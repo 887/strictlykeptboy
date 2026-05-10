@@ -3279,3 +3279,1298 @@ This document is "done" (Status: ✅ DONE) when:
 - The "Tradeoffs resolved inline" list has been re-read and any
   reversed call has been logged with the date and reason.
 - The "Deferred to future versions" list has been triaged at v1 ship.
+
+---
+
+# Round 3 — extensions (Phases UI-FF through UI-KK)
+
+Round 3 of `decisions.md` (D.41–D.52) reframes the app around a second
+first-class entry path: **receiving a complete schedule from someone
+else via deep-link / QR**. The phases below extend this spec to cover
+the new UI surfaces that path needs:
+
+- A stripped-down simplified ("good boy") mode chrome that hides
+  authoring complexity (UI-FF).
+- A first-launch deep-link bootstrap that skips the wizard entirely and
+  drops a brand-new user straight into a gifted schedule (UI-GG).
+- The authoring side's share-this-repo flow with QR generation and
+  share-history (UI-HH).
+- The evolution path mini-wizard that lets a simplified-mode user grow
+  into authoring without losing gifted schedules (UI-II).
+- The cross-repo state UI surfaces (done/snooze/note/mute/hide/
+  priority-override) that write to the recipient's own repo without
+  touching read-only sources (UI-JJ).
+- The receiving-repo UI and `references.toml`-driven prompt sheet that
+  cascades sibling-repo offers (UI-KK).
+
+Each phase here follows the same conventions as UI-A through UI-EE
+above: sub-step checkboxes with `**UI-X.Y**` prefixes, ASCII mockups
+for the load-bearing visual states, M3E component references, and
+cross-links back to `main.md` (Phases MM–TT), `decisions.md`
+(D.41–D.52), and the sibling deep-dive docs (`shared-schedules.md`,
+`data-model.md` DM-Q+, `resolver.md` RV-L+).
+
+**Round 3 phase index:**
+
+| Phase | Topic | main.md tie-in | decisions.md tie-in |
+|---|---|---|---|
+| UI-FF | Simplified ("good boy") mode chrome | PP | D.45 |
+| UI-GG | First-launch deep-link bootstrap | MM, QQ | D.42, D.46 |
+| UI-HH | Authoring share-this-repo flow + QR | RR | D.48 |
+| UI-II | Evolution path: simplified → own repo | SS | D.47 |
+| UI-JJ | Cross-repo state UI surfaces | OO, TT | D.44, D.49 |
+| UI-KK | Receiving-repo and `references.toml` UI | MM, NN | D.42, D.43 |
+
+---
+
+## UI-FF — Simplified ("good boy") mode chrome
+
+`decisions.md` D.45. `main.md` Phase PP.
+
+**Design center.** Simplified mode is a UI-only veneer over the full
+app. **Not a feature lock** — every byte of data the user has is
+preserved across mode flips; only the chrome changes. The mode is
+designed for two anchor users: (1) a brand-new app installer who tapped
+a gifted-schedule deep-link and has never seen a calendar app before,
+(2) an existing power-user who wants a single-purpose-device feel
+("just show me today, don't tempt me into the editor"). Both must be
+served by the same chrome.
+
+The mode is selected automatically when the user has only read-only
+gifted repos and no own repo (D.45 auto-entry rule). It is also
+reachable from full mode via Settings → Appearance → "Switch to
+simplified mode". The reverse — "Switch to full mode" — is always one
+tap from the simplified-mode settings, never gated.
+
+**Sub-steps:**
+
+- [ ] **UI-FF.1** Add a `UiMode` enum to app prefs in DataStore:
+  `SIMPLIFIED` | `FULL`. Default at first launch:
+  - `SIMPLIFIED` iff the boot path is the deep-link receive flow AND no
+    own repo exists (D.46 boot behavior).
+  - `FULL` otherwise (wizard path, or returning user with own repo).
+  The mode value is observed by the root `NavigationSuiteScaffold`
+  composable; switching the mode triggers a re-composition of the
+  entire chrome, but never touches data or repo state.
+
+- [ ] **UI-FF.2** In simplified mode, the bottom nav has exactly **two**
+  destinations: `Schedule` (📆) and `Tasks` (✅). The Together tab and
+  Settings tab are removed from the bottom nav. The
+  `NavigationSuiteScaffold` is configured with a 2-item layout; the rail
+  variant on tablets shows the same two items vertically.
+
+- [ ] **UI-FF.3** Single-view Schedule shell. Simplified mode forces a
+  single view-mode (no Day/Week/Month/Year/Timebox tab strip). The
+  view defaults to **Today** (a stripped variant of UI-D's Day view
+  pinned to `LocalDate.now()`); the user can pick **Day** instead from
+  a one-time "pick your home view" prompt on first entry to simplified
+  mode. The picker writes to `SimplifiedHomeView` in DataStore. The
+  view-mode tab row (`SecondaryTabRow` from UI-C) is omitted from the
+  composition tree entirely — not just hidden, so the M3E reflow never
+  leaves stale space.
+
+- [ ] **UI-FF.4** Compact top app bar. Simplified mode uses the same
+  `MediumTopAppBar` from UI-B but with a reduced trailing-action set:
+  - Leading: repo switcher chip (filterable by name; same component as
+    UI-K but rendered in a `Surface(color = surfaceContainerLow)` chip
+    with a downward chevron; opens the same `ModalBottomSheet` repo
+    list, but the "+ Add repo" entry is replaced by "Add a gifted
+    schedule" which routes to UI-GG's add-gifted-repo screen).
+  - Trailing 1: mode-label badge — a small text-only `AssistChip`
+    showing whichever label the user picked (default "Simplified"; see
+    UI-FF.7). Tap → label picker (UI-FF.7). Long-press → toast
+    explaining "this is your current mode label".
+  - Trailing 2: sync `IconButton` (🔄).
+  - Trailing 3: kebab overflow → "Settings".
+  - The identity icon is **not** present in simplified mode (no
+    authoring identity needed for a pure consumer).
+
+- [ ] **UI-FF.5** Event detail sheet in simplified mode. Re-uses the
+  Round 1 UI-I sheet *content* (title, time, body, comments, calendar
+  badge) and the Round 2 UI-W comment composer, BUT:
+  - The "Edit event" action is hidden if the source repo is read-only
+    (which, in simplified mode, every repo typically is).
+  - The "Mark done" / "Snooze" / "Mute" / "Hide" actions are present
+    and write to cross-repo state files per UI-JJ.
+  - The kebab is reduced: just "Hide on this device" and "Share event".
+
+- [ ] **UI-FF.6** FAB in simplified mode. A single
+  `FloatingActionButton.Large` labelled "Add my own events" with a
+  pencil-plus icon. Tap → routes into the UI-II evolution-path
+  mini-wizard. Long-press → same destination (no surprise menu). The
+  FAB is only present on the Schedule view, not on Tasks.
+
+- [ ] **UI-FF.7** Mode-label picker. A `ModalBottomSheet` with a single
+  `LazyColumn` of selectable rows. Each row is a `ListItem` with a
+  trailing `RadioButton`. Options (D.45 list):
+  - Simplified (default; the Play-Store-safe label)
+  - Focused
+  - Received Schedules
+  - Good Boy Mode
+  - Good Girl Mode
+  - Good Pet Mode
+  - Kept Mode
+  - Other…
+  The "Other…" row expands inline to an `OutlinedTextField` accepting up
+  to 32 chars of free text. The current selection is shown as the
+  trailing chip in the top app bar (UI-FF.4). Choice persists in
+  DataStore key `ModeLabel`. Reachable from: first-use overlay,
+  Settings → Appearance → "Mode label", and tap on the trailing chip
+  itself.
+
+- [ ] **UI-FF.8** First-use overlay. On the very first composition of
+  simplified mode (regardless of how the user got there), a
+  `Dialog(properties = DialogProperties(usePlatformDefaultWidth = false))`
+  appears with two stacked questions:
+  1. "What should we call this mode for you?" → routes to UI-FF.7's
+     picker, defaulting to "Simplified".
+  2. "Which home view do you want to land on?" → Day or Today, single
+     select (default Today).
+  Dismiss writes both answers to DataStore. The overlay never appears
+  again unless the user resets app prefs.
+
+- [ ] **UI-FF.9** Settings surface in simplified mode. Reached from the
+  top-bar kebab → "Settings". The settings shell is a stripped variant
+  of UI-P with only these sections visible:
+  - "Sync" (manual sync button + last-sync timestamp).
+  - "Appearance" (theme dark/light/system, mode label, home view).
+  - "Notifications" (channel toggles only, no advanced overrides).
+  - "More features available" → routes to the "Switch to full mode"
+    confirmation (UI-FF.10).
+  - "About" (version, license, the standard footer from UI-P).
+  Everything else from UI-P (Repos, Identity, Templates, Advanced sync,
+  GPG, Stickers, etc.) is omitted at the composition level. The full
+  UI-P composable is *not* rendered with hidden rows — it's a separate
+  `SimplifiedSettingsScreen` composable that includes only the allowed
+  rows. This prevents accidental leakage when an internal nav change
+  in UI-P adds a new row.
+
+- [ ] **UI-FF.10** Mode-switch flow. "Switch to full mode" from
+  Settings → "More features available" shows a confirmation
+  `AlertDialog`:
+  - Title: "Show all features?"
+  - Body: "You'll see the full app: repo management, templates,
+    identity, and more. You can switch back any time."
+  - Primary button: "Show all features".
+  - Secondary button: "Cancel".
+  On confirm, `UiMode` flips to `FULL`, the root scaffold recomposes
+  into the Round-1 chrome (UI-A through UI-U).
+
+  For *temporary* full-mode use (e.g., "I need to add a deploy key
+  once"), an alternate path: Settings → "Use full mode for one task"
+  → flips `UiMode` to `FULL` *and* sets a `RevertOnNextSync` flag. On
+  the next successful sync, a `Snackbar` appears: "Switch back to
+  simplified mode now?" with `Action("Yes")` and dismiss. This keeps
+  the simplified-mode contract — "you can always get out and back" —
+  without forcing a full mode-flip ceremony for one-time chores.
+
+- [ ] **UI-FF.11** Cross-link back to `main.md` Phase PP (simplified
+  mode chrome) and `shared-schedules.md` Phase SH-D (mode semantics).
+
+**ASCII mockup — simplified-mode home (Today view):**
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│ [🦊 Master's schedule ▾]   [Good Boy Mode]   [🔄]   [⋮]          │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│   Today · Mon May 11                                             │
+│                                                                  │
+│   ┌───────────────────────────────────────────────────────────┐  │
+│   │  07:00 ▍ Morning workout                            🔓    │  │
+│   │         45 min · Workouts (from Master)                    │  │
+│   └───────────────────────────────────────────────────────────┘  │
+│   ┌───────────────────────────────────────────────────────────┐  │
+│   │  12:30 ▍ Lunch check-in                             🔓    │  │
+│   │         15 min · Check-ins (from Master)                   │  │
+│   └───────────────────────────────────────────────────────────┘  │
+│   ┌───────────────────────────────────────────────────────────┐  │
+│   │  18:00 ▍ Evening journal                            🔓    │  │
+│   │         20 min · Journaling (from Master)                  │  │
+│   └───────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│   Tasks for today                                                │
+│     ○  10 push-ups before noon                                   │
+│     ●  drink 2L water  (done)                                    │
+│     ○  text Master at 21:00                                      │
+│                                                                  │
+│                                                  ┌─────────────┐ │
+│                                                  │  ✎ Add my   │ │
+│                                                  │   own events│ │
+│                                                  └─────────────┘ │
+├──────────────────────────────────────────────────────────────────┤
+│              [📆 Schedule]            [✅ Tasks]                 │
+└──────────────────────────────────────────────────────────────────┘
+
+   🔓  = small "shared from a read-only repo" badge per UI-JJ.7.
+```
+
+**ASCII mockup — mode-label picker:**
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  ━━                                                              │
+│                                                                  │
+│  Mode label                                                      │
+│  Pick what to call this mode on your device.                     │
+│                                                                  │
+│  ○  Simplified                                                   │
+│  ○  Focused                                                      │
+│  ○  Received Schedules                                           │
+│  ●  Good Boy Mode                                                │
+│  ○  Good Girl Mode                                               │
+│  ○  Good Pet Mode                                                │
+│  ○  Kept Mode                                                    │
+│  ○  Other…                                                       │
+│       └─ [ _______________________________ ]  (32 chars)         │
+│                                                                  │
+│                                          [ Cancel ]   [ Save ]   │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**Tradeoffs resolved inline.**
+
+- *Two-tab nav vs. single-screen-only.* A single-screen UI (no nav at
+  all) was tempting for the most-minimal case, but Tasks is a
+  distinct-enough surface (different visual model, different
+  resolver query) that punishing the user with a tab-style toggle in
+  the top bar would be worse than dedicating a bottom-nav slot. Two
+  tabs win.
+- *Mode-label discoverability.* Burying the label picker in Settings
+  alone would hide its expressiveness for the kink-coded users. Putting
+  it as a trailing chip on every screen surfaces it without shouting
+  about it; the default "Simplified" reads as utilitarian to any user
+  who doesn't open the picker.
+- *Auto-revert from temporary full mode.* A timer-based auto-revert
+  ("flip back after 5 minutes") felt hostile. Snackbar-on-next-sync is
+  the sweet spot: it's tied to a discrete action the user just took, so
+  the prompt arrives at a moment where switching back makes sense.
+- *Settings composability.* A "show full UI-P with rows hidden by mode"
+  approach was rejected — too easy to leak a new row through. Separate
+  `SimplifiedSettingsScreen` composable, allow-list at the source.
+
+---
+
+## UI-GG — First-launch deep-link bootstrap
+
+`decisions.md` D.42, D.46. `main.md` Phases MM (deep-link registration)
+and QQ (first-launch bootstrap).
+
+**Design center.** A brand-new app install, launched from a
+`strictlykeptboy://add?…` intent or a verified
+`https://strictlykeptboy.app/add?…` Android App Link, MUST skip the
+welcome wizard. No template picker. No identity setup. No repo creation
+ceremony. The user lands on the "Add gifted repo" screen with the URL
+prefilled, taps Accept, watches a clone-progress mascot, and ends up on
+the simplified-mode home view. **One tap from QR to working schedule**
+is the ship target (D.41).
+
+**Sub-steps:**
+
+- [ ] **UI-GG.1** Deep-link intent handler. The root activity's
+  `onNewIntent` parses `strictlykeptboy://add?...` and
+  `https://strictlykeptboy.app/add?...` per D.42's URL schema:
+  - `url` (required, repeatable).
+  - `label`, `mode`, `priority`, `via`, `references`.
+  - Fragment params: `token`, `expires`.
+  The handler routes:
+  - **No repos configured** → UI-GG.2 (first-launch path).
+  - **Already configured** → UI-KK.1 (add-repo-while-running, NOT
+    first-launch).
+
+- [ ] **UI-GG.2** Add-gifted-repo screen. A full-screen `Scaffold` with
+  a `MediumTopAppBar` titled "Add a gifted schedule" and a back arrow
+  that exits the activity (since there's nowhere to back to on a first
+  launch). The body is a `LazyColumn` of cards:
+  - **Card 1 — heading card**. Large title "Add a gifted schedule".
+    Subheading line composed from URL params: `<label> from <via>`
+    (e.g., "Master's schedule from Master @"); falls back to the URL
+    hostname/path if no `label`; falls back to "(from someone)" if no
+    `via`.
+  - **Card 2 — mode chip**. A read-only `AssistChip` showing the link's
+    `mode=` value ("Read-only" / "Read-write" / "Pull-only"). Greyed
+    out — the user can't change it from this screen; it's whatever the
+    sharer set. Tap → a `Tooltip` explaining the mode.
+  - **Card 3 — auth status**. One of:
+    - "Public repo, no sign-in needed" (green check icon).
+    - "Using included credential" (key icon) — when `#token=` was in
+      the URL fragment.
+    - "This schedule needs sign-in" (lock icon) — with a "Sign in"
+      button that routes to the Device-Code flow from Round 1 UI-K.4.
+  - **Card 4 — repo URL**. Monospaced text, truncated middle with
+    `…` if it exceeds the card width. Long-press → copy to clipboard
+    (in case the user wants to record it).
+  - **Card 5 — action row**. Two buttons:
+    - Primary `Button("Accept")` (filled-tonal, M3E).
+    - Secondary `OutlinedButton("Cancel")` — exits the activity.
+
+- [ ] **UI-GG.3** Clone-progress screen. After "Accept", route to a
+  full-screen progress composable with:
+  - Mascot at the top — the bat placeholder from UI-Q's mascot pool,
+    animated with a gentle `infiniteRotation`.
+  - A `LinearProgressIndicator` (determinate when JGit reports % via
+    the sync-engine progress monitor; indeterminate otherwise).
+  - Status text under the bar, cycling through phases as the
+    sync-engine reports them: "Cloning…" → "Indexing files…" →
+    "Resolving overlays…" → "Almost ready…".
+  - A `TextButton("Cancel")` at the bottom that aborts the clone via
+    JGit cancel-callback + cleans up the partial repo dir.
+
+- [ ] **UI-GG.4** Post-clone references prompt. After the clone
+  completes, if the cloned repo has `.strictlykeptboy/references.toml`
+  with any entry where `default_active = true`, route to UI-KK.2's
+  references-prompt sheet. The first-launch path defers to UI-KK for
+  this UI surface — DRY across first-launch and add-while-running.
+
+- [ ] **UI-GG.5** Landing transition. Once the clone is done (and any
+  references are resolved per UI-GG.4), the root scaffold recomposes
+  into simplified mode (UI-FF) and lands on the home view. The
+  one-time onboarding card overlay (UI-GG.6) appears on top.
+
+- [ ] **UI-GG.6** Onboarding card. A `Card` floating over the
+  simplified-mode home, anchored to the bottom-third of the screen
+  with a scrim above. Content:
+  - Headline: "Welcome to your schedule."
+  - Body: "<author label or 'someone'> set this up for you. Tap any
+    event for details. Mark tasks done by tapping their circle."
+  - `Button("Got it")` (filled-tonal, full-width).
+  Dismissable also by tap-anywhere on the scrim. The "I've seen this"
+  flag persists in DataStore `OnboardingCardSeen`. The card never
+  re-appears.
+
+- [ ] **UI-GG.7** Error states. Each error renders as a full-screen
+  `Scaffold` with the same mascot (sad-mascot variant), a heading, a
+  body explanation, and one or two buttons:
+  - **Malformed URL** — "We couldn't read that link." Body: "The link
+    looks broken. Try opening the link again, or ask the sender for
+    a fresh one." Buttons: `OutlinedButton("Close")`.
+  - **Expired token** — "This link has expired." Body: "The included
+    sign-in credential is no longer valid. Ask the sender for a new
+    link, or sign in with your own account." Buttons:
+    `Button("Sign in instead")` + `OutlinedButton("Close")`.
+  - **Network down** — "Can't reach the server." Body: "Check your
+    connection. We'll try again when you're back online." Buttons:
+    `Button("Retry")` + `OutlinedButton("Close")`.
+  - **Auth failed** — "Sign-in didn't work." Body: "The credential
+    didn't grant access. The sender may have revoked it, or the
+    permissions may be wrong." Buttons: `Button("Try sign-in again")`
+    + `OutlinedButton("Close")`.
+  - **Schema too new** — "This schedule needs a newer app." Body:
+    "The sender's schedule uses features your app version doesn't
+    understand. Update the app and try again." Buttons:
+    `Button("Open Play Store")` + `OutlinedButton("Close")`.
+  All "Close" buttons exit the activity on a first-launch path
+  (nothing to back into) or pop the back-stack otherwise.
+
+- [ ] **UI-GG.8** Token-fragment hygiene. After a successful clone,
+  the URL fragment (`#token=…`) is stripped from any persisted
+  referrer string, the in-memory `Intent` extras are cleared, and the
+  credential is moved to `EncryptedSharedPreferences` keyed by the
+  repo URL hash per D.50. See `sync-engine.md` Phase SE-? for the
+  storage details; this checkbox is the UI side only.
+
+- [ ] **UI-GG.9** Cross-link back to `main.md` Phases MM (intent
+  registration), QQ (first-launch bootstrap), and `shared-schedules.md`
+  Phase SH-B (end-to-end receive flow).
+
+**ASCII mockup — Add-gifted-repo screen:**
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  ←     Add a gifted schedule                                     │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐  │
+│  │                                                            │  │
+│  │   Master's schedule                                        │  │
+│  │   from Master @                                            │  │
+│  │                                                            │  │
+│  └────────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐  │
+│  │  Mode                                                      │  │
+│  │  ┌───────────────────┐                                     │  │
+│  │  │ 👁 Read-only       │   (set by sender, can't change)    │  │
+│  │  └───────────────────┘                                     │  │
+│  └────────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐  │
+│  │  🔑 Using included sign-in credential                      │  │
+│  │     valid for 24 h from the sender                         │  │
+│  └────────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐  │
+│  │  Repo                                                      │  │
+│  │  git@github.com:dom/…edule.git    (long-press to copy)     │  │
+│  └────────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│           [ Cancel ]                  [   Accept   ]             │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**ASCII mockup — clone-progress screen:**
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                                                                  │
+│                            🦇                                    │
+│                       (bat mascot                                │
+│                        slow-rotates)                             │
+│                                                                  │
+│                    Cloning your schedule…                        │
+│                                                                  │
+│      ████████████████████████░░░░░░░░░░░  62 %                   │
+│                                                                  │
+│                       Indexing files…                            │
+│                                                                  │
+│                                                                  │
+│                       [   Cancel   ]                             │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**ASCII mockup — onboarding card overlay:**
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│ [🦊 Master's schedule ▾]   [Good Boy Mode]   [🔄]   [⋮]          │
+├──────────────────────────────────────────────────────────────────┤
+│   Today · Mon May 11                                             │
+│   ┌───────────────────────────────────────────────────────────┐  │
+│   │  07:00 ▍ Morning workout                                  │  │
+│   └───────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│   ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  │
+│   ░░░  ┌──────────────────────────────────────────────────┐ ░░░  │
+│   ░░░  │  Welcome to your schedule.                       │ ░░░  │
+│   ░░░  │                                                  │ ░░░  │
+│   ░░░  │  Master set this up for you. Tap any event       │ ░░░  │
+│   ░░░  │  for details. Mark tasks done by tapping         │ ░░░  │
+│   ░░░  │  their circle.                                   │ ░░░  │
+│   ░░░  │                                                  │ ░░░  │
+│   ░░░  │              [        Got it        ]            │ ░░░  │
+│   ░░░  └──────────────────────────────────────────────────┘ ░░░  │
+│   ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**Tradeoffs resolved inline.**
+
+- *Cancel-on-clone vs. partial-state recovery.* JGit's `setProgressMonitor`
+  + cancel-callback is reliable enough that we cancel-and-delete-partial
+  rather than try to resume; resuming a half-cloned repo is too easy to
+  get wrong, and the source is on a network anyway. If the user comes
+  back, re-tapping the same link starts fresh.
+- *Onboarding-card timing.* Showing the card immediately on land (vs.
+  delayed after first event-tap) was chosen because the simplified-mode
+  home is the entire UI surface — there's no risk of "user navigated
+  away before reading". One overlay, one tap to dismiss.
+- *Error-state recovery buttons.* Each error gets two buttons max. More
+  than two buttons reads as "we don't know what you should do"; two is
+  a clear contract — primary recovery + close.
+
+---
+
+## UI-HH — Authoring share-this-repo flow
+
+`decisions.md` D.48. `main.md` Phase RR.
+
+**Design center.** Any user who authored a repo can share it as a gift
+with a few taps. The flow generates a deep-link (and matching QR), with
+optional one-shot deploy-key or fine-grained PAT embedded in the URL
+fragment. The flow MUST be discoverable from the repo settings (not
+hidden in a sub-menu), and MUST surface the auth-method tradeoffs
+inline so the sharer understands what they're handing out.
+
+**Sub-steps:**
+
+- [ ] **UI-HH.1** Entry point. In full mode, Settings → Repos → tap a
+  repo row → repo-detail screen (existing from UI-K) → new row:
+  "Share this repo" with a share-icon (♻️-or-arrow-pair). Tap → opens
+  the share-config sheet (UI-HH.2). The row sits above the existing
+  "Remove this repo" row, separated by a `Divider`.
+
+- [ ] **UI-HH.2** Share-config sheet. A `ModalBottomSheet` with a
+  `LazyColumn` of grouped settings rows:
+  - **Group "Mode"**: three `RadioButton` rows — Read-only (default,
+    described as "Receiver views only"), Read-write ("Receiver can
+    edit; requires shared auth"), Pull-only ("Receiver gets a one-way
+    mirror; no comments back").
+  - **Group "Suggested label"**: a single `OutlinedTextField`
+    labelled "Label", defaulting to the repo's display name. Char
+    limit 64.
+  - **Group "Suggested priority"**: three `FilterChip`s in a row —
+    High / Normal (default-selected) / Low.
+  - **Group "Auth method"**: four `RadioButton` rows:
+    - "Recipient uses their own SSH key" (no token in link).
+    - "Embed a one-shot deploy key" (24h expiry default; provider API
+      generates it).
+    - "Embed a fine-grained PAT" (24h expiry default; provider API
+      generates it).
+    - "Public repo, no auth needed" — only visible if the repo is
+      public per provider metadata.
+  - **Group "Expiry"**: a `Slider` (snapping to 1h / 6h / 24h / 7d /
+    30d) — only visible when the chosen auth method embeds a token.
+    Default `24h`. The label reads "Link expires in: 24 hours".
+  - Action row at the bottom: `OutlinedButton("Cancel")` +
+    `Button("Generate")`.
+
+- [ ] **UI-HH.3** Generation step. Tap "Generate" routes through a
+  short progress overlay ("Talking to GitHub…" / "Creating deploy
+  key…" / "Building link…") backed by the provider API calls in
+  `sync-engine.md` Phase SE-share. On success, route to the
+  output-panel screen (UI-HH.4). On failure, an inline error replaces
+  the action row in the share-config sheet ("Couldn't create deploy
+  key — your token may need `admin:public_key` scope. Try again or
+  sign in with broader scope.") with a "Retry" button.
+
+- [ ] **UI-HH.4** Output panel. Full-screen `Scaffold` with title
+  "Share this schedule" and a back arrow that returns to the
+  repo-detail screen. Body composed top-to-bottom:
+  - **QR card**. A large `Image` of the generated QR PNG, rendered
+    256dp × 256dp on a white card, with a subtle border. Tap to expand
+    to full-screen, scrim'd, for easy scanning across a room.
+  - **Link card**. The URL as monospaced `Text` in a
+    `Surface(color = surfaceContainerLow)` card, wrapped to fit. A
+    trailing icon `IconButton` (📋) copies to clipboard with a
+    `Snackbar("Link copied")`. Long-press the text → select-all for
+    manual copy.
+  - **Metadata row**. Three small `AssistChip`s reflecting the chosen
+    settings: mode, priority, expiry.
+  - **Action row**. Three buttons in a row:
+    - `Button("Share via…")` (filled-tonal) → `Intent.ACTION_SEND` with
+      the URL as `EXTRA_TEXT` and the QR PNG as `EXTRA_STREAM`. Picker
+      shows system share-targets.
+    - `OutlinedButton("Save QR")` → writes the QR PNG to
+      `MediaStore.Downloads`, toasts "Saved to Downloads".
+    - `OutlinedButton("Done")` → returns to repo-detail.
+
+- [ ] **UI-HH.5** Share history sub-screen. In repo-detail screen,
+  below the "Share this repo" row, a new row "Share history (N)"
+  where N is the count of active+expired+revoked entries. Tap → opens
+  the share-history screen: a `LazyColumn` of `ListItem`s, one per
+  share-link, sorted by issued-date descending. Each row:
+  - Leading icon: link-status icon — green check (active), grey clock
+    (expired), red X (revoked).
+  - Headline: the suggested label.
+  - Supporting line 1: "<mode> · expires <relative time>" or
+    "<mode> · expired <relative time>" or "<mode> · revoked
+    <relative time>".
+  - Supporting line 2 (if known): "shared with <recipient label>" —
+    populated when the recipient's first sync reports back its identity
+    via a comment in the source repo, *if* the share included
+    read-write or the comment-back protocol.
+  - Trailing: kebab → "Revoke", "Copy link", "Show QR", "Delete from
+    history".
+
+- [ ] **UI-HH.6** Revoke action. From the share-history kebab → "Revoke"
+  → `AlertDialog`:
+  - Title: "Revoke this share?"
+  - Body: "The recipient will see an access-denied error on their next
+    sync. They keep any data they already have locally, but new
+    changes won't reach them."
+  - `Button("Revoke")` (filled-tonal, error-color) +
+    `OutlinedButton("Cancel")`.
+  On confirm, the share-engine deletes the provider-side deploy-key or
+  PAT, the share-history entry is marked `REVOKED`, the row updates
+  in place, and a `Snackbar("Access revoked")` appears.
+
+- [ ] **UI-HH.7** Empty-state for share-history. When the repo has
+  never been shared, the share-history row is hidden entirely; only
+  the "Share this repo" row is visible. Reduces chrome for the
+  not-yet-shared case.
+
+- [ ] **UI-HH.8** Cross-link back to `main.md` Phase RR
+  (share-this-repo flow) and `shared-schedules.md` Phase SH-C
+  (authoring-side end-to-end).
+
+**ASCII mockup — share-config sheet:**
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  ━━                                                              │
+│                                                                  │
+│  Share this repo                                                 │
+│                                                                  │
+│  Mode                                                            │
+│  ●  Read-only — receiver views only                              │
+│  ○  Read-write — receiver can edit; requires shared auth         │
+│  ○  Pull-only — one-way mirror, no comments back                 │
+│                                                                  │
+│  Suggested label                                                 │
+│   ┌────────────────────────────────────────────────────────┐     │
+│   │ Master's schedule                                      │     │
+│   └────────────────────────────────────────────────────────┘     │
+│                                                                  │
+│  Suggested priority                                              │
+│   ( High )    [● Normal ]    ( Low )                             │
+│                                                                  │
+│  Auth method                                                     │
+│  ○  Recipient uses their own SSH key                             │
+│  ●  Embed a one-shot deploy key                                  │
+│  ○  Embed a fine-grained PAT                                     │
+│  (Public repo option hidden — this repo is private)              │
+│                                                                  │
+│  Link expires in: 24 hours                                       │
+│  ├──○────────────────────────────────────────┤                   │
+│  1h     6h    24h         7d              30d                    │
+│                                                                  │
+│              [ Cancel ]                  [  Generate  ]          │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**ASCII mockup — share-output panel:**
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  ←     Share this schedule                                       │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│           ┌──────────────────────────────────────────┐           │
+│           │                                          │           │
+│           │   ██  ██  ██████  ██  ████  ██   ██████  │           │
+│           │   ██  ██  ██  ██  ██  ██    ██   ██      │           │
+│           │   ██████  ██  ██  ████████  ██   ██████  │           │
+│           │   ██  ██  ██████  ██  ██    ██   ██  ██  │           │
+│           │   ██  ██          ██  ██    ██████████   │           │
+│           │       (256dp x 256dp QR)                 │           │
+│           └──────────────────────────────────────────┘           │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────┐ [📋] │
+│  │ strictlykeptboy://add?url=git@github.com:dom/master-    │     │
+│  │ schedule.git&label=Master%27s+schedule&mode=read-only   │     │
+│  │ &priority=normal#token=ABC…XYZ                          │     │
+│  └────────────────────────────────────────────────────────┘     │
+│                                                                  │
+│   ( 👁 Read-only )   ( Normal )   ( ⏳ Expires in 24 h )         │
+│                                                                  │
+│   [ Share via… ]     [ Save QR ]     [   Done   ]                │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**ASCII mockup — share-history list:**
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  ←     Share history                                             │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│   ✓  Master's schedule                                  ⋮        │
+│      Read-only · expires in 18 h                                 │
+│      shared with @sub-handle                                     │
+│   ───────────────────────────────────────────────────────────    │
+│   ⏰  Personal trainer 12-wk                            ⋮        │
+│      Read-write · expired 3 days ago                             │
+│      shared with @client-04                                      │
+│   ───────────────────────────────────────────────────────────    │
+│   ✗  Soccer season                                      ⋮        │
+│      Pull-only · revoked yesterday                               │
+│   ───────────────────────────────────────────────────────────    │
+│                                                                  │
+│      (kebab menu options:                                        │
+│         · Revoke                                                 │
+│         · Copy link                                              │
+│         · Show QR                                                │
+│         · Delete from history)                                   │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**Tradeoffs resolved inline.**
+
+- *Mode + auth method as separate groups.* Combining them into a
+  single picker ("Public read-only" / "Private read-only with deploy
+  key" / …) was tempting for fewer rows, but the combinatorial
+  explosion of valid pairs (mode × auth × expiry) outpaces a flat
+  picker. Two groups, one slider — the user composes.
+- *Expiry default of 24h.* D.48 specifies 24h for embedded tokens; we
+  surface the slider so power users can extend, but the default
+  matches the locked decision.
+- *Share-history row hidden when empty.* No "empty state with
+  illustration"; the row simply doesn't appear. Keeps repo-detail
+  uncluttered for the common case (most users only share once or
+  twice per repo).
+
+---
+
+## UI-II — Evolution path UI: simplified → own repo
+
+`decisions.md` D.47. `main.md` Phase SS.
+
+**Design center.** A simplified-mode user who's been consuming gifted
+schedules and now wants to add their own events MUST be able to grow
+into authoring without losing their gifted repos and without seeing
+the full Round-1 wizard. The mini-wizard is **2–3 screens**, every
+screen has a "Just start empty" or "Skip" escape, and the post-
+creation prompt defaults to **keeping the user in simplified mode**.
+
+**Sub-steps:**
+
+- [ ] **UI-II.1** Entry points. Two distinct routes:
+  - From simplified-mode FAB "Add my own events" (UI-FF.6).
+  - From simplified-mode Settings → "Set up your own schedule"
+    (a new row added between "Sync" and "Appearance" — visible only
+    when the user has *no* own repo).
+  Both routes land on UI-II.2 (Screen 1).
+
+- [ ] **UI-II.2** Screen 1 — "Where should we put your schedule?".
+  Full-screen `Scaffold`, top app bar "Set up your schedule (1/3)"
+  with a back arrow that exits the wizard (with confirmation if any
+  field is touched). Body:
+  - Section "Provider" with three `RadioButton` rows:
+    - GitHub (default).
+    - Forgejo.
+    - Just local for now (no remote yet; can add later).
+  - Section "Repo name" — `OutlinedTextField` defaulting to
+    `<github-username>-schedule` (or `my-schedule` for the local-only
+    case). Helper text: "You can rename this later.".
+  - Section "Visibility" — two `RadioButton` rows: Private (default)
+    / Public. Hidden if the provider is "Just local for now".
+  - Action row at the bottom: `OutlinedButton("Cancel")` +
+    `Button("Next")`.
+
+- [ ] **UI-II.3** Screen 2 — "Sign in to <provider>". Skipped entirely
+  if Screen 1's provider is "Just local for now". Otherwise:
+  - Full-screen `Scaffold`, top app bar "Set up your schedule (2/3)".
+  - Body delegates to the Device-Code-flow composable from Round 1
+    UI-K.4 (`SignInScreen(provider = …)`), but with the wizard's
+    headline replaced: "Sign in to GitHub" + small body line "We'll
+    create your schedule repo here.".
+  - On success, route to Screen 3 (UI-II.4).
+  - On failure: inline error, "Retry" + "Cancel" buttons.
+
+- [ ] **UI-II.4** Screen 3 — "Pick a template?". Full-screen `Scaffold`,
+  top app bar "Set up your schedule (3/3)". Body:
+  - **Top card**: a large `Button("Skip — start empty")` (filled-tonal,
+    full-width, prominent). Body line: "You can always add events one
+    at a time.".
+  - **Below the top card**: a horizontal `Divider` and the label
+    "…or start from a template:" then the role-toggle screen from
+    Round 1 UI-O wizard's K.3 step (`RoleToggleGrid` composable, but
+    rendered without the wizard's other steps). The roles are
+    Round-1's default set: Work / Fitness / Family / Self-care /
+    Custom.
+  - Action row at the bottom: `OutlinedButton("Back")` +
+    `Button("Create")`.
+
+- [ ] **UI-II.5** Creation-progress screen. After "Create" (or after
+  "Skip — start empty"), route to a full-screen progress composable:
+  - Mascot at top (bat, slow-rotate, same as UI-GG.3).
+  - Status text cycling: "Creating your repo on <provider>…" →
+    "Setting up files…" → "Migrating your existing tasks…" → "Done!".
+  - The "Migrating your existing tasks" step copies
+    `~/.strictlykeptboy/_local/state/` into the new repo's `state/`
+    folder per D.47 and writes a `references.toml` listing all
+    currently-configured gifted repos. See `data-model.md` Phase DM-Q+
+    for the file shape; this checkbox is the UI side only.
+
+- [ ] **UI-II.6** Post-creation prompt. After the progress screen
+  reports "Done!", a `Dialog` appears:
+  - Title: "You're set up."
+  - Body: "Your schedule is live. Want to keep the simple view, or
+    show all features?"
+  - `Button("Stay simple")` (filled-tonal, **default-highlighted**).
+  - `OutlinedButton("Show all features")` — flips `UiMode` to `FULL`
+    on confirm.
+  Dismiss-by-scrim acts as "Stay simple".
+
+- [ ] **UI-II.7** Reverse path — full mode → simplified. In full mode,
+  Settings → Appearance → "Switch to simplified mode" row. Tap →
+  `AlertDialog`:
+  - Title: "Switch to simplified mode?"
+  - Body: "You'll see just your schedule and tasks. You can switch
+    back any time."
+  - `Button("Switch")` + `OutlinedButton("Cancel")`.
+  No migration; just a `UiMode` flip. Instant.
+
+- [ ] **UI-II.8** Cross-link back to `main.md` Phase SS (evolution path)
+  and `shared-schedules.md` Phase SH-E (migration semantics).
+
+**ASCII mockup — Screen 1 (provider + name + visibility):**
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  ←     Set up your schedule (1/3)                                │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│   Where should we put your schedule?                             │
+│                                                                  │
+│   Provider                                                       │
+│     ●  GitHub                                                    │
+│     ○  Forgejo                                                   │
+│     ○  Just local for now                                        │
+│                                                                  │
+│   Repo name                                                      │
+│   ┌────────────────────────────────────────────────────────┐     │
+│   │ personal-schedule                                          │     │
+│   └────────────────────────────────────────────────────────┘     │
+│   You can rename this later.                                     │
+│                                                                  │
+│   Visibility                                                     │
+│     ●  Private                                                   │
+│     ○  Public                                                    │
+│                                                                  │
+│              [ Cancel ]                  [    Next    ]          │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**ASCII mockup — Screen 2 (sign-in):**
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  ←     Set up your schedule (2/3)                                │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│   Sign in to GitHub                                              │
+│   We'll create your schedule repo here.                          │
+│                                                                  │
+│         ┌────────────────────────────────────────┐               │
+│         │                                        │               │
+│         │   Open your browser to                 │               │
+│         │   github.com/login/device              │               │
+│         │                                        │               │
+│         │   and enter the code:                  │               │
+│         │                                        │               │
+│         │            ABCD-EFGH                   │               │
+│         │                                        │               │
+│         │   Waiting for sign-in…                 │               │
+│         │                                        │               │
+│         └────────────────────────────────────────┘               │
+│                                                                  │
+│              [ Cancel ]                                          │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**ASCII mockup — Screen 3 (template? or skip):**
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  ←     Set up your schedule (3/3)                                │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│   Pick a template?                                               │
+│                                                                  │
+│   ┌────────────────────────────────────────────────────────┐     │
+│   │                                                        │     │
+│   │           Skip — start empty                           │     │
+│   │                                                        │     │
+│   │     You can always add events one at a time.           │     │
+│   │                                                        │     │
+│   └────────────────────────────────────────────────────────┘     │
+│                                                                  │
+│   ─────────  or start from a template:  ─────────                │
+│                                                                  │
+│     [ Work ]   [ Fitness ]   [ Family ]                          │
+│     [ Self-care ]   [ Custom ]                                   │
+│                                                                  │
+│              [ Back ]                    [   Create   ]          │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**ASCII mockup — post-creation prompt:**
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                                                                  │
+│              ┌──────────────────────────────────────┐            │
+│              │                                      │            │
+│              │   You're set up.                     │            │
+│              │                                      │            │
+│              │   Your schedule is live. Want to     │            │
+│              │   keep the simple view, or show      │            │
+│              │   all features?                      │            │
+│              │                                      │            │
+│              │     [   Stay simple   ]              │            │
+│              │     [ Show all features ]            │            │
+│              │                                      │            │
+│              └──────────────────────────────────────┘            │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**Tradeoffs resolved inline.**
+
+- *2 vs. 3 screens for non-local provider.* Three screens (provider /
+  sign-in / template) is the natural decomposition; collapsing
+  provider+name onto sign-in screen would crowd the sign-in code. Three
+  it is, with the "Just local for now" path collapsing to two.
+- *Skip-template as prominent button rather than skip-link.* The
+  Round-1 wizard's role-toggle screen treats template-picking as the
+  default and skipping as a link. For the evolution path, the user has
+  already been consuming a gifted schedule — they may not need a
+  template *at all*. Making "Skip — start empty" the most prominent
+  button reflects that.
+- *Stay-simple as default.* If the user got to UI-II from simplified
+  mode, defaulting to "Stay simple" respects the contract that mode
+  flips are explicit. "Show all features" remains a one-tap away.
+
+---
+
+## UI-JJ — Cross-repo state UI surfaces
+
+`decisions.md` D.44 (state-file model), D.49 (priority resolution).
+`main.md` Phases OO (state files) and TT (multi-repo priority).
+
+**Design center.** The recipient interacts with content from read-only
+gifted repos: marks tasks done, snoozes events, leaves private notes,
+mutes, hides, overrides priority. Every interaction writes to **the
+recipient's own primary repo** (or `_local/state/` if they have no
+primary yet) per D.44 — never to the source. The UI MUST make the
+"this is your private state" model legible without nagging.
+
+**Sub-steps:**
+
+- [ ] **UI-JJ.1** Done-toggle on tasks. The Round-1 task-row "circle
+  tap to toggle done" (UI-J) extends transparently across repos. For
+  tasks from gifted repos, the toggle writes a `done` state file at
+  `state/<source-repo-id>/<entity-id>.done.toml` per D.44. Visual: the
+  circle fills with the calendar color; no auxiliary chrome. Long-press
+  the circle on a gifted task → tooltip "Done state is saved on this
+  device, not in the source schedule.".
+
+- [ ] **UI-JJ.2** Swipe-to-snooze on event chips. In Day/Week views,
+  left-swipe on an event chip reveals a `SwipeToDismissBox` action
+  layer with snooze choices: 15m / 1h / Tomorrow / Custom… Same UX as
+  Round 2 NS-M, but cross-repo aware: writes a `snooze` state file
+  with `until = <ISO>` per D.44. The chip visually dims and shows a
+  small "💤 until <relative time>" badge until the snooze elapses.
+  Tap-the-badge → "Undo snooze".
+
+- [ ] **UI-JJ.3** Swipe-to-snooze on task rows. Same gesture, same
+  state-file schema, applied to task rows in UI-J. The row dims and
+  shows the snooze badge.
+
+- [ ] **UI-JJ.4** Comment composer in event detail. Reuses Round 2
+  UI-W's composer, but the **write target** depends on the source-repo
+  mode:
+  - Source is **read-write**: write to `<event-id>.comments/<comment-id>.md`
+    in the source repo. Visual indicator above the composer: "💬 This
+    will be a public comment on <repo label>." (info-color text).
+  - Source is **read-only**: write a `note` state file at
+    `state/<source-repo-id>/<entity-id>.note.toml` in the recipient's
+    own repo. Visual indicator above the composer: "🔒 This will be a
+    private note (only you see it). The schedule is read-only."
+    (neutral-color text).
+  - Source is **pull-only**: same as read-only.
+  The indicator is **always present** (no hover/reveal) so the user
+  never types into a context they didn't expect. The composer's
+  "Post" button label changes too: "Post comment" vs. "Save note".
+
+- [ ] **UI-JJ.5** Mute toggle in event detail header. A
+  `FilledIconToggleButton` with a bell icon, top-right of the detail
+  sheet header. Tap → toggles a `mute` state file. Visual: bell with
+  diagonal slash when muted. Tooltip: "Notifications muted for this
+  event on this device.".
+
+- [ ] **UI-JJ.6** Hide toggle in event detail kebab. Kebab menu item
+  "Hide on this device". Tap → confirmation `AlertDialog`:
+  - Title: "Hide this event?"
+  - Body: "It won't show up on your schedule. You can unhide later from
+    Settings → Hidden events."
+  - `Button("Hide")` + `OutlinedButton("Cancel")`.
+  On confirm, writes a `hide` state file; the event disappears from
+  all schedule views (resolver filters it out per `resolver.md`
+  RV-L+).
+
+- [ ] **UI-JJ.7** Priority-override UI. In the calendar list (full mode
+  Settings → Repos → tap repo → calendar list, or simplified-mode the
+  same surface reached via Settings → Repos when shown there per
+  UI-FF.9): long-press a calendar row → context menu with "Override
+  priority on this device". Tap → opens a bottom sheet:
+  - Title: "Override priority — <calendar name>".
+  - Body line: "The schedule's author set this calendar's priority to
+    <N>. You can override it just for your device.".
+  - `Slider` 1–1000, snapping to 50, with `Text` showing the current
+    value.
+  - Action row: `OutlinedButton("Clear override")` (visible only when
+    an override exists) + `Button("Save")`.
+  Writes a `priority-override` state file per D.44. The resolver
+  applies the override per D.49.
+
+- [ ] **UI-JJ.8** Shared-source indicator. Every event chip, task row,
+  and calendar list entry sourced from a read-only or pull-only repo
+  gets a small "🔓" (open-padlock-with-circle) badge in the leading
+  corner, 12dp, tinted `surfaceVariant`. Long-press → toast "From
+  <repo label> · read-only". The badge is absent for events from
+  the user's own repos and for read-write gifted repos.
+
+- [ ] **UI-JJ.9** Hidden-events recovery. Settings → "Hidden events"
+  (new row, visible in both modes when at least one `hide` state file
+  exists) → a `LazyColumn` of hidden events with each row showing
+  title + source-repo label + an `IconButton("Unhide")`. Tap unhide →
+  deletes the `hide` state file → event reappears.
+
+- [ ] **UI-JJ.10** State-file write coalescing. UI-side requirement:
+  rapid toggles (e.g., done-undone-done within 2s) coalesce to a
+  single state-file write, with the latest value winning. Prevents
+  jj/git noise from flicker. See `data-model.md` Phase DM-Q+ for the
+  storage detail; this checkbox is the UI side.
+
+- [ ] **UI-JJ.11** Cross-link back to `main.md` Phases OO and TT, and
+  `resolver.md` Phase RV-L+ for the overlay-merge semantics.
+
+**ASCII mockup — comment composer with private-note indication:**
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  ━━                                                              │
+│                                                                  │
+│  Morning workout                                  🔓             │
+│  07:00 – 07:45 · Workouts (from Master's schedule)               │
+│                                                                  │
+│  ─────────────────────────────────────────────────────────       │
+│                                                                  │
+│  Body                                                            │
+│  3 × 12 push-ups, 3 × 30s plank, 5 min stretching                │
+│                                                                  │
+│  Notes                                                           │
+│   ┌──────────────────────────────────────────────────────┐       │
+│   │  🔒 This will be a private note (only you see it).   │       │
+│   │     The schedule is read-only.                       │       │
+│   └──────────────────────────────────────────────────────┘       │
+│   ┌──────────────────────────────────────────────────────┐       │
+│   │ did 5 extra reps today, felt good                    │       │
+│   │                                                      │       │
+│   │                                                      │       │
+│   └──────────────────────────────────────────────────────┘       │
+│                                                                  │
+│              [ Cancel ]                  [   Save note   ]       │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**ASCII mockup — priority-override sheet:**
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  ━━                                                              │
+│                                                                  │
+│  Override priority — Workouts                                    │
+│                                                                  │
+│  The schedule's author set this calendar's priority to 700.      │
+│  You can override it just for your device.                       │
+│                                                                  │
+│   1 ├──────────────────────────●───────────────────┤  1000       │
+│                              850                                 │
+│                                                                  │
+│   [ Clear override ]                     [   Save   ]            │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**Tradeoffs resolved inline.**
+
+- *Always-visible private-note indicator vs. hover-reveal.* Hover
+  isn't a real Android gesture; long-press is too discoverable for a
+  consequence-bearing distinction (public comment vs. private note).
+  Always-visible wins — the strip is one line and the wording is
+  short.
+- *Hide vs. delete on gifted content.* Delete is impossible (read-only
+  source). Hide is the right primitive — reversible, local, no
+  surprise. The Settings → "Hidden events" recovery surface ensures
+  the user can always undo.
+- *Padlock-with-circle as shared badge.* The alternative — using the
+  source-repo's avatar — was rejected because the avatar would compete
+  with the calendar color stripe and crowd the chip. A neutral 12dp
+  icon is the floor.
+- *Coalesce-rapid-toggles.* Doing it at the UI layer (not the
+  storage layer) keeps the storage layer idempotent and the UI
+  responsive; no race between filesystem and view-model.
+
+---
+
+## UI-KK — Receiving-repo and `references.toml` UI
+
+`decisions.md` D.42, D.43. `main.md` Phases MM (deep-link) and NN
+(`references.toml` manifest).
+
+**Design center.** The "Add a gifted schedule" screen and the
+references-prompt sheet are used both at first-launch (UI-GG) and
+when an existing user adds another gifted repo. Both surfaces MUST
+be DRY across paths. Required-references get a persistent banner so
+the user can't quietly miss a manifest's hard dependency.
+
+**Sub-steps:**
+
+- [ ] **UI-KK.1** Add-gifted-repo screen (the reusable one). The same
+  composable as UI-GG.2's screen, parameterized by:
+  - `entryPoint`: `FIRST_LAUNCH` | `RUNNING_APP`.
+  - In `FIRST_LAUNCH`, "Cancel" exits the activity.
+  - In `RUNNING_APP`, "Cancel" pops the back-stack to wherever the
+    user came from (Settings → Repos → "+ Add a gifted schedule", or
+    the top-bar repo-switcher → "Add a gifted schedule" in simplified
+    mode).
+  All other behavior identical: heading, mode chip, auth status,
+  Accept/Cancel buttons.
+
+- [ ] **UI-KK.2** References-prompt sheet. Triggered after a successful
+  clone if the cloned repo contains `.strictlykeptboy/references.toml`
+  with one or more `[[reference]]` entries. Renders a
+  `ModalBottomSheet`:
+  - Heading: "This schedule references <N> other schedules".
+  - Body line: "Want to add them too? You can change this any time.".
+  - A `LazyColumn` of `ListItem` rows, one per reference:
+    - Leading: a small generated avatar (deterministic from URL hash —
+      a colored letter circle, like Gmail's letter avatars).
+    - Headline: the reference's `label`.
+    - Supporting line 1: `description` if present, else the URL.
+    - Supporting line 2: priority badge ("High" / "Normal" / "Low") +
+      mode chip ("Read-only" / "Read-write" / "Pull-only") + (if
+      `required = true`) a small red asterisk with helper text
+      "required".
+    - Trailing: a `Switch` defaulting to the entry's `default_active`.
+      Required entries' switches are non-toggleable (locked on).
+  - Action row: `OutlinedButton("Skip for now")` +
+    `Button("Add selected")`.
+  - The "Skip for now" path still respects `required = true` entries:
+    a `Snackbar("N required schedules will keep prompting until added")`
+    appears, and the persistent banner (UI-KK.3) activates.
+
+- [ ] **UI-KK.3** Required-references banner. A persistent `Card`
+  pinned to the top of the schedule view (above the day timeline)
+  whenever any `required = true` reference from a configured repo's
+  `references.toml` is not yet added. Content:
+  - Icon: ⚠️.
+  - Headline: "<N> schedule<s> need to be added".
+  - Body: "<repo label> depends on <other-repo label>" (lists up to
+    three; "+N more" if longer).
+  - Trailing: `Button("Add now")` → re-opens UI-KK.2's references-prompt
+    sheet with only the missing required entries pre-filtered.
+  Banner dismiss is **not** available — the only way to clear it is to
+  add the required repos or remove the parent repo. Repo-removal
+  prompts: "<parent repo> required <other-repo>; remove anyway?".
+
+- [ ] **UI-KK.4** References indicator in repo settings. In full mode,
+  Settings → Repos → tap repo → repo-detail screen → new section
+  "References" listing every entry from this repo's `references.toml`
+  with state badges:
+  - "✓ added" (green) — reference is configured and synced.
+  - "○ not added" (neutral) — user skipped.
+  - "✗ not-found" (red) — clone attempted and 404'd.
+  - "* required" (red asterisk prefix) — overlays whichever state.
+  Each row tap → opens a small menu: "Add", "Re-clone", "Open repo
+  settings" (if added). The section is omitted entirely if the repo
+  has no `references.toml`.
+
+- [ ] **UI-KK.5** Mode-aware "+ Add a gifted schedule" entry.
+  - In **simplified mode**, the repo switcher (top bar in UI-FF.4) is
+    a bottom sheet; its bottom row is "Add a gifted schedule" routing
+    to UI-KK.1 with `entryPoint = RUNNING_APP`.
+  - In **full mode**, Settings → Repos has a row "+ Add a gifted
+    schedule" alongside the existing "+ Add a repo" row (which uses
+    the Round 1 add-repo flow for authoring). Both routes lead to the
+    correct screens.
+
+- [ ] **UI-KK.6** Manifest-changed re-prompt. On sync, if a configured
+  repo's `references.toml` has changed since the last sync (added
+  entries with `default_active = true`, or removed entries), a one-time
+  `Snackbar` appears: "<repo label>'s references changed. Review?" →
+  `Action("Review")` opens UI-KK.2 filtered to the delta. The snackbar
+  is suppressed if the only change is descriptive (label/description
+  edits with no add/remove).
+
+- [ ] **UI-KK.7** Empty-state for references-prompt. When the
+  cloned repo has no `references.toml`, the references-prompt sheet
+  never appears; the flow proceeds straight to the landing transition
+  (UI-GG.5). No empty-state UI — silence is the empty state.
+
+- [ ] **UI-KK.8** Cross-link back to `main.md` Phases MM (deep-link
+  registration), NN (`references.toml`), and `shared-schedules.md`
+  Phase SH-F (reference cascade semantics).
+
+**ASCII mockup — references-prompt sheet:**
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  ━━                                                              │
+│                                                                  │
+│  This schedule references 2 other schedules                      │
+│  Want to add them too? You can change this any time.             │
+│                                                                  │
+│   ┌─────────────────────────────────────────────────────────┐    │
+│   │ (M)  Master's check-ins                          ● ON   │    │
+│   │      Daily wellness check-ins                            │    │
+│   │      ( High )  ( 👁 Read-only )                          │    │
+│   └─────────────────────────────────────────────────────────┘    │
+│                                                                  │
+│   ┌─────────────────────────────────────────────────────────┐    │
+│   │ (S)  Soccer season                               ● ON   │    │
+│   │      Practices and matches                               │    │
+│   │      ( Normal )  ( 🔁 Pull-only )                        │    │
+│   └─────────────────────────────────────────────────────────┘    │
+│                                                                  │
+│   [ Skip for now ]                       [  Add selected  ]      │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**ASCII mockup — required-references banner:**
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│ [🦊 Master's schedule ▾]   [Good Boy Mode]   [🔄]   [⋮]          │
+├──────────────────────────────────────────────────────────────────┤
+│  ┌───────────────────────────────────────────────────────────┐   │
+│  │ ⚠️  1 schedule needs to be added                          │   │
+│  │    Master's schedule requires Master's check-ins          │   │
+│  │                                              [ Add now ]  │   │
+│  └───────────────────────────────────────────────────────────┘   │
+│                                                                  │
+│   Today · Mon May 11                                             │
+│   ┌───────────────────────────────────────────────────────────┐  │
+│   │  07:00 ▍ Morning workout                            🔓    │  │
+│   └───────────────────────────────────────────────────────────┘  │
+│   …                                                              │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**ASCII mockup — references indicator in repo settings:**
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  ←     Master's schedule                                         │
+├──────────────────────────────────────────────────────────────────┤
+│   …                                                              │
+│   References                                                     │
+│   ───────────────────────────────────────────────────────────    │
+│   ✓ added       Master's check-ins                               │
+│                 (High · Read-only)                               │
+│   ───────────────────────────────────────────────────────────    │
+│   * required ○ not added    Soccer season                        │
+│                              (Normal · Pull-only)                │
+│   ───────────────────────────────────────────────────────────    │
+│   ✗ not-found   Old workouts archive                             │
+│                 (Low · Read-only)                                │
+│   ───────────────────────────────────────────────────────────    │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**Tradeoffs resolved inline.**
+
+- *Banner non-dismissable for required refs.* Allowing dismiss would
+  defeat the `required = true` contract (the sharer marked it required
+  precisely because the parent schedule doesn't make sense without it).
+  The only escape valves are "Add now" or "Remove parent repo".
+- *Auto-add vs. always-prompt.* D.43 explicitly says "offer (never
+  auto-import) other repos as siblings". The default-on-toggle within
+  the prompt sheet is the right balance: the prompt is the consent
+  point; the toggle pre-fills based on the manifest author's intent.
+- *Generated letter-avatar vs. fetched repo-icon.* Fetching repo icons
+  from providers at prompt time would block the sheet on network. A
+  deterministic colored-letter avatar (Gmail-style) renders instantly
+  and reads as "I made this up locally" rather than "I'm pulling
+  someone's branding".
+- *Manifest-change snackbar throttle.* One snackbar per sync per repo
+  (not per entry) — prevents notification spam when a sharer touches
+  their manifest casually.
+
+---
+
+## Round 3 done-when
+
+Round 3 of this document is "done" (Status: ✅ DONE) when:
+
+- Every phase UI-FF through UI-KK has its sub-step checkboxes ticked.
+- Every ASCII mockup in this section has been re-validated against the
+  implemented composable on the AVD.
+- The "Tradeoffs resolved inline" lists in each phase have been re-read
+  at v1 ship; any reversed call has been logged with the date + reason.
+- The Round-3 phase index above has been cross-checked against
+  `main.md` Phases MM–TT (no phase referenced here without a parent
+  phase in main.md; no orphan main.md phase without UI coverage).

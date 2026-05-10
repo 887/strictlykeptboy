@@ -766,6 +766,398 @@ Anything else from the original v2-deferral pile is now in v1 scope.
 
 ---
 
+---
+
+# Round 3 — shared schedules + simplified ("good boy") mode (D.41 onward)
+
+After Round 2, the user named a use case that the existing scope didn't
+optimize for: **a sub (or any recipient — student, employee, athlete,
+team member) receives a complete schedule from someone else (Dom, coach,
+teacher, manager) without ever having used a calendar app before, by
+scanning a QR or opening a deep-link. The recipient consumes the
+schedule; they don't have to author one. Later, they can grow into
+authoring their own without losing the gifted schedules.**
+
+The Dom never needs write access to the sub's repo. The sub never
+edits the Dom's repo. Cross-repo state lives in the recipient's
+repo. **Zero merge conflicts by design** — the model extends the
+Round 1 one-file-per-entity invariant across repos.
+
+License-clean throughout (Round 2 constraint stands).
+
+## D.41 — Shared schedules: a primary use case, not a side feature
+
+The app supports two equally-first-class entry paths:
+
+- **Authoring path** — user creates a repo, applies templates, builds
+  their schedule. (Round 1 wizard.)
+- **Receiving path** — user receives a deep-link / QR from someone
+  else, opens it, the app clones the referenced repo as read-only,
+  drops them into the schedule view. **No wizard. No template
+  picker. No repo creation.** (Round 3.)
+
+Both paths converge: receiving users can later add their own repo
+without losing the gifted schedules. Authoring users can share their
+repos as gifts.
+
+Use-case anchors (per user direction):
+
+1. Dom prepares a "Schedule from Master" repo and sends sub a link.
+   Sub installs the app, taps the link, has a complete kinky-coded
+   schedule with workouts, check-ins, chores. Sub never sees the
+   wizard.
+2. Personal trainer sends a client a "12-week strength program" link.
+   Client installs app, taps link, has a workout calendar with daily
+   reminders. Client never wrote calendar code.
+3. Sports club sends members a season calendar. Members tap link,
+   get a complete season schedule overlaid on whatever else they
+   have.
+4. School / employer sends a structured calendar to a student /
+   employee.
+
+Every one of these scenarios should be **one tap from QR to working
+schedule**, including auth for private repos.
+
+## D.42 — Deep-link + app protocol registration (in v1)
+
+The app registers two intent filters:
+
+- **Custom scheme**: `strictlykeptboy://...`
+  - `strictlykeptboy://add?url=git@github.com:dom/private-cal.git&label=Schedule+from+Master&mode=read-only#token=<one-shot-secret>`
+- **Universal link**: `https://strictlykeptboy.app/add?...`
+  - Verified via Android App Links (Digital Asset Links JSON at the apex domain).
+
+URL parameters:
+
+- `url` (required, may repeat) — git URL(s) to clone. Multiple URLs in
+  one link supported (bulk-add a repo bundle).
+- `label` (optional) — suggested display name for each repo. If
+  multiple `url`, multiple `label` indices line up by position.
+- `mode` (optional) — `read-only` (default) | `read-write` |
+  `pull-only` (CalDAV-like one-way mirror).
+- `priority` (optional) — `high` | `normal` | `low` — sets a uniform
+  display-priority modifier for all calendars in the imported repo.
+- `via` (optional) — short author label, e.g. `via=Master+%40` for
+  attribution on the import-confirm screen.
+- `references` (optional) — `auto` | `prompt` (default) | `ignore` —
+  what to do with the referenced repo's own `references.toml` (see
+  D.43).
+
+Sensitive data goes in the URL **fragment** (after `#`), which Android
+never sends in HTTP requests and is not logged in normal app
+analytics:
+
+- `token` — one-shot SSH deploy key or fine-grained PAT for cloning
+  a private repo. Embedded by the share-side at link generation;
+  consumed once at receive-side; cleared after first use.
+- `expires` — ISO timestamp; receive-side refuses link past expiry.
+
+QR codes encode the same URL. **Same intent both directions** — the
+app's deep-link handler resolves either form to the same add-repo
+flow.
+
+## D.43 — `references.toml` manifest for cross-repo overlay
+
+Path: `.strictlykeptboy/references.toml` in any repo.
+
+This is **not** git submodules. (User had explicitly bad experiences
+with submodules. We are not relitigating that.) It is an
+**app-level manifest** that the app reads when scanning a repo and
+uses to **offer** (never auto-import) other repos as siblings.
+
+Schema:
+
+```toml
+schema_version = 1
+
+[[reference]]
+url = "git@github.com:dom/master-schedule.git"
+label = "Master's schedule"  # suggested display name
+priority_modifier = "high"   # "high" | "normal" | "low"
+mode = "read-only"           # "read-only" | "read-write" | "pull-only"
+required = false             # if true, app warns when reference is not added
+credential_hint = "ssh-key:fingerprint:abc123"  # optional, helps auth UX
+description = "Workouts, check-ins, weekly assignments."
+default_active = true        # whether to enable the import by default
+
+[[reference]]
+url = "https://github.com/our-soccer-club/season-cal.git"
+label = "Soccer season"
+priority_modifier = "normal"
+mode = "pull-only"
+default_active = true
+```
+
+App behavior:
+
+- When a user adds a repo, app reads its `references.toml` and
+  presents a "this repo references N other repos — add them too?"
+  screen with per-reference toggles.
+- Already-configured repos (by URL hash) auto-dedup and show as
+  "already added".
+- Each reference is a **separate clone** in `~/.strictlykeptboy/repos/<id>/`.
+  Independent git trees. Independent sync. Independent credentials.
+- Removing a reference at the manifest level does NOT auto-uninstall;
+  app prompts user to remove or keep.
+
+## D.44 — Cross-repo state files: the core unlock
+
+When User-Sub interacts with content from Repo-Dom (added as a
+reference, read-only), the result of the interaction is **stored in
+User-Sub's own primary repo** (or `_local/state/` if they have no
+primary yet).
+
+Path: `state/<source-repo-id>/<entity-id>.<state-kind>.toml`
+
+- `<source-repo-id>` = stable hash (SHA-256 prefix) of the source
+  repo's normalized URL. Survives renames.
+- `<entity-id>` = UUIDv7 of the source entity (event, task, recurrence,
+  comment).
+- `<state-kind>` = `done` | `snooze` | `note` | `reaction` |
+  `priority-override` | `mute` | `hide`.
+
+Example — sub marks a Dom-assigned workout task as done:
+
+```
+~/.strictlykeptboy/repos/sub-own/state/
+  abc123_dom-repo/
+    01HZ-WORKOUT-MONDAY.done.toml
+```
+
+```toml
++++
+schema_version = 1
+state_kind = "done"
+source_repo_url = "git@github.com:dom/master-schedule.git"
+source_entity_id = "01HZ-WORKOUT-MONDAY"
+source_entity_kind = "task"
+author = "sub"
+done_at = "2026-05-11T07:30:00+02:00"
++++
+
+Body free-form. The sub can add a note ("did 5 extra reps", a photo
+attachment ref, etc.). Optional.
+```
+
+Resolver merges state-files with source entities at view time. Done
+state visually marks the source task as completed without ever
+touching the source repo.
+
+State files for ALL interactions follow this shape:
+
+- **Done** — `done_at`, optional body for sub's note.
+- **Snooze** — `until` ISO timestamp.
+- **Note** — private annotation (only visible to the state-file's repo).
+- **Reaction** — emoji + author. Stored as the sub's private record of
+  their reaction; can become a comment in the source repo if write
+  access exists.
+- **Priority-override** — `priority` integer; overrides source for
+  display only on this device's repos.
+- **Mute** — notifications suppressed for this entity.
+- **Hide** — entity not rendered (sub doesn't want to see Dom's "weigh-in"
+  task on the schedule view).
+
+**Why this works:**
+
+- Source repos stay append-only-by-author. Zero merge conflicts on
+  source.
+- State repos hold all per-receiver mutations. Conflicts on state are
+  vanishingly rare and idempotent (latest-wins per state file).
+- The model scales: same primitive handles Dom-sub, coach-client,
+  team-member, school-student.
+
+CLI: `skb state set --done <entity-id>` / `skb state set --priority-override <calendar-id> <priority>` etc.
+
+## D.45 — Simplified ("good boy") mode
+
+A UI-only mode that hides advanced surfaces. **Not a feature lock** —
+the user can always access full mode in one tap.
+
+What's visible in simplified mode:
+
+- Schedule view (single primary view: Day or "Today" depending on
+  user preference at first launch).
+- Task list (combined view).
+- Sync button.
+- Comment composer on event detail (if comments enabled in source).
+- Settings → "Switch to full mode" + minimal toggles (theme, mode label).
+
+What's hidden in simplified mode:
+
+- Repo management UI (still works via deep-link receive; can't manage
+  from inside the app).
+- Identity creation / GPG / signing.
+- Template picker / wizard.
+- All advanced sync settings.
+- Multi-view tabs (Week / Month / Year / Timebox).
+- The Together tab.
+
+**Mode label** is user-selectable from a list at first-use:
+
+- "Simplified" (Play-Store default)
+- "Focused"
+- "Received Schedules"
+- "Good Boy Mode"
+- "Good Girl Mode"
+- "Good Pet Mode"
+- "Kept Mode"
+- "Other..." (free text)
+
+The user picks once; can change in Settings → Appearance → Mode label.
+Play Store screenshots use "Simplified" exclusively. The hint-but-not-blatant
+positioning per the project's broader register-discipline (see
+`personalities` repo, `CLAUDE.md` "two surfaces" framing).
+
+**Auto-entry into simplified mode:** when the user has only read-only
+repos configured AND no own repo, app boots into simplified mode by
+default. The Settings → "Switch to full mode" toggle is one-tap-
+reversible.
+
+## D.46 — First-launch deep-link bootstrap
+
+If the app is launched via a `strictlykeptboy://add?...` intent AND
+no repos are configured:
+
+1. Skip the welcome wizard entirely.
+2. Show the "Add gifted repo" screen with URL prefilled.
+3. If the URL contains a `#token=` fragment, attempt to clone with
+   that credential first; on success, the cred is stored and the
+   token-fragment is wiped from any persisted referrer.
+4. After successful clone:
+   - Boot into simplified mode.
+   - Display schedule view.
+   - Show one-time onboarding card: "Welcome to your schedule.
+     Tap any event for details. <author label> set this up for you.
+     <Tap to learn more / Dismiss>."
+5. If the receiving repo's `references.toml` declares additional
+   repos with `default_active = true`, the app prompts ONCE
+   ("This schedule references N other schedules. Add them?") with
+   per-item toggles. Defaults match each reference's `default_active`.
+
+## D.47 — Evolution path: simplified → own repo
+
+User in simplified mode can grow into authoring without losing
+gifted schedules:
+
+1. In simplified mode, tap "Add my own events" (in event-create FAB or
+   Settings → "Set up your own schedule").
+2. Mini-wizard: 2–3 screens — repo name, provider, auth method.
+3. App creates the new repo, runs an opt-in template-picker (the
+   wizard's role-toggle screen, but skippable with "Just start
+   empty").
+4. App migrates `_local/state/*` into the new repo's `state/` folder.
+5. App writes a `references.toml` in the new repo with all currently-
+   configured gifted repos listed (cementing the relationship for
+   sync across devices).
+6. App keeps the user in simplified mode unless they choose otherwise
+   ("You're set up. Stay in simple mode or switch to full?").
+
+**The reverse path also works**: an authoring user can choose to
+hide everything but a primary view (Settings → "Switch to simplified
+mode"). Useful for focus / single-purpose-device contexts.
+
+## D.48 — Authoring side: share-this-repo flow
+
+In any repo settings: "Share this repo" → opens a share-config sheet:
+
+- **Mode**: read-only (default) / read-write / pull-only.
+- **Suggested label**: text input ("Schedule from Master", etc.).
+- **Suggested priority modifier**: high / normal / low.
+- **Auth method**:
+  - "Recipient adds their own SSH key" (no token in link; sub uploads
+    their key to the provider's collaborator UI).
+  - "Embed a one-shot deploy key" (app generates a read-only deploy
+    key via the provider's API and embeds it in the link fragment;
+    24h expiry).
+  - "Embed a fine-grained PAT" (app generates a read-only PAT and
+    embeds it; 24h expiry).
+  - "Public repo, no auth needed".
+- **Output**:
+  - Copy link.
+  - Save QR (PNG to gallery).
+  - Share via system share sheet.
+
+Provider API requirements:
+
+- **GitHub**: deploy-key creation needs `admin:public_key`; PAT
+  creation needs `admin:public_key` and fine-grained PAT scope.
+  Already in the OAuth scope set per Round 1 D.7.
+- **Forgejo**: equivalent endpoints; same scope set.
+
+CLI: `skb share <repo> [--mode ...] [--auth ...]` → prints the URL.
+
+## D.49 — Multi-repo priority resolution (extends D.5)
+
+Each calendar still owns its `priority` field as authored. The
+resolver applies overrides in this order at render time:
+
+1. **Local override** (per-device): `state/<source-repo-id>/<calendar-id>.priority-override.toml`
+2. **Repo modifier** (from `references.toml` `priority_modifier`):
+   `high` = +200, `normal` = 0, `low` = -200, applied uniformly to
+   every calendar in the imported repo.
+3. **Authored priority** in the source calendar's `calendar.toml`.
+4. Default 500 if none of the above.
+
+Floor / ceiling stays at [1, 1000]. Out-of-range values clamp.
+
+Receiver can also do a global "pin this repo to top" — adds a +500
+modifier to the repo's reference, no per-calendar config needed.
+
+## D.50 — Received-repo credential storage
+
+- **Public repos**: clone over HTTPS anonymously. No credential
+  stored.
+- **Private repos via deep-link deploy key**: key parsed from URL
+  fragment, stored in `EncryptedSharedPreferences` keyed by repo URL
+  hash. Token-fragment wiped from any persisted referrer string.
+- **Private repos via OAuth**: standard Device Flow per D.7.
+- **Private repos via PAT in link**: token parsed from URL fragment,
+  stored encrypted, token-fragment wiped.
+- **Read-only enforcement**: a repo configured as `read-only` at app
+  level **refuses push** even if the credential would allow it.
+  Local edits are queued and never leave the device (Round 2 NS-E
+  semantics extend).
+- **Token expiry**: app refreshes / re-prompts when token expires.
+
+## D.51 — Source-repo-id stability
+
+`source_repo_id` = SHA-256(normalized URL) truncated to 16 hex chars.
+Normalization rules:
+
+- Lowercase.
+- Strip `.git` suffix.
+- Strip trailing slash.
+- For `git@host:owner/repo` and `https://host/owner/repo` — they
+  resolve to the SAME id (the SSH-vs-HTTPS detail is transport, not
+  identity).
+- For renames at the provider side: the old id stays valid until the
+  user explicitly re-binds. App detects "this URL 404s but the
+  source_repo_id has state files" and prompts "the source repo seems
+  to have moved — supply new URL?" with a `skb state rebind <old-id> <new-url>` CLI.
+
+## D.52 — CLI surface additions for Round 3
+
+New `skb` subcommands:
+
+- `skb accept <url-or-qr-file>` — accept a gifted repo from a deep-link
+  URL or by reading a QR PNG. The headless equivalent of the deep-link
+  intent. Used by Claude to bootstrap a repo from a link the user
+  pasted.
+- `skb ref add|list|remove` — manage `references.toml` entries.
+- `skb state set --done|--snooze|--note|--mute|--hide <entity-id>` —
+  write state files.
+- `skb state list [--source <repo-id>]` — list state files for a
+  repo.
+- `skb state rebind <old-id> <new-url>` — fix a renamed source repo.
+- `skb share [<repo>] [--mode ...]` — print a share-link (or QR
+  PNG path if `--qr` given) for the named repo.
+- `skb mode simplified|full|toggle` — switch display mode.
+
+All subject to the cross-cutting design rules in CLI-tooling (atomic
+writes, auto-commits, `--json`, etc.).
+
+---
+
 # Subagent task assignment
 
 Six parallel Opus subagents flesh out the deep-dive planning docs.
@@ -802,3 +1194,14 @@ the resolution inline, and continue.
 
 Round 2 agents follow the same "elaborate, don't decide" rule. They
 treat `decisions.md` Round 2 (D.23–D.40) as locked.
+
+## Round 3 — shared schedules subagents
+
+| Doc | Action | Scope | Subagent |
+|---|---|---|---|
+| `shared-schedules.md` | NEW | Holistic feature spec — deep-link/QR/protocol, references.toml semantics, simplified mode behavior, authoring share-flow, evolution path, end-to-end UX scenarios. Phase prefix `SH-`. | SA-13 |
+| `data-model.md` | EXTEND | Phases DM-Q+ — `references.toml` schema, `state/<source-repo-id>/<entity-id>.<kind>.toml` schemas, source-repo-id derivation, conflict-free state-file design | SA-14 |
+| `ui-spec.md` | EXTEND | Phases UI-FF+ — simplified-mode chrome, share-this-repo + QR generation UI, deep-link receive screen, first-launch routing, "add my own repo" mini-wizard, mode-label picker | SA-15 |
+| `resolver.md` | EXTEND | Phases RV-L+ — cross-repo state-file overlay logic, multi-repo priority resolution with modifiers, source-repo-id matching, dedup logic | SA-16 |
+
+Round 3 agents treat D.41–D.52 as locked.

@@ -2341,6 +2341,988 @@ section below.
 
 ---
 
+# Round 3 — extensions (Phases DM-Q through DM-V)
+
+Round 3 (decisions.md D.41–D.52) adds **shared schedules**: a sub /
+recipient receives a fully-authored repo from someone else, consumes it,
+and records their interactions in their OWN repo (or a pre-own-repo
+local bucket) via per-source state files. Source repos stay
+append-only-by-author; recipient mutations live elsewhere; **zero merge
+conflicts by design**.
+
+The phases below extend `data-model.md` with:
+
+- **DM-Q** — `references.toml` manifest schema (D.43)
+- **DM-R** — Cross-repo state file schemas (D.44)
+- **DM-S** — Source-repo-id derivation (D.51)
+- **DM-T** — Pre-own-repo `_local/state/` bucket (D.47)
+- **DM-U** — Pre-own-repo identity (`local-identity.toml`) (extends D.15)
+- **DM-V** — Updated deferrals (surgical addition)
+
+Cross-link: these phases back the master-plan phases
+[MM (deep-link)](main.md#phase-mm--deep-link--app-protocol-registration),
+[NN (references.toml)](main.md#phase-nn--referencestoml-manifest),
+[OO (cross-repo state)](main.md#phase-oo--cross-repo-state-files-statesource-repo-id),
+and [TT (multi-repo priority)](main.md#phase-tt--multi-repo-priority-resolution-extends-phase-e--aa).
+
+---
+
+## Phase DM-Q — `references.toml` manifest schema (D.43)
+
+A repo can declare other repos as **siblings to offer at add-time**.
+Not git submodules. Not auto-cloned. Just an app-level manifest that
+the receive-flow uses to populate the "add these too?" checklist.
+
+Location: `.strictlykeptboy/references.toml` at the root of any repo.
+Reader graceful: missing or empty file = "no references" (no error).
+
+### Schema
+
+```toml
++++
+schema_version = 1
++++
+
+[[reference]]
+url = "git@github.com:dom/master-schedule.git"
+label = "Master's schedule"           # suggested display name; recipient can override
+priority_modifier = "high"            # "high" | "normal" | "low"; +200 / 0 / -200 to all calendars
+mode = "read-only"                    # "read-only" | "read-write" | "pull-only"
+required = false                      # true → banner warns if not added
+default_active = true                 # recipient picker default
+description = "Workouts, check-ins, weekly assignments."   # one-line picker UI description
+credential_hint = "ssh-key:fingerprint:abc123"             # optional; helps auth UX
+recommended_calendars = ["Workouts", "Check-ins"]          # optional subset of source calendar NAMES
+order_priority = 10                  # picker ordering; lower = higher in list
+```
+
+The outer `+++` frontmatter fences mirror the rest of the schema family
+(events, tasks, identities) so the file behaves identically to other
+TOML-frontmatter files for tooling that already understands the family.
+Body below the closing `+++` is reserved (future per-manifest free-form
+notes); v1 readers ignore it.
+
+### Field rules
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `url` | string | yes | Must parse as a valid git URL (SSH `git@host:owner/repo` or HTTPS `https://host/owner/repo`, with or without `.git`). |
+| `label` | string | no | Suggested display name; recipient can override on add. Empty → app falls back to the URL's `owner/repo`. |
+| `priority_modifier` | enum | no | One of `high`, `normal`, `low`. Default `normal`. |
+| `mode` | enum | no | One of `read-only`, `read-write`, `pull-only`. Default `read-only`. |
+| `required` | bool | no | If true, app shows a top-bar banner when this reference is not currently added. Default false. |
+| `default_active` | bool | no | Whether the picker checkbox is pre-ticked. Default true. |
+| `description` | string | no | One-line description shown in picker. ≤ 160 chars enforced (tooltip if longer). |
+| `credential_hint` | string | no | Free-form. Suggested forms: `ssh-key:fingerprint:<fp>`, `oauth:github`, `pat:provider`. App treats as advisory only. |
+| `recommended_calendars` | string[] | no | Subset of source repo calendar **names** (not IDs — see rationale below). |
+| `order_priority` | int | no | Display order in the picker, ascending. Default 100. |
+
+#### Why `recommended_calendars` uses names, not IDs
+
+UUIDv7 calendar IDs in the source repo are opaque and would force the
+authoring side to look them up. **Names are stable for the human author**
+(the Dom knows their calendar is called "Workouts" without checking the
+filesystem). Trade-off: if the source repo renames a calendar, the
+`recommended_calendars` list goes stale. The receiver app handles this
+gracefully:
+
+- At add-time scan, the app matches `recommended_calendars` entries
+  against source calendar `name` fields.
+- Misses are silently skipped and surfaced once in the broken-entries
+  tray (`skb verify` reports them) with hint "rename detected; update
+  references.toml on the source side".
+- No hard failure; the picker still works with whatever matched.
+
+Inline tradeoff resolved: **names over IDs** for author ergonomics; the
+gracefully-degrading miss-handling absorbs the rename risk.
+
+### Read path
+
+```
+1. App scans repo on open / on HEAD change.
+2. If .strictlykeptboy/references.toml exists, parse it via ktoml.
+3. Cache the parsed [[reference]] list in Room table `repo_references`:
+     (repo_id, ordinal, url, label, priority_modifier, mode, required,
+      default_active, description, credential_hint,
+      recommended_calendars_json, order_priority)
+   PK: (repo_id, ordinal).
+4. Invalidate on HEAD change touching .strictlykeptboy/references.toml.
+5. If file is missing → empty result set (no error).
+6. If file parses but a [[reference]] entry is malformed (e.g. invalid
+   `mode` enum, unparseable url), the entry is dropped and surfaced in
+   the broken-entries tray. Other valid entries still load.
+```
+
+### Write path
+
+Append/remove via `skb ref add|remove`. v1 rewrites the whole file (no
+comment preservation; same deferral as DM-A.4), preserving the order of
+existing `[[reference]]` blocks and appending new ones at the end.
+`skb ref add` accepts the same field set as the schema.
+
+```
+skb ref add \
+  --url git@github.com:dom/master-schedule.git \
+  --label "Master's schedule" \
+  --priority-modifier high \
+  --mode read-only \
+  --description "Workouts, check-ins, weekly assignments."
+
+skb ref remove --url git@github.com:dom/master-schedule.git
+skb ref list [--json]
+```
+
+Auto-commit message: `add reference "<label>" → <url>` /
+`remove reference "<label>" from references.toml`.
+
+### Validation rules
+
+The validator (shared by app + `skb`) refuses to write when:
+
+- `url` is missing or fails URL parsing.
+- `url`, after normalization (DM-S), equals the **current repo's** URL
+  (self-reference). Refused with `cycle: self-reference`.
+- `url`, after normalization, would produce a cycle in the reference
+  graph reachable from the current repo. Cycle detection walks the
+  graph BFS-style across already-configured repos on this device:
+  ```
+  fn would_cycle(new_url):
+    target = normalize(new_url)
+    if target == normalize(current_repo_url): return true
+    visited = {normalize(current_repo_url)}
+    queue = [target]
+    while queue not empty:
+      u = queue.pop()
+      if u in visited: return true
+      visited.add(u)
+      refs = read_references_for_repo_url(u)  # from Room cache
+      for r in refs:
+        queue.push(normalize(r.url))
+    return false
+  ```
+  The walk is bounded by the count of currently-configured repos on the
+  device; references to repos NOT configured on this device cannot
+  participate in a cycle from this device's perspective (we just can't
+  see them — accepted).
+- `mode` is not one of `read-only`, `read-write`, `pull-only`.
+- `priority_modifier` is not one of `high`, `normal`, `low`.
+- `order_priority` is not an integer.
+
+### Worked example
+
+A sub's own repo declares the Dom's master schedule, the soccer club's
+season schedule, and a personal trainer's program:
+
+```toml
++++
+schema_version = 1
++++
+
+[[reference]]
+url = "git@github.com:dom/master-schedule.git"
+label = "Master's schedule"
+priority_modifier = "high"
+mode = "read-only"
+required = true
+default_active = true
+description = "Workouts, check-ins, weekly assignments. Read-only."
+credential_hint = "ssh-key:fingerprint:abc123"
+recommended_calendars = ["Workouts", "Check-ins", "Chores"]
+order_priority = 10
+
+[[reference]]
+url = "https://github.com/our-soccer-club/season-cal.git"
+label = "Soccer season"
+priority_modifier = "normal"
+mode = "pull-only"
+required = false
+default_active = true
+description = "Match days, training, away games."
+recommended_calendars = ["Matches", "Training"]
+order_priority = 20
+
+[[reference]]
+url = "git@gitea.example.com:trainer-jane/strength-12wk.git"
+label = "12-week strength program"
+priority_modifier = "normal"
+mode = "read-only"
+required = false
+default_active = true
+description = "Daily lifts + accessory work."
+credential_hint = "ssh-key:fingerprint:def456"
+order_priority = 30
+```
+
+### DM-Q sub-steps
+
+- [ ] **DM-Q.1** Implement ktoml parser for `references.toml` with
+      schema validation and graceful empty-file handling.
+- [ ] **DM-Q.2** Implement Room cache table `repo_references` with
+      the column set above and HEAD-keyed invalidation.
+- [ ] **DM-Q.3** Implement the cycle-detection BFS in the shared
+      validator (app + `skb`). Unit-test self-reference, two-cycle,
+      three-cycle, and the "unseen repo" off-device case.
+- [ ] **DM-Q.4** Implement `skb ref add|remove|list`. `--json` output
+      for AI consumers.
+- [ ] **DM-Q.5** Implement `recommended_calendars` name-resolution at
+      add-time scan with miss-tray surfacing.
+- [ ] **DM-Q.6** Write the worked-example fixture into the demo
+      seed (templates-demo-wizard) so demo-sub's repo ships a
+      `references.toml` pointing at demo-dom.
+- [ ] **DM-Q.7** Add validator coverage for malformed `[[reference]]`
+      blocks (drop one, keep others) and broken-entries tray entries.
+- [ ] **DM-Q.8** Document the rename-tolerance contract for
+      `recommended_calendars` in AGENTS.md so Claude-side editors
+      don't try to "fix" calendar IDs in the manifest.
+
+---
+
+## Phase DM-R — Cross-repo state file schemas (D.44)
+
+When the recipient interacts with a source-repo entity (Dom's task,
+coach's event, club's training session), the result of the interaction
+is **never written into the source repo**. It is written into the
+recipient's OWN repo at:
+
+```
+state/<source-repo-id>/<entity-id>.<state-kind>.toml
+```
+
+If the recipient has no own repo yet, the same path lives under
+`~/.strictlykeptboy/local-state/` (see DM-T).
+
+`<state-kind>` is one of: `done`, `snooze`, `note`, `reaction`,
+`priority-override`, `mute`, `hide`. **One file per (source-repo,
+entity, kind) tuple** — same one-file-per-entity invariant that powers
+the Round 1 conflict-free design, applied to state.
+
+### Common header on every state file
+
+Every state file's TOML frontmatter carries:
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `schema_version` | int | yes | `1` for v1. |
+| `state_kind` | enum | yes | One of the seven kinds above. |
+| `source_repo_url` | string | yes | Canonical URL (the one used to clone). |
+| `source_repo_id` | string | yes | 16-hex SHA-256 prefix per DM-S; MUST equal `derive_id(source_repo_url)`. |
+| `source_entity_id` | string | yes | UUIDv7 of the source entity. Opaque from this app's perspective. |
+| `source_entity_kind` | enum | yes | `event` / `task` / `recurrence` / `calendar` / `todolist` / `comment`. |
+| `author` | string | yes | `<person-id>` for the actor (DM-U if pre-own-repo). |
+| `device_id` | string | no | UUID for the writing device. Recommended on snooze, optional elsewhere. |
+| `created_at` | ISO 8601 | yes (most kinds) | With offset. Some kinds use a more specific name (`done_at`, `muted_at`). |
+
+Body (after the closing `+++`) is free-form Markdown for `done`,
+`snooze`, and `note`. Other kinds have empty bodies in v1 (writer skips
+emitting the closing `+++` and body when the kind is body-less, but the
+reader accepts either form).
+
+### `done` — task completion
+
+```toml
++++
+schema_version = 1
+state_kind = "done"
+source_repo_url = "git@github.com:dom/master-schedule.git"
+source_repo_id = "abc123def4567890"
+source_entity_id = "01HZ-WORKOUT-MONDAY"
+source_entity_kind = "task"
+author = "sub"
+done_at = "2026-05-11T07:30:00+02:00"
++++
+
+Did the full set + 5 extra reps. Felt good.
+```
+
+Filename: `01HZ-WORKOUT-MONDAY.done.toml` under
+`state/abc123def4567890/`.
+
+Body is optional free-form note about the completion. The resolver
+treats presence of the file as authoritative for the "done" state of
+the source task; body is shown in the event-detail sheet as the
+recipient's private note.
+
+### `snooze` — alarm snoozed
+
+```toml
++++
+schema_version = 1
+state_kind = "snooze"
+source_repo_url = "git@github.com:dom/master-schedule.git"
+source_repo_id = "abc123def4567890"
+source_entity_id = "01HZ-EVENT-DENTIST"
+source_entity_kind = "event"
+author = "sub"
+device_id = "device-uuid-xyz"
+alarm_lead_time = "15m"
+until = "2026-05-11T14:15:00+02:00"
+created_at = "2026-05-11T13:45:00+02:00"
++++
+
+Snoozed once on the way out the door.
+```
+
+Notes:
+
+- `alarm_lead_time` identifies which of the source event's scheduled
+  alarms is snoozed (matches the lead-time strings in the event's
+  `notifications = [...]` list per D.14).
+- `until` is the wake-time. The resolver fires no notifications for
+  this `(source_entity_id, alarm_lead_time)` pair until `now >= until`.
+- Snooze is idempotent: snoozing again rewrites the file with a new
+  `until`. **Latest write wins.**
+
+### `note` — private annotation
+
+```toml
++++
+schema_version = 1
+state_kind = "note"
+source_repo_url = "git@github.com:dom/master-schedule.git"
+source_repo_id = "abc123def4567890"
+source_entity_id = "01HZ-EVENT-DINNER"
+source_entity_kind = "event"
+author = "sub"
+created_at = "2026-05-11T18:00:00+02:00"
++++
+
+Master expects me to wear the black collar to this. Don't push as a
+comment — keep private.
+```
+
+Body is the note text (Markdown). Notes are **never** pushed to the
+source repo as comments; they are private to the recipient's repo. The
+UI shows them in the event-detail sheet with a "private to you" badge.
+
+### `reaction` — emoji acknowledgment
+
+```toml
++++
+schema_version = 1
+state_kind = "reaction"
+source_repo_url = "git@github.com:dom/master-schedule.git"
+source_repo_id = "abc123def4567890"
+source_entity_id = "01HZ-EVENT-INSPECTION"
+source_entity_kind = "event"
+author = "sub"
+emoji = "✅"
+created_at = "2026-05-11T20:00:00+02:00"
++++
+```
+
+`emoji` is a Unicode emoji string. v1 accepts any string up to 16
+code points — display layer truncates if needed. Reactions are private
+unless the source-repo mode is `read-write` AND the user explicitly
+elects "mirror this reaction as a comment in the source repo" — that
+mirror is a separate action that writes a comment file per D.29 in the
+source repo and does NOT obviate this state file.
+
+### `priority-override` — per-calendar local priority
+
+```toml
++++
+schema_version = 1
+state_kind = "priority-override"
+source_repo_url = "git@github.com:dom/master-schedule.git"
+source_repo_id = "abc123def4567890"
+source_entity_id = "01HZ-CAL-WORKOUTS"
+source_entity_kind = "calendar"
+author = "sub"
+priority = 750
+created_at = "2026-05-11T08:00:00+02:00"
++++
+```
+
+`priority` is clamped to `[1, 1000]` at write time (out-of-range
+values are clamped, not rejected — same UX as D.49). This override is
+the layer-1 entry in D.49's priority-resolution stack. Files of kind
+`priority-override` target calendars (`source_entity_kind = "calendar"`)
+or todolists (`source_entity_kind = "todolist"`); event-level priority
+overrides are NOT supported in v1 (use mute / hide to drop, or
+priority-bump the whole calendar).
+
+Inline tradeoff resolved: per-event priority-override is rejected
+because (a) D.5 priority lives at the calendar layer in the source
+schema, and (b) flooding `state/` with one priority file per event has
+worse signal-to-noise than promoting a calendar.
+
+### `mute` — notifications suppressed
+
+```toml
++++
+schema_version = 1
+state_kind = "mute"
+source_repo_url = "git@github.com:dom/master-schedule.git"
+source_repo_id = "abc123def4567890"
+source_entity_id = "01HZ-EVENT-WEIGHIN"
+source_entity_kind = "event"
+author = "sub"
+muted_at = "2026-05-11T08:00:00+02:00"
+muted_until = "2026-06-01T00:00:00Z"
++++
+```
+
+- `source_entity_kind` ∈ `{event, task, calendar, todolist, recurrence}` —
+  scope of the mute.
+- `muted_until` is optional. Missing → indefinite (until the file is
+  deleted by `skb state set --unmute …`).
+- For `recurrence` scope, the mute applies to all materialized
+  instances of the rule.
+- For `calendar` / `todolist` scope, the mute applies to all entities
+  within. The resolver evaluates mute scopes in order
+  `event > recurrence > calendar/todolist` — a per-event mute always
+  wins over a calendar-wide one.
+
+### `hide` — entity not rendered
+
+```toml
++++
+schema_version = 1
+state_kind = "hide"
+source_repo_url = "git@github.com:dom/master-schedule.git"
+source_repo_id = "abc123def4567890"
+source_entity_id = "01HZ-EVENT-WEIGHIN"
+source_entity_kind = "event"
+author = "sub"
+hidden_at = "2026-05-11T08:05:00+02:00"
++++
+```
+
+Hide is harder than mute: the entity does not render in any view (no
+chip, no row, no count). Same scope rules as mute (event / recurrence /
+calendar / todolist). Hide can be temporary (rare; add a `hidden_until`
+field analogous to `muted_until`) but the v1 default omits it (hide is
+typically "I don't want to see this at all").
+
+### Conflict semantics
+
+Two devices write `state/<src>/<ent>.<kind>.toml` from different
+sessions (or the same device on different branches). Resolution rules:
+
+| Kind | Conflict-merge rule |
+|---|---|
+| `done` | Latest `done_at` wins. (Idempotent: redoing-done is a no-op.) |
+| `snooze` | Latest `until` wins. (Stretching a snooze always extends.) |
+| `note` | Three-way conflict surfaced in the standard conflict UI. Notes are user-authored prose; merging without human review would lose intent. |
+| `reaction` | Latest `emoji` wins. (Changing one's mind is fine.) |
+| `priority-override` | Latest `priority` wins. |
+| `mute` | Latest `muted_until` wins (later expiry preferred; "indefinite" beats any finite). |
+| `hide` | File-presence is the signal; latest write wins, no semantic merge needed. |
+
+For `note`, the resolver path is: "two files with same path differ in
+body". Surfaces in the standard conflict UI (D.8 mainline). The merge
+preserves both bodies (concatenate with a horizontal rule separator) by
+default — the user reconciles.
+
+### Validation rules
+
+The validator refuses to write when:
+
+- `state_kind` is not one of the seven enum values.
+- `source_repo_id` does not match `derive_id(source_repo_url)` per
+  DM-S. (Prevents typos and stale IDs from drifting.)
+- `source_entity_id` fails UUIDv7 syntactic validation.
+- `source_entity_kind` is not in the supported set.
+- Kind-specific required fields are missing
+  (`done.done_at`, `snooze.until`, `snooze.alarm_lead_time`,
+  `priority-override.priority`, `mute.muted_at`, `hide.hidden_at`,
+  `reaction.emoji`).
+- ISO 8601 timestamps fail parse.
+- `priority` is non-integer (out-of-range values clamp, not refuse).
+
+The validator does NOT check that `source_entity_id` exists in the
+referenced source repo's working tree. **State files are write-anywhere,
+read-anywhere** — the source entity may not be cloned yet (e.g. when
+syncing state to a new device that hasn't fetched the source repo). The
+resolver tolerates orphaned state files at view time (they render as
+"state for entity not present"; `skb verify` reports them).
+
+### CLI surface
+
+```
+skb state set --done       <repo-id> <entity-id> [--body "<note>"]
+skb state set --undone     <repo-id> <entity-id>
+skb state set --snooze     <repo-id> <entity-id> --until <iso> [--lead-time <dur>]
+skb state set --note       <repo-id> <entity-id> --body "<text>"
+skb state set --reaction   <repo-id> <entity-id> --emoji "<emoji>"
+skb state set --priority   <repo-id> <calendar-id> <priority>
+skb state set --mute       <repo-id> <entity-id> [--until <iso>] [--scope event|recurrence|calendar]
+skb state set --unmute     <repo-id> <entity-id>
+skb state set --hide       <repo-id> <entity-id>
+skb state set --unhide     <repo-id> <entity-id>
+skb state list             [--source <repo-id>] [--kind <kind>] [--json]
+skb state show             <repo-id> <entity-id> [--kind <kind>] [--json]
+```
+
+`<repo-id>` is the 16-hex `source_repo_id`. `<entity-id>` is the
+UUIDv7. Auto-commit message: `set <kind> on <entity-id> in source
+<repo-id>` (e.g. `set done on 01HZ-WORKOUT-MONDAY in source
+abc123def4567890`).
+
+### DM-R sub-steps
+
+- [ ] **DM-R.1** Implement the seven kind-specific TOML
+      writer/reader pairs (shared validator).
+- [ ] **DM-R.2** Implement the `derive_id` cross-check at write time
+      (rejects mismatched url/id).
+- [ ] **DM-R.3** Implement Room cache table `state_files` keyed by
+      `(owning_repo_id, source_repo_id, source_entity_id, kind)`.
+      HEAD-keyed invalidation.
+- [ ] **DM-R.4** Implement conflict-merge rules per the table above
+      in the sync engine. Note-conflict path routes to standard
+      conflict UI; the other six routes are silent latest-wins.
+- [ ] **DM-R.5** Implement orphan-tolerance in the resolver: state
+      files for entities not present in any cloned source render as
+      "ghost state" rows in `skb verify --json` but don't error.
+- [ ] **DM-R.6** Implement `skb state set / list / show` with `--json`.
+- [ ] **DM-R.7** Document the seven file shapes in AGENTS.md with
+      one worked example each.
+- [ ] **DM-R.8** Add unit tests for every conflict-merge rule with
+      adversarial inputs (timestamps in the future, malformed
+      `muted_until`, etc.).
+- [ ] **DM-R.9** Add `skb verify` check that flags state files whose
+      `source_repo_id` does not match any configured (cloned or
+      pre-own-repo) source. Reports them with hint "source repo not
+      configured; add via reference or accept the gift link".
+
+---
+
+## Phase DM-S — Source-repo-id derivation (D.51)
+
+Stable identifier for "a remote git repo" that survives URL transport
+changes (SSH ↔ HTTPS), case differences, trailing slashes, and the
+`.git` suffix. Used as the directory name under `state/` and as the
+foreign-key into the source-of-truth for every state file.
+
+### Algorithm
+
+```
+fn derive_source_repo_id(url: String) -> String:
+    # 1. Normalize the URL to a canonical form.
+    norm = url.trim()
+
+    # 1a. Convert SSH form to canonical HTTPS-ish form for hashing.
+    #     git@host:owner/repo  →  host/owner/repo
+    #     ssh://git@host/owner/repo  →  host/owner/repo
+    if matches "^git@([^:]+):(.+)$":
+        host = group(1); path = group(2)
+        norm = host + "/" + path
+    elif matches "^ssh://([^@]+@)?([^/]+)/(.+)$":
+        host = group(2); path = group(3)
+        norm = host + "/" + path
+    elif matches "^https?://([^/]+)/(.+)$":
+        host = group(1); path = group(2)
+        norm = host + "/" + path
+    else:
+        # Unknown form (file://, custom transports, …).
+        # Fall through; whatever it is gets normalized as-is.
+        pass
+
+    # 2. Strip trailing slash.
+    while norm.endsWith("/"):
+        norm = norm.dropLast(1)
+
+    # 3. Strip ".git" suffix (case-insensitive).
+    if norm.endsWithIgnoreCase(".git"):
+        norm = norm.dropLast(4)
+
+    # 4. Lowercase the whole thing.
+    norm = norm.toLowerCase(Locale.ROOT)
+
+    # 5. SHA-256 of UTF-8 bytes; take first 16 hex chars.
+    digest = sha256(norm.toByteArray(UTF_8))
+    return digest.toHex().substring(0, 16)
+```
+
+### Worked examples
+
+All three of these URLs produce the **same** `source_repo_id`:
+
+| Input | Normalized | `source_repo_id` |
+|---|---|---|
+| `git@github.com:dom/master-schedule.git` | `github.com/dom/master-schedule` | (same) |
+| `https://github.com/Dom/master-schedule/` | `github.com/dom/master-schedule` | (same) |
+| `https://github.com/dom/master-schedule` | `github.com/dom/master-schedule` | (same) |
+
+The hash result of `sha256("github.com/dom/master-schedule")` truncated
+to 16 hex chars is the canonical `source_repo_id`. The v1 test suite
+pins this value as a regression fixture (computed at first
+implementation and frozen) — any future algorithm change would require
+a schema bump and a migration. Implementer note: do not bake an
+arbitrary "expected hash" into this planning doc — the test suite is
+the binding spec.
+
+Additional worked examples (all produce one ID each, distinct from the
+above):
+
+| Input | Normalized |
+|---|---|
+| `https://gitea.example.com/trainer-jane/strength-12wk.git` | `gitea.example.com/trainer-jane/strength-12wk` |
+| `ssh://git@gitea.example.com/trainer-jane/strength-12wk.git` | `gitea.example.com/trainer-jane/strength-12wk` |
+| `git@gitea.example.com:trainer-jane/strength-12wk.git` | `gitea.example.com/trainer-jane/strength-12wk` |
+
+(All three above are the same ID.)
+
+### Rename detection + rebind
+
+When the upstream repo URL changes (e.g. the Dom renames their GitHub
+account, or transfers the repo to an organization), the next sync fetch
+returns a 404 on the stored URL but the locally-cached
+`source_repo_id` still indexes valid state files in the recipient's
+`state/<old-id>/` directory.
+
+Detection (in the sync engine, surfaced to the user):
+
+```
+On fetch:
+  if remote responds 404 / "repo not found":
+    inspect state/<source-repo-id> in recipient's own repo:
+      if state files exist for this source_repo_id:
+        surface "this repo seems to have moved" banner with
+        "Provide the new URL" CTA.
+      else:
+        surface generic "remote not found" error.
+```
+
+Rebind flow (`skb state rebind <old-id> <new-url>`):
+
+```
+1. Validate <new-url> parses.
+2. Compute new-id = derive_source_repo_id(<new-url>).
+3. If new-id == old-id: no-op (URL changed but normalized form
+   identical; just update the stored remote URL).
+4. Else:
+   a. mv state/<old-id>/ → state/<new-id>/  (filesystem)
+   b. Rewrite every state file inside the moved directory:
+      - update `source_repo_url` to <new-url>
+      - update `source_repo_id` to <new-id>
+   c. Update references.toml entries whose `url` derived to <old-id>:
+      - replace `url` with <new-url>
+   d. Update the device-side repo registry's stored remote URL.
+   e. Commit with message:
+      `rebind source-repo-id <old-id> → <new-id> (upstream moved)`
+   f. Push (if auto-sync enabled).
+5. App also offers a GUI flow: Settings → Repos → tap the affected
+   repo → "Repository moved" banner → "Update URL" sheet.
+```
+
+The rebind is **never automatic**. URL changes that the user didn't
+initiate could indicate a hijack; the user must confirm the new URL.
+
+### DM-S sub-steps
+
+- [ ] **DM-S.1** Implement `derive_source_repo_id` per the pseudo-code
+      above. Shared Kotlin function used by app + `skb`.
+- [ ] **DM-S.2** Unit-test the three SSH/HTTPS/case/slash variants
+      producing the same ID; pin the actual hex result as a fixture.
+- [ ] **DM-S.3** Implement the fetch-error → "repo seems to have
+      moved" detection in the sync engine.
+- [ ] **DM-S.4** Implement `skb state rebind <old-id> <new-url>` with
+      atomic directory rename + state-file frontmatter rewrite +
+      references.toml update.
+- [ ] **DM-S.5** Implement the GUI rebind sheet hooked off the
+      Settings → Repos screen.
+- [ ] **DM-S.6** Document the rebind UX in AGENTS.md so Claude knows
+      to suggest `skb state rebind` rather than hand-editing state
+      file paths when the user reports "the Dom moved the repo".
+
+---
+
+## Phase DM-T — Pre-own-repo `_local/state/` bucket (D.47)
+
+A recipient in simplified mode without an own repo still produces state
+when they tick "done" on a Dom-assigned task. That state needs to live
+**somewhere** before there's a repo to commit it into.
+
+### Location
+
+```
+~/.strictlykeptboy/local-state/
+  state/
+    <source-repo-id>/
+      <entity-id>.<state-kind>.toml
+```
+
+Same path structure as in-repo state files. Same TOML schemas as DM-R.
+No `+++` change, no kind change — just no git backing.
+
+### Semantics
+
+- Files written atomically (write-to-temp + rename), same as the
+  in-repo writer.
+- No commit; no branch; no push.
+- The local-state directory is `chmod 700` (owner-only) at create time.
+- Backed up only if the user explicitly backs up their app data via
+  Android's backup mechanism (off by default for the app; see security
+  rationale in D.22 — local-state is not auto-cloud-backed because it
+  contains the recipient's private interactions).
+
+### Cross-device sync of pre-own-repo state: **NOT supported**
+
+Inline tradeoff resolved: pre-own-repo state is **deliberately
+device-local**. A user on Device A and Device B who both consume the
+Dom's repo without an own repo will see **diverged** done/snooze/note
+state until they create an own repo.
+
+Rationale:
+
+1. There is no shared writeable location (the source repo is
+   read-only).
+2. Building a cross-device sync mechanism *just* for the pre-own-repo
+   case adds an entire sync target (the app's own backend? a free-form
+   sidecar repo?) that's redundant the moment an own repo exists.
+3. The migration to an own repo (below) is the path forward; users
+   are nudged towards it the first time they multi-device.
+
+The Settings → Sync screen surfaces this explicitly in simplified mode:
+"Your interactions on this device aren't synced to your other devices.
+[Create your own repo] to sync."
+
+### Migration when an own repo is created
+
+On the successful creation of an own repo (per D.47 + DM-O.2-style
+flow):
+
+```
+1. Snapshot the pre-own-repo identity (DM-U) into the new repo's
+   identities/ folder (DM-U.5 handles this).
+2. Read every file under ~/.strictlykeptboy/local-state/state/
+   recursively.
+3. Copy each file into <new-repo>/state/<source-repo-id>/
+   <entity-id>.<state-kind>.toml — same relative path; bytes
+   unchanged (the source_repo_id stays valid because it's derived
+   from URL, which hasn't changed).
+4. git add state/ && git commit -m "migrate local state from
+   pre-own-repo".
+5. If auto-sync is on, push. If push succeeds, proceed; if push fails,
+   abort the cleanup and surface "migration committed locally; push
+   blocked — retry sync to complete" (state stays in BOTH places
+   until push succeeds).
+6. On confirmed push success (or user-confirmed offline-OK):
+   rm -rf ~/.strictlykeptboy/local-state/state/
+   (the identity file stays as a record of the device's pre-own-repo
+    identity; see DM-U).
+```
+
+The two-place transient is intentional: if the migration commit gets
+lost (uncommon, but possible if the device dies mid-flow), the
+local-state directory is the authoritative copy. Cleanup is gated on
+durable success.
+
+### Edge cases
+
+- **Two devices each have pre-own-repo state, then one creates an own
+  repo first.** Device A creates an own repo and migrates its local
+  state in. Device B clones the new own repo (via Settings →
+  "Connect this device to an existing repo") and gets Device A's
+  state. Device B's own pre-own-repo state is **NOT** auto-merged —
+  the app surfaces "this device has unsynced local interactions
+  from before you connected the own repo; review and import?" with a
+  diff-style picker. User picks per-file.
+
+- **State files for sources the user never adds.** Orphaned local
+  state harmlessly accumulates. `skb verify` flags it; the user can
+  run `skb state prune --orphans` to delete state files whose
+  source-repo-id matches no configured source.
+
+- **App reinstall before own-repo creation.** Without Android backup
+  enabled, the pre-own-repo state directory is lost on uninstall. The
+  app shows a one-time warning in simplified-mode Settings ("Your
+  interactions are stored only on this device until you create your
+  own repo").
+
+### DM-T sub-steps
+
+- [ ] **DM-T.1** Implement the `~/.strictlykeptboy/local-state/state/`
+      writer path (same `StateFileWriter` interface as in-repo, with
+      the directory swapped).
+- [ ] **DM-T.2** Implement `chmod 700` at create-time.
+- [ ] **DM-T.3** Implement the migration routine
+      (`PreOwnRepoStateMigrator`) with the two-place transient and
+      durable-success cleanup.
+- [ ] **DM-T.4** Implement the Device-B import picker for the
+      cross-device-not-shared edge case.
+- [ ] **DM-T.5** Implement `skb state prune --orphans` against
+      pre-own-repo state.
+- [ ] **DM-T.6** Document the device-local limitation in the
+      simplified-mode Sync settings screen + in AGENTS.md.
+- [ ] **DM-T.7** Add the one-time uninstall-warning surface in
+      simplified-mode Settings.
+
+---
+
+## Phase DM-U — Identity for state-file authoring (extends D.15)
+
+State files need an `author` field (DM-R common header). D.15's
+identity model lives at `identities/<person-id>.md` **inside a repo** —
+but a simplified-mode user with no own repo has no such file. DM-U
+defines a pre-own-repo identity that fills the gap.
+
+### Location
+
+```
+~/.strictlykeptboy/local-identity.toml
+```
+
+One file per device. Created at app first launch (before any deep-link
+intent is processed, so it's available when the first received gift
+needs to write state).
+
+### Schema
+
+```toml
+schema_version = 1
+id = "01HZ-DEVICE-IDENTITY-UUIDV7"
+display_name = "Bat"
+avatar_emoji = "🦇"
+created_at = "2026-05-11T07:00:00+02:00"
+device_id = "device-uuid-xyz"
+```
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `schema_version` | int | yes | `1`. |
+| `id` | string | yes | UUIDv7. Same ID space as `identities/<person-id>.md`. |
+| `display_name` | string | yes | User-provided at first launch; defaults to "You" if user skips. |
+| `avatar_emoji` | string | no | Single emoji. Optional. |
+| `avatar_path` | string | no | Path to a local image file (cached under `~/.strictlykeptboy/local-identity-assets/`). Mutually exclusive with `avatar_emoji`. |
+| `created_at` | ISO 8601 | yes | First-launch timestamp. |
+| `device_id` | string | yes | Stable per-device UUID generated at first launch and stored in `EncryptedSharedPreferences`. |
+
+### First-launch flow
+
+```
+1. App boots for the first time.
+2. Generate device_id (UUIDv7) and store in EncryptedSharedPreferences.
+3. Show a minimal one-screen identity prompt:
+     "What should we call you on this device?"
+     [text field]  [emoji picker]
+     [Skip — use "You"]
+4. Write ~/.strictlykeptboy/local-identity.toml.
+5. Proceed to the next routing decision (deep-link intent handling,
+   wizard, or empty state).
+```
+
+The prompt is **skip-tolerant**: skipping uses `display_name = "You"`
+and no avatar. This keeps the receiving path (D.41 simplified mode)
+genuinely one-tap from QR to schedule view.
+
+### Migration when an own repo is created
+
+When the user creates an own repo (DM-T migration flow runs in
+parallel):
+
+```
+1. Copy ~/.strictlykeptboy/local-identity.toml's fields into a new
+   <own-repo>/identities/<id>.md file with frontmatter:
+     +++
+     schema_version = 1
+     id = <same id>
+     display_name = <same>
+     avatar = <emoji or attachment path>
+     email = "<id>@strictlykeptboy.local"  # synthesized; user may
+                                            # edit later
+     default_author = true
+     +++
+
+     Migrated from pre-own-repo identity on <date>.
+
+2. If `avatar_path` was set, also copy the avatar file into the
+   own repo's attachments/ via the content-addressed path (D.3).
+3. Commit: `add identity "<display_name>" (migrated from pre-own-repo)`.
+4. Set this identity as the active identity for the new repo (app
+   prefs).
+5. The local-identity.toml file STAYS. Rationale: if the user later
+   creates a SECOND own repo on the same device (uncommon but
+   possible), the same identity should re-migrate. The file is the
+   per-device identity-of-record; the in-repo file is its checked-in
+   manifestation.
+```
+
+### Multi-device identity divergence
+
+Each device has its own `local-identity.toml` with its own UUIDv7 `id`.
+**Device A's identity ≠ Device B's identity** until cross-device
+identity unification ships. After Device A creates an own repo and
+Device B clones it, Device B's pre-own-repo identity stays in its
+local-identity.toml; the user can either:
+
+- Accept the in-repo identity (Device A's, migrated) and demote
+  Device B's local-identity to "secondary" status. Subsequent state
+  writes from Device B use Device A's `id` as `author`. The local
+  identity file stays as a historical record but doesn't author new
+  files.
+- Keep Device B's identity as a second `identities/<id-B>.md` in the
+  repo, making "Bat (Device A)" and "Bat (Device B)" two co-existing
+  identities. **No cryptographic linkage** in v1; this is just two
+  names that happen to be the same person.
+
+True unification (where two identities provably refer to the same
+human) requires public-key linkage (signing a binding statement with
+both identities' keys). That's deferred — see DM-V.2.
+
+### State files written under pre-own-repo identity
+
+Until migration, `author` in state files is the pre-own-repo
+`id`. Post-migration, both old (with old `id`) and new (with the same
+`id`, since DM-T.3 preserves bytes) state files reference the same
+identity. No retroactive rewriting is needed.
+
+### DM-U sub-steps
+
+- [ ] **DM-U.1** Implement first-launch identity prompt (Compose
+      screen).
+- [ ] **DM-U.2** Implement `~/.strictlykeptboy/local-identity.toml`
+      reader/writer with ktoml.
+- [ ] **DM-U.3** Implement device_id generation + EncryptedSharedPrefs
+      storage.
+- [ ] **DM-U.4** Implement the avatar-emoji + avatar-path field pair
+      with mutual-exclusion validation.
+- [ ] **DM-U.5** Implement the pre-own-repo → in-repo identity
+      migration as part of the own-repo-creation flow.
+- [ ] **DM-U.6** Implement the Device-B reconciliation UI for the
+      multi-device-divergence case (accept-A, keep-both).
+- [ ] **DM-U.7** Document in AGENTS.md that state files written from
+      simplified mode reference a pre-own-repo identity whose file
+      lives outside the repo (so AI agents don't try to look up
+      `identities/<author>.md` for those state-file authors and fail).
+
+---
+
+## Phase DM-V — Updated deferrals (surgical addition)
+
+Round 3 (D.41–D.52) adds two genuinely new deferrals beyond the Round 2
+set already audited in DM-P. This phase appends them to the
+"Open questions deferred to future schema versions" list and confirms
+that every Round 1 + Round 2 deferral stays correctly classified.
+
+- [ ] **DM-V.1** Add to the deferrals list: ⚠️ **STILL DEFERRED v1.1
+      — Cross-device pre-own-repo state sync** (DM-T). v1
+      intentionally keeps pre-own-repo state device-local; sync is
+      "free" once an own repo exists, so building a separate sync
+      pipeline for the pre-own-repo case is unjustified. v1.1 may
+      revisit if telemetry-less feedback indicates demand.
+- [ ] **DM-V.2** Add to the deferrals list: ⚠️ **STILL DEFERRED v1.1
+      — Cross-device identity unification** (DM-U + Round 2
+      NS-deferral on key linkage). Provably-linking two devices'
+      identities requires public-key signing of a binding statement
+      with both identity keys; that machinery (key generation,
+      verification, revocation) is its own scope and is deferred.
+- [ ] **DM-V.3** Re-confirm the existing five Round 1+2 deferrals
+      stay correctly classified as ⚠️ STILL DEFERRED v1.1:
+      - comment-preserving TOML writer
+      - Unicode tags
+      - body-checkbox-as-done default flip
+      - soft-delete via `_trash/`
+      - in-app attachment GC
+      None of D.41–D.52 changes the calculus on any of the above.
+- [ ] **DM-V.4** Acceptance: after this phase lands, the
+      deferrals list contains one ✅ MOVED entry (from DM-P, the
+      per-event tz_id) and **seven** ⚠️ STILL DEFERRED entries (the
+      original five + two from Round 3).
+
+---
+
 ## Open questions deferred to future schema versions
 
 These were resolved for v1 by intentionally not addressing them. Each
@@ -2381,6 +3363,25 @@ deferred** — those are marked ⚠️ STILL DEFERRED v1.1.
    `tools/gc.sh` (or `skb gc attachments` per DM-O). v1.1 may ship
    in-app GC after we measure how often orphans actually accumulate
    in real repos.
+7. ⚠️ **STILL DEFERRED v1.1 — Cross-device pre-own-repo state sync**
+   (DM-T, added in Round 3 via DM-V.1). v1 intentionally keeps
+   pre-own-repo state device-local; cross-device sync is "free" the
+   moment the user creates an own repo (the own repo IS the sync
+   target). Building a separate sync pipeline just for the
+   pre-own-repo window adds a redundant backend with no longevity.
+   v1.1 may revisit if feedback shows users routinely consume
+   gifted repos on multiple devices without ever authoring their
+   own.
+8. ⚠️ **STILL DEFERRED v1.1 — Cross-device identity unification**
+   (DM-U, added in Round 3 via DM-V.2). Each device generates its
+   own pre-own-repo identity with its own UUIDv7. **Provably**
+   linking two devices' identities requires public-key signing of a
+   binding statement with both identity keys; that machinery (key
+   gen, verification, revocation, UX for "this is also me") is its
+   own scope and intersects with the Round 2 NS-deferral on
+   cryptographic identity linkage. v1 ships the two-identity
+   "Bat (Device A)" / "Bat (Device B)" co-existence model as a
+   functional substitute.
 
 ---
 

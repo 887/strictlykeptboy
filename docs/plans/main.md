@@ -496,6 +496,125 @@ Deep-dives: [`data-model.md`](data-model.md) extension DM-K, [`ui-spec.md`](ui-s
 
 ---
 
+---
+
+# Round 3 — shared schedules + simplified ("good boy") mode (Phases MM–TT)
+
+After Round 2, the user named a primary use case the existing scope
+didn't optimize for: **a recipient — sub, student, employee, athlete
+— receives a complete schedule from someone else via a deep-link or
+QR, without ever using a calendar app before, and consumes the
+schedule one-tap-from-link**. Later they can grow into authoring
+their own without losing the gifted schedules. See `decisions.md`
+D.41–D.52.
+
+Cross-references for Round 3:
+- Shared-schedules deep-dive (NEW): [`shared-schedules.md`](shared-schedules.md)
+- Data model extensions: [`data-model.md`](data-model.md) (extends with DM-Q+)
+- UI extensions: [`ui-spec.md`](ui-spec.md) (extends with UI-FF+)
+- Resolver extensions: [`resolver.md`](resolver.md) (extends with RV-L+)
+
+---
+
+## Phase MM — Deep-link / app protocol registration
+
+Deep-dive: [`shared-schedules.md`](shared-schedules.md) phases SH-A, SH-B.
+
+- [ ] **MM.1** Register intent filter for `strictlykeptboy://add?...` (custom scheme)
+- [ ] **MM.2** Register intent filter for `https://strictlykeptboy.app/add?...` (universal link)
+- [ ] **MM.3** Digital Asset Links JSON at `https://strictlykeptboy.app/.well-known/assetlinks.json` for verified App Links
+- [ ] **MM.4** URL parser: extract `url`, `label`, `mode`, `priority`, `via`, `references` query params
+- [ ] **MM.5** URL fragment parser: extract `token`, `expires` (never sent over network)
+- [ ] **MM.6** Multi-URL support (`?url=A&url=B`)
+- [ ] **MM.7** Token-wipe: clear `#token=` from any persisted referrer after consumption
+- [ ] **MM.8** Expiry enforcement: refuse links past `expires`
+- [ ] **MM.9** QR scan integration (ZXing already in for D.42; verify reuse)
+
+## Phase NN — `references.toml` manifest
+
+Deep-dives: [`shared-schedules.md`](shared-schedules.md) SH-C, [`data-model.md`](data-model.md) DM-Q.
+
+- [ ] **NN.1** Schema definition + ktoml round-trip
+- [ ] **NN.2** Reader: scan `.strictlykeptboy/references.toml` on repo open
+- [ ] **NN.3** Writer: append/remove entries via `skb ref add|remove`
+- [ ] **NN.4** Auto-dedup against already-configured repos (by source-repo-id, D.51)
+- [ ] **NN.5** "Offer to add referenced repos" sheet UI (per-reference toggle)
+- [ ] **NN.6** Validation: refuse circular reference loops, refuse self-reference
+- [ ] **NN.7** Required-reference warning surface in repo settings ("this repo expects ref X — not added")
+
+## Phase OO — Cross-repo state files (`state/<source-repo-id>/`)
+
+Deep-dives: [`shared-schedules.md`](shared-schedules.md) SH-D, [`data-model.md`](data-model.md) DM-R, [`resolver.md`](resolver.md) RV-L.
+
+- [ ] **OO.1** State-file schema (done, snooze, note, reaction, priority-override, mute, hide)
+- [ ] **OO.2** Source-repo-id derivation (SHA-256 of normalized URL → 16 hex)
+- [ ] **OO.3** Resolver merge: source entity ⊕ state file → rendered instance
+- [ ] **OO.4** Writer atomicity: state-file commits one file per state change
+- [ ] **OO.5** `_local/state/` for pre-own-repo state (migrated on repo creation per D.47)
+- [ ] **OO.6** `skb state set --done|...` CLI surface
+- [ ] **OO.7** State-file orphan detection: when source entity is deleted, prompt to clean up state files
+
+## Phase PP — Simplified mode chrome
+
+Deep-dives: [`shared-schedules.md`](shared-schedules.md) SH-E, [`ui-spec.md`](ui-spec.md) UI-FF.
+
+- [ ] **PP.1** Mode state in app prefs (`simplified` | `full`)
+- [ ] **PP.2** Hidden surfaces: repo management, identities, templates, advanced sync, multi-view tabs, Together tab
+- [ ] **PP.3** Visible surfaces: Schedule (single view), Tasks (combined), sync button, comment composer, settings (minimal)
+- [ ] **PP.4** "Switch to full mode" entry point in settings (one-tap-reversible)
+- [ ] **PP.5** Mode-label picker (Simplified / Focused / Received Schedules / Good Boy / Good Girl / Good Pet / Kept / Other)
+- [ ] **PP.6** Auto-entry: simplified by default when only read-only repos configured AND no own repo
+- [ ] **PP.7** Play Store screenshots use "Simplified" label exclusively
+
+## Phase QQ — First-launch deep-link bootstrap
+
+Deep-dives: [`shared-schedules.md`](shared-schedules.md) SH-F, [`ui-spec.md`](ui-spec.md) UI-GG.
+
+- [ ] **QQ.1** Detect "launched via deep-link AND no repos configured" condition
+- [ ] **QQ.2** Skip wizard; go straight to "Add gifted repo" screen with URL prefilled
+- [ ] **QQ.3** Auth flow: try `#token=` fragment first, then OAuth, then PAT prompt
+- [ ] **QQ.4** Clone progress UI with animated mascot
+- [ ] **QQ.5** Post-clone: boot into simplified mode, schedule view, one-time onboarding card
+- [ ] **QQ.6** If receiving repo has `references.toml` with `default_active`, prompt to add referenced repos
+- [ ] **QQ.7** Error handling: bad URL, network down, auth failure — clear messages with retry
+
+## Phase RR — Authoring side: share-this-repo flow
+
+Deep-dives: [`shared-schedules.md`](shared-schedules.md) SH-G, [`ui-spec.md`](ui-spec.md) UI-HH.
+
+- [ ] **RR.1** Settings → Repos → tap repo → "Share this repo" entry
+- [ ] **RR.2** Share-config sheet: mode, label, priority modifier, auth method
+- [ ] **RR.3** Auth method: "Recipient adds own SSH key" path (no token in link)
+- [ ] **RR.4** Auth method: "Embed one-shot deploy key" (provider API generates read-only key, embed in link fragment, 24h expiry)
+- [ ] **RR.5** Auth method: "Embed fine-grained PAT" (provider API generates read-only PAT, embed in fragment, 24h expiry)
+- [ ] **RR.6** Auth method: "Public repo" (no token needed)
+- [ ] **RR.7** Output: copy link / save QR / system share sheet
+- [ ] **RR.8** `skb share` CLI subcommand
+
+## Phase SS — Evolution path: simplified → own repo migration
+
+Deep-dives: [`shared-schedules.md`](shared-schedules.md) SH-H, [`ui-spec.md`](ui-spec.md) UI-II.
+
+- [ ] **SS.1** "Add my own events" entry point in simplified mode (FAB or settings)
+- [ ] **SS.2** Mini-wizard: repo name, provider, auth (2–3 screens)
+- [ ] **SS.3** Optional template-picker (skippable)
+- [ ] **SS.4** Migrate `_local/state/*` → new repo's `state/` folder
+- [ ] **SS.5** Write `references.toml` in new repo listing currently-configured gifted repos
+- [ ] **SS.6** Mode-choice prompt: stay simplified or switch to full
+- [ ] **SS.7** Reverse path: full mode → "Switch to simplified mode" toggle
+
+## Phase TT — Multi-repo priority resolution (extends Phase E + AA)
+
+Deep-dive: [`resolver.md`](resolver.md) RV-M.
+
+- [ ] **TT.1** Local-override (per-device) loaded from state-files at render time
+- [ ] **TT.2** Repo-modifier from `references.toml` (high/normal/low → ±200)
+- [ ] **TT.3** Receiver "pin this repo to top" → +500 modifier
+- [ ] **TT.4** Clamp [1, 1000] with out-of-range warning in broken-entries tray
+- [ ] **TT.5** Visual indicator on calendars whose displayed priority differs from source-declared priority
+
+---
+
 ## Notes on parallel deep-dives
 
 Phases A through W are intentionally exhaustive but rely on the deep-dive
