@@ -1978,6 +1978,1292 @@ non-blocked.
 
 ---
 
+# Round 3 — extensions (Phases CLI-L through CLI-N)
+
+This block adds the shared-schedules CLI surface (Round 3 — D.41–D.52)
+to the document above. The existing CLI-A through CLI-K phases are
+unchanged; the conventions in CLI-B, CLI-C, CLI-D apply verbatim to
+every Round 3 command. Where Round 3 introduces a new convention (e.g.
+exit code 9 `link-expired`, the `--source` / `--target` disambiguation
+pair), CLI-M extends the cross-cutting design surgically — no rewrite.
+
+**Round 3 phase-mapping table** — each CLI-L sub-step ↔ `main.md`
+Phase MM/NN/OO/PP/RR + `shared-schedules.md` Phase SH-J:
+
+| CLI sub-step | main.md phase | shared-schedules.md phase | Topic |
+|---|---|---|---|
+| CLI-L.1 | MM, NN | SH-J.1 | `skb accept` (deep-link / QR receive) |
+| CLI-L.2 | NN | SH-J.2 | `skb ref add | list | remove` |
+| CLI-L.3 | OO | SH-J.3 | `skb state set | list | rebind` |
+| CLI-L.4 | RR | SH-J.4 | `skb share` |
+| CLI-L.5 | PP | SH-J.5 | `skb mode` |
+| CLI-M.* | (cross-cutting) | SH-K | Extended exit codes + flag patterns |
+| CLI-N.* | X.9, DM-O | SH-J | AI-agent bootstrap pattern |
+
+Cross-links:
+- [`shared-schedules.md`](shared-schedules.md) Phases SH-A through SH-K.
+- [`data-model.md`](data-model.md) Phases DM-Q (references.toml),
+  DM-R (state-file schemas), DM-S (source-repo-id), DM-T
+  (`_local/state/`), DM-U (state-file identity), DM-O (AGENTS.md
+  rewrite).
+- [`decisions.md`](decisions.md) D.41–D.52 (locked).
+
+---
+
+## Phase CLI-L — shared-schedules subcommands
+
+Goal: every Round 3 subcommand spelled out to the same depth as
+CLI-A.1 (synopsis, args, flags, stdout, `--json`, stderr, exit codes,
+behavior notes, worked example). Every write command obeys CLI-B
+(atomic + auto-commit) and CLI-C (`--json` envelope). Repo discovery
+follows CLI-E.1. Identity resolution follows CLI-E.5. The
+disambiguation conventions for `--source` / `--target` are new and
+specified in CLI-M.
+
+- [ ] **CLI-L.1** `skb accept <url-or-qr-file>` — deep-link / QR receive.
+- [ ] **CLI-L.2** `skb ref add | list | remove` — manage `references.toml`.
+- [ ] **CLI-L.3** `skb state set | list | rebind` — write/list/migrate state files.
+- [ ] **CLI-L.4** `skb share [<repo-id>]` — generate share-link / QR / revoke.
+- [ ] **CLI-L.5** `skb mode <simplified|full|toggle>` — switch display mode.
+
+### CLI-L.1 — `skb accept`
+
+#### `skb accept <url-or-qr-file>`
+
+**Synopsis:** `skb accept <url-or-qr-file> [--mode <m>] [--label <s>] [--priority <p>] [--references <r>] [--token <secret>] [--insecure-trust-clock] [--no-clone] [--id <uuid>] [flags]`
+
+**Description:** Accept a gifted repo from a deep-link URL
+(`strictlykeptboy://...` or `https://strictlykeptboy.app/add?...`) or
+by reading a QR PNG file (decoded via ZXing). This is the headless
+equivalent of the deep-link intent per D.42. Used by Claude to
+bootstrap from a link the user pasted, or by power users automating
+onboarding. Implements `main.md` Phases MM + NN.
+
+**Positional args:**
+
+| Arg | Type | Notes |
+|---|---|---|
+| `<url-or-qr-file>` | string | Either a deep-link URL (any of the two intent schemes per D.42) OR a filesystem path to a QR PNG. Auto-detected: if the argument starts with `strictlykeptboy://` or `http(s)://`, treated as URL; else treated as a file path and decoded via ZXing. |
+
+**Flags:**
+
+| Flag | Type | Default | Notes |
+|---|---|---|---|
+| `--mode` | `read-only` \| `read-write` \| `pull-only` | from URL or `read-only` | overrides the link's `mode` param |
+| `--label` | string | from URL | overrides the link's `label` param |
+| `--priority` | `high` \| `normal` \| `low` | from URL or `normal` | overrides the link's `priority` modifier (D.49) |
+| `--references` | `auto` \| `prompt` \| `ignore` | `prompt` | `auto` accepts all `default_active=true` refs; `prompt` writes a structured prompt to stdout (or to `--json`); `ignore` skips reading `references.toml` |
+| `--token` | string | from URL fragment | pass auth token explicitly (useful when the URL fragment was scrubbed by logging) |
+| `--insecure-trust-clock` | bool | false | accept links whose `expires` is past the device clock (clock skew); emits a stderr warning when on |
+| `--no-clone` | bool | false | record the repo in app config without cloning; useful for tests or out-of-band clone |
+| `--id` | UUIDv7 | auto-mint | assign a known UUIDv7 as the app's internal `repo_id`; makes `skb accept` idempotent across re-runs |
+| `--default-identity` | UUIDv7 | active identity | identity to bind for state-file authoring against this repo (per DM-U) |
+| `--json` | bool | false | machine-readable output |
+| `--dry-run` | bool | false | parse and validate the URL/QR; do not clone or write config |
+| `--no-commit` | bool | false | for `--default-identity` updates to `~/.skb/config.toml`, stage but don't commit (config is not git-tracked by default; flag is a no-op here but accepted for consistency) |
+| `--verbose` / `-v` | bool | false | per CLI-J.2 |
+| `--quiet` / `-q` | bool | false | per CLI-J.2 |
+
+**Stdout (human):**
+
+```text
+$ skb accept 'https://strictlykeptboy.app/add?url=git%40github.com:dom/master-schedule.git&label=Master&mode=read-only#token=deploy-key-redacted&expires=2026-05-12T22:00:00Z'
+✓ accepted "Master" (read-only, priority high)
+  repo_id:        0190f000-bbbb-7000-8a0a-000000000007
+  source_repo_id: a4f1c2d8e3b59071
+  url:            git@github.com:dom/master-schedule.git
+  clone:          ~/.strictlykeptboy/repos/0190f000-bbbb-7000-8a0a-000000000007/
+  references:     1 (1 default-active, 0 already-configured)
+    - "Master Resources" (read-only, normal)  [default_active]
+prompt: 1 reference found; run `skb ref list --repo 0190f000-...` to inspect, or re-run with `--references auto` to accept.
+```
+
+**Stdout (`--json`):**
+
+```text
+$ skb accept '<url>' --references auto --json
+{
+  "version": 1,
+  "command": "accept",
+  "result": {
+    "repo_id": "0190f000-bbbb-7000-8a0a-000000000007",
+    "source_repo_id": "a4f1c2d8e3b59071",
+    "url": "git@github.com:dom/master-schedule.git",
+    "mode": "read-only",
+    "label": "Master",
+    "priority": "high",
+    "cloned": true,
+    "clone_path": "~/.strictlykeptboy/repos/0190f000-bbbb-7000-8a0a-000000000007/",
+    "already_configured": false,
+    "references_found": [
+      {
+        "url": "git@github.com:dom/master-resources.git",
+        "label": "Master Resources",
+        "mode": "read-only",
+        "priority_modifier": "normal",
+        "default_active": true,
+        "already_configured": false,
+        "accepted": true,
+        "child_repo_id": "0190f000-cccc-7000-8a0a-000000000008"
+      }
+    ],
+    "expires_at": "2026-05-12T22:00:00Z",
+    "token_consumed": true
+  }
+}
+```
+
+**JSON field types:**
+
+- `repo_id` — UUIDv7 string (app-internal `repo_id`)
+- `source_repo_id` — 16-hex-char string (D.51 stable hash)
+- `url` — string (normalized)
+- `mode` — enum `read-only|read-write|pull-only`
+- `label` — string
+- `priority` — enum `high|normal|low`
+- `cloned` — bool
+- `clone_path` — string (filesystem path; `~` is preserved in output)
+- `already_configured` — bool (true when the URL hashes to an existing `source_repo_id` already configured; in that case the command returns success and `cloned=false`)
+- `references_found` — array of reference objects (same shape as `ref list --json` entries plus `already_configured` and `accepted` booleans and a `child_repo_id` for any that were cloned)
+- `expires_at` — RFC 3339 string or null
+- `token_consumed` — bool (true if a fragment-token was parsed and stored encrypted per D.50)
+
+**Stderr:** validation failures (malformed URL, ZXing decode failure
+on a non-QR PNG, schema-version-too-new per SH-K.1, `expires` past
+device clock without `--insecure-trust-clock`, clone-time auth failure,
+network failure). Warning lines (non-fatal) for
+`--insecure-trust-clock`, for already-configured URLs, and for tokens
+that look like SSH keys but failed key-format parse.
+
+**Exit codes:**
+
+- `0` — success (including the already-configured no-op case).
+- `1` — usage (malformed URL, bad flag combo, ZXing decode failed).
+- `2` — not-found (`--id` references a repo entry but its directory is missing).
+- `3` — conflict (`--id` collides with a non-repo config entry).
+- `4` — auth failure (token expired at provider; cred invalid; SSH key rejected).
+- `6` — schema-mismatch (gifted repo's `schema_version` exceeds supported).
+- `7` — network error (DNS, timeout, TLS).
+- `9` — link expired (`expires` past device clock and `--insecure-trust-clock` not set). **New exit code; see CLI-M.1.**
+
+**Behavior notes:**
+
+- Validation order: URL/QR parse → schema-version check (`schema_version` param if present, or remote schema-file fetch for HTTPS) → expiry check → already-configured check → clone → references parse → references handling per `--references`.
+- Atomic write: each repo addition is a separate transaction (clone + config-entry write + optional credential store + commit-of-config). When the gifted repo has references, each accepted reference is its OWN transaction. See CLI-M.3 for the multi-repo atomicity note.
+- Auto-commit message: `accept repo "<label>" from <provider-host>` (e.g. `accept repo "Master" from github.com`). The commit lands in the active own-repo's `references.toml` (if updated) — when there's no own-repo the operation only updates `~/.skb/config.toml`, which is NOT a git repo and therefore has no commit.
+- Idempotency: re-running `skb accept` with the same URL is a no-op (returns `already_configured=true`, `cloned=false`, exit 0). Re-running with `--token` rotates the stored credential (encrypted per D.50). Re-running with `--id` of an existing config entry refreshes label/mode/priority but does not re-clone.
+- Credential handling: tokens in the URL fragment are parsed, the bytes are passed directly into `EncryptedSharedPreferences` (Android) or `~/.skb/keys/<repo-id>.cred.aes` (desktop, AES-GCM, master-key per CLI-A.6 gpg-import convention). The token-fragment is wiped from any persisted log per D.50. `--verbose` does NOT log the token bytes.
+- `--no-clone`: the URL is parsed, validated, stored in config; `cloned=false`; no filesystem clone occurs. The reference list is NOT processed (we cannot read `references.toml` without cloning). Documented in stderr as a warning.
+- `--references prompt`: in `--json` mode, the `references_found[].accepted` field is always `false`, and the caller is expected to issue follow-up `skb accept` calls per accepted reference. In human mode, the prompt line on stdout instructs the user.
+- `--references auto`: recursive depth-limit of 3 (per SH-K to bound the reference graph). Cycles detected by walking accepted `source_repo_id`s; cycle hit → skip with a stderr warning.
+- Source-repo-id derivation per D.51 + DM-S: `SHA-256(normalize(url))[0:16]`. The normalization handles SSH vs HTTPS aliasing.
+
+**Worked example — accept a Dom's deep-link with embedded deploy key, see references prompt, accept default-active references:**
+
+```text
+$ skb accept 'strictlykeptboy://add?url=git%40github.com:dom/dom-schedule.git&label=Master&mode=read-only&priority=high&references=prompt#token=ssh-ed25519+AAAAC3Nz...redacted&expires=2026-05-12T22:00:00Z'
+✓ accepted "Master" (read-only, priority high)
+  repo_id:        0190f000-bbbb-7000-8a0a-000000000007
+  source_repo_id: a4f1c2d8e3b59071
+  url:            git@github.com:dom/dom-schedule.git
+  references:     2 (2 default-active, 0 already-configured)
+    - "Master Resources" (read-only, normal)  [default_active]
+    - "Pack Calendar"    (pull-only, low)     [default_active]
+prompt: 2 references default-active. Re-run with `--references auto` to accept both, or:
+        $ skb accept git@github.com:dom/master-resources.git --label "Master Resources" --mode read-only
+        $ skb accept git@github.com:dom/pack-calendar.git    --label "Pack Calendar"    --mode pull-only --priority low
+
+$ skb accept 'strictlykeptboy://add?url=git%40github.com:dom/dom-schedule.git&...' --references auto
+✓ accepted "Master" (read-only, priority high)
+  ...
+✓ accepted reference "Master Resources" (read-only, normal)
+  repo_id:        0190f000-cccc-7000-8a0a-000000000008
+  source_repo_id: 09f3a7d2c1b48e60
+✓ accepted reference "Pack Calendar" (pull-only, low)
+  repo_id:        0190f000-dddd-7000-8a0a-000000000009
+  source_repo_id: 7e1b3c5d2a6f9081
+```
+
+### CLI-L.2 — `skb ref …`
+
+These commands edit a target repo's `.strictlykeptboy/references.toml`
+manifest (per DM-Q schema). They do NOT clone the referenced repo —
+that's `skb accept`'s job. The active repo is the default target; use
+`--repo <id>` to target a non-active repo.
+
+#### `skb ref add`
+
+**Synopsis:** `skb ref add <url> [--label <s>] [--mode <m>] [--priority <p>] [--required] [--default-active] [--description <s>] [--credential-hint <hint>] [--recommended-calendars <list>] [--order-priority <int>] [--repo <id>] [--force] [flags]`
+
+**Description:** Add a new `[[reference]]` entry to the target repo's
+`references.toml`. Atomic write + auto-commit. Implements `main.md`
+Phase NN.
+
+**Positional args:**
+
+| Arg | Type | Notes |
+|---|---|---|
+| `<url>` | string | git URL of the referenced repo (SSH or HTTPS) |
+
+**Flags:**
+
+| Flag | Type | Default | Notes |
+|---|---|---|---|
+| `--label` | string | derived from URL last segment | suggested display name (≤ 200 chars) |
+| `--mode` | enum | `read-only` | per D.43 |
+| `--priority` | enum | `normal` | per D.43 `priority_modifier` (`high`/`normal`/`low`) |
+| `--required` | bool | false | app warns when the reference is not configured (D.43) |
+| `--default-active` | bool | true | whether to enable the import by default when the parent repo is accepted |
+| `--description` | string | — | free-text description (≤ 500 chars) |
+| `--credential-hint` | string | — | per D.43 `credential_hint` (e.g. `ssh-key:fingerprint:abc123`) |
+| `--recommended-calendars` | comma-list of UUIDv7 | `[]` | hint: which calendars in the referenced repo should be enabled by default on receive |
+| `--order-priority` | int | 0 | sort key for the receive-prompt UI when multiple refs are listed |
+| `--repo` | UUIDv7 or name | active | target repo to write the manifest into |
+| `--force` | bool | false | overwrite an existing entry with the same URL (default: refuse, return the existing entry's `ref_id`) |
+| `--json` | bool | false | machine-readable output |
+| `--dry-run` | bool | false | print the would-be manifest entry without writing |
+| `--no-commit` | bool | false | stage but don't commit (per CLI-B.4) |
+
+**Stdout (human):**
+
+```text
+$ skb ref add git@github.com:dom/master-schedule.git --label "Master" --priority high
+✓ added reference "Master"
+  ref_id:    0190d4a0-7fab-7c50-9c1e-aaaaaaaaaaaa
+  url:       git@github.com:dom/master-schedule.git
+  mode:      read-only
+  priority:  high
+  file:      .strictlykeptboy/references.toml
+  commit:    7c4b9e2  "add reference \"Master\""
+```
+
+**Stdout (`--json`):**
+
+```text
+{
+  "version": 1,
+  "command": "ref.add",
+  "result": {
+    "ref_id": "0190d4a0-7fab-7c50-9c1e-aaaaaaaaaaaa",
+    "url": "git@github.com:dom/master-schedule.git",
+    "label": "Master",
+    "mode": "read-only",
+    "priority_modifier": "high",
+    "required": false,
+    "default_active": true,
+    "description": null,
+    "credential_hint": null,
+    "recommended_calendars": [],
+    "order_priority": 0,
+    "path": ".strictlykeptboy/references.toml",
+    "commit": "7c4b9e2a8d1f4e0b3c2a1f9e8d7c6b5a4e3d2c1b",
+    "created": true,
+    "source_repo_id": "a4f1c2d8e3b59071"
+  }
+}
+```
+
+**JSON field types:** match DM-Q exactly. `ref_id` is a UUIDv7 string,
+`source_repo_id` is the 16-hex-char hash per D.51, `mode` and
+`priority_modifier` are enums, `required` / `default_active` are bools,
+`recommended_calendars` is an array of UUIDv7 strings, `order_priority`
+is int, `created` is bool (false when `--force` overwrote an existing
+entry).
+
+**Stderr:**
+
+- `error: URL would form a reference cycle (target repo references self via "<url>")` — the walker found the proposed `<url>` already in the reference chain leading back to the target repo. Exit 3.
+- `error: reference with URL "<url>" already exists (ref_id <existing-id>); pass --force to overwrite` — exit 3.
+- `error: cannot write to non-own-repo "<repo-id>" (mode = read-only)` — exit 4. The target repo is configured read-only at the app level (D.50).
+
+**Exit codes:**
+
+- `0` — success.
+- `1` — usage (bad URL, bad flag combo).
+- `2` — not-found (`--repo <id>` doesn't resolve).
+- `3` — conflict (cycle detected, duplicate URL without `--force`).
+- `4` — auth / mode-refused (target repo is read-only).
+- `5` — corrupt (existing `references.toml` failed to parse).
+
+**Behavior notes:**
+
+- Atomic write per CLI-B.2: `.strictlykeptboy/.references.toml.tmp.<pid>.<nano>` → rename.
+- Auto-commit message: `add reference "<label>"` (or `update reference "<label>"` when `--force` overwrites).
+- Cycle detection: walk the reference graph rooted at the proposed `<url>`. If the target repo's `source_repo_id` appears in any reachable repo's `references.toml` (read via the cached clones in `~/.strictlykeptboy/repos/`), refuse with exit 3. Cached clones are used; the walker does NOT clone new repos.
+- Duplicate detection: hash the normalized `<url>` per D.51; compare against each existing entry's normalized URL. Same hash → duplicate.
+- Idempotency: re-running with the same `<url>` is a no-op unless `--force` (then the entry's flags are updated to match the new args). The returned `ref_id` is stable across re-runs.
+- `--dry-run`: prints the would-be `[[reference]]` block as TOML on stdout (or `result.preview` in `--json`).
+
+**Worked example — add a Dom's repo as a reference with priority=high:**
+
+```text
+$ skb ref add git@github.com:dom/master-schedule.git \
+    --label "Master" \
+    --priority high \
+    --required \
+    --description "Workouts, check-ins, weekly assignments." \
+    --credential-hint "ssh-key:fingerprint:abc123"
+✓ added reference "Master"
+  ref_id:    0190d4a0-7fab-7c50-9c1e-aaaaaaaaaaaa
+  url:       git@github.com:dom/master-schedule.git
+  mode:      read-only
+  priority:  high (required)
+  file:      .strictlykeptboy/references.toml
+  commit:    7c4b9e2  "add reference \"Master\""
+```
+
+#### `skb ref list`
+
+**Synopsis:** `skb ref list [--repo <id>] [--json]`
+
+**Description:** Print every `[[reference]]` entry in the target repo's
+`references.toml`.
+
+**Flags:**
+
+| Flag | Type | Default | Notes |
+|---|---|---|---|
+| `--repo` | UUIDv7 or name | active | target repo |
+| `--json` | bool | false | machine-readable output |
+| `--include-resolved` | bool | false | also resolve each reference's `source_repo_id` and `already_configured` status |
+
+**Stdout (human):**
+
+```text
+$ skb ref list
+ref_id                                label              mode        priority  required  default-active
+0190d4a0-7fab-7c50-9c1e-aaaaaaaaaaaa  Master             read-only   high      yes       yes
+0190d4a0-7fab-7c50-9c1e-bbbbbbbbbbbb  Master Resources   read-only   normal    no        yes
+0190d4a0-7fab-7c50-9c1e-cccccccccccc  Pack Calendar      pull-only   low       no        no
+```
+
+**Stdout (`--json`):** array of reference objects, each with the same
+fields as `ref add --json result` (minus `commit`, `created`).
+
+```text
+{
+  "version": 1,
+  "command": "ref.list",
+  "result": {
+    "repo_id": "0190f000-aaaa-7000-8a0a-000000000001",
+    "references": [
+      {
+        "ref_id": "0190d4a0-7fab-7c50-9c1e-aaaaaaaaaaaa",
+        "url": "git@github.com:dom/master-schedule.git",
+        "label": "Master",
+        "mode": "read-only",
+        "priority_modifier": "high",
+        "required": true,
+        "default_active": true,
+        "description": "Workouts, check-ins, weekly assignments.",
+        "credential_hint": "ssh-key:fingerprint:abc123",
+        "recommended_calendars": [],
+        "order_priority": 0,
+        "source_repo_id": "a4f1c2d8e3b59071",
+        "already_configured": true,
+        "child_repo_id": "0190f000-bbbb-7000-8a0a-000000000007"
+      }
+    ]
+  }
+}
+```
+
+**Exit codes:** 0 ok; 2 not-found (`--repo`); 5 corrupt (manifest unparseable).
+
+**Behavior notes:** read-only; no commit; sorted by `order_priority`
+ascending, then `label` ascending.
+
+**Worked example:**
+
+```text
+$ skb ref list --repo sub-own --json | jq '.result.references[].label'
+"Master"
+"Master Resources"
+"Pack Calendar"
+```
+
+#### `skb ref remove`
+
+**Synopsis:** `skb ref remove <ref-url-or-id> [--repo <id>] [--cascade]`
+
+**Description:** Remove a `[[reference]]` entry from the target repo's
+manifest. Does NOT auto-uninstall the referenced repo's clone (per
+D.43); use `--cascade` to also call `skb repo remove` on the child
+repo.
+
+**Positional args:**
+
+| Arg | Type | Notes |
+|---|---|---|
+| `<ref-url-or-id>` | string | either the URL of the referenced repo OR the `ref_id` UUIDv7 |
+
+**Flags:**
+
+| Flag | Type | Default | Notes |
+|---|---|---|---|
+| `--repo` | UUIDv7 or name | active | target repo |
+| `--cascade` | bool | false | also `skb repo remove` the configured child repo (if any) |
+| `--json` | bool | false | machine-readable output |
+| `--dry-run` | bool | false | print what would be removed |
+| `--no-commit` | bool | false | per CLI-B.4 |
+
+**Stdout (human):**
+
+```text
+$ skb ref remove git@github.com:dom/master-schedule.git
+✓ removed reference "Master"
+  ref_id:    0190d4a0-7fab-7c50-9c1e-aaaaaaaaaaaa
+  commit:    9a1b2c3  "remove reference \"Master\""
+note: the cloned child repo (0190f000-bbbb-...) is still configured. Use --cascade to remove it.
+```
+
+**Stdout (`--json`):**
+
+```text
+{
+  "version": 1,
+  "command": "ref.remove",
+  "result": {
+    "ref_id": "0190d4a0-7fab-7c50-9c1e-aaaaaaaaaaaa",
+    "label": "Master",
+    "url": "git@github.com:dom/master-schedule.git",
+    "commit": "9a1b2c3...",
+    "cascaded": false,
+    "child_repo_id": "0190f000-bbbb-7000-8a0a-000000000007"
+  }
+}
+```
+
+**Exit codes:** 0 ok; 1 usage; 2 not-found (no matching entry).
+
+**Behavior notes:**
+
+- Atomic write. Auto-commit: `remove reference "<label>"`.
+- Idempotency: removing an already-absent ref returns exit 2 in default mode; pass `--ignore-missing` to make it exit 0.
+- `--cascade` removal is a SEPARATE transaction (the child repo's removal happens after the manifest write; if it fails, the manifest stays mutated). Use `skb tx start` if you need both in one commit.
+
+**Worked example — remove a stale ref:**
+
+```text
+$ skb ref remove 0190d4a0-7fab-7c50-9c1e-cccccccccccc --cascade
+✓ removed reference "Pack Calendar"
+  ref_id:    0190d4a0-7fab-7c50-9c1e-cccccccccccc
+  commit:    a1b2c3d  "remove reference \"Pack Calendar\""
+✓ removed cloned child repo
+  repo_id:   0190f000-dddd-7000-8a0a-000000000009
+  path:      ~/.strictlykeptboy/repos/0190f000-dddd-7000-8a0a-000000000009/  (deleted)
+```
+
+### CLI-L.3 — `skb state …`
+
+These commands write/list/migrate **cross-repo state files** per D.44
+(schemas in DM-R). State files live in the writing repo (the
+"receiver" side); they reference entities in a source repo (the
+"author" side) by `source_repo_id` + `source_entity_id`. The receiver
+side records all interactions; the source side stays append-only.
+
+#### `skb state set`
+
+**Synopsis:** `skb state set <entity-id> [--source <repo-id>] [--target <repo-id>] <state-kind-flag> [kind-flags] [flags]`
+
+**Description:** Write a state file for `<entity-id>`. Exactly one
+state-kind flag must be supplied (mutually exclusive group below).
+Atomic write + auto-commit to the target repo. Implements `main.md`
+Phase OO.
+
+**Positional args:**
+
+| Arg | Type | Notes |
+|---|---|---|
+| `<entity-id>` | UUIDv7 | source entity (event, task, recurrence, comment, calendar) |
+
+**Mutually exclusive state-kind flags (exactly one required):**
+
+| Flag | Sub-flags | Notes |
+|---|---|---|
+| `--done` | `--at <iso>` (default: now), `--note <s>`, `--note-from-stdin` | mark task done; writes `<entity-id>.done.toml` |
+| `--undone` | — | clear an existing `done` state (removes the file) |
+| `--snooze <until>` | `--alarm-lead-time <duration>` | snooze; `<until>` accepts ISO timestamp or relative duration (`15m`, `2h`, `tomorrow`, `tomorrow@08:00`); writes `<entity-id>.snooze.toml` |
+| `--note <text>` | `--note-from-stdin` (overrides `<text>`) | private annotation; writes `<entity-id>.note.toml` |
+| `--reaction <emoji>` | — | one grapheme; writes `<entity-id>.reaction.toml` |
+| `--mute` | `--until <duration-or-iso>` | suppress notifications; writes `<entity-id>.mute.toml`; without `--until` the mute is permanent |
+| `--unmute` | — | remove the mute state file |
+| `--hide` | `--hide-past`, `--hide-until <duration-or-iso>` | hide from render; writes `<entity-id>.hide.toml` |
+| `--unhide` | — | remove the hide state file |
+| `--priority-override <int>` | — | 1..1000; only valid for calendar entities; writes `<entity-id>.priority-override.toml` |
+
+**Cross-cutting flags:**
+
+| Flag | Type | Default | Notes |
+|---|---|---|---|
+| `--source` | UUIDv7 or name | auto-resolve | the source-repo this entity belongs to. Auto-resolved per CLI-M.2 when `<entity-id>` is unique across configured repos; ambiguous → exit 1. |
+| `--target` | UUIDv7 or name | active own-repo, or `_local/state/` | which repo the state file is WRITTEN TO. See CLI-M.4 for precedence. |
+| `--device-id` | string | per-device-id (D.34) | override the device-id stamped on snoozes |
+| `--orphan` | bool | false | allow writing a state file whose `source_repo_id` is not in the configured set (e.g. for offline ingestion); without this, refuse |
+| `--id` | UUIDv7 | derived | override the state-file's own UUIDv7 (rare; useful for cross-device dedup) |
+| `--author` | UUIDv7 | active identity | per CLI-E.5 + DM-U |
+| `--json` | bool | false | |
+| `--dry-run` | bool | false | |
+| `--no-commit` | bool | false | |
+
+**Stdout (human):**
+
+```text
+$ skb state set 0190d4a0-WORKOUT-MONDAY --done --note "did 5 extra reps"
+✓ marked done: event "Workout - Monday" (in source "Master")
+  source_repo_id:    a4f1c2d8e3b59071
+  source_entity_id:  0190d4a0-WORKOUT-MONDAY
+  state_kind:        done
+  done_at:           2026-05-11T07:30:00+02:00
+  target_repo:       sub-own
+  file:              state/a4f1c2d8e3b59071/0190d4a0-WORKOUT-MONDAY.done.toml
+  commit:            7c4b9e2  "state done for 0190d4a0-WORKOUT-MONDAY"
+```
+
+**Stdout (`--json`):**
+
+```text
+{
+  "version": 1,
+  "command": "state.set",
+  "result": {
+    "state_kind": "done",
+    "state_file_id": "0190d4a0-aaaa-7000-8a0a-000000000001",
+    "source_repo_id": "a4f1c2d8e3b59071",
+    "source_repo_url": "git@github.com:dom/master-schedule.git",
+    "source_entity_id": "0190d4a0-WORKOUT-MONDAY",
+    "source_entity_kind": "task",
+    "target_repo_id": "0190f000-aaaa-7000-8a0a-000000000001",
+    "target_path": "state/a4f1c2d8e3b59071/0190d4a0-WORKOUT-MONDAY.done.toml",
+    "done_at": "2026-05-11T07:30:00+02:00",
+    "author": "0190a000-1111-7000-8a0a-aaaaaaaaaaaa",
+    "body": "did 5 extra reps",
+    "commit": "7c4b9e2a8d1f...",
+    "created": true
+  }
+}
+```
+
+**JSON field types:** match DM-R schemas verbatim. `state_kind` is the
+enum `done|undone|snooze|note|reaction|mute|unmute|hide|unhide|priority-override`.
+For snoozes, the result includes `until` and optionally `device_id`.
+For reactions: `emoji`. For priority overrides: `priority` (int) and
+`scope` (`"calendar"`). For mute/hide with expiry: `until`.
+
+**Stderr:**
+
+- `error: entity <id> not found in any configured source repo` — exit 2.
+- `error: entity <id> ambiguous; found in 2 source repos (pass --source)` — exit 1.
+- `error: --source <repo-id> not configured (pass --orphan to write anyway)` — exit 2.
+- `error: --priority-override only valid for calendar entities; <id> is a task` — exit 1.
+- `error: refusing to write state file for own-authored entity (state files are for receiver-side interactions; edit the source file directly)` — exit 1. This catches the common AI-agent mistake described in CLI-N.
+
+**Exit codes:**
+
+- `0` — success.
+- `1` — usage (bad flag combo, ambiguous entity, wrong kind for `--priority-override`, source-is-self).
+- `2` — not-found (entity, `--source`, `--target`).
+- `3` — conflict (`--id` collides with non-matching state-file).
+- `5` — corrupt (existing state-file unparseable).
+
+**Behavior notes:**
+
+- Atomic single-file write per CLI-B.2.
+- Auto-commit message format: `state <kind> for <entity-id-short>` (e.g. `state done for 0190d4a0`). For `--undone` and similar removals: `clear state <kind> for <entity-id-short>`.
+- Idempotency: re-running `--done` on an already-done entity is a no-op (`created=false`, exit 0). Re-running `--snooze <until>` updates the existing snooze (latest-wins per D.44); `commit` records the change.
+- Source resolution per CLI-M.2: if `--source` not supplied, scan configured repos for `<entity-id>`. Unique match → use it; ambiguous → exit 1 with a hint listing the candidates.
+- Target resolution per CLI-M.4: if `--target` not supplied, default to active own-repo. If no own-repo configured (simplified-mode receiver per D.45), write to `_local/state/<source-repo-id>/<entity-id>.<kind>.toml` (per DM-T). The `_local/` bucket is NOT git-tracked; later, when the user creates an own-repo (D.47), `skb` migrates `_local/state/*` into `state/`.
+- Validation: when `--target` is read-only at the app level, refuse with exit 4.
+- For `--note-from-stdin`: reads stdin until EOF and uses it as the state file body.
+
+**Worked example — mark a Dom-assigned workout as done with a note ("did 5 extra reps"):**
+
+```text
+$ skb state set 0190d4a0-WORKOUT-MONDAY --done --note "did 5 extra reps"
+✓ marked done: task "Workout - Monday" (in source "Master")
+  source_repo_id:    a4f1c2d8e3b59071
+  source_entity_id:  0190d4a0-WORKOUT-MONDAY
+  state_kind:        done
+  done_at:           2026-05-11T07:30:00+02:00
+  target_repo:       sub-own
+  file:              state/a4f1c2d8e3b59071/0190d4a0-WORKOUT-MONDAY.done.toml
+  commit:            7c4b9e2  "state done for 0190d4a0"
+```
+
+**Worked example — snooze an alarm until tomorrow morning:**
+
+```text
+$ skb state set 0190d4a0-CHECKIN-EVENING --snooze tomorrow@08:00
+✓ snoozed: event "Evening check-in" (in source "Master")
+  until:             2026-05-12T08:00:00+02:00
+  device_id:         dev-laragana-pixel-7
+  file:              state/a4f1c2d8e3b59071/0190d4a0-CHECKIN-EVENING.snooze.toml
+  commit:            9a8b7c6  "state snooze for 0190d4a0"
+```
+
+#### `skb state list`
+
+**Synopsis:** `skb state list [--source <repo-id>] [--kind <state-kind>] [--entity <entity-id>] [--target <repo-id>] [--json]`
+
+**Description:** List state files matching filters in the target repo.
+
+**Flags:**
+
+| Flag | Type | Default | Notes |
+|---|---|---|---|
+| `--source` | UUIDv7 or name | (all) | filter to one source repo |
+| `--kind` | enum | (all) | filter to one state kind |
+| `--entity` | UUIDv7 | (all) | filter to one source entity |
+| `--target` | UUIDv7 or name | active own-repo or `_local/` | repo to scan |
+| `--from` | date | — | filter by state-file timestamp ≥ |
+| `--to` | date | — | filter by state-file timestamp ≤ |
+| `--json` | bool | false | |
+| `--limit` | int | unlimited | max entries |
+
+**Stdout (human):**
+
+```text
+$ skb state list --source dom-schedule --kind done
+entity-id                            kind   timestamp                  body
+0190d4a0-WORKOUT-MONDAY              done   2026-05-11T07:30:00+02:00  did 5 extra reps
+0190d4a0-WORKOUT-TUESDAY             done   2026-05-12T07:25:00+02:00  —
+0190d4a0-CHECKIN-EVENING-2026-05-10  done   2026-05-10T21:05:00+02:00  —
+```
+
+**Stdout (`--json`):** array of state-file objects per DM-R, each with
+`state_file_id`, `source_repo_id`, `source_entity_id`, `state_kind`,
+kind-specific fields, `author`, `path`.
+
+**Exit codes:** 0 ok; 2 not-found (`--source`/`--target`); 5 corrupt.
+
+**Behavior notes:** read-only; no commit. Sorted by state-file
+timestamp descending by default.
+
+**Worked example — list all `done` state files for the Dom's repo:**
+
+```text
+$ skb state list --source a4f1c2d8e3b59071 --kind done --json | jq '.result.state_files | length'
+17
+```
+
+#### `skb state rebind`
+
+**Synopsis:** `skb state rebind <old-source-repo-id> <new-url> [--target <repo-id>] [flags]`
+
+**Description:** Rename a source-repo's identity per D.51 rebind
+behavior. Renames `state/<old-source-id>/` to `state/<new-source-id>/`
+(derived from `<new-url>`), updates every matching `[[reference]]`
+entry in `references.toml`, and commits with an auto-message.
+
+**Positional args:**
+
+| Arg | Type | Notes |
+|---|---|---|
+| `<old-source-repo-id>` | 16-hex string or name | the old source-repo-id (the directory under `state/`); name resolution looks up the configured repo by label |
+| `<new-url>` | string | the new git URL (used to derive the new source-repo-id per D.51) |
+
+**Flags:**
+
+| Flag | Type | Default | Notes |
+|---|---|---|---|
+| `--target` | UUIDv7 or name | active own-repo | repo whose state/ and references.toml are mutated |
+| `--no-verify-clone` | bool | false | skip the test-clone of `<new-url>` (default: app does a shallow `git ls-remote` to verify the URL resolves before rebinding) |
+| `--json` | bool | false | |
+| `--dry-run` | bool | false | |
+| `--no-commit` | bool | false | |
+
+**Stdout (human):**
+
+```text
+$ skb state rebind a4f1c2d8e3b59071 git@github.com:dom/master-schedule-v2.git
+✓ rebound source repo
+  old_source_repo_id: a4f1c2d8e3b59071
+  new_source_repo_id: 1d2e3f4a5b6c7081
+  new_url:            git@github.com:dom/master-schedule-v2.git
+  state files moved:  17
+  references updated: 1
+  commit:             c0ffee1  "rebind source a4f1c2d8 -> 1d2e3f4a"
+```
+
+**Stdout (`--json`):**
+
+```text
+{
+  "version": 1,
+  "command": "state.rebind",
+  "result": {
+    "old_source_repo_id": "a4f1c2d8e3b59071",
+    "new_source_repo_id": "1d2e3f4a5b6c7081",
+    "new_url": "git@github.com:dom/master-schedule-v2.git",
+    "state_files_moved": 17,
+    "references_updated": 1,
+    "verified_clone": true,
+    "commit": "c0ffee1..."
+  }
+}
+```
+
+**Stderr:**
+
+- `error: no state directory state/<old-id>/ found in target repo` — exit 2.
+- `warning: new URL did not resolve via ls-remote; rebinding anyway` — on `--no-verify-clone` or transient failure.
+
+**Exit codes:** 0 ok; 1 usage; 2 not-found (old dir absent); 3 conflict
+(new-id collides with an existing populated `state/<new-id>/` — refuse
+without `--force-merge`); 7 network (ls-remote failed without
+`--no-verify-clone`).
+
+**Behavior notes:** all moves happen in a single git commit (the
+auto-rename uses `git mv` semantics via JGit; for non-git `_local/`
+target, a simple atomic-rename of the directory).
+
+### CLI-L.4 — `skb share`
+
+#### `skb share [<repo-id>]`
+
+**Synopsis:** `skb share [<repo-id>] [--mode <m>] [--label <s>] [--priority <p>] [--auth <a>] [--expires <duration>] [--qr <out-path>] [--share <text>] [--revoke <link-id>] [flags]`
+
+**Description:** Generate a share-link / QR for a repo, or revoke an
+existing share. Implements `main.md` Phase RR + D.48.
+
+**Positional args:**
+
+| Arg | Type | Notes |
+|---|---|---|
+| `<repo-id>` | UUIDv7 or name | optional; defaults to active repo |
+
+**Flags:**
+
+| Flag | Type | Default | Notes |
+|---|---|---|---|
+| `--mode` | enum | `read-only` | `read-only|read-write|pull-only` per D.42 |
+| `--label` | string | repo's display name | suggested label for recipient |
+| `--priority` | enum | `normal` | `high|normal|low` per D.49 |
+| `--auth` | enum | auto | `byo-ssh|one-shot-deploy-key|pat|public`. `public` is auto-selected when the repo URL resolves to a public-readable provider URL; otherwise default is `byo-ssh` (no embedded credential). |
+| `--expires` | duration | `24h` | token expiry for embedded-auth modes; range `1h`..`30d`; ignored for `byo-ssh` and `public` |
+| `--qr` | path | — | also write a QR PNG to the given path |
+| `--share` | string | — | emit a system-share-sheet-compatible plain-text message: `"<text>\n<url>"` instead of just the URL |
+| `--revoke` | string | — | revoke an existing share-link by its `link_id` (recorded in `shared-links.toml`); calls provider API to delete the deploy-key/PAT |
+| `--scheme` | enum | `https` | `https` (universal link) or `custom` (`strictlykeptboy://`); per D.42 |
+| `--json` | bool | false | |
+| `--dry-run` | bool | false | for embedded-auth modes, do NOT call the provider API; emit a synthetic preview URL |
+| `--no-commit` | bool | false | |
+
+**Stdout (human):**
+
+```text
+$ skb share dom-schedule --auth one-shot-deploy-key --label "Schedule from Master" --priority high --expires 7d --qr ~/Pictures/sub-link.png
+✓ generated share-link for "dom-schedule"
+  link_id:       0190d4a0-link-7000-8a0a-000000000001
+  mode:          read-only
+  label:         Schedule from Master
+  priority:      high
+  auth:          one-shot-deploy-key (ed25519, fpr SHA256:abcd...)
+  expires_at:    2026-05-18T22:00:00Z
+URL: https://strictlykeptboy.app/add?url=git%40github.com:dom/master-schedule.git&label=Schedule+from+Master&mode=read-only&priority=high#token=ssh-ed25519+AAAAC3Nz...&expires=2026-05-18T22:00:00Z
+QR:  /home/dom/Pictures/sub-link.png
+  commit:        d3adbee  "record share-link for dom-schedule"
+```
+
+**Stdout (`--json`):**
+
+```text
+{
+  "version": 1,
+  "command": "share",
+  "result": {
+    "link_id": "0190d4a0-link-7000-8a0a-000000000001",
+    "url": "https://strictlykeptboy.app/add?url=...#token=...&expires=...",
+    "scheme": "https",
+    "expires_at": "2026-05-18T22:00:00Z",
+    "mode": "read-only",
+    "label": "Schedule from Master",
+    "priority": "high",
+    "auth_method": "one-shot-deploy-key",
+    "key_fingerprint": "SHA256:abcd...",
+    "key_provider_id": 12345,
+    "qr_path": "/home/dom/Pictures/sub-link.png",
+    "commit": "d3adbee..."
+  }
+}
+```
+
+**For `--revoke`:**
+
+```text
+{
+  "version": 1,
+  "command": "share",
+  "result": {
+    "link_id": "0190d4a0-link-7000-8a0a-000000000001",
+    "revoked": true,
+    "provider_action": "delete-deploy-key",
+    "provider_key_id": 12345,
+    "commit": "ca11ed..."
+  }
+}
+```
+
+**Stderr:**
+
+- `error: provider auth required to generate one-shot-deploy-key (run \`skb identity gpg-import\` or sign in)` — exit 4.
+- `error: --expires out of range (must be 1h..30d)` — exit 1.
+- `error: link_id <id> not found in shared-links.toml` — exit 2.
+
+**Exit codes:** 0 ok; 1 usage; 2 not-found (repo, link_id); 4 auth
+(provider API auth failed); 7 network (provider API unreachable).
+
+**Behavior notes:**
+
+- For `one-shot-deploy-key`: app generates an ed25519 keypair
+  client-side, uploads the public half to the provider via API (per
+  D.48; GitHub `admin:public_key` scope; Forgejo equivalent), embeds
+  the PRIVATE half in the URL fragment, records the share in
+  `.strictlykeptboy/shared-links.toml` (schema in DM-R subsection;
+  fields: `link_id`, `created_at`, `expires_at`, `auth_method`,
+  `provider_key_id`, `mode`, `label`, `priority`, `revoked`). Atomic
+  write + auto-commit.
+- For `pat`: app generates a fine-grained PAT via provider API (scope
+  `contents:read`), embeds, records.
+- For `byo-ssh`: link has no token; recipient adds their own key to
+  the provider. No API call.
+- For `public`: link has no token; no API call. Auto-detected when the
+  repo's URL resolves to a public-readable provider URL.
+- `--revoke`: looks up the `link_id` in `shared-links.toml`; calls the
+  provider API to delete the embedded key/PAT; marks the entry
+  `revoked = true` (does NOT delete the entry — audit trail). Atomic
+  write + auto-commit `revoke share-link <link-id-short>`.
+- `--dry-run`: for embedded-auth modes, emits a synthetic URL with
+  `#token=DRYRUN&expires=...` so the caller can validate URL shape
+  without consuming provider API rate limit.
+- Idempotency: each `skb share` invocation generates a NEW link (new
+  `link_id`, new key, new URL); there is no "update existing share".
+  This is by design — share-links are credentials, and rotating them
+  on each call is safer than mutating in place. Use `--revoke` to
+  retire old links.
+
+**Worked example — share a master-schedule repo with embedded deploy key, 7d expiry, save QR to disk, output JSON:**
+
+```text
+$ skb share dom-schedule \
+    --auth one-shot-deploy-key \
+    --label "Schedule from Master" \
+    --priority high \
+    --expires 7d \
+    --qr ~/Pictures/sub-link.png \
+    --json
+{
+  "version": 1,
+  "command": "share",
+  "result": {
+    "link_id": "0190d4a0-link-7000-8a0a-000000000001",
+    "url": "https://strictlykeptboy.app/add?url=git%40github.com:dom/master-schedule.git&label=Schedule+from+Master&mode=read-only&priority=high#token=ssh-ed25519+AAAAC3Nz...&expires=2026-05-18T22:00:00Z",
+    "scheme": "https",
+    "expires_at": "2026-05-18T22:00:00Z",
+    "mode": "read-only",
+    "label": "Schedule from Master",
+    "priority": "high",
+    "auth_method": "one-shot-deploy-key",
+    "key_fingerprint": "SHA256:abcdef0123456789...",
+    "key_provider_id": 12345,
+    "qr_path": "/home/dom/Pictures/sub-link.png",
+    "commit": "d3adbee..."
+  }
+}
+```
+
+### CLI-L.5 — `skb mode`
+
+#### `skb mode <simplified|full|toggle>`
+
+**Synopsis:** `skb mode <simplified|full|toggle> [--label <s>] [--json]`
+
+**Description:** Switch display mode per D.45. Stored in app prefs;
+affects the GUI on the same device. Implements `main.md` Phase PP.
+
+**Positional args:**
+
+| Arg | Type | Notes |
+|---|---|---|
+| `<mode>` | enum | `simplified`, `full`, or `toggle` (flips between the two) |
+
+**Flags:**
+
+| Flag | Type | Default | Notes |
+|---|---|---|---|
+| `--label` | string | current | set the mode label (Simplified / Focused / Good Boy / etc.; per D.45). Optional with all modes including `toggle`. |
+| `--json` | bool | false | |
+| `--dry-run` | bool | false | print what would change without writing |
+
+**Stdout (human):**
+
+```text
+$ skb mode toggle
+✓ switched to simplified (label: "Good Boy Mode")
+  previous_mode: full
+  auto_entered:  false
+
+$ skb mode
+current: simplified ("Good Boy Mode")
+```
+
+**Stdout (`--json`):**
+
+```text
+{
+  "version": 1,
+  "command": "mode",
+  "result": {
+    "mode": "simplified",
+    "label": "Good Boy Mode",
+    "previous_mode": "full",
+    "auto_entered": false
+  }
+}
+```
+
+**JSON field types:**
+
+- `mode` — enum `simplified|full`
+- `label` — string (one of the D.45 presets or a user-defined free-text label)
+- `previous_mode` — enum `simplified|full|null` (null on first set)
+- `auto_entered` — bool (true when the current mode was set automatically per D.45 auto-entry rule rather than by user/CLI action)
+
+**Exit codes:** 0 ok; 1 usage (bad mode arg).
+
+**Behavior notes:**
+
+- Stored in `~/.skb/config.toml` under `[display] mode = ...` and `[display] mode_label = ...`. NOT git-tracked (per-device pref).
+- The CLI doesn't render a GUI, but it shares app prefs with the GUI on the same device. So `skb mode simplified` taken on the desktop AFFECTS the next GUI launch on the same device. On a phone-only setup, the CLI is rare; on a multi-device setup with a desktop running the JVM CLI, the per-device-pref scope matters and is documented loudly.
+- Calling `skb mode` with no positional arg prints the current mode + label and exits 0.
+- `auto_entered` is set to `false` whenever the CLI explicitly changes the mode; the GUI sets it to `true` only when D.45's auto-entry rule triggers.
+- Idempotency: `skb mode simplified` when already in simplified mode is a no-op (still exit 0, prints the current state).
+
+**Worked example:**
+
+```text
+$ skb mode simplified --label "Good Pet Mode"
+✓ switched to simplified (label: "Good Pet Mode")
+  previous_mode: full
+  auto_entered:  false
+
+$ skb mode --json
+{
+  "version": 1,
+  "command": "mode",
+  "result": {
+    "mode": "simplified",
+    "label": "Good Pet Mode",
+    "previous_mode": null,
+    "auto_entered": false
+  }
+}
+```
+
+---
+
+## Phase CLI-M — updated cross-cutting conventions (Round 3 extensions)
+
+These extend the conventions in CLI-B, CLI-C, CLI-D, and CLI-E without
+rewriting them. Where a Round 3 convention applies to ALL commands
+(including Round 1/2 commands), it is called out as `(retro-applies)`.
+
+- [ ] **CLI-M.1** **Exit code 9 — link expired.** Added to the
+  CLI-D.1 taxonomy:
+
+  | Code | Name | When |
+  |---|---|---|
+  | 9 | link-expired | A deep-link or share-link's `expires` field is past device clock and `--insecure-trust-clock` was not set. Distinct from `4 auth` (the credential is valid; the link wrapper has aged out) and `7 network` (clock skew is local, not network). |
+
+  JSON `error.code` enum adds `"link_expired"` per CLI-C.2.
+  `error.details = { expires_at: <iso>, device_now: <iso>, skew_seconds: <int> }`.
+
+  This exit code is currently only raised by `skb accept`. Future
+  share-link consumers (e.g. a future `skb fetch <link-id>` verb) will
+  use the same code.
+
+- [ ] **CLI-M.2** **`--source` flag pattern + resolution algorithm.**
+  State and ref commands accept `--source <repo-id-or-name>` to
+  disambiguate which source repo an entity belongs to when the same
+  entity-id appears in multiple configured repos.
+
+  Resolution algorithm when `--source` is NOT given:
+  1. Iterate every configured repo in `~/.skb/config.toml` whose mode
+     permits it as a source (any mode — even read-only repos are valid
+     sources for state files).
+  2. For each, ask the Room cache (or fall back to a filesystem scan)
+     whether `<entity-id>` exists in that repo.
+  3. If exactly one repo matches → use it.
+  4. If multiple match → exit 1 with a hint listing the candidates
+     and the `--source <id>` flag:
+     ```text
+     error: entity 0190d4a0-XXXX-... is ambiguous; found in 2 source repos
+     hint:  re-run with one of:
+              skb state set --source dom-schedule 0190d4a0-XXXX-... --done
+              skb state set --source coach-strength 0190d4a0-XXXX-... --done
+     ```
+  5. If zero match → exit 2 (`not_found`); hint: `pass --orphan to write a state file for an unconfigured source`.
+
+  This algorithm applies to `skb state set`, `skb state list --entity`,
+  and any future verb that takes an `<entity-id>` whose source is
+  ambiguous.
+
+- [ ] **CLI-M.3** **Atomic writes across repos (multi-repo
+  transactions).** When a Round 3 command writes across MULTIPLE repos
+  in a single invocation (e.g. `skb accept` writing `references.toml`
+  in own-repo AND cloning a child repo AND writing config in
+  `~/.skb/config.toml`), the operations are NOT a single atomic
+  transaction by default. Each writes-and-commits in its own
+  transaction. Failure midway leaves the earlier transactions
+  committed and the later ones unstarted.
+
+  Rationale: cross-repo atomicity would require a two-phase commit
+  protocol across N independent git repos, which is out of scope for
+  v1. The cost is acceptable because the failure mode is recoverable
+  (re-running `skb accept` is idempotent per CLI-L.1, so the user can
+  re-run after fixing the network/auth issue).
+
+  **Escape hatch:** the user (or AI agent) can wrap multi-repo
+  operations in `skb tx start` / `skb tx commit` (per CLI-A.21). The
+  transaction lock-file mechanism extends to span multiple repos when
+  invoked at the multi-repo scope: `skb tx start --multi-repo` (new
+  sub-flag added to CLI-A.21 by this phase). Failure inside the
+  transaction rolls back every repo's staged-but-uncommitted writes.
+
+  `(retro-applies)`: any existing CLI-A.* command that already wrote
+  to multiple repos (e.g. `skb sync` per CLI-A.10) is already
+  per-repo-atomic; this convention codifies the existing behavior and
+  adds the `--multi-repo` tx escape hatch.
+
+- [ ] **CLI-M.4** **`--target` precedence for state writes.** When
+  `--target` is unspecified on a `skb state set` (or `skb ref add`
+  with `--repo`), the resolution order is:
+
+  1. `--target <repo-id-or-name>` flag (explicit).
+  2. Active own-repo per `~/.skb/config.toml`'s `active_repo`, if it
+     is a `read-write` repo (i.e. one created by the user, not a
+     gifted one — D.41 authoring path).
+  3. If no own-repo is configured (simplified-mode receiver per
+     D.45), write to `_local/state/<source-repo-id>/<entity-id>.<kind>.toml`
+     per DM-T. The `_local/` bucket is NOT git-tracked.
+  4. Fail with exit 2 if even `_local/` cannot be created (filesystem
+     error).
+
+  Refuse to write a state file into a read-only-configured repo even
+  if `--target` explicitly names it: exit 4 with `error: target repo
+  "<name>" is configured read-only at the app level (D.50)`.
+
+  `(retro-applies)`: `skb comment add` and other multi-repo-aware
+  verbs follow the same precedence.
+
+- [ ] **CLI-M.5** **Credential redaction in logs.** Extends CLI-D.6:
+  every Round 3 command that handles a URL with a `#token=` fragment
+  redacts the fragment in:
+  - Structured log entries (`~/.skb/logs/<date>.log`) — the URL is
+    logged with the fragment replaced by `#token=<redacted>`.
+  - Stderr output in `--verbose` mode.
+  - Stdout output (the URL is printed verbatim only when the user
+    explicitly asked for it via `skb share`'s output; everywhere else
+    it's redacted).
+  - Error envelope details — exit 4 / exit 9 details NEVER include
+    the raw token even when redaction is technically lossy for
+    debugging.
+
+  Rationale: tokens are credentials and their accidental disclosure
+  via logs is a class of bug that v1 must structurally prevent.
+
+- [ ] **CLI-M.6** **`source_repo_id` as first-class identifier.** Per
+  D.51 + DM-S, every Round 3 command that takes a `--source` or
+  `--repo` argument accepts EITHER:
+  - The app's internal `repo_id` (UUIDv7).
+  - The user-facing repo `name` (from `~/.skb/config.toml`).
+  - The 16-hex-char `source_repo_id` (the D.51 hash).
+  - The repo URL (normalized per D.51 before hashing).
+
+  Resolution: try in the order above; first match wins. Documented in
+  every command's flag table as "UUIDv7 or name" — but the wider
+  parser also accepts the latter two forms for AI-agent convenience.
+
+  `(retro-applies)`: CLI-E.1 repo-discovery already accepts `name` or
+  `path`; CLI-M.6 adds `source_repo_id` and URL to the parser.
+
+---
+
+## Phase CLI-N — updated v1.1 hooks + AI-agent integration
+
+These extend CLI-G (AGENTS.md content) and CLI-K (future hooks) with
+Round 3 specifics. The v1.1 hooks in CLI-K remain unchanged; CLI-N.3
++ CLI-N.4 add new entries below them.
+
+- [ ] **CLI-N.1** **Discovery for AI: `skb help --json` covers Round 3.**
+  Extends CLI-C.3: the help-schema bundle at `META-INF/skb/schemas/`
+  now includes `accept.json`, `ref-add.json`, `ref-list.json`,
+  `ref-remove.json`, `state-set.json`, `state-list.json`,
+  `state-rebind.json`, `share.json`, `mode.json`. A Claude agent
+  learning the surface for the first time calls `skb help --json` and
+  receives all Round 3 commands listed alongside Round 1/2 commands
+  with their full flag schemas. The top-level `result.commands[]` array
+  is sorted alphabetically; Round 3 commands interleave naturally
+  with Round 1/2.
+
+  The `result.commands[].category` field (new in CLI-N.1) groups
+  commands for AI consumers:
+
+  | Category | Commands |
+  |---|---|
+  | `entity` | event, task, recurrence, comment |
+  | `taxonomy` | cal, list, identity |
+  | `view` | show, week, month, find-free |
+  | `repo` | repo, branch, sync, accept, share |
+  | `reference` | ref |
+  | `state` | state |
+  | `chrome` | mode |
+  | `meta` | help, --version, self-update, tx, verify, migrate |
+
+- [ ] **CLI-N.2** **Bootstrap pattern for AI agents.** When Claude is
+  given a share-link by the user (in chat or as a URL), the canonical
+  flow is:
+
+  1. `skb accept <url> --references auto --json` — clone + auto-add
+     default-active refs. Parse the JSON to learn `repo_id` and the
+     references chain.
+  2. `skb show today --json` — confirm the schedule renders and learn
+     entity IDs for the day.
+  3. Use `skb event …` / `skb task …` / `skb state …` commands to
+     interact going forward. For receiver-side interactions on
+     received-repo content, use `skb state set` (CLI-L.3). For
+     authoring-side content in the user's own repo, use `skb event
+     add` / `skb task add` (CLI-A.1, CLI-A.2).
+
+  This pattern is documented in the AGENTS.md content rewrite (DM-O);
+  cross-link from CLI-G.* into DM-O's "Bootstrap from a share-link"
+  section.
+
+- [ ] **CLI-N.3** **State-file primitive for AI: receiver vs author
+  side.** An AI agent on the **receiver side** (Claude editing the
+  sub's interactions with Dom's schedule) writes STATE FILES via
+  `skb state set`. An AI agent on the **author side** (Claude planning
+  the Dom's schedule for the sub) writes to SOURCE-REPO
+  events/tasks/recurrences via `skb event add` / `skb task add` etc.
+
+  The state-file primitive cleanly separates "I'm doing this for the
+  receiver" from "I'm authoring for the source". The CLI enforces this
+  via:
+  - `skb state set` refuses to write a state file for an entity whose
+    source repo equals the active own-repo (exit 1: "source-is-self —
+    edit the source file directly").
+  - `skb event/task add` refuses to write to a `read-only`-configured
+    repo (exit 4 per CLI-M.4).
+
+  This is documented in the AGENTS.md rewrite at DM-O with the
+  "two-hat" framing: every Claude session has either the receiver
+  hat (operating in a receiving user's context) or the author hat
+  (operating in an authoring user's context). The CLI exit codes are
+  the hard guardrail; the AGENTS.md prose is the soft guidance.
+
+- [ ] **CLI-N.4** **MCP server (CLI-K.2) reserves Round 3 tools.** The
+  v1.1 `skb serve` MCP server, when shipped, exposes every Round 3
+  command as an MCP tool with the names `skb.accept`, `skb.ref.add`,
+  `skb.ref.list`, `skb.ref.remove`, `skb.state.set`, `skb.state.list`,
+  `skb.state.rebind`, `skb.share`, `skb.mode`. The JSON-Schema bundle
+  in `META-INF/skb/schemas/` is the source of truth for the MCP tool
+  definitions, ensuring zero drift between CLI flag parsing and MCP
+  tool args.
+
+- [ ] **CLI-N.5** **`skb daemon` (CLI-K.1) watches receiver state.**
+  The v1.1 daemon mode, when shipped, watches `state/<source-repo-id>/`
+  directories across all configured receiver-side repos, emits
+  `skb-state-change` events on the Unix-domain-socket emitter
+  (CLI-B.8), letting future MCP/UI consumers react to state writes.
+  v1 contribution: the socket emitter is already wired for state
+  writes per CLI-B.8.
+
+---
+
+## Round 3 — tradeoffs resolved inline (additions to the existing list)
+
+These are NEW tradeoffs surfaced during Round 3 elaboration. They
+extend the numbered list in the "Cross-cutting tradeoffs resolved
+inline" section below; the numbering continues from there.
+
+13. **`skb accept` recursion depth (CLI-L.1).** Considered: unbounded
+    recursion through `references.toml` chains; depth 1 only; depth 3.
+    **Resolved: depth 3 with cycle detection.** Rationale: real-world
+    chains rarely exceed 2 hops (Dom → Master Resources → seasonal
+    sub-pack); depth 3 covers the 99% case without risking runaway
+    expansion. Cycle detection via `source_repo_id` set membership.
+
+14. **`skb state set --done` vs `skb task done` (CLI-L.3 vs
+    CLI-A.2).** Considered: collapse the two into one verb that
+    auto-detects "is this entity in my own repo or in a source repo"
+    and routes accordingly. **Resolved: keep both verbs distinct.**
+    Rationale: the two-hat framing in CLI-N.3 is structurally
+    valuable; an AI agent that thinks "I'm marking a task done" should
+    have to articulate "in MY repo (author hat) vs IN A SOURCE REPO
+    (receiver hat)". The friction is the feature. Power users with
+    only an own-repo and no source-repos use `skb task done` and
+    never see `skb state set`.
+
+15. **Source-repo-id derivation: hash truncation length (CLI-L.1,
+    D.51).** Considered: 8 hex chars (32-bit, collision-prone); 16
+    hex chars (64-bit, vanishing collision risk at v1 scale); 32 hex
+    chars (128-bit, overkill). **Resolved: 16 hex chars.** Rationale:
+    64-bit suffices for distinguishing < 10^9 source repos with <
+    10^-12 collision probability; the 16-char strings fit comfortably
+    on a single line of `ls` output. Documented in D.51 + DM-S.
+
+16. **`skb share` link mutability (CLI-L.4).** Considered: allow
+    "update share-link" to change expiry/label without rotating the
+    embedded key. **Resolved: each `skb share` invocation generates
+    a NEW link with a NEW key.** Rationale: a share-link is a
+    credential; mutating in place opens a class of "I revoked it but
+    the old link still works" bugs. Rotate-on-each-call is the safer
+    primitive; `--revoke` retires old links explicitly.
+
+17. **Exit code 9 vs reusing exit code 4 (CLI-M.1).** Considered:
+    reuse `4 auth` for expired links. **Resolved: dedicated exit code
+    9 (link-expired).** Rationale: AI agents (Claude) branch on exit
+    code; conflating "credential rejected by provider" with "link
+    wrapper expired at receiver clock" makes retry logic wrong (one
+    is fixable by re-auth; the other is fixable by getting a fresh
+    link). The taxonomy was always pluralizable per CLI-D.1; adding
+    code 9 follows the same spirit.
+
+18. **Default target for state writes when both own-repo AND
+    `_local/` exist (CLI-M.4).** Considered: prefer `_local/`
+    (per-device, no sync churn); prefer own-repo (single source of
+    truth across devices). **Resolved: prefer own-repo if it exists,
+    fall back to `_local/` only when no own-repo is configured.**
+    Rationale: D.47's evolution path migrates `_local/state/*` into
+    own-repo on first own-repo creation; the steady state is "state
+    lives in own-repo and syncs across devices". `_local/` is a
+    bootstrap-only bucket. Mixing the two long-term would split
+    state across two locations and complicate the resolver.
+
+19. **`skb accept --no-clone` semantics (CLI-L.1).** Considered:
+    refuse `--no-clone` outright (require a clone for valid config);
+    allow it, store config, document that subsequent commands will
+    fail until clone happens. **Resolved: allow it, store config,
+    `skb sync` of that repo on next invocation clones.** Rationale:
+    test harnesses and CI pipelines need to seed config without
+    network; this flag is the escape hatch. The user-facing risk
+    ("you accepted a repo but it's not cloned yet") is surfaced by
+    `skb repo list` showing a `not-cloned` badge.
+
+20. **`skb share --auth public` auto-detection (CLI-L.4).**
+    Considered: require the user to explicitly pass `--auth public`;
+    auto-detect via provider API call. **Resolved: auto-detect when
+    omitted, with a confirmation print on stdout in human mode and a
+    `result.auth_method_auto_detected = true` field in `--json`
+    mode.** Rationale: AI agents that don't think about auth get a
+    sensible default; users who explicitly pass `--auth byo-ssh`
+    still get the no-auth-embedded variant. The auto-detect is a
+    one-RTT API call to the provider (`GET /repos/<owner>/<repo>` →
+    check `private: false`) and is cached per `source_repo_id` for
+    24h in `~/.skb/cache/provider-info/`.
+
+---
+
 ## Cross-cutting tradeoffs resolved inline
 
 1. **Argument parser choice (CLI-H.2).** Considered: clikt, Picocli,
