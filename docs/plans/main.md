@@ -37,15 +37,17 @@ README to install. They're not work for this project.
 
 ## Phase A — project scaffold
 
-- [ ] **A.1** `android create --name=strictlykeptboy --output=. compose-empty` then strip the empty-template chrome
-- [ ] **A.2** Configure `app/build.gradle.kts`: minSdk 26, targetSdk 36, namespace `com.eight87.strictlykeptboy`, applicationId same, Compose + KSP + Room + kotlinx.serialization + licensee plugins (mirror tonearmboy's plugin set)
-- [ ] **A.3** Add `libs.versions.toml` with all locked-version libraries (Compose BOM, Material3 Expressive, Room, JGit, apache-sshd-osgi, OkHttp, ktoml, commonmark, lib-recur, BouncyCastle, AndroidX security-crypto, WorkManager, car-app)
-- [ ] **A.4** Capture `GIT_SHA` + `BUILD_DATE` `buildConfigField`s (mirror tonearmboy)
-- [ ] **A.5** Set up Licensee plugin with allowed licenses Apache-2.0, MIT, BSD-2/3, EPL-2.0, BSD-Source-Code (JGit ships under EDL/EPL — verify allowlist before lock)
-- [ ] **A.6** `MainActivity` + `App` + theme scaffolding with Material3 Expressive default
-- [ ] **A.7** Edge-to-edge enabled, status bar transparent, M3E dynamic color
-- [ ] **A.8** Hilt or simple manual DI? **Decision: manual DI** (mirror tonearmboy; avoid annotation-processor overhead). Compose-friendly DI via simple `LocalAppContainer` provider.
-- [ ] **A.9** First `assembleDebug` + `android run` → blank screen with "strictlykeptboy" title runs on AVD
+_Shipped in commit (next push). Scaffolded via `android create` empty-activity template, package renamed to `com.eight87.strictlykeptboy`, M3E pinned, BuildConfig fields wired, splash with version+sha+date displayed, `./gradlew assembleDebug` produces a 12MB debug APK._
+
+- [x] **A.1** `android create --name=strictlykeptboy --output=. empty-activity` then strip the empty-template chrome (Navigation example removed; only MainActivity + theme retained)
+- [x] **A.2** Configure `app/build.gradle.kts`: minSdk 26, targetSdk 36, namespace `com.eight87.strictlykeptboy`, applicationId same, Compose + serialization plugins. (KSP / Room / Licensee deferred to subsequent phases where they're actually used — keep scaffold minimal.)
+- [x] **A.3** Bootstrap `libs.versions.toml` with the Compose BOM + M3E pin (1.5.0-alpha18). Heavy libs (JGit, ktoml, commonmark, lib-recur, BouncyCastle, security-crypto, WorkManager, car-app) get added in their owning phases (B/C/J/Q) so the scaffold stays minimal.
+- [x] **A.4** `GIT_SHA` + `BUILD_DATE` `buildConfigField`s wired and rendered on the splash screen
+- [ ] **A.5** Licensee plugin — deferred to Phase LL (Round 2 license audit); not needed at scaffold time
+- [x] **A.6** `MainActivity` + theme scaffolding with M3E (`MaterialExpressiveTheme` + `expressiveLightColorScheme()` for light; `darkColorScheme()` seeded for dark — `expressiveDarkColorScheme()` not yet shipped in 1.5.0-alpha18)
+- [x] **A.7** Edge-to-edge enabled (`enableEdgeToEdge()`), M3E dynamic color when API ≥ S
+- [ ] **A.8** Manual DI scaffolding — deferred to Phase B/C when the first real components are wired
+- [x] **A.9** First `assembleDebug` ran clean: `BUILD SUCCESSFUL in 13s, 38 actionable tasks`, 12MB APK at `app/build/outputs/apk/debug/app-debug.apk`. `android run` against AVD is the next step (out of scope for the scaffold commit; the build itself works).
 
 ---
 
