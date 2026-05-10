@@ -24,10 +24,9 @@ The name is the brand: a strict, kept schedule, kept boy. Cute bat-in-hoodie mas
 
 ## Non-goals (v1)
 
-- CalDAV/CardDAV server-side sync. Scripts in `tools/` for iCal export/import to Thunderbird/Outlook; no real-time CalDAV in v1.
-- Web app or desktop app. Android only in v1.
-- End-to-end encrypted repo contents (Git repo can be private; that's the encryption story for now).
-- Time-zone-aware multi-timezone display (single device timezone in v1; recurrence rules stored in repo timezone).
+- Web app or desktop app. Android only for the GUI in v1. (The `skb` CLI is cross-platform — Linux/macOS/anywhere with Java 17+ — and is the primary surface for AI agents like Claude.)
+- End-to-end encrypted repo contents (Git repo can be private at the provider level; that's the encryption story for now).
+- Self-served CalDAV / webcal endpoints (server territory, not client). Bidirectional CalDAV *client* sync IS in v1 — point the app at any CalDAV server (Google, Microsoft, Apple, Nextcloud, DAVx⁵, your own).
 
 ## Stack (locked)
 

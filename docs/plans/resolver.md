@@ -929,17 +929,737 @@ in any case the v1 wizard or templates can produce.
 
 ---
 
-## Out-of-scope (explicit)
+# Round 2 — extensions (Phases RV-H through RV-K)
 
-- **Multi-tz scheduling for common-time** (deferred to v2 per D.10).
-- **Aligned sub-window emission** in common-time (deferred per
-  RV-E.5 commentary).
-- **CalDAV-side resolver semantics** — out of scope per D.16; v1
-  exports plain iCal which third-party clients resolve themselves.
-- **Editing the resolver's primary/secondary choice** at the slot
-  level (e.g. "show this work event over the vacation just for
-  today") — v2 feature; current workaround is per-occurrence
-  exception override on the recurrence rule.
+These phases extend the Round 1 resolver design with multi-timezone
+semantics, a multi-tz common-time finder, a non-busy weather data
+layer, and a surgical update to the out-of-scope section. They
+correspond to **Phase AA** (multi-tz), **Phase BB** (weather), and
+**Phase Y** (CalDAV — only the resolver-side semantics; the pull
+mechanics live in `sync-engine.md` SE-Q) in `main.md`.
+
+Locked-decision references: D.25 (CalDAV bridge), D.27 (multi-tz
+first-class), D.28 (weather overlay).
+
+**Promotion summary (Round 1 → Round 2):**
+
+| Concern | Round 1 status | Round 2 status |
+|---|---|---|
+| Per-entity tz | Resolver respects file, UI does not expose | UI exposes per-event + per-recurrence + repo-default tz (D.27) |
+| Multi-tz common-time | Out-of-scope (deferred v2) | **In-scope** — RV-I formalizes algorithm |
+| CalDAV resolver semantics | Out-of-scope per D.16 | **In-scope** as additional active calendars (D.25) — pull mechanics in SE-Q, resolver treats mirror calendars identically to native (RV-H tz logic applies) |
+| Weather overlay | Not modeled | **New** non-busy data layer (RV-J) — does not affect active-set or busy-set |
+| Aligned sub-window emission in common-time | Out-of-scope | Still deferred (RV-K) |
+| Per-slot UI override of primary | Out-of-scope | Still deferred (RV-K) |
+
+---
+
+## Phase RV-H — Multi-timezone semantics (D.27)
+
+> main.md → AA.1, AA.2, AA.3, AA.5. decisions.md → D.27, also D.6
+> (recurrence tz) and D.25 (CalDAV mirror calendars participate).
+
+**Goal:** make the entire RV-A → RV-B → RV-C → RV-D pipeline
+tz-aware at every step, with crisp resolution rules and DST behavior
+documented and tested.
+
+### RV-H tz-resolution order (locked)
+
+For any field, the tz used by the resolver is the **first non-null**
+in this order:
+
+1. `event.tz_id` (or `recurrence.tz_id` for recurring events; for
+   exceptions, the exception's tz overrides only if explicitly set,
+   otherwise inherits from the rule).
+2. `calendar.default_tz` (set in `calendar.toml`; optional).
+3. `repo.default_tz` (set in `repo.toml`; optional; defaults to
+   device tz at scaffold time per D.27).
+4. **Device tz** (`ZoneId.systemDefault()` at the resolver-call
+   instant).
+
+Each field has its own resolution evaluation — there is no single
+"event tz." Concretely:
+
+- `event.start` / `event.end` are interpreted in the event's resolved
+  tz (the "**event tz**").
+- `active_windows` / `active_hours` on a calendar are interpreted in
+  the calendar's resolved tz (the "**calendar tz**"), which is
+  `calendar.default_tz || repo.default_tz || device-tz`. Note that
+  `event.tz_id` does NOT participate here — the calendar's
+  activeness is a property of the calendar, not of the events on it.
+- Recurrence expansion (RRULE iteration) uses the recurrence's
+  resolved tz (the "**rule tz**") for DST math, per D.6.
+- The renderer converts every resolved instance to the **render tz**
+  before slot construction. The render tz comes from the UI mode (see
+  RV-H.6).
+
+**Decision (calendar tz ≠ event tz, deliberately):** a "work calendar
+active 09:00–17:00 in Europe/Berlin" should activate based on Berlin's
+clock regardless of where the events on it are scheduled. The most
+common case is a user travelling to NYC: their Berlin work calendar's
+9–17 active window should still cover the Berlin morning (3am NYC),
+because that's when their colleagues are working and emails are
+arriving. Rationale: a calendar models *whose schedule it represents*,
+not where individual events sit.
+
+**Corollary:** if a user actually wants "active when I personally am
+in work hours wherever I am," they set `calendar.default_tz` empty
+(falls through to device-tz, which roams with the phone).
+
+### RV-H active-set in calendar tz
+
+Restating RV-A.2 with the multi-tz lens:
+
+```kotlin
+fun isActive(c: CalendarMeta, at: ZonedDateTime): Boolean {
+    if (!c.activeToggle) return false
+    val calTz = c.tzId  // resolved per chain: calendar.default_tz || repo || device
+    val local = at.withZoneSameInstant(calTz)
+    // ...rest identical to RV-A.2...
+}
+```
+
+No change to the predicate body — RV-A already passed `c.tzId` through.
+What's new in RV-H is **the chain that produces `c.tzId`** (RV-H.1
+below) and the **explicit documentation** that events do not influence
+calendar activeness.
+
+### RV-H recurrence materialization in rule tz
+
+Restating RV-B with the multi-tz lens:
+
+- lib-recur iterates in the rule tz (`rec.tzId`), which is
+  `recurrence.tz_id || calendar.default_tz || repo.default_tz ||
+  device-tz` at file-load time.
+- Each emitted `start: ZonedDateTime` is in the rule tz.
+- For exceptions: the `occurrenceDate` index key is computed in the
+  **rule tz**, not the event tz, not the render tz. (An override
+  exception's own `tz_id`, if set, only affects the override's
+  start time, not which base occurrence it matches.)
+- DST in lib-recur: spring-forward gap → lib-recur shifts the
+  occurrence forward by the gap (standard behavior); fall-back overlap
+  → lib-recur picks the first occurrence (standard). Both are
+  documented in RV-B.7 already; the multi-tz extension does not
+  change this.
+
+### RV-H render-tz conversion
+
+```kotlin
+data class RenderTz(val zone: ZoneId, val origin: RenderTzOrigin)
+
+enum class RenderTzOrigin { Device, Pinned, Participant }
+
+fun toRenderTz(inst: ResolvedInstance, renderTz: RenderTz): ResolvedInstance =
+    inst.copy(
+        start = inst.start.withZoneSameInstant(renderTz.zone),
+        end   = inst.end.withZoneSameInstant(renderTz.zone),
+    )
+```
+
+Renderer converts at the **slot-construction input** boundary: every
+instance for the date range is converted to render tz *before* the
+sweep that finds slot boundaries. This is the only sane way to
+construct slots — boundaries are `Instant`-equivalent regardless of
+tz, but `.toLocalDate()` for "which day cell does this belong to"
+must use render tz. Rationale: a 23:00 Berlin event is "today"
+to a Berlin viewer and "today" to an NYC viewer's afternoon — the
+day-cell assignment is render-tz-dependent.
+
+### RV-H DST transition handling (render-side)
+
+Beyond lib-recur's RRULE-side DST handling (RV-B.7), the renderer
+also needs to handle DST in the **render tz** for visual continuity:
+
+```kotlin
+fun checkRenderTzDstContinuity(
+    slots: List<RenderedSlot>,
+    renderTz: ZoneId,
+    range: ClosedRange<LocalDate>,
+): List<RenderAnnotation> {
+    val rules = renderTz.rules
+    val annotations = mutableListOf<RenderAnnotation>()
+    var cursor = range.start.atStartOfDay(renderTz).toInstant()
+    val end = range.endInclusive.plusDays(1).atStartOfDay(renderTz).toInstant()
+    while (cursor < end) {
+        val next = rules.nextTransition(cursor) ?: break
+        if (next.instant >= end) break
+        annotations += RenderAnnotation.DstTransition(
+            at = next.instant.atZone(renderTz),
+            kind = if (next.duration.isNegative) DstKind.FallBack else DstKind.SpringForward,
+            magnitude = next.duration.abs(),
+        )
+        cursor = next.instant.plusSeconds(1)
+    }
+    return annotations
+}
+```
+
+`RenderAnnotation.DstTransition` decorates the day-view timeline with
+a thin band ("DST → spring forward 1h" or "DST ← fall back 1h"), so
+no event silently teleports or duplicates in the user's view. The
+data is part of the `RenderedSchedule.annotations: List<RenderAnnotation>`
+output channel (RV-H.5).
+
+### RV-H all-day events across tz
+
+An `isAllDay = true` event has start = 00:00 calendar-tz, end =
+24:00 calendar-tz. When rendered in a different tz:
+
+- Berlin all-day event rendered in NYC: 00:00 Berlin == 18:00 prev-
+  day NYC; 24:00 Berlin == 18:00 same-day NYC. **The event spans two
+  NYC day cells.**
+- Resolver emits TWO `RenderedSlot`s with `isAllDayContinuation = true`
+  on the second cell, and the Day/Week/Month adapters render the
+  banded continuation. The single underlying `ResolvedInstance.id`
+  is preserved, so tap-to-edit goes to the same file.
+
+**Decision (all-day rendering tz):** the *source-of-truth tz* for an
+all-day event is the **calendar's** tz, not the event's `tz_id`. An
+all-day event is conceptually "the whole day on this calendar," and
+the calendar is the entity with a stable timezone. Per-event `tz_id`
+on an all-day event is *ignored* for rendering purposes (it remains
+in the file for future use). Rationale: a "vacation day" on a Berlin
+work calendar means "the whole Berlin-day," not "the whole event-tz-
+day"; otherwise re-pinning the event tz would shift which day cell
+holds the vacation.
+
+### RV-H pinned-tz per-event
+
+`event.pin_render_tz: Boolean` (optional, default false). When true,
+the day/week/month view shows that event in **its** tz regardless of
+the user's selected render tz, with a small overlay label "in
+Europe/Berlin." Rationale: travel events ("flight departing CET")
+should not silently shift to the destination's tz when the user
+arrives.
+
+Implementation: in the renderer's pre-conversion step,
+`pin_render_tz == true` skips `toRenderTz` for that instance and
+keeps its native tz; the adapter labels the chip.
+
+### RV-H test corpus (≥ 10 scenarios)
+
+Locked test fixtures for RV-H. All live under
+`core/resolver/src/test/.../tz/`:
+
+1. **Berlin→NYC same-day event:** event at 09:00 Europe/Berlin on
+   2026-06-15, rendered in America/New_York. Expected slot: 03:00 NYC.
+2. **Sydney→London evening meeting:** event at 19:00 Australia/Sydney
+   on 2026-06-15, rendered in Europe/London. Expected: 10:00 London
+   (during BST; AEST is UTC+10, BST is UTC+1).
+3. **DST fall-back overlap (US):** 2026-11-01 01:30 America/New_York
+   appears twice (EDT then EST). An event scheduled at 01:30 EDT
+   renders at the first 01:30; an event at 01:30 EST renders at the
+   second 01:30. Day view shows both, separated by the DST annotation
+   band.
+4. **DST spring-forward gap (US):** 2026-03-08 02:30 America/New_York
+   does not exist. lib-recur shifts a daily 02:30 event to 03:30
+   on that date only; resolver renders at 03:30 with annotation.
+5. **Ambiguous local 02:30 during fall-back:** a one-off file with
+   `start = "2026-11-01T01:30:00"` in `America/New_York` is
+   ambiguous in source. Decision: parser picks the *first* occurrence
+   (EDT) per `java.time.ZonedDateTime.ofLocal(..., preferredOffset)`
+   with `preferredOffset = null` (java.time default is "earlier
+   offset"); validator emits a warning.
+6. **Zero-duration event at DST transition:** point event at
+   2026-11-01T01:30 EDT does not duplicate; the second 01:30 EST
+   pass has no instance. Test asserts exactly one instance.
+7. **All-day event straddling render-tz days:** Berlin all-day on
+   2026-06-15 rendered in NYC → two NYC slots tagged
+   `isAllDayContinuation`.
+8. **Active-hours in calendar tz vs device tz:** Berlin calendar
+   active 09:00–17:00; device in `America/New_York`. Query at NYC
+   03:30 == Berlin 09:30 → calendar **active**. Query at NYC 13:30
+   == Berlin 19:30 → calendar **not active**.
+9. **Pinned-tz event:** event in Europe/Berlin with
+   `pin_render_tz = true`, render tz = America/New_York. Chip shows
+   Berlin time + "in Europe/Berlin" label; not converted.
+10. **Recurrence tz ≠ calendar tz:** RRULE in Asia/Tokyo
+    `FREQ=WEEKLY;BYDAY=FR` on a calendar in Europe/Berlin. The Friday
+    determination is in Tokyo time; an instance at 23:00 JST Friday
+    is 16:00 CEST Friday (still Friday in Berlin) — but an instance
+    at 02:00 JST Friday is 19:00 CET Thursday (Thursday in Berlin).
+    Both render correctly under their respective Tokyo Friday
+    occurrences; the calendar-tz only affects active-hour evaluation,
+    not which day the recurrence fires.
+11. **CalDAV mirror calendar tz inheritance:** a pull-only mirror of
+    a Google Calendar whose server tz is `America/Los_Angeles` lands
+    in the repo with `calendar.default_tz = America/Los_Angeles`.
+    RV-H tz-resolution chain treats this identically to a native
+    calendar with that default. Per D.25, mirror calendars are
+    not special-cased in the resolver.
+12. **Per-event tz_id override on a non-pinned event:** event tz set
+    to Asia/Tokyo on a Europe/Berlin calendar, render in
+    America/New_York. The event's `start/end` are interpreted in
+    Tokyo, then converted to NYC for rendering. Calendar activeness
+    is still evaluated in Berlin tz.
+
+### RV-H phase steps
+
+- [ ] **RV-H.1** Implement tz-resolution chain: `resolveTz(event, calendar, repo): ZoneId` and analogous `resolveTzForRecurrence`, `resolveTzForCalendar`. Pure function; covered by unit tests for each fall-through level.
+- [ ] **RV-H.2** Update `EventLoader` / `RecurrenceLoader` / `CalendarLoader` (file-store → resolver bridge) to populate the resolved `tzId` field on `CalendarMeta`, `RecurrenceFile`, `MaterializedEvent` per the chain at load time.
+- [ ] **RV-H.3** Update `EventFields` schema in `data-model.md` cross-link: add optional `tz_id` and `pin_render_tz` to event frontmatter (the schema work itself is DM-L; RV-H consumes it).
+- [ ] **RV-H.4** Renderer pre-step: convert every `ResolvedInstance` to render tz (`toRenderTz`) **except** those with `pin_render_tz = true`. Document at top of `Renderer.render` that input may be in mixed tz; output is render-tz-normalized except for pinned.
+- [ ] **RV-H.5** Add `RenderedSchedule.annotations: List<RenderAnnotation>` channel; populate with `DstTransition` entries via `checkRenderTzDstContinuity`.
+- [ ] **RV-H.6** Add `RenderTz` parameter to view-mode adapters (RV-D): adapters take render tz from the UI ViewModel (UI-V's display-tz toggle). Default = device tz.
+- [ ] **RV-H.7** All-day continuation handling: when a non-pinned all-day event's calendar-tz day spans two render-tz days, emit two slots with `isAllDayContinuation` flag on the second.
+- [ ] **RV-H.8** Update `RenderCacheKey` (RV-F.1) to include `renderTzId` and `pinnedEventTzDigest` (a tiny digest of which events are pinned). Without this, switching the display tz would serve stale cached schedules.
+- [ ] **RV-H.9** Ten-scenario test corpus (RV-H test corpus above), each as an explicit fixture under `core/resolver/src/test/.../tz/Scenario01_BerlinNyc.kt` … `Scenario12_*.kt`.
+- [ ] **RV-H.10** Property test: round-trip tz conversion of any `ResolvedInstance` through `toRenderTz` and back to source tz returns an instance whose `Instant` is exactly equal.
+- [ ] **RV-H.11** Performance: tz-conversion adds ≤ 5% overhead vs a single-tz render on the RV-G L4 200-event-month fixture. Java's `ZoneId.getRules()` is cached so this is a non-issue, but assert it.
+- [ ] **RV-H.12** Update `RV-A` worked example commentary to reference RV-H tz-resolution chain (no behavior change; just a cross-link in code comments).
+
+---
+
+## Phase RV-I — Multi-timezone common-time finder (D.27)
+
+> main.md → AA.4, AA.7, and N (common-time UI). decisions.md → D.10,
+> D.27.
+
+**Goal:** extend RV-E's common-time finder so each participant is
+evaluated in **their own** tz, then results are surfaced in the
+requesting user's tz.
+
+### RV-I new inputs
+
+```kotlin
+data class Participant(
+    val id: ParticipantId,                 // stable; for ranking + result label
+    val displayName: String,
+    val tzId: ZoneId,
+    val workingHours: List<HourRange>,     // in their tz; empty = 24/7
+    val preferredTimeOfDay: ClosedRange<LocalTime>?, // for ranking
+    val busySetSource: BusySetSource,      // local repo, CalDAV mirror, or static iCal feed
+)
+
+data class MultiTzCommonTimeQuery(
+    val participants: List<Participant>,   // includes the requester
+    val requesterId: ParticipantId,        // results displayed in their tz
+    val range: ClosedRange<LocalDate>,
+    val duration: Duration,
+    val topK: Int = 20,
+    val nearFitsIfNoExact: Boolean = true, // fall back to one-hour-over windows
+)
+
+data class MultiTzFreeSlot(
+    val startUtc: Instant,
+    val endUtc: Instant,
+    val perParticipantLocal: Map<ParticipantId, LocalDateTimeRange>,
+    val isNearFit: Boolean,                // true iff this slot is outside someone's working hours by ≤ 1h
+    val nearFitDetails: List<ParticipantId>,// who it's a near-fit for
+    val rankScore: Double,
+)
+```
+
+### RV-I algorithm
+
+```kotlin
+fun findMultiTzCommonTime(q: MultiTzCommonTimeQuery): List<MultiTzFreeSlot> {
+
+    // 1. For each participant, compute their busy-set in THEIR tz, then
+    //    project to UTC instants for set operations.
+    val busyByParticipant: Map<ParticipantId, List<UtcInterval>> =
+        q.participants.associate { p ->
+            val localBusy = loadBusySet(p.busySetSource, q.range, p.tzId)
+                              // returns intervals in p.tzId already
+            p.id to localBusy.map { it.toUtc() }
+        }
+
+    // 2. For each participant, compute their available windows in their
+    //    tz (working hours intersected with range), then project to UTC.
+    val availableByParticipant: Map<ParticipantId, List<UtcInterval>> =
+        q.participants.associate { p ->
+            val windows = enumerateWorkingHours(p.workingHours, q.range, p.tzId)
+            val free = subtractAll(windows, busyByParticipant[p.id]!!)
+            p.id to free.map { it.toUtc() }
+        }
+
+    // 3. Intersect across all participants in UTC instant-space.
+    var commonFree = availableByParticipant.values.first()
+    for (other in availableByParticipant.values.drop(1)) {
+        commonFree = intersectIntervals(commonFree, other)
+    }
+
+    // 4. Filter to slots ≥ duration.
+    val exactFits = commonFree.filter { it.length >= q.duration }
+
+    // 5. If empty and nearFitsIfNoExact, broaden each participant's
+    //    working hours by ±1h on each side and recompute.
+    val nearFits: List<MultiTzFreeSlot> =
+        if (exactFits.isEmpty() && q.nearFitsIfNoExact)
+            computeNearFits(q, busyByParticipant, broadenBy = Duration.ofHours(1))
+        else emptyList()
+
+    val all = exactFits.map { it.toSlot(q, isNearFit = false) } + nearFits
+
+    // 6. Rank.
+    return all.sortedByDescending { rank(it, q) }.take(q.topK)
+}
+
+fun rank(slot: MultiTzFreeSlot, q: MultiTzCommonTimeQuery): Double {
+    val nInPreferredTod = q.participants.count { p ->
+        val local = slot.perParticipantLocal[p.id]!!
+        p.preferredTimeOfDay?.let { tod ->
+            local.midpoint.toLocalTime() in tod
+        } ?: true
+    }
+    val preferredFraction = nInPreferredTod.toDouble() / q.participants.size
+    val earlinessBonus = 1.0 / (1.0 + daysFromRangeStart(slot, q.range))
+    val nearFitPenalty = if (slot.isNearFit) 0.5 else 1.0
+    return (preferredFraction * 10.0 + earlinessBonus) * nearFitPenalty
+}
+```
+
+### RV-I edge cases (locked)
+
+- **Zero participants:** undefined; caller must pass ≥ 1. The
+  validator on the UI layer (UI-V multi-tz Together-tab) enforces.
+- **One participant:** degenerates to RV-E single-tz finder; returns
+  their free windows ranked normally. Cheap fast-path: skip the
+  intersection.
+- **Participants in same tz:** algorithm still runs correctly; the
+  per-participant local-time mapping is identical. No special case.
+- **Participant with no working hours:** treated as available 24/7
+  in their tz. Common case: "asynchronous teammate" who flags any
+  time as fine.
+- **Working hours that cross midnight:** participant's working hours
+  carry the same midnight-rollover semantics as `HourRange` in RV-A.
+  Sliced into two intervals before UTC projection.
+- **Participant in DST transition during range:** UTC projection
+  handles this correctly; `working 09:00–17:00 their-tz` on the
+  spring-forward day yields a 7h UTC window (not 8h) for that
+  participant, intersecting tighter for others. Test scenario in
+  RV-I.8.
+- **No overlap at all + no near-fits:** return empty list with a
+  caller-visible flag (`exhausted = true`). UI surfaces "no shared
+  window across the date range; try widening the range or marking
+  yourselves async."
+- **Near-fit definition:** broaden each participant's working hours
+  by ±1h, recompute intersection. Any resulting slot that overlaps
+  at least one participant's broadened-but-not-original hours is
+  flagged `isNearFit`, with `nearFitDetails` listing whose hours
+  are violated.
+- **Duration > any individual working window:** mirror RV-E rule —
+  we don't span across multiple windows. Return `[]` (or near-fits
+  if those join two windows after broadening by 1h, but typical
+  participants have ≥ 8h working windows).
+- **CalDAV mirror busy-set:** D.25 mirrors land as additional active
+  calendars; their events flow into `loadBusySet` identically to
+  native events. No special path.
+- **Conflicting tz declarations:** if `participant.tzId` differs from
+  the participant's own repo's `repo.default_tz`, the participant's
+  declared `tzId` wins (RV-I overrides on a per-query basis).
+
+### RV-I display rules
+
+Results are surfaced **in the requester's tz** as primary text, with
+a secondary line per participant:
+
+```
+Mon 2026-06-15  14:00–15:30  (your tz, Europe/Berlin)
+  Alice: 08:00–09:30 America/New_York
+  Boris: 22:00–23:30 Asia/Tokyo  ← outside preferred 09:00–18:00 ⚠
+```
+
+The ⚠ surfaces near-fits and out-of-preferred-time slots without
+hiding them. UI taps "Schedule" → routes to quick-create event in
+the requester's repo.
+
+### RV-I worked example: 3-participant Berlin / NYC / Sydney
+
+Query:
+- Participants: A (Berlin, working 09:00–18:00), B (NYC, working
+  08:00–17:00), C (Sydney, working 09:00–17:00).
+- Range: 2026-06-15..2026-06-19 (Mon..Fri).
+- Duration: 1h.
+- Top 5.
+
+Tz offsets in June 2026: Berlin CEST = UTC+2, NYC EDT = UTC-4,
+Sydney AEST = UTC+10.
+
+Working hours converted to UTC (per day, Mon..Fri):
+- A: 09:00–18:00 CEST = 07:00–16:00 UTC.
+- B: 08:00–17:00 EDT  = 12:00–21:00 UTC.
+- C: 09:00–17:00 AEST = 23:00 prev-day–07:00 UTC.
+
+Intersect A ∩ B in UTC: max(07:00, 12:00)..min(16:00, 21:00) =
+12:00..16:00 UTC.
+
+Intersect (A ∩ B) ∩ C: C is 23:00 prev-day..07:00 UTC, no overlap
+with 12:00..16:00 UTC. **Exact-fit intersection is empty.**
+
+Near-fits (broaden each by ±1h):
+- A: 06:00..17:00 UTC.
+- B: 11:00..22:00 UTC.
+- C: 22:00 prev-day..08:00 UTC.
+
+(A ∩ B) broadened = 11:00..17:00 UTC. ∩ C broadened: no overlap
+(C ends at 08:00 UTC).
+
+Broaden by ±2h (escalation step, not in the locked algorithm but
+shown for illustration): still no overlap on weekdays. The algorithm
+returns `exhausted = true`. The UI surfaces:
+
+> No shared working-hours overlap was found across the requested
+> range. Sydney is ~14h ahead of NYC; consider asynchronous
+> communication or pick a participant to mark as async.
+
+Counter-example with B replaced by D (London, 09:00–17:00 BST):
+- A: 09:00–18:00 CEST = 07:00–16:00 UTC.
+- D: 09:00–17:00 BST  = 08:00–16:00 UTC.
+- C: 09:00–17:00 AEST = 23:00 prev-day–07:00 UTC.
+
+(A ∩ D) = 08:00–16:00 UTC. ∩ C = no overlap exact. Near-fit broaden:
+C → 22:00 prev-day–08:00 UTC; intersect with 08:00–16:00 UTC at the
+single instant 08:00 — 0-length, no fit. Still exhausted.
+
+Counter-example with C replaced by E (Mumbai, 09:00–17:00 IST):
+- IST = UTC+5:30. E: 09:00–17:00 IST = 03:30–11:30 UTC.
+- (A ∩ D) ∩ E = 08:00..11:30 UTC = **3.5 hours of overlap** —
+  multiple 1h slots, ranked Mon first.
+
+This worked-example explicitly shows that the algorithm correctly
+returns no-fit when geometrically impossible (Sydney + Berlin +
+NYC at standard working hours) and returns fits when a tz pair is
+closer (Berlin + London + Mumbai).
+
+### RV-I phase steps
+
+- [ ] **RV-I.1** Define `Participant`, `MultiTzCommonTimeQuery`, `MultiTzFreeSlot`, `UtcInterval`, `LocalDateTimeRange` data classes in `core/resolver/multitz/`.
+- [ ] **RV-I.2** Implement `BusySetSource` resolver: `LocalRepo(repoId)`, `CalDavMirror(mirrorId)`, `StaticICalFeed(url)`. Each returns intervals in a declared tz.
+- [ ] **RV-I.3** Implement `enumerateWorkingHours(hours, range, tz)`: produces per-day intervals in tz, then projects to UTC.
+- [ ] **RV-I.4** Implement `intersectIntervals(a, b)`: sweep-line intersection in UTC, O(n+m).
+- [ ] **RV-I.5** Implement `computeNearFits` with the ±1h broadening rule.
+- [ ] **RV-I.6** Implement `rank` per pseudo-code (preferred-tod fraction × 10 + earliness bonus, × near-fit penalty).
+- [ ] **RV-I.7** Implement orchestration `findMultiTzCommonTime` per pseudo-code.
+- [ ] **RV-I.8** Test fixtures: the 3-participant Berlin/NYC/Sydney worked example (exhausted case), the Berlin/London/Mumbai counter-example (3.5h overlap), single-participant fast-path, same-tz participants, DST-transition day for one participant, async participant (no working hours), mid-range tz change is **not** supported (a participant's tz is fixed per query — document explicitly).
+- [ ] **RV-I.9** Performance test: 5 participants × 14 days × 100 busy-events each → < 800ms on JVM, < 1.5s on Pixel 6a. The hot path is sweep intersection, linear in events.
+- [ ] **RV-I.10** Update `RenderCacheKey` (RV-F.1) for the multi-tz finder: query results cached by `(query-hash, busy-set-digest-per-participant)`. Invalidation on any participant's busy-set change.
+
+---
+
+## Phase RV-J — Weather overlay as a non-busy data layer (D.28)
+
+> main.md → BB.1, BB.3, BB.4, BB.5, BB.6, BB.7. decisions.md → D.28.
+
+**Goal:** introduce the **non-busy data layer** concept to the
+resolver. Weather is the first such layer. Non-busy layers decorate
+the rendered schedule but do NOT participate in active-set or
+busy-set computation. They flow through a parallel output channel
+on `RenderedSchedule`.
+
+### RV-J non-busy layer concept (locked)
+
+A non-busy layer is a function from `(location, time-range, render-tz)
+→ Decoration`. Decorations are surfaced via `RenderedSchedule`'s
+secondary output channels and consumed by view-mode adapters
+alongside the primary slot list. They **never** influence:
+
+- which calendars are active (RV-A unchanged),
+- which events are busy (RV-E / RV-I subtraction unchanged),
+- slot construction or priority (RV-C unchanged).
+
+Future non-busy layers (sun/moon phases, holidays-as-decoration,
+sport-event banners) can plug into the same channel without resolver
+core changes.
+
+### RV-J data shapes
+
+```kotlin
+data class WeatherProviderConfig(
+    val location: GeoLocation,             // (lat, lon, optional name)
+    val granularity: Duration = Duration.ofHours(3),
+    val units: TemperatureUnits = Celsius,
+)
+
+data class HourForecast(
+    val instant: Instant,                  // forecast start
+    val tempC: Double,
+    val conditionCode: WeatherConditionCode, // WMO code or normalized enum
+    val precipMm: Double,
+    val windKph: Double,
+)
+
+interface WeatherProvider {
+    suspend fun forecastFor(
+        config: WeatherProviderConfig,
+        dateRange: ClosedRange<LocalDate>,
+        renderTz: ZoneId,
+    ): List<HourForecast>
+}
+
+data class WeatherStrip(
+    val date: LocalDate,                   // in render tz
+    val location: GeoLocation,
+    val hours: List<HourForecast>,         // 8 entries/day at 3h granularity
+)
+
+data class RenderedSchedule(
+    // ...existing fields...
+    val annotations: List<RenderAnnotation>,
+    val weatherStrips: List<WeatherStrip>, // one per rendered day, or empty
+)
+```
+
+### RV-J integration into the pipeline
+
+```
+RV-A active-set  ──┐
+RV-B recurrence  ──┤
+                   ├─→ RV-C slot construction ──→ RV-D adapters
+RV-J weather     ──┘                             ↑
+   (parallel, non-blocking)                       (adapters consume strips)
+```
+
+The weather fetch runs **in parallel** with RV-A/B/C via a
+`coroutineScope { val schedule = async { renderSlots() }; val weather
+= async { fetchWeather() }; RenderedSchedule(slots = schedule.await(),
+weatherStrips = weather.await()) }`. If the weather fetch fails
+(offline, API down), `weatherStrips = emptyList()` and the rest of
+the render is unaffected. Rationale: weather is decoration, never
+load-bearing.
+
+### RV-J cache + invalidation
+
+- **Cache layer:** Room table `weather_cache` keyed by `(lat, lon,
+  date, granularity, units)`. Stores `List<HourForecast>` serialized
+  as JSON (compact; ≤ 8 rows × ~80 bytes ≈ 640 bytes per day per
+  location).
+- **Freshness:** 6h TTL. Stale entries returned with `isStale = true`
+  flag and a background refresh kicked off.
+- **Opportunistic refresh:** on `ConnectivityManager.NetworkCallback.
+  onAvailable`, refresh any stale-or-expiring-within-1h entries for
+  the currently-rendered range.
+- **Eviction:** entries older than `today - 7d` are dropped on a
+  weekly maintenance pass (sync engine SE-Q maintenance hook).
+
+### RV-J multi-location handling
+
+Multiple active calendars may declare different `weather_location`s
+(via D.28: per-repo location, optional per-event override). The
+resolver applies these rules:
+
+1. **Per render day:** select the **repo default** location of the
+   primary repo for the rendered date. The "primary repo" is the
+   repo whose calendar provides the most active-hours coverage that
+   day (deterministic tiebreak: lex on `repoId`). Rationale: a single
+   weather strip per day avoids visual clutter; multiple strips
+   create a "whose weather?" decision problem.
+2. **Per event:** if an individual event has `event.location` (a
+   geographic location, distinct from a generic location string),
+   the event detail sheet shows that event's forecast as a chip in
+   the detail UI (NOT in the day-view strip). This is a per-event
+   embellishment, not a render-pipeline concern.
+3. **Travel events:** when `event.location ≠ primary-repo location`
+   AND the event is the slot's `primary`, the day-view strip is
+   **dual-banded** for that slot's time range: above strip shows
+   primary-repo weather, below strip shows event-location weather.
+   This is the one exception to "one location per day," scoped
+   tightly to the visual extent of the travel event.
+
+### RV-J locked decisions
+
+**Decision (non-busy layer abstraction):** the data-layer concept is
+formalized as `interface RenderDecorationProvider { fun decorate(...):
+RenderDecoration }`. Weather is the first implementation. Rationale:
+v2 will add at least sun/moon, holidays-as-decoration, and
+sport-event banners; bake the seam now.
+
+**Decision (location is repo-default, not calendar-default):** D.28
+puts the location at the repo level. Calendars within a repo share
+the location. Rationale: weather follows the user, not the calendar
+category; "work calendar in Berlin" vs "personal calendar in Berlin"
+both want the same Berlin weather.
+
+**Decision (Open-Meteo as v1 provider):** D.28 already locks
+Open-Meteo. RV-J abstracts behind `WeatherProvider` so a future
+NOAA/MetOffice provider can drop in.
+
+**Decision (3h granularity in v1, hourly in v2):** day strip shows
+8 entries per day (every 3h: 00, 03, 06, 09, 12, 15, 18, 21).
+Hourly granularity (24 entries) was considered but adds visual noise
+without proportional value at typical strip widths on phones.
+
+**Decision (fail open):** all weather paths fail open. A failed
+fetch produces `emptyList()`. No error chrome in the day view; a
+single "weather unavailable" hint appears in the day-view overflow
+menu.
+
+### RV-J phase steps
+
+- [ ] **RV-J.1** Define `WeatherProviderConfig`, `HourForecast`, `WeatherStrip` data classes; `WeatherProvider` interface; `RenderDecorationProvider` umbrella.
+- [ ] **RV-J.2** Implement `OpenMeteoProvider` (Apache-2.0 client). API call: `https://api.open-meteo.com/v1/forecast?latitude=…&longitude=…&hourly=temperature_2m,weather_code,precipitation,wind_speed_10m&timezone=auto`. Parse JSON → `HourForecast`. Apply 3h decimation.
+- [ ] **RV-J.3** Room cache: `WeatherCacheEntity(lat, lon, date, granularity, units, payloadJson, fetchedAt, isStale)`. DAO with `get(lat,lon,date)` and `put(...)` and `purgeOlderThan(date)`.
+- [ ] **RV-J.4** Add `RenderedSchedule.weatherStrips` and `RenderedSchedule.annotations` channels (the latter shared with RV-H.5).
+- [ ] **RV-J.5** Implement parallel fetch in `Resolver.renderRange`: `coroutineScope { async slots; async weather }`. Weather failure isolated.
+- [ ] **RV-J.6** Day-view adapter (RV-D.1 extension): consume `weatherStrips` → top-of-timeline strip. Week/Month adapters: consume aggregated icons.
+- [ ] **RV-J.7** Per-day primary-repo-location selection algorithm; tiebreak on `repoId`.
+- [ ] **RV-J.8** Travel-event dual-band rendering for `event.location ≠ primary-repo location` slots.
+- [ ] **RV-J.9** Opportunistic refresh on `NetworkCallback.onAvailable`; weekly purge.
+- [ ] **RV-J.10** Update `RenderCacheKey` (RV-F.1) to include `weatherCacheDigest`: SHA-256 of the `(location, date) → fetchedAt` map for the rendered range. Without this, the rendered schedule could be served from cache with stale weather strips.
+- [ ] **RV-J.11** Tests: provider success, provider failure → empty strips, multi-location day → repo-default chosen, travel-event dual-band, stale-then-fresh refresh path.
+- [ ] **RV-J.12** Performance: weather fetch ≤ 300ms on cache hit (Room read), ≤ 1.5s on cold network (Open-Meteo p95). The parallel-with-slots dispatch hides this latency from the visible D.21 budget.
+
+---
+
+## Phase RV-K — Updated out-of-scope section
+
+> Surgical update to the existing "Out-of-scope (explicit)" block
+> below. New phases promoted in (CalDAV resolver semantics, multi-tz
+> common-time) and a residual deferred-list curated.
+
+### RV-K promotions (Round 1 → Round 2)
+
+- ✅ **Multi-tz common-time** — promoted to v1 via RV-I. Was: "deferred
+  to v2 per D.10." Now: D.10 + D.27 jointly define the v1 surface.
+- ✅ **CalDAV-side resolver semantics** — promoted to v1 via RV-H. Was:
+  "out of scope per D.16." Now: per D.25 the resolver treats CalDAV
+  mirror calendars as additional active calendars, with tz inheritance
+  per RV-H tz-resolution chain. The pull-side mechanics (PROPFIND,
+  ETag, conflict, push) live in `sync-engine.md` SE-Q+; the resolver
+  does NOT distinguish mirror vs native.
+
+### RV-K still-deferred (locked)
+
+- ⚠ **Aligned sub-window emission in common-time** — the v1 finder
+  (RV-E single-tz and RV-I multi-tz) emits **maximal free intervals
+  only**, not duration-aligned sub-windows. A 4h common window does
+  not produce four 1h sub-window options ranked separately. Users
+  pick the maximal block and adjust at the quick-create step
+  (N.3 / UI-V). Rationale: simpler API; the ranking already surfaces
+  the right blocks. Aligned-sub-window emission stays a v2 nicety.
+- ⚠ **Per-slot UI override of primary choice** — the resolver's
+  priority tiebreak (RV-C: priority desc, calendar.id lex asc) is
+  deterministic. Users cannot say "for *this slot only*, show work
+  over vacation"; they can only change calendar priority globally,
+  or use a per-occurrence recurrence exception override. Rationale:
+  per-slot UI overrides would require a new schema field and a new
+  rendering branch, with no clear cleanup story. v2 candidate.
+
+### RV-K phase steps
+
+- [ ] **RV-K.1** Surgical edit to the "Out-of-scope (explicit)" block below: remove the promoted-to-v1 items, retain and re-word the still-deferred items with the rationale from RV-K above. (Tracked here as a single doc edit; will land alongside RV-H/I/J.)
+- [ ] **RV-K.2** Update the `Cross-reference table` (top of this doc) to add rows for RV-H, RV-I, RV-J with their main.md → AA/BB/Y links and D.25/D.27/D.28 references.
+- [ ] **RV-K.3** Update the `Tradeoffs resolved inline (summary)` table with the new RV-H/I/J tradeoffs (per-tz fall-through, near-fit broadening, repo-default location).
+- [ ] **RV-K.4** Update the `Correctness-vs-performance calls` list with one new entry: the **weather fetch fails open**, accepting a small UX regression (no strip) for never blocking the render pipeline.
+- [ ] **RV-K.5** Update `Performance audit` table with RV-I budget (5 participants × 14 days × 100 events < 800ms JVM) and RV-J budget (weather fetch ≤ 300ms cache hit, 1.5s cold, parallel-with-slots so not on the critical path).
+
+---
+
+## Out-of-scope (explicit) — updated by RV-K
+
+- ✅ **Multi-tz common-time** — **promoted to v1** via RV-I. (Was
+  deferred to v2 per D.10.)
+- ✅ **CalDAV-side resolver semantics** — **promoted to v1** via
+  RV-H. Resolver treats CalDAV mirror calendars (D.25) as additional
+  active calendars sharing the RV-H tz-resolution chain; pull
+  mechanics live in `sync-engine.md` SE-Q+.
+- ⚠ **Aligned sub-window emission** in common-time (RV-E + RV-I) —
+  still deferred. Finders emit maximal free intervals; users adjust
+  at quick-create. v2 candidate.
+- ⚠ **Per-slot UI override** of primary/secondary choice — still
+  deferred. Priority tiebreak is deterministic globally; per-slot
+  overrides are a v2 candidate. Current workaround: per-occurrence
+  recurrence exception override.
 
 ---
 

@@ -1351,38 +1351,1157 @@ Tactical edge cases discovered during planning. Resolved inline.
 
 ---
 
+# Round 2 — extensions (Phases SE-Q through SE-W)
+
+The phases below extend the sync engine with Round 2 v1-scope additions
+locked in `decisions.md` D.23–D.26, D.35, D.36. These are appended to
+the Round 1 phases (SE-A through SE-P) above; they do NOT supersede or
+rewrite any prior decision. Each phase resolves its own internal
+tradeoffs inline (marked **Decision:**) per the global "elaborate, don't
+punt" rule.
+
+Cross-references back to `main.md` (Round 2 phases):
+
+| `main.md` phase | This doc's Round 2 phases |
+|---|---|
+| **Y** (Round-2 CalDAV bridge) | SE-Q |
+| **Z** (Round-2 Git LFS) | SE-R |
+| **GG** (Round-2 signed commits + ssh-agent) | SE-S, SE-T |
+| **JJ** (Round-2 multi-branch) | SE-U |
+
+---
+
+## Phase SE-Q — Bidirectional CalDAV bridge
+
+Corresponds to `main.md` **Y** (Round 2 CalDAV bridge) and locks in
+`decisions.md` **D.25**.
+
+### Goal
+
+Two-way sync between a calendar in the user's git-backed repo and a
+CalDAV server (Google Calendar, Microsoft 365/Exchange, Apple iCloud,
+Nextcloud, DAVx⁵-bridged endpoints, generic RFC4791 servers). The
+bridge is **co-equal with git sync**, not nested under it: each
+configured CalDAV mirror runs its own worker in `SyncService` and
+fails/recovers independently.
+
+### Libraries + licensing
+
+| Library | License | Distribution status |
+|---|---|---|
+| `ical4j` (`net.fortuna.ical4j:ical4j:4.0.x`) | MPL-2.0 (file-level copyleft) | Link-clean. We do NOT modify ical4j sources; we link as a binary dep. Per D.25, MPL-2.0 only triggers share-back on modifications to ical4j itself, not on our app linking to it. |
+| `dav4jvm` (`com.github.bitfireAT:dav4jvm`) | MPL-2.0 (file-level) | Same status. The library extracted from DAVx⁵; battle-tested against real CalDAV servers. |
+| `okhttp` (existing) | Apache-2.0 | Reused as `dav4jvm`'s underlying HTTP client (single OkHttp config across git HTTPS + CalDAV). |
+
+**Decision (license-clean status):** because both libraries are MPL-2.0
+and we ship them as unmodified linked binaries inside our APK, our
+distribution is unaffected by MPL-2.0's copyleft. Per `decisions.md`
+Round-2 preamble, MPL-2.0 is on the allowed list. `About → Open-source
+licenses` screen renders the MPL-2.0 notices verbatim alongside the
+existing Apache-2.0 notices.
+
+### Data model surface
+
+A `CalDavMirror` is a first-class object peered to `RepoConfig`:
+
+```kotlin
+data class CalDavMirror(
+    val mirrorId: String,            // sha256(repoId + serverUrl + calendarPath)
+    val repoId: String,              // owning repo
+    val displayName: String,
+    val serverUrl: String,           // CalDAV root (e.g. https://caldav.example.com)
+    val calendarHomePath: String,    // discovered via PROPFIND
+    val calendarPath: String,        // e.g. /caldav/user/work-calendar/
+    val targetCalendarId: String,    // repo-side <calendar-id> the mirror writes to
+    val mode: CalDavMode,            // PULL_ONLY | PUSH_ONLY | BIDI
+    val syncIntervalMinutes: Int,    // default 30
+    val credentialBindingId: String, // CalDav creds in SecretsStore
+    val lastSyncedCtag: String?,     // collection-level change token
+    val lastSyncedSyncToken: String?,// RFC6578 WebDAV-Sync token if supported
+    val lastSyncedAt: Long?,
+    val lastError: CalDavError?
+)
+
+enum class CalDavMode { PULL_ONLY, PUSH_ONLY, BIDI }
+```
+
+`CalDavMirror`s are persisted in `EncryptedSharedPreferences` keyed by
+`mirrorId`, mirroring the `RepoStore` pattern. Credentials live in
+`SecretsStore` keyed by `credentialBindingId` — same encrypted store as
+git creds, distinct keys.
+
+### Object ↔ file mapping
+
+Per `notifications-sharing-import.md` NS-F (iCal import via UID):
+
+- One CalDAV `VEVENT` ↔ one repo file under
+  `calendars/<targetCalendarId>/events/<yyyy>/<mm>/<event-id>.md`.
+- Repo `event-id` is UUIDv7 generated app-side on first observation.
+- The CalDAV `UID` is stored in frontmatter as `imported_uid = "<uid>"`.
+  This is the join key for incremental sync.
+- VTODO is mapped onto a sibling `todolists/<list-id>/tasks/...`
+  structure only when the mirror's target is a todolist (CalDAV servers
+  that expose tasks alongside events). v1 surfaces both VEVENT and
+  VTODO; VJOURNAL is read but rendered as a comment-on-the-day entry
+  (kept simple for v1).
+- VTIMEZONE blocks are parsed but never written verbatim to repo files;
+  the resolver re-derives them from `tz_id` per Round-2 D.27.
+- RRULE → repo `recurrences/<rule-id>.md` (re-uses the existing
+  recurrence model from `decisions.md` D.6). Per-instance overrides
+  (`RECURRENCE-ID`) → `exceptions/<rule-id>/<yyyy-mm-dd>.md`.
+- VALARMs are mapped to the repo's `notifications = [...]` array per
+  D.14, with lead-times converted from CalDAV TRIGGER durations.
+
+### Discovery flow
+
+1. User enters server URL + credentials in `Settings → Repos → <repo>
+   → + Add CalDAV mirror`.
+2. App does an HTTP `OPTIONS` on the server URL to check `DAV:
+   calendar-access` header. If absent → reject with "this server does
+   not advertise CalDAV support".
+3. `.well-known/caldav` GET → expect 301/302 redirect to
+   `calendarHomeSet`. If no `.well-known`, fall back to a PROPFIND on
+   the supplied URL for `{DAV:}current-user-principal`.
+4. PROPFIND on principal URL with depth 0 for `{C:}calendar-home-set`.
+5. PROPFIND on calendar-home with depth 1 for `{D:}resourcetype`,
+   `{D:}displayname`, `{C:}supported-calendar-component-set`,
+   `{CS:}getctag`, `{D:}sync-token`. Filter to entries whose
+   resourcetype contains `{C:}calendar`.
+6. Present discovered calendars to user with checkboxes; user picks
+   mode (pull/push/bidi) and the repo-side target calendar (existing
+   `<calendar-id>` or new).
+
+### Credential storage
+
+CalDAV credentials piggyback on the existing `SecretsStore` (Phase
+SE-C) with a new credential kind:
+
+```kotlin
+sealed interface CalDavCredential : Credential {
+    data class BasicAuth(val username: String, val password: String) : CalDavCredential
+    data class BearerToken(val accessToken: String, val refreshToken: String?, val expiresAt: Long?) : CalDavCredential
+    // OAuth: Google/Microsoft both speak OAuth 2.0 to their CalDAV endpoints
+}
+```
+
+OAuth for Google/Microsoft uses the Device Flow + refresh-token pattern
+identical to GitHub OAuth (Phase SE-E). Apple iCloud requires
+app-specific passwords (no OAuth for CalDAV) → use BasicAuth with a
+clear UI note: "Apple ID requires an app-specific password from
+appleid.apple.com; your main Apple password will not work".
+
+### Incremental sync
+
+Two paths in priority order:
+
+1. **RFC6578 WebDAV-Sync** (preferred). Server advertises
+   `{DAV:}sync-collection` in OPTIONS. We send `REPORT sync-collection`
+   with our last `sync-token`; server responds with added/changed/
+   deleted hrefs. Used by Google, Apple, Nextcloud, Radicale.
+2. **CTag + ETag fallback**. PROPFIND `{CS:}getctag` on the collection;
+   if unchanged from `lastSyncedCtag`, skip. Else PROPFIND depth 1 for
+   per-resource `{D:}getetag`; compare to a stored per-resource
+   `etag_<href>` map; for each changed/added href do a GET. Deletes
+   detected by hrefs missing from the new PROPFIND result.
+
+**Decision (which path):** runtime probe at first sync — if
+sync-collection works, persist that capability flag on the mirror and
+prefer it. If REPORT 501s, fall back to ctag. The capability flag
+is re-probed every 30 days to catch server upgrades.
+
+### Conflict resolution
+
+Conflicts arise when both sides change the same VEVENT between syncs.
+Detection:
+
+- Pull side: we observe a remote `ETag` change AND the local repo file
+  has a `lastSyncedHash` ≠ `currentHash`.
+- Push side: we attempt `PUT` with `If-Match: <known-etag>` and get
+  `412 Precondition Failed`.
+
+Resolution UI: **same 3-way diff modal as git conflicts** (Phase SE-J).
+The modal is parameterized by `ConflictSource.{GIT, CALDAV}` and
+renders identically — TOML field-level pre-merge + Markdown body
+3-way diff + Keep mine / Keep theirs / Manual merge buttons. The only
+difference: "theirs" is labeled "server" for CalDAV, "remote" for git.
+
+After resolution:
+- "Keep mine" → push to CalDAV with `If-Match: *` (force-overwrite).
+- "Keep theirs" → overwrite local file with server version, write a
+  git commit `pull caldav: prefer server for <title>`.
+- "Manual merge" → user's merged version pushed to both git and CalDAV.
+
+Per the `decisions.md` D.8 invariant, every CalDAV-side change also
+produces a git commit (the repo is canonical). The commit message
+prefix is `caldav:` so history is easy to filter.
+
+### Per-mirror sync worker
+
+Each `CalDavMirror` gets its own coroutine job inside `SyncService`:
+
+```kotlin
+class CalDavMirrorWorker(
+    private val mirror: CalDavMirror,
+    private val dav: DavCollection,        // dav4jvm handle
+    private val repoStore: RepoStore,
+    private val gitRepo: GitRepo,          // for the git-side commit after each pull
+    private val bus: SyncStatusBus
+) {
+    suspend fun runOnce(): SyncResult { ... }
+    suspend fun runForever() { /* delay(intervalMinutes); runOnce(); repeat */ }
+}
+```
+
+`SyncService` keeps a `Map<MirrorId, Job>`; on mirror add → launch; on
+remove → cancel.
+
+### Failure isolation
+
+A CalDAV mirror crashing (auth error, network timeout, server 500)
+records `lastError` on the mirror and continues its retry-with-backoff
+loop. **It does NOT block the owning repo's git sync, nor any other
+mirror's sync.** Conversely, a git sync failure on the owning repo
+does not stop CalDAV mirrors from running — the CalDAV side has its
+own working copy of the calendar state.
+
+Cross-impact only at conflict-resolution time: if git sync produces a
+conflict on the same calendar file that CalDAV is trying to push, the
+CalDAV push waits until the git conflict is resolved (the file on disk
+is "in conflict" state and we don't ship in-flux data upstream).
+
+### Per-server verification matrix
+
+v1 testing covers these servers (per D.25):
+
+| Server | Auth | sync-collection | Notes |
+|---|---|---|---|
+| Google Calendar | OAuth 2.0 (Device Flow → access+refresh) | Yes | Endpoint: `apidata.googleusercontent.com/caldav/v2/<email>/events`. |
+| Microsoft 365 / Exchange | OAuth 2.0 (Device Flow) | Yes (Outlook), No (older Exchange) | Endpoint: `outlook.office365.com/EWS/Exchange.asmx` for EWS-only; pure CalDAV at `outlook.office.com/<tenant>/...`. |
+| Apple iCloud | BasicAuth (app-specific password) | Yes | Endpoint discovered via `caldav.icloud.com`. Requires `https://` and modern TLS. |
+| Nextcloud | BasicAuth or OAuth | Yes | Endpoint: `<nc>/remote.php/dav/calendars/<user>/<cal>/`. |
+| DAVx⁵-bridged (passthrough) | Whatever the underlying server uses | Inherits | Not a server; only validated indirectly. |
+| Radicale (self-hosted) | BasicAuth | Yes | Common self-host target; ensures we don't accidentally rely on Google-specific extensions. |
+
+### CLI surface (cross-ref `cli-tooling.md`)
+
+- `skb caldav add --repo R --server URL --calendar PATH --mode bidi --target-calendar CAL`
+- `skb caldav list [--repo R]`
+- `skb caldav sync [--mirror M | --all]`
+- `skb caldav remove --mirror M`
+
+### Phase tasks
+
+- [ ] **SE-Q.1** Add `ical4j` + `dav4jvm` to `libs.versions.toml`;
+  R8 keep rules for ical4j's `ServiceLoader`-discovered factories
+- [ ] **SE-Q.2** `CalDavMirror` data class + `CalDavMirrorStore`
+  (EncryptedSharedPreferences-backed)
+- [ ] **SE-Q.3** `CalDavCredential` kinds + `SecretsStore` extension
+- [ ] **SE-Q.4** Discovery flow: OPTIONS + .well-known + PROPFIND chain
+- [ ] **SE-Q.5** `IcalMapper`: VEVENT ↔ repo Markdown+TOML file
+  (UID preserved as `imported_uid`)
+- [ ] **SE-Q.6** `IcalMapper`: VTODO → repo task file
+- [ ] **SE-Q.7** `IcalMapper`: RRULE + RECURRENCE-ID → repo
+  recurrences + exceptions
+- [ ] **SE-Q.8** `IcalMapper`: VALARM → repo `notifications` array
+- [ ] **SE-Q.9** `IcalMapper`: VJOURNAL → day-comment entry
+- [ ] **SE-Q.10** Sync engine: WebDAV-Sync (REPORT sync-collection)
+  path with capability probe
+- [ ] **SE-Q.11** Sync engine: CTag + ETag fallback path
+- [ ] **SE-Q.12** Push path: `PUT` with `If-Match` + 412 detection
+- [ ] **SE-Q.13** Delete path: `DELETE` with `If-Match` for local
+  deletions in BIDI mode
+- [ ] **SE-Q.14** Conflict modal parameterization (shared with git
+  conflict UI, label-only delta) — cross-ref Phase SE-J
+- [ ] **SE-Q.15** `CalDavMirrorWorker` + `SyncService` integration
+  (independent worker per mirror)
+- [ ] **SE-Q.16** Failure-isolation tests: git sync continues when
+  one mirror is wedged; mirror continues when git sync is wedged
+- [ ] **SE-Q.17** Per-server verification matrix tests against
+  MockWebServer fixtures for Google / iCloud / Nextcloud / Radicale
+  response shapes
+- [ ] **SE-Q.18** OAuth Device Flow for Google CalDAV (re-uses Phase
+  SE-E machinery; scope `https://www.googleapis.com/auth/calendar`)
+- [ ] **SE-Q.19** OAuth Device Flow for Microsoft CalDAV (scope
+  `Calendars.ReadWrite` + `offline_access`)
+- [ ] **SE-Q.20** Apple iCloud app-specific-password UX with inline
+  help link to `appleid.apple.com`
+- [ ] **SE-Q.21** Per-mirror configurable sync interval (default 30m,
+  options 5m/15m/30m/1h/4h/manual)
+- [ ] **SE-Q.22** `caldav:` commit-message prefix for all repo-side
+  writes originating from a CalDAV pull
+- [ ] **SE-Q.23** CLI subcommand wiring (handoff to `cli-tooling.md`)
+- [ ] **SE-Q.24** Robolectric tests: mode matrix (pull-only, push-only,
+  bidi) × conflict matrix (no-conflict, repo-wins, server-wins,
+  manual-merge)
+
+---
+
+## Phase SE-R — Git LFS for large attachments
+
+Corresponds to `main.md` **Z** (Round 2 Git LFS) and locks in
+`decisions.md` **D.26**.
+
+### Goal
+
+Attachments above a configurable size threshold (default 1MB) route
+through Git LFS, keeping the repo's pack history bounded and clone
+times fast even when users attach 50MB PDFs or screen recordings.
+JGit ships LFS support since 5.x; we use 6.x's `Lfs` API.
+
+### `.gitattributes` generation
+
+When LFS is enabled on a repo, the app maintains a managed
+`.gitattributes` file at repo root:
+
+```
+# Managed by strictlykeptboy — do not edit between the BEGIN/END markers
+# BEGIN strictlykeptboy-lfs
+attachments/** filter=lfs diff=lfs merge=lfs -text
+# END strictlykeptboy-lfs
+```
+
+The app reads the file, finds the marker block, replaces it on every
+LFS-config change. Lines outside the markers are preserved (user can
+add their own entries). On first enable, if `.gitattributes` exists
+without the markers, the block is appended.
+
+**Decision (marker style):** explicit markers preserve user edits
+without us needing a parser; this is the same pattern git itself
+recommends for tool-managed `.gitattributes`.
+
+### Threshold-based routing
+
+Per-repo setting `lfsThresholdBytes` (default `1_048_576` = 1 MiB).
+
+- On attachment add: compute size. If `size >= threshold` AND LFS is
+  enabled on the repo AND the provider has LFS capability → write the
+  file under `attachments/<sha-prefix>/<sha256>.<ext>` and let the
+  `.gitattributes` filter route it to LFS.
+- If any condition fails → in-tree storage (existing path from
+  `decisions.md` D.3). User sees a one-time toast: "this attachment
+  is X MB; LFS would have kept it out of the repo history but
+  [reason]".
+
+Possible reasons surfaced: "LFS is disabled for this repo", "this
+provider does not support LFS", "the file is below the threshold".
+
+### Provider LFS capability detection
+
+Probe at repo-add time and re-probe on first LFS-touched commit:
+
+1. `HEAD <repoUrl>/info/lfs` — LFS-enabled providers return 200 with
+   `application/vnd.git-lfs+json` content type or at least a 401
+   (auth required) which we treat as "endpoint exists".
+2. A 404 / 405 → provider has no LFS. Record
+   `RepoConfig.lfsProviderCapable = false`. Show one-time warning
+   and fall back to in-tree.
+3. Re-probe is cached for 7 days per repo to avoid hammering.
+
+GitHub, GitLab, Gitea, Forgejo, Bitbucket, Codeberg, self-hosted
+gitolite-with-`lfs-test-server` all support the standard endpoint.
+
+### LFS auth
+
+LFS uses HTTP Basic over HTTPS, separately from the repo's
+git-over-SSH or git-over-HTTPS auth. **Strategy:** piggyback the
+repo's existing credential:
+
+- HTTPS repo with OAuth token → LFS gets the same `Authorization: Bearer
+  <token>` (GitHub/Forgejo accept their PATs as LFS creds).
+- HTTPS repo with PAT → same PAT for LFS.
+- SSH repo → LFS uses SSH `git-lfs-authenticate` shim: send `ssh
+  git@host git-lfs-authenticate <repo> <op>` to get a short-lived HTTPS
+  token, then use that for the LFS HTTP calls. JGit's `Lfs` driver
+  handles this via the configured `SshdSessionFactory`.
+
+**Decision (no separate LFS credential UI):** keeping LFS auth invisible
+to the user matches the "Git LFS is transparent when supported" goal.
+Failures fall through to "provider doesn't support LFS" and in-tree
+storage.
+
+### LFS pointer files
+
+JGit writes the pointer file to the working tree on checkout; the
+actual content lives in `.git/lfs/objects/<oo>/<bb>/<sha>`. Our
+attachment renderer must detect pointer files and lazy-fetch:
+
+```
+version https://git-lfs.github.com/spec/v1
+oid sha256:abc123...
+size 1234567
+```
+
+Detection: file starts with `version https://git-lfs.github.com/spec/`
+AND is small (<1KB). On detection, the attachment loader triggers an
+LFS fetch and shows a small "downloading X MB attachment..." spinner.
+
+### Migration helper
+
+`skb migrate --lfs --repo R` for an existing repo:
+
+**Decision (no history rewrite):** rewriting history to move existing
+large attachments to LFS is destructive (changes every commit SHA,
+breaks every clone). v1 ships **forward-migration only**: from the
+migration commit onward, new attachments above the threshold go to
+LFS; existing in-tree large attachments stay where they are. Document
+this in the CLI help text and in the migration confirmation modal.
+
+Migration steps:
+1. Probe provider LFS capability.
+2. Generate `.gitattributes` with the LFS marker block.
+3. Set `RepoConfig.lfsEnabled = true` and `lfsThresholdBytes`.
+4. Commit `enable git-lfs (forward-only; existing attachments
+   unchanged)`.
+5. Push.
+
+Optional second pass (warned, opt-in): `skb migrate --lfs
+--rewrite-history --repo R` is a v1.1 addition (gated; see
+deferral list update below). v1 omits the rewrite path entirely.
+
+### LFS pointer conflicts
+
+A pointer file conflict (rare — only when both sides upload a
+different blob for the same path between syncs) appears as a
+single-file 3-way diff with the pointer-text shown. Resolution:
+"Keep mine" = my blob's OID wins; "Keep theirs" = their OID wins;
+"Manual merge" is disabled (a pointer file is structured; manual
+edits would corrupt it). UI shows pointer fields as labeled rows
+rather than raw text, with thumbnails of both blobs side-by-side
+when the underlying type is image.
+
+### Phase tasks
+
+- [ ] **SE-R.1** `RepoConfig` extensions: `lfsEnabled: Boolean`,
+  `lfsThresholdBytes: Long`, `lfsProviderCapable: Boolean?`
+- [ ] **SE-R.2** `.gitattributes` marker-block reader/writer
+- [ ] **SE-R.3** `LfsCapabilityProbe` with 7-day cache
+- [ ] **SE-R.4** Attachment router: size-check + capability-check
+  before write; in-tree fallback with one-time toast
+- [ ] **SE-R.5** JGit `LfsConnectionFactory` wired to share OkHttp +
+  auth with the repo's existing transport
+- [ ] **SE-R.6** SSH path: `git-lfs-authenticate` token exchange via
+  `SshdSessionFactory`
+- [ ] **SE-R.7** Pointer-file detection in attachment loader
+- [ ] **SE-R.8** Lazy LFS fetch on attachment open with progress UI
+- [ ] **SE-R.9** Pointer-file conflict UI (labeled rows + thumbnail
+  preview when type=image)
+- [ ] **SE-R.10** `skb migrate --lfs` command (forward-only)
+- [ ] **SE-R.11** Per-repo setting in `Settings → Repos → <repo> →
+  Storage` for `lfsEnabled` + threshold slider
+- [ ] **SE-R.12** Defaults: `lfsEnabled = true` for new repos when
+  capability probe passes; `false` when capability probe fails
+- [ ] **SE-R.13** Test: 5MB attachment routed to LFS when enabled,
+  in-tree when disabled, in-tree-with-warning when provider lacks LFS
+- [ ] **SE-R.14** Test: pointer conflict → modal renders with
+  thumbnails
+
+---
+
+## Phase SE-S — Signed commits (optional)
+
+Corresponds to `main.md` **GG** (Round 2 signed commits) and locks in
+`decisions.md` **D.23**.
+
+### Posture
+
+Signing is a **capability**, not the identity model. Default OFF in UI,
+CLI, and the wizard. Verification of others' signed commits is
+independent of whether the local user signs their own commits.
+
+### GPG private-key import
+
+Two entry points in `Settings → Identities → <identity> → Signing
+keys`:
+
+1. **File picker** — opens SAF; user picks an ASCII-armored
+   `.asc`/`.gpg` file. App parses with BouncyCastle's
+   `PGPSecretKeyRingCollection`, prompts for the key's passphrase if
+   encrypted, validates the key contains a signing-capable subkey,
+   then stores.
+2. **Paste armored text** — text field accepts pasted
+   `-----BEGIN PGP PRIVATE KEY BLOCK-----` … `-----END PGP PRIVATE KEY
+   BLOCK-----`. Same validation pipeline.
+
+After import: app displays key fingerprint (40 hex chars, grouped
+4-by-4), user IDs (name + email associations), creation date, expiry
+(or "no expiry"). User confirms "yes this is the key I meant to
+import" and it's persisted.
+
+### Storage
+
+Imported armored private keys live in `EncryptedSharedPreferences`
+under prefs key `signing.gpg.<fingerprint>`. Each entry stores:
+
+```kotlin
+data class StoredGpgSigningKey(
+    val fingerprint: String,         // 40 hex
+    val armoredPrivateKey: String,   // user gave us this; we keep it armored
+    val userIds: List<String>,       // for display only
+    val createdAt: Long,
+    val expiresAt: Long?,
+    val passphraseHandle: PassphraseHandle  // either INLINE_ENCRYPTED or PROMPT_EACH_USE
+)
+```
+
+**Decision (passphrase handling):** two modes per imported key:
+- `INLINE_ENCRYPTED`: user types passphrase once at import; app
+  decrypts the private key in-memory, re-encrypts the bytes with the
+  Android Keystore-backed master key, persists the keystore-encrypted
+  blob, and discards the user's passphrase. Sign operations use the
+  master-key-decrypted blob. **No user prompt per commit.**
+- `PROMPT_EACH_USE`: app keeps the original armored (passphrase-
+  protected) blob and prompts the user for the passphrase before every
+  signing operation. Suitable for users who treat their GPG key as
+  high-value.
+
+Default is `INLINE_ENCRYPTED` (matches "Claude editing schedules via
+CLI" use case — no per-commit prompts). User can flip per key in
+settings.
+
+### Per-identity + per-repo signing-key picker
+
+`identities/<person-id>.md` frontmatter gains optional
+`signing_key_fingerprint = "<40-hex>"` for the identity's default key.
+
+`RepoConfig` gains optional `signingKeyFingerprintOverride: String?`
+for a per-repo override (e.g. user signs all personal-repo commits
+with key A but work-repo commits with key B).
+
+Resolution at commit time:
+1. If `signingEnabled = false` for the repo → no signature.
+2. Else if `RepoConfig.signingKeyFingerprintOverride != null` → use
+   that key.
+3. Else if `identity.signing_key_fingerprint != null` → use that key.
+4. Else → no signature, log warning "signing enabled but no key
+   selected — commit proceeds unsigned".
+
+### JGit + BouncyCastle wiring
+
+JGit 6.x exposes `GpgSigner.setDefault(signer)`. Our `BcGpgSigner`:
+
+```kotlin
+class BcGpgSigner(private val keyStore: SigningKeyStore) : GpgSigner() {
+    override fun canLocateSigningKey(...): Boolean = ...
+    override fun sign(commit: CommitBuilder, gpgSigningKey: String?,
+                       committer: PersonIdent, credentialsProvider: CredentialsProvider?) {
+        val key = keyStore.resolveForCommit(commit, gpgSigningKey)
+        val secret = key.toBcSecretKey(...)            // decrypt with master key
+        val sig = BcPgpSigner.sign(commit.toByteArray(), secret)
+        commit.setGpgSignature(GpgSignature(sig))
+    }
+}
+```
+
+`GpgSigner.setDefault(BcGpgSigner(...))` is set in `App.onCreate`
+**after** keystore init.
+
+Algorithms supported by BC for PGP signing: RSA-2048+, ECDSA-256+,
+Ed25519. We accept all three on import; reject DSA (legacy weak).
+
+### Verified-author chip
+
+When rendering an event/task tile, the UI looks up the authoring
+commit's signature status:
+
+- `unsigned` → no chip
+- `signed_verified` → small green check badge in the corner, tooltip
+  shows fingerprint and signer name
+- `signed_unknown_key` → small grey check (signature is valid but we
+  haven't imported the public key)
+- `signed_bad` → small red X (signature failed verification — could
+  indicate tampering or corruption)
+
+The verification result is cached per-commit in Room (keyed by commit
+SHA); cache invalidated when the user imports a new public key
+(re-verify all `signed_unknown_key` entries against the new keyring).
+
+### Public-key import (verification side)
+
+Separate flow: `Settings → Identities → <other-person-id> → Public
+signing keys → + Import public key`. File picker or paste accepts
+armored `-----BEGIN PGP PUBLIC KEY BLOCK-----`. Multiple public keys
+per identity supported (key rotation).
+
+Public keys stored in `EncryptedSharedPreferences` under
+`verify.gpg.<fingerprint>` with the bound `person-id`.
+
+### Key revocation
+
+User can remove an imported private key:
+`Settings → Identities → <identity> → Signing keys → tap key →
+Remove`. Confirmation modal: "removing this key means new commits
+will not be signed with it. Existing signed commits are unaffected —
+their signatures remain in the commit objects on the remote."
+
+Removed keys are deleted from `EncryptedSharedPreferences`. No
+revocation certificate is generated by the app (out of scope; users
+who need a revocation cert do it on their main machine).
+
+### SSH-signed commits (alternative path)
+
+JGit 6.x supports `gpg.format = ssh` for SSH-key-based commit
+signatures (the same scheme GitHub recently introduced). Our
+`SshSigner` is a parallel `GpgSigner` subclass that:
+
+- Reuses the user's existing on-device ed25519 git SSH key (Phase
+  SE-C) when configured.
+- Or accepts a separately-imported SSH signing key (so SSH transport
+  key and signing key can differ).
+- Writes the signature in OpenSSH SSHSIG format.
+- Verifies others' SSH signatures via imported SSH public keys
+  (`Settings → Identities → <other> → Public signing keys → SSH
+  format`).
+
+Per-identity / per-repo: signing-format selector is `none | gpg |
+ssh`. **Decision (default):** when the user enables signing for the
+first time on an identity that already has a device-stored SSH key,
+the default offered is `ssh` (lower friction — no key import). GPG is
+offered as an alternative for users with existing GPG keys.
+
+### Default OFF everywhere
+
+- `signingEnabled = false` for every new identity.
+- `signingEnabled = false` for every new repo.
+- CLI `skb event add` etc. produce unsigned commits by default.
+- CLI `skb commit --sign` flag forces signing on a single commit even
+  if disabled (for occasional verifiable commits).
+- Wizard does not prompt for signing keys (zero new-user friction).
+- `Settings → Identities → <identity> → Signing keys` is the only
+  surface that mentions it.
+
+### Phase tasks
+
+- [ ] **SE-S.1** Add `bcpg-jdk18on` (BouncyCastle PGP, Apache-2.0
+  effectively for our use, MIT-style) to `libs.versions.toml`
+- [ ] **SE-S.2** `SigningKeyStore` over `EncryptedSharedPreferences`
+- [ ] **SE-S.3** GPG private-key import: file picker + paste UI
+- [ ] **SE-S.4** GPG private-key import: BC parse + validation +
+  fingerprint display + user confirmation
+- [ ] **SE-S.5** Passphrase modes: `INLINE_ENCRYPTED` vs
+  `PROMPT_EACH_USE` selector
+- [ ] **SE-S.6** `BcGpgSigner` + `GpgSigner.setDefault` wiring
+- [ ] **SE-S.7** Per-identity `signing_key_fingerprint` frontmatter
+  field (cross-ref `data-model.md` Round 2)
+- [ ] **SE-S.8** Per-repo `signingKeyFingerprintOverride` in
+  `RepoConfig`
+- [ ] **SE-S.9** Resolution chain at commit time (repo-override →
+  identity-default → unsigned-with-warning)
+- [ ] **SE-S.10** GPG public-key import for verification
+- [ ] **SE-S.11** Verified-author chip renderer (4 states: unsigned,
+  verified, unknown-key, bad) — cross-ref `ui-spec.md` Round 2
+- [ ] **SE-S.12** Per-commit signature verification cache in Room
+- [ ] **SE-S.13** Key revocation flow (remove from prefs;
+  confirmation modal)
+- [ ] **SE-S.14** SSH-signing alternative: `SshSigner` implementation
+- [ ] **SE-S.15** SSH-signing default-suggested when device has an
+  existing ed25519 SSH key
+- [ ] **SE-S.16** `skb commit --sign` CLI override flag
+- [ ] **SE-S.17** Test: round-trip sign + verify via BC for RSA, ECDSA,
+  Ed25519 (GPG format)
+- [ ] **SE-S.18** Test: round-trip sign + verify SSHSIG format
+- [ ] **SE-S.19** Test: signature on commit C remains verifiable after
+  the private key is removed from the device
+
+---
+
+## Phase SE-T — ssh-agent forwarding (advanced)
+
+Corresponds to `main.md` **GG** (Round 2 ssh-agent) and locks in
+`decisions.md` **D.35**.
+
+### Use case
+
+Users on dev machines (Termux, Linux desktop ssh-mosh into the
+device, ChromeOS Linux container) have an ssh-agent socket accessible
+via `$SSH_AUTH_SOCK`. Letting JGit pull keys from the agent means:
+
+- No need to copy an ed25519 key onto the device.
+- Hardware-token-backed keys (YubiKey, etc.) plumbed through ssh-agent
+  remain usable for git operations.
+- Multiple keys served from one agent — JGit selects via the
+  publickey-auth probe.
+
+For pure mobile users (Pixel / phone-only / no agent): the existing
+device-stored key (Phase SE-C) is the default. This phase is **purely
+additive** for advanced users.
+
+### Toggle
+
+`Settings → Sync → SSH → "Use ssh-agent if available"`. Default OFF.
+When ON:
+
+1. App reads `System.getenv("SSH_AUTH_SOCK")`.
+2. If unset or socket file does not exist → log warning "ssh-agent
+   socket not found; falling back to device-stored key".
+3. If set and socket reachable → configure
+   `SshdSessionFactory.setAuthenticationKeySource(...)`.
+
+The setting is per-app, not per-repo — ssh-agent either is or isn't
+available on this device.
+
+### `AuthenticationKeySource` implementation
+
+apache-sshd ships an `AgentClient` that speaks the SSH-agent
+protocol over a Unix domain socket. Wrap:
+
+```kotlin
+class SshAgentAuthSource(
+    private val socketPath: String,
+    private val fallback: DeviceKeyAuthSource
+) : AuthenticationKeySource {
+    override fun getKeys(session: ClientSession): List<KeyPair> {
+        return try {
+            val agent = SshAgentClient.connect(socketPath)
+            agent.requestIdentities()
+        } catch (e: IOException) {
+            // socket vanished mid-session, or perms denied
+            fallback.getKeys(session)
+        }
+    }
+}
+```
+
+### Socket path discovery
+
+- **Linux/macOS dev**: `$SSH_AUTH_SOCK` is the canonical env var. We
+  read it at process start; it doesn't change at runtime.
+- **Android device sessions**: `$SSH_AUTH_SOCK` is unset.
+- **Termux**: ssh-agent runs inside Termux; user enables the toggle
+  AND sets `SSH_AUTH_SOCK` in the Termux profile so the app can
+  inherit it. (Termux launches the app with its env.)
+- **GUI launches (Pixel launcher)**: env-var inheritance is not
+  guaranteed. Fallback path is the device-stored key.
+
+**Decision (no socket-path manual override in UI):** Surfacing a path
+picker is a footgun (wrong paths cause silent fallback). v1 reads only
+`SSH_AUTH_SOCK`. Users who need a non-standard path can set the env
+var. v1.1 may add an override if there's demand.
+
+### Fallback semantics
+
+If agent fails mid-session (socket disappears, agent crashes), JGit's
+auth retry will call the fallback key source on the next attempt.
+User sees "auth failed → retrying with device key → succeeded" if the
+device key works, or a clear "all keys exhausted" error if neither
+works.
+
+### Security note
+
+The app never reads `id_rsa`-style files from disk — it only speaks
+the agent protocol. This means:
+
+- The agent's "confirm each use" prompt (`ssh-add -c`) works as
+  intended — the user sees a confirm prompt on every git op when so
+  configured.
+- We can't accidentally leak a private key to the repo or to logs.
+
+Logging: agent requests are logged at INFO with key fingerprints only,
+never key material.
+
+### Phase tasks
+
+- [ ] **SE-T.1** `SshAgentAuthSource` implementation against
+  apache-sshd's agent client
+- [ ] **SE-T.2** `$SSH_AUTH_SOCK` reader at `App.onCreate`
+- [ ] **SE-T.3** Fallback chain: agent → device key on socket-not-
+  available or agent-failure
+- [ ] **SE-T.4** Setting `Settings → Sync → SSH → Use ssh-agent` with
+  default-off and status indicator ("Active: 3 keys served" /
+  "Inactive: socket not found")
+- [ ] **SE-T.5** Audit log of agent-key fingerprints used per session
+- [ ] **SE-T.6** Test: agent serves 2 keys → JGit selects the
+  matching one for the remote
+- [ ] **SE-T.7** Test: agent absent → fallback to device key without
+  error toast (silent fallback, only the indicator shows it)
+- [ ] **SE-T.8** Documentation page in `Settings → Help → ssh-agent`
+  with examples for Termux + Linux desktop
+
+---
+
+## Phase SE-U — Multi-branch support
+
+Corresponds to `main.md` **JJ** (Round 2 multi-branch) and locks in
+`decisions.md` **D.36**.
+
+### Goal
+
+A repo may have N branches. The app exposes the current branch in the
+repo switcher, allows switching, allows creating/deleting branches,
+and scopes every sync operation to the current branch. PR creation
+remains a provider-side concern (deep-link out).
+
+### Data-model surface
+
+`RepoConfig` gains:
+
+```kotlin
+data class RepoConfig(
+    // ...existing fields...
+    val currentBranch: String,                  // e.g. "main", "claude/plan-2026-q3"
+    val defaultBranch: String,                  // detected from origin/HEAD on clone
+    val knownBranches: Set<String> = emptySet() // local + tracked-remote branch names
+)
+```
+
+`currentBranch` and `defaultBranch` may differ — `defaultBranch` is
+the remote-side default ("main" usually), `currentBranch` is what the
+user currently has checked out locally.
+
+### Default branch detection on clone
+
+After `git clone`, JGit reports `origin/HEAD` symbolic ref. We read it
+and set `defaultBranch` accordingly:
+
+```kotlin
+val origHead = repo.resolve("refs/remotes/origin/HEAD")
+val targetRefName = repo.refDatabase.exactRef("refs/remotes/origin/HEAD")?.target?.name
+val defaultBranch = targetRefName?.removePrefix("refs/remotes/origin/")
+```
+
+`currentBranch` is set to `defaultBranch` on clone. If `origin/HEAD`
+is missing (some self-hosted setups), default to `main` then `master`
+then the first branch seen, in that order, with a one-time warning.
+
+### Branch switching
+
+`Settings → Repos → <repo> → Branch` opens a picker:
+
+- List shows local branches first (bold), then remote-tracking
+  branches that have no local counterpart (italic + "remote only").
+- Tap a branch → if uncommitted changes exist → `Stash and switch` /
+  `Discard and switch` / `Cancel` modal. Stash is the default option.
+- After confirm: `git stash -u` (if needed) → `git checkout <branch>`
+  → update `RepoConfig.currentBranch` → invalidate Room index for the
+  repo (HEAD changed) → trigger a rescan.
+
+`skb branch switch <branch>` CLI mirrors the same logic with
+`--stash` / `--discard` flags.
+
+### Branch creation
+
+`Settings → Repos → <repo> → Branch → + New branch` modal:
+
+- Branch name (validated against `git check-ref-format`)
+- "Base from": dropdown of existing branches (defaults to current)
+- "Set as current after creation": checkbox (default ON)
+- "Push immediately": checkbox (default ON when online)
+
+On confirm: `git branch <name> <base>` → optionally checkout →
+optionally push with `--set-upstream`.
+
+CLI: `skb branch create <name> [--from BASE] [--no-checkout]
+[--no-push]`.
+
+### Branch deletion
+
+`Settings → Repos → <repo> → Branch → tap branch → Delete`:
+
+- Refuses to delete the current branch (must switch off first).
+- Refuses to delete `main` (and `defaultBranch` if different).
+- Two-step confirmation: "Delete branch 'X'?" with checkbox "Also
+  delete on remote".
+- On confirm: `git branch -D <name>` locally; if checkbox set, `git
+  push origin --delete <name>`.
+
+Reserved name list: `main`, `master`, the repo's `defaultBranch`. The
+delete button is disabled (greyed) for these.
+
+CLI: `skb branch delete <name> [--remote]`.
+
+### Stash + reset path for uncommitted changes
+
+The modal at switch time exposes three options:
+
+1. **Stash (default):** `git stash push -u -m "skb pre-switch from
+   <oldBranch> at <epoch>"`. The stash is per-app-managed; on switch
+   back to `<oldBranch>`, the app offers "Restore stashed changes
+   from <when>?". Stashes accumulate; `Settings → Repos → <repo> →
+   Stashes` lists them with restore/drop.
+2. **Discard:** `git checkout -- .` + `git clean -fd`. Modal warns
+   "you will lose <N> file changes; this cannot be undone".
+3. **Cancel:** abort the switch; user keeps the dirty state on the
+   old branch.
+
+### PR creation: out-of-app
+
+When the user wants to merge a feature branch into `main`, the app
+opens the provider's compare page in the system browser:
+
+- GitHub: `https://github.com/<owner>/<repo>/compare/<base>...<head>`
+- Forgejo: `<base-url>/<owner>/<repo>/compare/<base>...<head>`
+- Gitea: same as Forgejo
+- GitLab: `https://gitlab.com/<owner>/<repo>/-/merge_requests/new?merge_request[source_branch]=<head>&merge_request[target_branch]=<base>`
+
+Provider detection: parsed from the configured remote URL host.
+
+`Settings → Repos → <repo> → Branch → tap non-default branch → Open
+PR` button surfaces this deep link.
+
+CLI: `skb branch pr [--branch B] [--target main]` opens the same URL
+in the device browser via Android intent.
+
+**Decision (no in-app PR):** per D.40 and D.36, in-app PR creation
+requires elevated OAuth scopes and provider-API divergence is
+significant. Deep-link is sufficient for v1; v1.1 may revisit.
+
+### Per-branch sync
+
+Each branch maintains its own remote tracking ref. Sync operations
+(`SyncService`) work on the **current** branch only:
+
+- Fetch fetches all branches (one network call).
+- Rebase rebases the current branch onto its remote tracking ref.
+- Push pushes the current branch only.
+
+Per-branch sync intervals are NOT a v1 thing (one interval per repo
+remains). Per-branch sync state (`commitsAhead`, `commitsBehind`)
+is persisted, so when the user switches branches the status badge
+updates from cache without a network call.
+
+### Branch in repo switcher
+
+The top-bar repo switcher shows `<avatar> <repo-name>` on the primary
+line and `<branch-name>` as a subdued caption when the current branch
+is not the default branch. When on the default branch, the caption is
+omitted (no visual noise for the common case).
+
+### Sharing + branches
+
+Per `notifications-sharing-import.md` NS-* (Round 2 extension):
+the "shared with me" surfaces respect the user's current branch when
+showing what's visible. If a shared collaborator has access to all
+branches, the app does not surface this; if access is branch-scoped
+(GitLab protected branches with maintainer-only), push failures
+surface the normal read-only-repo handling.
+
+### Phase tasks
+
+- [ ] **SE-U.1** `RepoConfig` extension: `currentBranch`,
+  `defaultBranch`, `knownBranches`
+- [ ] **SE-U.2** Default-branch detection at clone time with
+  `main` → `master` → first-branch fallback
+- [ ] **SE-U.3** Branch picker UI (`Settings → Repos → <repo> →
+  Branch`) — cross-ref `ui-spec.md` Round 2
+- [ ] **SE-U.4** Stash / Discard / Cancel modal on dirty switch
+- [ ] **SE-U.5** Stash management surface (list + restore + drop)
+- [ ] **SE-U.6** Branch create modal (name validation, base selector,
+  push-immediately checkbox)
+- [ ] **SE-U.7** Branch delete with reserved-name guard + remote-delete
+  checkbox
+- [ ] **SE-U.8** Per-branch persistence of `commitsAhead`/`commitsBehind`
+  in Room
+- [ ] **SE-U.9** Branch indicator in top-bar repo switcher
+- [ ] **SE-U.10** Deep-link PR creation per provider (GitHub, Forgejo,
+  Gitea, GitLab) with URL templates
+- [ ] **SE-U.11** CLI: `skb branch list|create|switch|delete|pr`
+- [ ] **SE-U.12** Room-index invalidation on `currentBranch` change
+- [ ] **SE-U.13** Sync engine: scope fetch/rebase/push to current
+  branch
+- [ ] **SE-U.14** Test: switch with dirty tree triggers stash modal;
+  stash + restore round-trips file contents
+
+---
+
+## Phase SE-V — Updated v2 deferrals (post-Round 2)
+
+This phase exists as a marker — it has no implementation tasks. Its
+purpose is to record that the Round 2 expansion in `decisions.md`
+D.23–D.40 moved several items from the original v2-deferred pile into
+v1 scope. The updated deferral list is below this phase, replacing the
+original deferral list verbatim. The "still deferred" entries each
+keep a one-line rationale; the "moved to v1" entries point at the
+phase that owns the work.
+
+This phase ships when every other Round-2 phase (SE-Q through SE-U) is
+green AND the deferral list below has been audited against the
+implementation status.
+
+### Phase tasks
+
+- [ ] **SE-V.1** Audit "moved to v1" entries against shipped phases —
+  every promoted item must have a green phase in this doc, in
+  `data-model.md`, in `ui-spec.md`, in `notifications-sharing-import.md`,
+  or in `cli-tooling.md` covering its mechanics
+- [ ] **SE-V.2** Audit "still deferred v1.1" entries — each must have
+  an issue or label in the project tracker (issue created during the
+  v1 ship cycle, not now)
+- [ ] **SE-V.3** Tick this phase when the Round 1 deferral list below
+  has been replaced + audited
+
+---
+
+## Phase SE-W — Cross-cutting verification
+
+Conflict-UI, sync-orchestration, and status-bar reporting all
+generalize across Round 1 and Round 2 sources. This phase ensures the
+generalizations actually hold across every sync path.
+
+### Conflict UI across all sync paths
+
+Four sync paths can produce a conflict in v1:
+
+| Path | Conflict shape | Modal reuse |
+|---|---|---|
+| Git pull/rebase (Phase SE-J) | TOML+body 3-way diff on one entity file | Original modal |
+| CalDAV pull (Phase SE-Q) | Same TOML+body 3-way diff; label "server" vs "mine" | Parameterized modal |
+| Git LFS pointer (Phase SE-R) | Pointer-file diff; structured rows + blob thumbnails | Specialized variant |
+| Signed-commit verification (Phase SE-S) | Not a 3-way diff; a "signature mismatch" banner on the entity | Specialized banner, no modal |
+
+**Decision (single modal component):** the conflict modal is a
+parameterized Compose `ConflictModal(state: ConflictModalState)` where
+`state` carries the source label, the field rows (auto-merged for TOML
+keys with disjoint changes), the body 3-way text, and the resolution
+buttons. LFS pointer conflicts use the same modal with
+`fieldsOnly = true` (no body editor).
+
+Signature-mismatch is not a conflict — it's an integrity warning
+rendered as a banner on the affected entity's detail screen with
+"Trust this signature anyway" / "Investigate" actions. Not a modal.
+
+### Sync orchestration: per-repo task queue
+
+`SyncService` keeps:
+
+- One job per repo (existing Phase SE-G).
+- N jobs per repo (one per `CalDavMirror`, see Phase SE-Q.15).
+- A global semaphore bounding concurrent network operations to
+  `min(4, configuredMax)` to avoid hammering radio + battery
+  (existing Phase SE-L invariant; reaffirmed here).
+
+Fairness:
+- Within a repo, git sync and CalDAV mirrors are queued in arrival
+  order with priority `manual > scheduled > opportunistic`.
+- Across repos, round-robin: each repo gets one slot per cycle until
+  the semaphore is exhausted.
+
+Starvation avoidance:
+- A repo whose git sync has been queued > 5 minutes jumps the queue
+  on the next slot (max-wait-time priority bump).
+
+### Status reporting in top bar
+
+The top-bar sync indicator combines three streams into one icon:
+
+- Git sync state (existing): `idle | syncing | offline | error |
+  ahead | behind | conflict`
+- CalDAV mirror state (Round 2): `idle | syncing | offline | error |
+  conflict` aggregated across all mirrors of the current repo
+- LFS transfer state (Round 2): `idle | transferring | error`
+
+Combined icon precedence (highest → lowest visual priority):
+
+1. `error` on any stream → red sync icon with error count badge
+2. `conflict` on any stream → orange sync icon with conflict count
+3. `syncing` or `transferring` on any stream → animated rotating sync
+   icon
+4. `offline` on any stream → grey sync icon with offline badge
+5. `behind` or `ahead` on git → blue sync icon with ↓N / ↑N count
+6. else → idle (subtle icon)
+
+Tap the indicator → opens a sheet with per-stream breakdown (git
+status row + per-mirror row + per-transfer row). Each row has its own
+action button (retry, resolve, view error).
+
+### Phase tasks
+
+- [ ] **SE-W.1** `ConflictModal` Compose component parameterized over
+  source label + fieldsOnly flag — cross-ref `ui-spec.md` Round 2
+- [ ] **SE-W.2** `ConflictModalState` data class covering git, CalDAV,
+  and LFS-pointer cases
+- [ ] **SE-W.3** Signature-mismatch banner component (NOT a modal)
+- [ ] **SE-W.4** Sync semaphore confirmed to bound git + CalDAV + LFS
+  combined to `min(4, configuredMax)`
+- [ ] **SE-W.5** Round-robin queue across repos + arrival-order within
+  repo + max-wait-time priority bump
+- [ ] **SE-W.6** Combined top-bar status indicator with precedence
+  ordering
+- [ ] **SE-W.7** Tap-indicator detail sheet with per-stream rows
+- [ ] **SE-W.8** Tests: 3 repos × 2 mirrors each × 1 in-flight LFS
+  transfer — semaphore caps at 4; round-robin observed; no starvation
+- [ ] **SE-W.9** Tests: error in CalDAV does not change top-bar icon
+  to red unless the user's *current* repo has the erroring mirror —
+  errors on inactive repos surface as a small unread-count dot, not a
+  full-screen-warning state
+- [ ] **SE-W.10** Audit: every Round-2 phase's conflict path uses
+  `ConflictModal`; no ad-hoc conflict UI elsewhere
+
+---
+
 ## Items deferred to v2
 
-The following are explicitly deferred. Each has a one-line rationale:
+Updated for Round 2. Items previously deferred that are now in v1 are
+marked **✅ MOVED TO v1** with a phase pointer. Items that remain
+deferred are marked **⚠️ STILL DEFERRED v1.1** with rationale.
 
-- **Custom auto-merge for TOML-key-disjoint changes.** Requires
-  semantic-diff UX care; v1 is simpler and safer with explicit user
-  resolution. (See SE-I "auto-resolvable cases".)
-- **QR code SSH-public-key export.** zxing dependency cost vs. marginal
-  UX win; clipboard + share-sheet covers desktop-handoff via existing
-  cross-device clipboards. (See SE-C.)
-- **Branch-protection PR-creation flow.** When push hits a protected
-  branch on GitHub, v1 blocks; v2 could open a PR via REST. Out of
-  scope. (See SE-K.)
-- **Conscrypt for older-Android TLS 1.3.** minSdk 26 has acceptable
-  defaults; revisit only if field reports show handshake failures.
-  (See SE-D.)
-- **CalDAV server-side bridge.** `decisions.md` D.16 marks this out of
-  v1; hooks left in `tools/` per `main.md` Phase P.5.
-- **ssh-agent integration.** Android lacks a Unix-socket ssh-agent; we
-  exclude `jgit-ssh-apache-agent` outright. (See SE-A.)
-- **Server-side hooks for write attribution.** v1 trusts client-side
-  `user.email`; server-side enforcement (e.g. signed commits) would
-  require GPG/SSH signing flows. v2 candidate.
-- **Multi-branch support.** v1 hard-codes `main` (or the remote default
-  branch detected at clone time) per repo. Multi-branch UI is a v2
-  topic; the data model already supports it (`RepoConfig` could gain a
-  `branch` field), but the UX cost is non-trivial.
-- **Submodules.** Not supported. Repos with submodules will fail to
-  clone with a clear error message.
-- **Git LFS.** Not supported in v1. Attachments are
-  content-addressable in-repo (per `decisions.md` D.3) and assumed
-  bounded (small images, occasional PDFs). LFS support is a v2 ask.
+### ✅ Moved to v1 (Round 2 promotions)
+
+- **✅ MOVED TO v1: Bidirectional CalDAV bridge.** Now in v1 per D.25.
+  See **Phase SE-Q** above for full mechanics (libraries, discovery,
+  mapping, conflict reuse, per-server matrix). Originally deferred as
+  "CalDAV server-side bridge".
+- **✅ MOVED TO v1: Git LFS.** Now in v1 per D.26. See **Phase SE-R**
+  above (threshold routing, capability probe, auth piggyback, pointer
+  conflicts, forward-only migration). Originally deferred as "Git LFS
+  v2 ask".
+- **✅ MOVED TO v1 (as optional capability): Signed commits.** Now in
+  v1 per D.23 — demoted from "deferred required" to "v1 optional,
+  default OFF". See **Phase SE-S** above (GPG + SSHSIG, per-identity
+  and per-repo keys, verified-author chip, key revocation). Originally
+  deferred as "server-side hooks for write attribution → GPG/SSH
+  signing flows would be needed".
+- **✅ MOVED TO v1: ssh-agent integration.** Now in v1 per D.35. See
+  **Phase SE-T** above (advanced setting, default OFF, `SSH_AUTH_SOCK`
+  reader, fallback chain). Originally deferred as "Android lacks
+  Unix-socket ssh-agent" — Termux + dev-machine sessions DO have one,
+  so the support is worth it for that user class.
+- **✅ MOVED TO v1: Multi-branch support.** Now in v1 per D.36. See
+  **Phase SE-U** above (branch picker, switch with stash, create/
+  delete, per-branch sync, PR via deep-link). Originally deferred as
+  "v1 hard-codes main".
+
+### ⚠️ Still deferred v1.1 (with rationale)
+
+- **⚠️ STILL DEFERRED v1.1: Semantic TOML auto-merge for
+  key-disjoint changes.** The file model is designed so conflicts
+  are rare; manual 3-way diff UI is sufficient for the volume v1
+  will see. Adding semantic-merge needs a careful UX pass (when does
+  the user need to see the auto-merge? what's the audit trail?) that
+  isn't worth blocking v1 on. See `decisions.md` D.40 row "Semantic
+  TOML auto-merge". (Original SE-I deferral preserved.)
+- **⚠️ STILL DEFERRED v1.1: QR code for SSH public-key export.**
+  Marginal value over clipboard + share-sheet, which already cover
+  desktop handoff via cross-device clipboards (Pixel-to-Mac via
+  iCloud/Universal Clipboard equivalents, KDE Connect, etc.). zxing
+  dep cost (~600KB) not worth it. (Original SE-C deferral preserved;
+  matches `decisions.md` D.40.)
+- **⚠️ STILL DEFERRED v1.1: Branch-protection PR creation in-app.**
+  Multi-branch support (Phase SE-U) covers everything except in-app
+  PR submission. Provider-side compare-and-pull-request page via
+  deep-link is adequate. In-app PR creation needs elevated OAuth
+  scopes per provider (different across GitHub / GitLab / Forgejo /
+  Gitea), each with its own API surface — significant matrix without
+  proportional user benefit for v1. (Matches D.40.)
+- **⚠️ STILL DEFERRED v1.1: Conscrypt for modernized TLS 1.3.**
+  Modern OkHttp + minSdk 26 ships acceptable TLS 1.3. Revisit only
+  if field reports show handshake failures against specific git
+  hosts. (Original SE-D deferral preserved; matches D.40 "Conscrypt
+  for older-Android TLS 1.3" rationale.)
+- **⚠️ STILL DEFERRED v1.1: Submodules.** Still not supported. Repos
+  with submodules fail to clone with a clear error. JGit's submodule
+  story has working-tree-quirks on Android (recursive nested working
+  trees + R8 keep rules + permissions); not worth it without demand.
+  (Original deferral preserved.)
+- **⚠️ STILL DEFERRED v1.1: In-app per-recipient deploy-key
+  generation.** **Rejected** per D.40 — wrong trust model. The
+  recipient should generate their own keypair on their own device;
+  the originating user should never possess a recipient's private
+  key.
+- **⚠️ STILL DEFERRED v1.1: Custom semantic merge for
+  `_local/snoozes.toml`.** Per D.34, snoozes use "latest wins per
+  entry" auto-merge — already in v1; this entry is here for
+  completeness to confirm we don't go beyond that simple rule.
+
+---
 
 ---
 

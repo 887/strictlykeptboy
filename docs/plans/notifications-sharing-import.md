@@ -1012,6 +1012,1281 @@ Relationship, Chores* — and is **not** the same thing as Android
 
 ---
 
+# Round 2 — extensions (Phases NS-L through NS-Q)
+
+Round 2 of `decisions.md` (D.23–D.40) pulled the v2 deferral pile into
+v1. These extension phases elaborate the in-app UX and notification
+surfaces for:
+
+- **NS-L** — Bidirectional CalDAV in-app UX (D.25). Cross-link: server
+  mechanics live in `sync-engine.md` SE-Q; this doc owns the user-facing
+  surface. Maps to `main.md` Phase **Y**.
+- **NS-M** — Comments / replies notification surface (D.29 + D.37).
+  Cross-link: file layout in `data-model.md` DM-K; composer UI in
+  `ui-spec.md` UI-V+. Maps to `main.md` Phase **CC**.
+- **NS-N** — CSV import for tasks (D.38). Cross-link: CLI in
+  `cli-tooling.md` CLI-*. Maps to `main.md` Phase **KK**.
+- **NS-O** — Cross-device snooze sync (D.34, opt-in). Cross-link:
+  resolver auto-merge details in `resolver.md`. Maps to `main.md`
+  Phase **II**.
+- **NS-P** — Multi-branch sharing semantics (D.36). Cross-link: branch
+  switching mechanics in `sync-engine.md` SE-Q; UI in `ui-spec.md`.
+  Maps to `main.md` Phase **JJ**.
+- **NS-Q** — Surgical update of the v2 deferral list.
+
+All five new feature phases supersede the original v2-deferred items
+documented in NS-G.7, NS-E.3, NS-J.6, NS-D.8 and parts of NS-K.6.
+NS-Q rewrites the deferred-items section accordingly.
+
+---
+
+## Phase NS-L — Bidirectional CalDAV in-app UX (D.25)
+
+Server-side mechanics — discovery protocol, dav4jvm + ical4j wiring,
+sync-loop scheduling, ETag/CTag bookkeeping, conflict surfacing back to
+the resolver — live in `sync-engine.md` SE-Q. This phase owns the
+user-facing UX surface and the notification touchpoints around CalDAV
+mirrors, so the user understands what's happening and can intervene
+when things break.
+
+A **mirror** is a CalDAV-backed shadow of a single calendar inside a
+repo. One repo can carry many mirrors; each mirror has a `mode` of
+`pull` (server → repo only), `push` (repo → server only), or `bidi`
+(both directions). Mirror metadata lives in the repo as
+`calendars/<calendar-id>/mirror.toml` so the configuration syncs across
+the user's devices automatically (the credential half stays in
+`EncryptedSharedPreferences` keyed by mirror URL hash). Per-mirror
+silenced-notifications state lives in app prefs.
+
+### NS-L.1 — Add-mirror flow
+
+- [ ] **NS-L.1.1** Entry-point: Settings → Repos → tap repo → tap a
+      calendar row → "Mirrors" subsection → "+ Add CalDAV mirror"
+      button. Also reachable from Settings → Repos → tap repo → "+ Add
+      CalDAV mirror" which then prompts for the target calendar mid-flow.
+
+- [ ] **NS-L.1.2** Step 1 — Server URL input:
+      - Single text field `Server URL` (e.g.
+        `https://caldav.example.com/`, `https://nextcloud.example.com/remote.php/dav/`).
+      - Helper text under the field: "Paste the CalDAV root or a
+        principal URL. We'll auto-discover from here."
+      - Quick-pick buttons under the field for common providers:
+        `iCloud` (prefills `https://caldav.icloud.com/`), `Fastmail`,
+        `Google` (which gates with a "Google CalDAV requires App
+        Passwords — open instructions" link), `Nextcloud / Generic`.
+      - Credentials section: `Username` + `Password` (or app-password
+        for iCloud/Google) fields. **Decision:** v1 supports
+        Basic-over-HTTPS only. OAuth-for-CalDAV (Apple, Google) is
+        deferred to v1.1 — `decisions.md` D.25 does not require it,
+        and the app-password path is the documented escape hatch for
+        both providers.
+      - "Continue" button → kicks off discovery (NS-L.1.3).
+
+- [ ] **NS-L.1.3** Step 2 — Discovery (driven by SE-Q):
+      - In-line progress card: "Discovering calendars on
+        `<host>`..." with a circular progress indicator.
+      - On success: hand off to step 3 with the discovered list.
+      - On HTTP 401 / 403: surface an inline error chip ("Wrong
+        username or password — try again") and return to step 1 with
+        the password field cleared but username preserved.
+      - On HTTP 5xx / network: surface "Server unreachable — try
+        again later" with a Retry button.
+      - On schema oddities (no `current-user-principal`,
+        non-conforming `PROPFIND` response): surface "This server
+        doesn't speak standard CalDAV. Paste a calendar URL directly?"
+        and offer a manual URL entry path.
+      - Discovery timeout: 20 seconds; user can extend once via
+        "Still trying — wait longer?" affordance.
+
+- [ ] **NS-L.1.4** Step 3 — Calendar picker:
+      - Header: "Found N calendars on `<host>`".
+      - List rows: each calendar shows display name, color swatch
+        (from CalDAV `calendar-color` property when present), and an
+        approximate event count (from `getctag`-derived hint when the
+        server provides one; otherwise omitted).
+      - User picks ONE calendar per mirror flow. **Decision:** to
+        mirror N server calendars, the user runs the wizard N times.
+        Multi-select would force a follow-up "pick target for each"
+        step that's worse UX than the linear flow.
+      - "Back" returns to Step 1 with URL+username preserved.
+
+- [ ] **NS-L.1.5** Step 4 — Mode picker:
+      - Three radio cards:
+        - **Pull only (read-only mirror)** — recommended for "work
+          calendar I want to see but not edit from the app".
+        - **Push only (export to server)** — recommended for "publish
+          my repo calendar so partner on Thunderbird can see it".
+        - **Bidirectional** — recommended for "personal calendar I
+          edit from multiple apps".
+      - Each card has a short description + a sample-conflict
+        explanation: e.g. for `bidi`, "If both sides change the same
+        event, you'll resolve the conflict the same way you do for
+        Git conflicts."
+      - Bidi mode shows an additional toggle "Promote conflicts to
+        notifications" (default ON; maps to NS-L.4 error channel).
+
+- [ ] **NS-L.1.6** Step 5 — Target calendar picker (push and bidi only):
+      - For push/bidi: "Which repo calendar should this mirror
+        sync?" — list of calendars in this repo, plus "Create a new
+        calendar named X from this mirror" option (X defaults to the
+        CalDAV calendar's display name).
+      - For pull-only: the mirror creates its own read-only repo
+        calendar named `<server-calendar-name> (mirror)`; the user
+        cannot pick "merge into existing" because the read-only
+        invariant must be preserved.
+
+- [ ] **NS-L.1.7** Step 6 — Confirm:
+      - Summary card:
+        - Server: `<host>`
+        - Calendar: `<server-calendar-name>`
+        - Mode: `<pull|push|bidi>`
+        - Local target: `<repo-calendar-name>` (or "new calendar")
+        - Sync interval: dropdown (5m / 15m / 30m / 1h / manual),
+          default 30m per D.25.
+      - "Create mirror" primary button → writes `mirror.toml`, stores
+        credentials, schedules first sync immediately, returns to
+        the calendar's Mirrors subsection.
+
+- [ ] **NS-L.1.8** `mirror.toml` schema (frozen here for the in-app
+      surface; SE-Q owns the implementation):
+
+      ```toml
+      id = "0190f9ab-2222-7c01-9100-aaaabbbbcccc"
+      server_url = "https://caldav.example.com/calendars/u/work/"
+      mode = "bidi"                       # pull | push | bidi
+      sync_interval = "30m"
+      created_at = "2026-05-10T18:01:00+02:00"
+      last_sync_at = "2026-05-10T18:31:14+02:00"
+      last_sync_status = "ok"             # ok | error | conflict
+      last_sync_error = ""                # human-readable, set when status=error
+      promote_conflicts = true            # NS-L.5 toggle
+      silenced = false                    # NS-L.3 per-mirror notification toggle
+      caldav_ctag = "..."                 # SE-Q owns; UI displays as opaque
+      caldav_calendar_color = "#1FB4D6"
+      ```
+
+      Note: credentials NEVER live in this file. Only the
+      `server_url` and the mirror id. `EncryptedSharedPreferences`
+      stores `(mirror_id) → (username, password)`.
+
+### NS-L.2 — Mirror status surface
+
+- [ ] **NS-L.2.1** Per-repo "Mirrors" subsection in Settings → Repos
+      → tap repo. Lists every mirror across every calendar in the
+      repo, grouped by calendar. Each row shows:
+      - Calendar display name (with color swatch).
+      - Server hostname.
+      - Mode chip (`pull` / `push` / `bidi`).
+      - Status chip: green check `synced 18:31`, yellow `syncing now`,
+        amber `behind 14m`, red `error — tap` (links to NS-L.4).
+      - Overflow menu: `Sync now`, `Silence notifications`,
+        `Change mode`, `Re-authenticate`, `Remove mirror`.
+
+- [ ] **NS-L.2.2** Per-calendar Mirrors subsection on a calendar's
+      settings page (Settings → Repos → repo → calendar → "Mirrors"):
+      - Same row layout as NS-L.2.1, scoped to that calendar.
+      - "+ Add CalDAV mirror" button below the list.
+
+- [ ] **NS-L.2.3** Mirror detail screen (tap any mirror row):
+      - Header: server URL, mode, target calendar, created date.
+      - "Diagnostics" card:
+        - Last sync time + status.
+        - Last error verbatim (when status=error).
+        - Number of events pulled / pushed since creation.
+        - CTag drift indicator if server CTag hasn't changed in over
+          24h despite our polling (signals a dead mirror).
+      - "Actions" card:
+        - `Sync now` (force-runs SE-Q sync loop).
+        - `Re-authenticate` → re-prompts for password (NS-L.5).
+        - `Change mode` → opens the mode picker again; downgrading
+          from `bidi` to `pull` flushes pending push commits with a
+          confirmation dialog.
+        - `Remove mirror` → confirm dialog; deletes `mirror.toml`,
+          cancels alarms, clears credentials.
+
+- [ ] **NS-L.2.4** Repo switcher decoration: when a repo has 1+
+      mirrors, the repo switcher row shows a small "via CalDAV" dot
+      under the repo name. Tap-and-hold reveals "N mirrors" tooltip.
+
+### NS-L.3 — Mirror-sync notifications (sync channel reuse)
+
+- [ ] **NS-L.3.1** **Decision:** CalDAV mirror successful-sync
+      notifications piggyback the existing `skb.sync` channel rather
+      than spawning a new channel. Rationale: from the user's mental
+      model, "git sync" and "CalDAV sync" are both "background data
+      reconciliation". Splitting channels would force two near-identical
+      Settings rows. Channel name in system Settings remains
+      "Sync results"; notification body distinguishes the source.
+
+- [ ] **NS-L.3.2** Sync result notification (only when
+      Settings → Notifications → "Show sync results" is enabled —
+      same gating as NS-D.9):
+      - Title: `Synced N repos · M mirrors`
+      - Body: comma-separated short list, e.g.
+        `personal · work-caldav · holidays-caldav`
+      - On per-mirror sync success in isolation (mirror-only loop
+        firing between git syncs): suppress the post entirely; only
+        post at the next git-sync rollup so users don't get N
+        notifications per polling interval.
+
+- [ ] **NS-L.3.3** Per-mirror silence toggle (`silenced = true` in
+      `mirror.toml`):
+      - When `silenced = true`, that mirror is **excluded from the
+        rollup body and counter**. It still syncs; notifications just
+        don't mention it.
+      - Toggle exposed in mirror detail screen (NS-L.2.3) and the
+        overflow menu (NS-L.2.1).
+      - **Decision:** silence is per-mirror, not per-repo, because
+        users often have one noisy mirror (a busy work calendar) and
+        one quiet mirror (a holidays feed) in the same repo.
+
+- [ ] **NS-L.3.4** Silence-everywhere quick toggle:
+      Settings → Notifications → "CalDAV mirror sync notifications"
+      master switch (default ON). When OFF, mirror activity is
+      excluded from the rollup regardless of per-mirror flags.
+      Per-mirror flags re-activate on master-ON.
+
+### NS-L.4 — Mirror-sync error notifications (errors channel)
+
+- [ ] **NS-L.4.1** Errors route through the existing `skb.errors`
+      channel (IMPORTANCE_HIGH per NS-A.5). Error notifications
+      categorize:
+      - **Auth error** (HTTP 401 / 403): "CalDAV: `<server>` rejected
+        credentials"
+      - **Network error** (timeout, DNS, TLS): "CalDAV: `<server>`
+        unreachable"
+      - **Protocol error** (parse failure, unexpected schema):
+        "CalDAV: `<server>` returned unexpected data"
+      - **Conflict** (bidi only, when SE-Q surfaces an unresolvable
+        case): "CalDAV: conflict on `<event-title>`"
+
+- [ ] **NS-L.4.2** Title format consistent with NS-D.10:
+      `CalDAV sync failed: <mirror display name>`
+      where mirror display name = `<server-host>/<calendar-name>`
+      truncated at 40 chars.
+
+- [ ] **NS-L.4.3** Tap behavior: opens the mirror detail screen
+      (NS-L.2.3) with the diagnostic error visible at the top and
+      the appropriate CTA highlighted (Re-authenticate for auth,
+      Sync now for network, Resolve for conflict).
+
+- [ ] **NS-L.4.4** De-duplication: one notification per
+      `mirror_id`. Subsequent errors for the same mirror update the
+      same notification rather than stacking. `notificationId =
+      ("mirror-err:" + mirrorId).hashCode()`. Cleared on next
+      successful sync.
+
+- [ ] **NS-L.4.5** Conflict notifications only fire when
+      `promote_conflicts = true` on that mirror (NS-L.1.5 toggle).
+      Otherwise SE-Q's conflict resolver UI is the only surface,
+      visible inside the app the next time the user opens the repo.
+
+- [ ] **NS-L.4.6** Action chips on error notifications:
+      - For auth errors: `Re-authenticate` (deep-links to NS-L.5).
+      - For network errors: `Retry now`.
+      - For conflict errors: `Resolve` (opens conflict resolver UI).
+      - All errors: `Dismiss` (suppresses for 24h; the dismissal
+        decays so a persistent error eventually re-surfaces).
+
+### NS-L.5 — CalDAV credential-expired re-auth flow
+
+- [ ] **NS-L.5.1** Trigger: SE-Q sees HTTP 401 from a mirror that
+      previously authenticated. Sets `last_sync_status = "error"`,
+      `last_sync_error = "Authentication failed"`, posts NS-L.4.1
+      auth-error notification.
+
+- [ ] **NS-L.5.2** Re-auth screen (reached via NS-L.4.6 deep-link or
+      mirror detail's `Re-authenticate` action):
+      - Single field: `Password` (username pre-filled, read-only).
+      - Helper text: "Your saved credentials no longer work.
+        Paste a new app-password or password."
+      - "Verify and save" primary button → runs SE-Q's
+        `verifyCredentials` against the mirror; on success, replaces
+        `EncryptedSharedPreferences` entry, kicks off an immediate
+        sync, clears the error notification.
+      - "Change username too?" expansion link → reveals the
+        Username field; useful for users who switched accounts on
+        the server side.
+
+- [ ] **NS-L.5.3** **Decision:** v1 does not support proactive
+      pre-expiry refresh. Many CalDAV servers don't expose token
+      expiry, and the auth path is Basic-only. We react to 401s; we
+      don't anticipate them. If a server starts issuing 401s
+      repeatedly within a short window (3 failures in 10 minutes), we
+      back off the polling interval to 4h to avoid spamming the
+      server with bad credentials, and surface a single notification
+      until re-auth succeeds.
+
+### NS-L.6 — iCal / CalDAV UID round-trip
+
+- [ ] **NS-L.6.1** When SE-Q pulls a `VEVENT` from CalDAV, the
+      VEVENT's `UID` is recorded on the resulting repo file as
+      `imported_uid = "<UID>"` in frontmatter (same field as NS-I.3
+      uses for `.ics` import — this is intentional reuse, not a new
+      key).
+
+- [ ] **NS-L.6.2** When SE-Q pushes a repo event to CalDAV, it uses
+      `imported_uid` if present; otherwise it uses the event's SKB
+      UUIDv7 as the `UID`. Push round-trips therefore preserve the
+      identity the remote server originally minted.
+
+- [ ] **NS-L.6.3** Round-trip drift detection: if a pulled VEVENT's
+      `UID` differs from `imported_uid` on a file we last pushed
+      under that id (server rewrote the UID — happens with some
+      iCloud edge cases), SE-Q logs a warning, keeps both ids in
+      frontmatter (`imported_uid` updated to the new one,
+      `previous_imported_uid` set), and re-pushes under the new id.
+      No user notification — this is a self-healing case.
+
+- [ ] **NS-L.6.4** Cross-export consistency: a calendar that was
+      pulled from CalDAV and is then exported via NS-H (iCal
+      export) retains the original `UID`. This means a CalDAV-pulled
+      calendar can be re-imported to Outlook with stable identities
+      and Outlook will recognize updates instead of creating
+      duplicates.
+
+- [ ] **NS-L.6.5** **Decision:** `imported_uid` is the single
+      authoritative round-trip field across `.ics` import (NS-I),
+      CalDAV pull (NS-L), and `.ics` export (NS-H). Using one field
+      means a user who imports `.ics`, syncs via CalDAV, and exports
+      `.ics` again gets stable UIDs through the whole chain.
+
+---
+
+## Phase NS-M — Comments / replies notification surface (D.29 + D.37)
+
+D.29 establishes the file-per-comment layout under
+`events/<yyyy>/<mm>/<event-id>.comments/<comment-id>.md`. D.37 carves
+out a dedicated notification channel. This phase wires the trigger
+detection, channel registration, content rendering, and per-event
+mute surface.
+
+The composer UI itself, the comment thread renderer in the event detail
+sheet, and the cross-link to `data-model.md` schema details live in
+`ui-spec.md` UI-V+ and `data-model.md` DM-K+. NS-M owns notifications
+and the per-event mute prefs key.
+
+### NS-M.1 — `skb.comments` channel registration
+
+- [ ] **NS-M.1.1** Add `skb.comments` to the channel-registration code
+      in NS-A.7's `App.onCreate` block:
+      - `id = "skb.comments"`
+      - `name = "Comments"` (localized)
+      - `description = "New comments on events you follow"`
+      - `importance = IMPORTANCE_DEFAULT`
+      - `setSound(defaultNotificationSound, audioAttributesNotification)`
+      - `enableVibration(true)`, default vibration pattern (same as
+        events — see NS-A.3 decision)
+      - `enableLights(true)`, light color = M3 secondary
+      - `lockscreenVisibility = VISIBILITY_PUBLIC`
+      - `setShowBadge(true)`
+      - `setBypassDnd(false)`
+      - `setGroup("skb_main")` (same channel group as the five
+        existing channels — keeps system settings tidy)
+
+- [ ] **NS-M.1.2** Update NS-A's channel count comment: the app now
+      ships SIX channels (events, tasks, comments, sync, errors,
+      service) under the `skb_main` group.
+
+- [ ] **NS-M.1.3** `skb.comments` is in the per-event override
+      allow-list for `notification_channel` frontmatter (NS-B.6):
+      valid values become `{events, tasks, comments, errors}`. The
+      typical comment doesn't carry an override; this is for the rare
+      event whose author wants its replies posted as `errors`-level
+      urgency (raid-quality reactions).
+
+### NS-M.2 — Comment-arrival detection
+
+- [ ] **NS-M.2.1** Trigger: sync diff. After every successful git
+      pull (and after every CalDAV mirror pull when the mirror's mode
+      includes pull — see NS-L), the sync engine runs
+      `git diff --name-only HEAD@{1} HEAD` (already part of D.2's
+      scan model). Any added path matching
+      `calendars/*/events/*/*/*.comments/*.md` is a new-comment
+      candidate.
+
+- [ ] **NS-M.2.2** Per-comment processing:
+      - Parse the file's frontmatter (`id`, `event_id`, `author`,
+        `created_at`, `in_reply_to?`) + body.
+      - Resolve the parent event: look up
+        `calendars/*/events/<yyyy>/<mm>/<event_id>.md` to fetch the
+        event title and parent calendar.
+      - Check per-event mute (NS-M.5). If muted, skip.
+      - Check `skb.comments` channel state (NS-A.10 logical group
+        mute, NS-A.13 group toggle). If suppressed, skip post but
+        still mark "seen" for badge counting.
+      - Otherwise build and post the notification (NS-M.3).
+
+- [ ] **NS-M.2.3** **Decision:** comments authored by the **active
+      local identity** never post a self-notification. We compare
+      the comment's `author` field against the active identity for
+      that repo at fire time. The comparison is by `person-id`, not
+      email, so identity switches don't accidentally re-notify on
+      old comments.
+
+- [ ] **NS-M.2.4** Coalescing: if a single sync surfaces 3+ comments
+      on the same event, post ONE summary notification:
+      - Title: `<event-title>` — `N new comments`
+      - Body: `<first-author>, <second-author>, ...` truncated.
+      - Tap → event detail at the comments section.
+      Threshold of 3 keeps the common "two replies during dinner"
+      case showing individually; bulk imports get summarized.
+
+- [ ] **NS-M.2.5** Re-sync replay safety: comment-arrival uses the
+      `seen_comment_ids` set in `_local/seen-comments.toml` (NOT
+      git-tracked; lives in `<filesDir>/seen-comments.toml`). A
+      comment id is added on first post-attempt. Re-pulling old
+      history (e.g. after a `git clone` of a repo that already has
+      old comments) does not flood the user — the file is seeded
+      with every existing comment id on first sync of the repo.
+
+### NS-M.3 — Comment notification content
+
+- [ ] **NS-M.3.1** Title: `<author-display-name> commented on
+      '<event-title>'`. Truncate event title at 30 chars; truncate
+      author display name at 20 chars. Author resolved via NS-G.1
+      `IdentityCache`.
+
+- [ ] **NS-M.3.2** Body: `<body-excerpt>` — the first 140 chars of the
+      Markdown body with newlines replaced by spaces, ellipsized.
+      Use `BigTextStyle` to expand to the full body up to 1500
+      chars on expansion.
+
+- [ ] **NS-M.3.3** When the comment is `in_reply_to` an existing
+      comment, prepend `↳ ` to the title to signal threading without
+      eating title real estate.
+
+- [ ] **NS-M.3.4** Small icon: same `ic_notification.xml` as
+      events. Color: same Material You seed as event notifications,
+      NOT a fresh color — comments share the calendar's visual
+      identity.
+
+- [ ] **NS-M.3.5** `notificationId = ("comment:" +
+      commentId).hashCode()`. Coalesced summary (NS-M.2.4) uses
+      `("comments-summary:" + eventId + ":" + syncBatchId).hashCode()`.
+
+- [ ] **NS-M.3.6** Author chip in notification body uses the
+      initials-form per NS-D.2 decision (compact = initials, expanded
+      = full display name).
+
+### NS-M.4 — Notification actions
+
+- [ ] **NS-M.4.1** Action 1 — `Reply`:
+      - Tap opens the in-app event detail with the composer focused
+        and pre-populated with `> @<original-author>: <body-excerpt>`
+        as a quoted prefix (user can delete before sending).
+      - Deep link:
+        `app://strictlykeptboy/event/<repo-id>/<event-id>?reply_to=<comment-id>`.
+
+- [ ] **NS-M.4.2** Action 2 — `View`:
+      - Opens the event detail scrolled to the comments section.
+      - Deep link:
+        `app://strictlykeptboy/event/<repo-id>/<event-id>#comments`.
+      - This is the default tap action when the user just taps the
+        notification body (i.e. View == tap).
+
+- [ ] **NS-M.4.3** Action 3 — `Mute event`:
+      - Adds this event id to the per-event mute set (NS-M.5).
+      - Toast confirmation: "Muted comments on <event-title>".
+      - Future comments on this event don't notify until unmuted.
+
+- [ ] **NS-M.4.4** Inline reply via `RemoteInput`:
+      - **Decision:** v1 SHIPS inline reply. The complexity is
+        moderate and the UX win on lockscreen replies is large.
+      - Implementation: `NotificationCompat.Action.Builder` with a
+        `RemoteInput.Builder("reply_text").setLabel("Reply...")`.
+        Pressing send fires a broadcast to a `ReplyReceiver` that
+        writes a new comment file via the same code path as the
+        in-app composer (NS-M.6), commits, and triggers a sync push.
+      - Constraints: the reply runs as a `goAsync()` broadcast with
+        a strict 10-second budget; file write + commit only — push
+        happens on the next sync interval rather than synchronously.
+      - Failure path: if the file write fails, post a fresh error
+        notification on `skb.errors` ("Reply not saved — tap to
+        retry") with the draft body in the payload so the user can
+        recover.
+      - On Wear OS / Auto: the same `RemoteInput` works on Wear; on
+        Auto, the comments channel is suppressed entirely (Auto
+        notifications are NS-A's events/tasks scope only; comments
+        would be too noisy while driving).
+
+- [ ] **NS-M.4.5** Action ordering on the notification follows the
+      NS-D.5 OEM-safe three-actions-max rule:
+      compact form shows `Reply` (with inline input) + `View` +
+      `Mute event`. The expanded form (via `BigTextStyle`) reveals
+      no additional actions; Android collapses the action row
+      consistently across phone/tablet/foldables.
+
+### NS-M.5 — Per-event mute persistence
+
+- [ ] **NS-M.5.1** Storage: `DataStore<Preferences>` with key
+      `muted_event_comments`, value type `Set<String>` of fully-
+      qualified `<repo-id>:<event-id>` strings.
+      **Decision:** mute is per-device-local, not committed to the
+      repo. Two reasons:
+      - Mute is an interaction preference (like NS-D.8 snoozes), not
+        data about the event.
+      - Different family members sharing a repo may want different
+        mute sets for the same event.
+
+- [ ] **NS-M.5.2** Surface in the event detail screen: a small
+      `🔕 Mute comments` toggle in the comments section header. State
+      mirrors the prefs key. Toggling re-renders the toggle but does
+      NOT immediately delete any pending notifications already posted.
+
+- [ ] **NS-M.5.3** Bulk unmute: Settings → Notifications → "Muted
+      comment threads" → list of `<event-title> (<repo>)` entries
+      with `Unmute` action per row + "Unmute all" header action.
+
+- [ ] **NS-M.5.4** Auto-unmute trigger: when an event passes its
+      `end` time + 30 days, its mute entry is pruned from the prefs
+      set during the nightly `AlarmHorizonExtender` job (NS-C.10).
+      Past events accumulate forever otherwise.
+
+- [ ] **NS-M.5.5** Mute does NOT suppress the comment from appearing
+      in the event detail's thread view — only the notification is
+      suppressed. The user can still browse the comments by opening
+      the event manually.
+
+### NS-M.6 — Reply commit conventions
+
+- [ ] **NS-M.6.1** When a comment is created (in-app composer OR
+      inline `RemoteInput` reply OR `skb comment add`), a new file is
+      written at
+      `calendars/<cal>/events/<yyyy>/<mm>/<event-id>.comments/<comment-id>.md`
+      with frontmatter:
+
+      ```toml
+      +++
+      id = "0190fa00-0000-7c01-9100-000000000001"
+      event_id = "<event-id>"
+      author = "<active-person-id>"
+      created_at = "2026-05-10T18:42:00+02:00"
+      in_reply_to = "<comment-id>"        # optional
+      +++
+
+      <body markdown>
+      ```
+
+- [ ] **NS-M.6.2** Auto-commit message format:
+      `comment on event "<title>" in <calendar-name>` —
+      verb is `comment` for first-level, `reply` for replies (when
+      `in_reply_to` is set). Matches D.8's commit-message style.
+
+- [ ] **NS-M.6.3** Comment edits: editing an existing comment
+      rewrites the same file. Auto-commit message: `edit comment on
+      event "<title>"`. **Decision:** v1 does NOT post an
+      "edited" notification — too noisy. Only NEW comment files
+      trigger notifications. Edits show up next time the user opens
+      the event detail.
+
+- [ ] **NS-M.6.4** Comment deletes: removing a comment removes the
+      file. Auto-commit message: `delete comment on event "<title>"`.
+      No notification fires; if the deleted comment had a pending
+      `notificationId` already posted, we cancel that post by
+      `notificationManager.cancel(("comment:" + commentId).hashCode())`
+      during sync-diff processing.
+
+---
+
+## Phase NS-N — CSV import for tasks (D.38)
+
+CSV import was deferred in NS-J.6 ("fragile mapping"). D.38 reverses
+that decision: v1 ships CSV import for tasks because it's the
+realistic on-ramp for users coming from Todoist / Things / Apple
+Reminders / spreadsheets. The mitigation for "fragile mapping" is a
+proper preview + column-mapping UI that surfaces problems pre-write.
+
+CLI parity lives in `cli-tooling.md` (CLI-* phases own
+`skb task import-csv`).
+
+### NS-N.1 — Entry point
+
+- [ ] **NS-N.1.1** Settings → Templates → row labeled
+      "Import tasks from CSV" with a CSV icon. Section header
+      reads "Imports" (sibling to "Templates").
+
+- [ ] **NS-N.1.2** From any tasks view → top-bar overflow →
+      "Import CSV..." (same flow, target todolist pre-selected to
+      the currently-viewed list when one is in focus).
+
+- [ ] **NS-N.1.3** Tapping the entry opens the multi-step import
+      sheet (NS-N.2 through NS-N.7).
+
+### NS-N.2 — File picker
+
+- [ ] **NS-N.2.1** Step 1 launches SAF
+      (`ACTION_OPEN_DOCUMENT`, mime `text/csv` plus
+      `text/plain` and `application/vnd.ms-excel` fallback for OEMs
+      that mistype CSV).
+
+- [ ] **NS-N.2.2** Once picked, copy the file into the app cache
+      dir (`cacheDir/import/<uuid>.csv`) so the user can revoke SAF
+      permission without breaking the flow.
+
+- [ ] **NS-N.2.3** Encoding detection: try UTF-8 first; on BOM
+      detection (`EF BB BF`) strip it; on UTF-8 decode failure fall
+      back to ISO-8859-1 then Windows-1252. Surface a chip at the
+      top of the preview screen: "Encoding: UTF-8" with a dropdown
+      to override.
+
+- [ ] **NS-N.2.4** Reject files larger than 5 MB outright with a
+      clear message ("File too large — please split or trim
+      first."). 5 MB of CSV tasks is approx 30,000 entries, well
+      beyond any realistic v1 use case.
+
+### NS-N.3 — Column-mapping UI
+
+- [ ] **NS-N.3.1** Step 2 parses the header row + first 5 data rows
+      and renders a two-pane mapping screen:
+      - Left pane: each CSV column shown as a card with `<column-name>`
+        + a 5-row sample preview (truncated to 30 chars per cell).
+      - Right pane: target field dropdowns per left-pane card.
+
+- [ ] **NS-N.3.2** Target fields (the right-pane dropdown options):
+      - `Title` (required — exactly one column must map here)
+      - `Due date`
+      - `Done`
+      - `Priority`
+      - `Todolist`
+      - `Body / Notes`
+      - `Ignore` (default for unmapped columns)
+      - `Custom field → <name>` (writes to `imported_extras.<name>`
+        in frontmatter, preserves round-trip)
+
+- [ ] **NS-N.3.3** Auto-detection rules (case-insensitive
+      header-name match):
+      - `title | task | todo | name | subject` → `Title`
+      - `due | due_date | deadline | when | date` → `Due date`
+      - `done | completed | status | complete | finished` → `Done`
+      - `priority | importance | p | urgency` → `Priority`
+      - `list | todolist | category | project | tag` → `Todolist`
+      - `body | notes | description | details | comments` → `Body`
+      - Everything else → `Ignore`.
+
+- [ ] **NS-N.3.4** Auto-detected mappings are PRESET but
+      USER-EDITABLE. Each auto-detection adds a small "Auto" chip
+      next to the dropdown so the user knows we guessed; the chip
+      disappears when the user changes the value.
+
+- [ ] **NS-N.3.5** Title-required validation: bar the "Continue"
+      button until exactly one column is mapped to `Title`. If the
+      user maps two columns to `Title`, the second mapping replaces
+      the first with a toast ("Only one Title column — moved Title
+      to <new>"). **Decision:** silent replace > modal error; users
+      iterate on mappings and we don't want to break their flow.
+
+- [ ] **NS-N.3.6** Date-format detection on the `Due date` column:
+      sniff the first 5 cells against `yyyy-MM-dd`, `MM/dd/yyyy`,
+      `dd.MM.yyyy`, `dd/MM/yyyy`, and ISO-8601 with time. Surface a
+      detected-format chip next to the Due-date mapping with a
+      dropdown override. Unparseable rows fall back to "no due
+      date" in the preview (NS-N.5).
+
+- [ ] **NS-N.3.7** Done-format detection: cells matching
+      `true|done|yes|y|1|x|completed|complete` → `done = true`;
+      everything else → `done = false`. **Decision:** be liberal
+      on inputs; lossy is fine because re-running the import is
+      cheap and the preview shows the result.
+
+- [ ] **NS-N.3.8** Priority parsing: accept integer 1..1000 (passes
+      through), `low | medium | high` → 250 / 500 / 750. Out-of-range
+      → use the target todolist's priority instead, flag the cell
+      in preview.
+
+### NS-N.4 — Target todolist picker
+
+- [ ] **NS-N.4.1** Step 3 — pick the target todolist:
+      - Dropdown listing every todolist in the current repo.
+      - "Create new todolist named ___" option at the bottom.
+      - When the CSV has a `Todolist` column mapped: a top-level
+        toggle "Use the CSV's `Todolist` column to route each task"
+        (default ON when mapped). With ON, the target-todolist
+        picker becomes the FALLBACK for rows whose Todolist cell is
+        empty or doesn't match any existing list.
+
+- [ ] **NS-N.4.2** New-todolist creation auto-fills priority=500,
+      no active windows, no active hours; user can edit afterwards
+      in Settings → Todolists.
+
+- [ ] **NS-N.4.3** **Decision:** rows that route to a non-existent
+      todolist via the CSV `Todolist` column WITHOUT the toggle ON
+      get dropped into the fallback list with a warning chip in the
+      preview row: "Todolist 'X' doesn't exist — using <fallback>".
+      Users who want strict routing flip the toggle ON and either
+      pre-create lists or accept the new-list-creation path.
+
+### NS-N.5 — Preview screen
+
+- [ ] **NS-N.5.1** Step 4 — preview the first N tasks (N=30,
+      configurable via "Show more" pagination) as they will be
+      written:
+      - Each row: title (bold) · due date (or "—") · done-checkbox
+        (read-only) · priority chip · todolist tag.
+      - Body excerpt below title if mapped (60 chars).
+      - Rows with validation issues get a yellow chip:
+        `bad date format` / `unknown todolist` / `priority out of
+        range` etc. Clicking the chip jumps back to the mapping
+        screen with the relevant column highlighted.
+
+- [ ] **NS-N.5.2** Header summary row:
+      `N tasks to import · M new · K updated · J ignored
+      (validation errors)`.
+      Counts derive from NS-N.6 idempotency lookup against existing
+      `imported_csv_hash` matches.
+
+- [ ] **NS-N.5.3** Per-row override: tap any preview row to open a
+      mini-editor for that row — change title / due / done /
+      priority / todolist / body before commit. Edits are
+      session-only (not written back to the CSV file). Useful for
+      one-off fixes without re-mapping.
+
+- [ ] **NS-N.5.4** Cancel button returns to mapping. "Import N
+      tasks" primary button commits.
+
+### NS-N.6 — Idempotency on re-import
+
+- [ ] **NS-N.6.1** Compute hash per row:
+      `imported_csv_hash = SHA-256(title + "|" +
+      due_iso + "|" + body)` (UTF-8 bytes, base64-encoded, first
+      16 chars). Stored in frontmatter of the resulting task file.
+
+- [ ] **NS-N.6.2** On re-import:
+      - For each row, look up existing tasks in the target todolist
+        (and the fallback list) with matching `imported_csv_hash`.
+      - If found AND the task hasn't been edited locally
+        (`last_edited_at == last_imported_at`): UPDATE in place,
+        bumping `last_imported_at`.
+      - If found AND locally edited: CONFLICT. Surface in preview
+        with a `local edits` chip and a per-row choice
+        `Keep mine` / `Overwrite with CSV`. Bulk action available
+        in the preview header.
+      - If not found: CREATE.
+
+- [ ] **NS-N.6.3** Deletes from the source CSV are NOT propagated
+      to the repo. **Decision:** v1 CSV import is additive +
+      updating only. Deleting a row from your spreadsheet to delete
+      a task is too risky as the default behavior (the user
+      probably just wants to focus the spreadsheet). Power users
+      can `skb task delete` explicitly.
+
+- [ ] **NS-N.6.4** Hash collision handling: if two rows in the same
+      CSV produce the same hash, surface a validation warning
+      ("duplicate rows: 47 and 89 are identical") and import only
+      the first. Re-imports of an unchanged CSV are no-ops by
+      design.
+
+### NS-N.7 — Commit + post-import surface
+
+- [ ] **NS-N.7.1** Single git commit per import:
+      `import N tasks from <filename>.csv`.
+      All new + updated files batched. If conflicts are unresolved
+      in preview, those rows are skipped from the commit and a
+      post-import banner offers "Resolve conflicts now" leading
+      back to the preview screen.
+
+- [ ] **NS-N.7.2** Post-import success toast: "Imported N tasks
+      into <todolist>" with an `Undo` action lasting 10 seconds.
+      Undo reverts the import commit
+      (`git reset --hard HEAD~1`) — safe because we just created it.
+
+- [ ] **NS-N.7.3** Sync push: kicked off automatically after a
+      successful import, same path as any other commit. If the
+      repo is read-only (NS-F), the commit stays local and the
+      standard read-only banner reminds the user.
+
+### NS-N.8 — CLI parity hook
+
+- [ ] **NS-N.8.1** `skb task import-csv <file> --list <todolist>
+      [--mapping <yaml>] [--dry-run]`:
+      - When `--mapping` is omitted, the CLI uses the same
+        auto-detection rules as NS-N.3.3.
+      - `--mapping <yaml>` accepts a saved mapping file (the GUI's
+        "Save mapping" affordance — see NS-N.8.2 — produces this).
+      - `--dry-run` prints the preview-equivalent to stdout (JSON
+        when `--json`) without writing.
+      - Full spec lives in `cli-tooling.md` CLI-*; this entry just
+        anchors the cross-link.
+
+- [ ] **NS-N.8.2** "Save mapping" button in the GUI's mapping screen
+      writes the current mapping config to
+      `<repo>/.strictlykeptboy/csv-mappings/<name>.yaml` so re-imports
+      from the same source schema skip the mapping step. The mapping
+      file is git-tracked; teams can share import recipes.
+
+---
+
+## Phase NS-O — Cross-device snooze sync (opt-in, D.34)
+
+NS-D.8 originally pinned snoozes to a `DataStore<Preferences>` map and
+deferred cross-device sync. D.34 reverses that with an **opt-in toggle**
+— default OFF preserves NS-D.8's behavior; ON elevates snoozes into the
+git-tracked repo state at `_local/snoozes.toml` with a deterministic
+auto-merge rule that never surfaces to the user.
+
+### NS-O.1 — Setting toggle
+
+- [ ] **NS-O.1.1** Settings → Notifications → new row
+      "Sync snoozes across devices" with a toggle (default OFF) and
+      helper text: "Snooze decisions you make on this device will be
+      shared with your other devices via the calendar repo."
+
+- [ ] **NS-O.1.2** Per-repo override: the master toggle is global,
+      but Settings → Repos → tap repo → "Notifications" subsection
+      exposes a per-repo override `Sync snoozes for this repo` —
+      tri-state (`use global` / `force on` / `force off`).
+      **Decision:** per-repo override is necessary because shared
+      repos (read-only mirror of a partner's calendar) shouldn't be
+      polluted with the user's snoozes. Default per-repo override is
+      `use global`.
+
+- [ ] **NS-O.1.3** Read-only repos (NS-F) have the per-repo override
+      forced to `off` and disabled in the UI with helper text:
+      "Snooze sync is unavailable on read-only repos."
+
+- [ ] **NS-O.1.4** Flip-on behavior: when the user turns the toggle
+      ON for the first time, the app commits the current device's
+      pending snoozes (from `DataStore<Preferences>`) into
+      `_local/snoozes.toml` immediately and runs a sync push. The
+      `DataStore` keeps a copy as a fast-path cache — the file
+      is the source of truth.
+
+- [ ] **NS-O.1.5** Flip-off behavior: when the user turns the toggle
+      OFF, snoozes already in `_local/snoozes.toml` STAY there
+      (other devices still need them). Future snoozes on this device
+      are recorded only in `DataStore` until re-enabled. The
+      file becomes append-only from this device's perspective until
+      the user flips back ON.
+
+### NS-O.2 — `_local/snoozes.toml` schema
+
+- [ ] **NS-O.2.1** Schema:
+
+      ```toml
+      schema_version = 1
+
+      [[snooze]]
+      alarm_id = "<event-id>:<lead-time-iso>"
+      until = "2026-05-10T18:00:00+02:00"
+      device_id = "<device-uuid>"
+      created_at = "2026-05-10T17:55:00+02:00"
+      ```
+
+      One `[[snooze]]` entry per (alarm_id) per-device snooze action.
+      Snoozing the same alarm twice on the same device replaces the
+      previous entry with the same `(alarm_id, device_id)` tuple
+      (latest `until` wins locally before commit).
+
+- [ ] **NS-O.2.2** `alarm_id` matches NS-C.4's schedule key:
+      `<repo-id>:<entity-id>:<lead-seconds>` — but stored without the
+      repo-id prefix because the file lives inside the repo (the
+      repo-id is the path context). Form:
+      `<entity-id>:<lead-seconds>`. We use seconds rather than the
+      grammar form (NS-B.3) because a snooze applies to a single
+      scheduled alarm; the lead-time is its identifier within the
+      event.
+
+- [ ] **NS-O.2.3** `device_id` minted on first launch (per NS-O.4)
+      and stored in `EncryptedSharedPreferences`. UUIDv4
+      (cryptographically random — we don't need sortability for
+      devices). Re-installing the app on the same physical device
+      mints a new id; this is acceptable because the auto-merge rule
+      (NS-O.3) handles it without surprise.
+
+- [ ] **NS-O.2.4** `created_at` is the local wall-clock time of the
+      snooze action in the device's tz, stored with offset. Used
+      only for human diagnostics in NS-O.5; merge logic uses `until`
+      exclusively.
+
+- [ ] **NS-O.2.5** `until` is the absolute UTC instant the snooze
+      expires, stored with offset for human-readability. Comparisons
+      are by instant.
+
+### NS-O.3 — Auto-merge rule (resolver detail)
+
+- [ ] **NS-O.3.1** **Decision:** `_local/snoozes.toml` is special-
+      cased in the conflict resolver (lives in `resolver.md`; this
+      doc owns the spec). The resolver detects a 3-way conflict on
+      this file by path-match and applies the snooze auto-merge
+      instead of surfacing the standard conflict UI.
+
+- [ ] **NS-O.3.2** Merge algorithm:
+      - Parse all three sides (base, ours, theirs).
+      - Compute the union of all `[[snooze]]` entries across all
+        three sides.
+      - Group entries by `alarm_id` (the device_id is NOT part of
+        the grouping key — see rationale below).
+      - For each group, pick the entry with the LATEST `until`.
+      - Tie-breaker on identical `until`: pick the entry with the
+        latest `created_at`. Further tie-breaker: lexicographic
+        device_id.
+      - Write the resulting set of entries back to
+        `_local/snoozes.toml`, sorted by `alarm_id` then `device_id`
+        for deterministic diffs.
+
+- [ ] **NS-O.3.3** Rationale for collapsing on `alarm_id` only
+      (ignoring `device_id`): a snooze is fundamentally an
+      instruction "don't ring this alarm before <until>". If Device A
+      says "snooze until 18:00" and Device B says "snooze until
+      20:00", the user's intent is best honored by "snooze until
+      20:00" everywhere. Keeping per-device entries would let an old
+      device's earlier snooze incorrectly re-arm the alarm on a
+      newer device.
+
+- [ ] **NS-O.3.4** Pruning during merge: entries whose `until` is
+      already in the past at merge time are dropped from the output.
+      This keeps the file from accumulating forever.
+
+- [ ] **NS-O.3.5** Idempotency: re-running the merge on the merged
+      output is a no-op. The sort order + drop-by-staleness rules
+      guarantee stability.
+
+- [ ] **NS-O.3.6** Auto-commit message: `merge snoozes`. No body.
+      The commit shows up in the user's git log as ordinary
+      housekeeping; we don't want to mention conflict avoidance
+      because there was no conflict from the user's perspective.
+
+### NS-O.4 — Device-id minting
+
+- [ ] **NS-O.4.1** On first app launch, mint a UUIDv4 via
+      `UUID.randomUUID()`. Store in `EncryptedSharedPreferences` with
+      key `skb.device_id`. **Decision:** stored encrypted because
+      while the device id isn't sensitive on its own, leaking it
+      across apps would let trackers correlate users; keeping it in
+      the encrypted store is cheap insurance.
+
+- [ ] **NS-O.4.2** Device id is never changed once minted, even
+      across major version upgrades. App data wipe is the only
+      reset.
+
+- [ ] **NS-O.4.3** Device id is NEVER displayed to the user. NS-O.5
+      diagnostics show it for support cases (with a "copy" button),
+      but no everyday UI surfaces it.
+
+### NS-O.5 — Cleanup + diagnostics
+
+- [ ] **NS-O.5.1** Pruning trigger: the next sync after `until`
+      passes for any snooze entry, the entry is dropped from
+      `_local/snoozes.toml`. Implemented as a small read-rewrite-
+      commit step at the end of the sync loop. Auto-commit message:
+      `prune expired snoozes`.
+
+- [ ] **NS-O.5.2** Coalesce-cleanup: if a sync would result in N
+      consecutive "prune expired snoozes" commits with no other
+      activity, coalesce into a single commit. The auto-commit
+      message format remains identical.
+
+- [ ] **NS-O.5.3** Diagnostics screen: Settings → Notifications →
+      "Snooze sync" → "Show diagnostics" reveals:
+      - This device's `device_id` (with copy button).
+      - Per-repo snoozes count (active / expired).
+      - Last merge commit time per repo.
+      - "Clear local snooze cache" button (rebuilds `DataStore`
+        cache from the repo file — recovery path if the cache drifts).
+
+- [ ] **NS-O.5.4** Snoozes never appear in the conflict UI. The
+      resolver auto-merge (NS-O.3) silently handles every case. If
+      the resolver ever fails (TOML parse error, file corruption),
+      it falls back to "trust this device's copy, log a warning" and
+      surfaces a single low-importance notification on `skb.errors`
+      with a "Reset snooze sync" CTA that rewrites the file from
+      this device's `DataStore`.
+
+### NS-O.6 — Interaction with NS-D.8 + NS-C.12
+
+- [ ] **NS-O.6.1** NS-D.8's fast-path `DataStore` snooze map stays
+      as a per-device cache. When sync is OFF, it's the only
+      storage. When sync is ON, it's a write-through cache backed
+      by `_local/snoozes.toml`.
+
+- [ ] **NS-O.6.2** NS-C.12's fire-time mute check additionally
+      consults the snooze map. When sync is ON, the map is always
+      hydrated from the repo file on sync completion (NS-O.6.3).
+
+- [ ] **NS-O.6.3** Sync-pull hook: every successful pull on a repo
+      with sync-snoozes ON reloads `_local/snoozes.toml` into
+      `DataStore`. The map is keyed by `alarm_id` (without
+      `device_id`) — collapsed per the merge rule. NS-C.11's fire
+      path consults this collapsed view at fire time.
+
+- [ ] **NS-O.6.4** Snooze action from notification (NS-D.5 /
+      NS-M.4):
+      - When sync is OFF: write to `DataStore` only.
+      - When sync is ON: write to `DataStore` + append to
+        `_local/snoozes.toml` + commit + queue push. Commit message:
+        `snooze "<event-title>" until <HH:mm>`.
+
+---
+
+## Phase NS-P — Multi-branch sharing semantics (D.36)
+
+D.36 introduces per-repo branches as a first-class concept (work-feature
+branches, partner-collab PRs, AI-agent feature branches). This phase
+elaborates the sharing-related surfaces: deep-link parameters that
+respect the current branch, author-chip "on branch X" indicators, and
+PR-status badging when branch frontmatter declares an open PR.
+
+Branch creation, switching, and the branch picker UI itself live in
+`sync-engine.md` SE-Q + `ui-spec.md` UI-V+. NS-P owns the share-link,
+attribution, and PR-status surfaces.
+
+### NS-P.1 — Branch-aware "Share read access" deep-link
+
+- [ ] **NS-P.1.1** NS-E.2's "Share read access" sheet adds a
+      "Currently viewing branch: `<branch>`" line above the three
+      options when the active branch is not `main`/`master`. Text
+      includes a "Switch to main first?" link that opens the branch
+      picker.
+
+- [ ] **NS-P.1.2** The "Add a collaborator (read-only)" deep-link
+      remains the standard provider collaborator screen — provider
+      access is per-repo, not per-branch, so the link is unchanged.
+      Helper text below the button: "Collaborators can read all
+      branches by default."
+
+- [ ] **NS-P.1.3** New affordance: "Share a link to this branch" —
+      copies a `tree`-style URL to the system clipboard:
+      - GitHub: `https://github.com/<owner>/<repo>/tree/<branch>`
+      - Forgejo: `https://<host>/<owner>/<repo>/src/branch/<branch>`
+      - Toast confirmation: "Branch link copied".
+      - The link is read-only and respects the provider's existing
+        visibility settings; private repos still require auth.
+
+- [ ] **NS-P.1.4** "Share a link to this branch" is hidden when the
+      active branch is `main`/`master` (deep-link to root is the
+      same as the repo-share existing flow).
+
+- [ ] **NS-P.1.5** Quick-Share intent: the standard Android share
+      intent (`ACTION_SEND` from the repo overflow menu) emits a
+      `text/plain` body with the branch-aware URL when the active
+      branch isn't main, or the repo-root URL when it is.
+
+### NS-P.2 — Author attribution: "on branch X" indicator
+
+- [ ] **NS-P.2.1** When the unified-overlay view (D.9 "all repos
+      overlay") is rendering an event that lives on a non-main
+      branch in its source repo, the author chip (NS-G.3) gets a
+      small `+ branch ribbon` decoration: a 6dp triangular cut at
+      the top-left of the chip in the branch's accent color.
+
+- [ ] **NS-P.2.2** Branch accent color resolution: per-branch color
+      lives in `.strictlykeptboy/branch-state.toml` (frozen here for
+      the UI surface; SE-Q owns the read-write logic):
+
+      ```toml
+      [branches.main]
+      color = ""                          # default — no ribbon
+
+      [branches."claude/plan-2026-q3"]
+      color = "#9370DB"                   # purple — AI-agent default
+      pr_url = "https://github.com/u/r/pull/47"
+      pr_state = "open"                   # open | closed | merged | draft
+
+      [branches."alice/timebox-redesign"]
+      color = "#FF6F61"
+      ```
+
+- [ ] **NS-P.2.3** Default branch colors: when a branch has no
+      explicit color in `branch-state.toml`, assign deterministically
+      from a 12-color palette via
+      `hashCode(branch_name) % 12`. Stable across devices because
+      branch names + hash function are stable.
+
+- [ ] **NS-P.2.4** Event detail sheet: when viewing an event from a
+      non-main branch, the header row shows a chip below the title:
+      `🌿 on branch <branch>` in the branch's accent color. Tap
+      opens the branch overview screen (UI-V+ owns the screen).
+
+- [ ] **NS-P.2.5** Schedule/week/month views: events from non-main
+      branches render with a subtle 1.5dp dashed left border in the
+      branch's accent color in addition to their regular calendar
+      coloring. Distinguishes feature-branch events at a glance
+      without overwhelming the day-view density.
+
+- [ ] **NS-P.2.6** Author chip + branch ribbon combination: when
+      the author chip already has a repo-avatar overlay (per
+      NS-G.6's all-repos overlay decoration), the branch ribbon
+      goes on the OPPOSITE corner. Order of overlays: repo avatar
+      top-right, branch ribbon top-left.
+
+- [ ] **NS-P.2.7** **Decision:** the branch indicator on chips
+      does NOT carry the branch name itself — too cramped. The chip
+      just signals "this is from a non-main branch"; the name is
+      visible via tap or hover.
+
+### NS-P.3 — PR-status badge
+
+- [ ] **NS-P.3.1** Source of truth: the `pr_url` + `pr_state` fields
+      in `.strictlykeptboy/branch-state.toml` per NS-P.2.2 schema.
+      These fields are written by:
+      - The branch creator manually (paste PR URL after creating PR
+        on the provider).
+      - `skb branch link-pr <url>` CLI (cli-tooling.md owns).
+      - A future provider-API enrichment (deferred to v1.1).
+
+- [ ] **NS-P.3.2** Repo switcher badge: when a non-main branch is
+      active AND `pr_state == "open"`, the repo switcher shows
+      "PR #N open" under the branch name (where N is parsed from
+      the `pr_url`):
+      - GitHub URL pattern: `.../pull/<N>`
+      - Forgejo URL pattern: `.../pulls/<N>`
+      - Pattern not matched: show "PR open" without the number.
+
+- [ ] **NS-P.3.3** PR-state visual style:
+      - `open`: M3 secondary container background, "PR #N open"
+        label.
+      - `draft`: tertiary container, "PR #N draft".
+      - `merged`: surface-variant, "PR #N merged" (still useful
+        info briefly after merge before user switches back to main).
+      - `closed`: outline-variant with strikethrough, "PR #N
+        closed" — the branch lingered; user should consider
+        switching away.
+
+- [ ] **NS-P.3.4** Tap PR badge → opens the `pr_url` in the system
+      browser via `ACTION_VIEW`. No in-app PR review surface in v1.
+
+- [ ] **NS-P.3.5** PR-state freshness: there's no automatic poll of
+      the provider in v1. The badge reflects whatever
+      `branch-state.toml` says. Each branch switch shows a "Last
+      updated: <time>" line under the badge in the branch overview
+      screen.
+
+- [ ] **NS-P.3.6** **Decision:** v1 ships with state-update via
+      manual edit or CLI. Automated provider polling would require
+      either elevated OAuth scopes (D.39's deferral applies) or a
+      webhook receiver (server territory, out of scope). Manual
+      `skb branch link-pr` is the v1 contract; v1.1 may add a
+      polling background job once scope-elevation is addressed.
+
+- [ ] **NS-P.3.7** Sharing a PR'd branch: when the active branch
+      has `pr_state = "open"`, NS-P.1.3's "Share a link to this
+      branch" gains a secondary action: "Share PR link instead?" —
+      copying the `pr_url` instead of the branch tree URL.
+
+### NS-P.4 — Branch and read-only-repo interaction
+
+- [ ] **NS-P.4.1** Read-only repos (NS-F): branch operations are
+      read-only too. The branch picker lists upstream branches but
+      "Create branch" is disabled with helper text "This repo is
+      read-only — fork it to create branches."
+
+- [ ] **NS-P.4.2** Read-only repo + non-main branch view: the
+      read-only banner (NS-F.4) gets an addendum:
+      `Read-only · viewing branch <name>`. The fork CTA (NS-F.6)
+      preserves the user's currently-viewed branch when pointing
+      them at the provider's fork UI; the after-fork URL update
+      flow asks "switch to <branch> in your fork?" if the user's
+      fork has that branch.
+
+### NS-P.5 — Branch-aware author-filter
+
+- [ ] **NS-P.5.1** NS-G.5's author-filter dropdown adds a secondary
+      filter row "Branches" with multi-select. Default: only the
+      current branch selected; user can include events from other
+      local branches (those the device has fetched) in the view.
+
+- [ ] **NS-P.5.2** **Decision:** branches-filter is OFF by default
+      for everyday users — most users never use branches. When the
+      repo has only `main`, the dropdown row is hidden entirely.
+      When the repo has 2+ branches, the row appears with the
+      current branch pre-selected.
+
+- [ ] **NS-P.5.3** Cross-branch query is O(branches × events).
+      Cache invalidation matches D.2's HEAD-SHA keying per branch.
+      Performance budget: cross-branch month-view render < 400ms
+      on Pixel 6a for repos with up to 5 branches × 200 events.
+
+---
+
+## Phase NS-Q — Updated v2 deferrals
+
+This phase surgically updates the deferred-items section to reflect
+Round 2 decisions. Phases NS-L through NS-P pull most of the v1.5/v2
+pile into v1; what remains genuinely deferred or out-of-scope is
+re-classified below. The "Tradeoffs resolved inline" section above is
+preserved as-is — those tradeoffs were resolved in their time and
+remain accurate.
+
+### NS-Q.1 — Update tradeoffs-resolved inline references
+
+- [ ] **NS-Q.1.1** No textual change required to the "Tradeoffs
+      resolved inline" list (NS-A.14 through NS-K.9). Those rows
+      describe decisions made for the original v1 scope; Round 2
+      extends the scope but does not retract any prior decision.
+
+- [ ] **NS-Q.1.2** Add an explanatory header note above the
+      "Deferred to v2 with rationale" section linking to this
+      phase: "*Round 2 of `decisions.md` (D.23–D.40) moved much of
+      this list into v1. See NS-L through NS-P for the moved items;
+      what remains here is still deferred.*"
+
+### NS-Q.2 — Surgical updates to "Deferred to v2 with rationale"
+
+- [ ] **NS-Q.2.1** Replace existing entries with the rewritten
+      classification documented in NS-Q.3 below.
+
+### NS-Q.3 — Reclassification reference
+
+The deferred-items section is rewritten to three tiers:
+
+- **Moved to v1** — items originally deferred but now in v1 scope
+  via Round 2. These rows note the phase(s) implementing them.
+- **Still deferred to v1.1** — items intentionally held back, with
+  a v1.1 path documented.
+- **Still out of scope** — items rejected as wrong-fit (not just
+  postponed).
+
+#### Moved to v1
+
+| Original deferral | Now implemented in | Notes |
+|---|---|---|
+| Bidirectional CalDAV sync | NS-L (UX) + `sync-engine.md` SE-Q (mechanics) | Was scoped as `tools/`-only; now full in-app via dav4jvm + ical4j. |
+| Comments / replies on events | NS-M (notifications) + `data-model.md` DM-K (schema) + `ui-spec.md` UI-V+ (composer) | User direction reversed from "events are not chat-shaped in v1" to file-per-comment in v1. |
+| CSV import for tasks | NS-N + `cli-tooling.md` CLI-* | Was deferred for "fragile mapping"; mitigated by preview + column-mapping UI. |
+| Cross-device snooze sync | NS-O | Was "local-by-design"; now opt-in with auto-merge in `_local/snoozes.toml`. |
+| Cross-repo identity unification | D.23 signed commits + committer email | Signed commits + email-based committer make this a non-issue at the git layer; the per-repo `identities/` dirs stay as the canonical display source. |
+
+#### Still deferred to v1.1
+
+| Item | Why deferred | v1.1 path |
+|---|---|---|
+| In-app collaborator listing | Requires elevated OAuth scopes (`read:org` for GitHub) — trust-footprint expansion | Re-evaluate after v1 ships and user-trust posture is clearer (D.39). Deep-link to provider is adequate v1. |
+| Per-recipient deploy-key generation in the app | Wrong trust model — recipient should hold their own private key | Guidance + paste field for the recipient's pubkey is the v1 contract (NS-E.2). No v1.1 promotion planned. |
+| Provider-API PR-state polling | Either scope-elevation or webhook-receiver complexity | Manual `skb branch link-pr` is the v1 contract (NS-P.3.6). v1.1 may add polling once scope posture is resolved. |
+| OAuth-for-CalDAV (Apple, Google) | Provider-specific OAuth dances; app-password path covers v1 | NS-L.1.2 documents the deferral. v1.1 may add provider-specific OAuth if app-password support degrades. |
+| Branch-protection PR creation in-app | Provider-side workflow; deep-link is enough | D.40 documents; NS-P.1.3 share-branch-link is the v1 contract. |
+| Notification group importance RAISE above channel ceiling | Would require dynamic channel proliferation | NS-A.14 lower-only rule stands. |
+| Cross-repo identity unification (public-key match auto-merge) | D.23 covers the basics; auto-merge across repos is the v2 enhancement | NS-G.6 v2 hook stands as future work, NOT blocking. |
+
+#### Still out of scope
+
+| Item | Why rejected |
+|---|---|
+| Self-served webcal / CalDAV from the app | Server territory — Android client can't expose a sustainable endpoint without port-forward/discovery. Power users cron `tools/ics-export.sh` instead. NS-K.9. |
+| Alpha-blend overlap | Colorblind + screen-reader regression. Striped overlay model in `resolver.md` stays. D.40. |
+| Multi-finger calendar gestures | Undiscoverable for most users. D.40. |
+| Semantic TOML auto-merge | One-file-per-entity invariant + manual conflict UI is sufficient. Adding semantic merge would obscure the explicit data model. D.40. |
+| Web app / desktop app | Android-only in v1. The `skb` CLI (D.24) covers the cross-platform power-user surface. |
+| End-to-end encrypted repo contents | Repo can be private at the provider level; that's the v1 data-at-rest story. D.40. |
+| QR code for SSH public-key export | Marginal value over clipboard/share; zxing dep cost. D.40. |
+
+### NS-Q.4 — Migration of existing readers
+
+- [ ] **NS-Q.4.1** The "Deferred to v2 with rationale" section in
+      the existing document is replaced wholesale by NS-Q.3's
+      three-tier classification. This is the ONLY surgical write
+      outside Round 2's appended content.
+
+- [ ] **NS-Q.4.2** Anyone who linked to anchors in the old
+      "Deferred to v2 with rationale" section (e.g.
+      `#deferred-to-v2-with-rationale-comments-replies-on-events`)
+      should update their links to point to the relevant Round 2
+      phase (NS-M for comments, etc.). Anchors themselves are
+      preserved as best as a markdown reflow allows; new content
+      uses `## NS-Q.3 — ...` style anchors.
+
+---
+
 # Tradeoffs resolved inline
 
 These were unforeseen at the brief stage; all resolved here without
@@ -1092,44 +2367,76 @@ punting back to the user.
 
 ---
 
-# Deferred to v2 with rationale
+# Deferred to v1.1 / out of scope
 
-- **Cross-repo identity unification (public-key match).** Documented
-  hook in NS-G.6. Not needed for v1; complicates the data model and
-  the UI's repo-scoping promise.
+*Round 2 of `decisions.md` (D.23–D.40) moved much of the original v2
+deferral pile into v1. See **NS-L** (bidi CalDAV), **NS-M** (comments),
+**NS-N** (CSV import), **NS-O** (cross-device snooze sync), and **NS-P**
+(multi-branch sharing) for the moved items, and **NS-Q** for the
+classification rationale. What remains below is genuinely held back
+for v1.1 or rejected as wrong-fit.*
 
-- **Comments / replies on events.** User direction was "events are
-  not chat-shaped in v1." Markdown body covers collaborative notes
-  meanwhile. v2 would add `comments/<event-id>/<comment-id>.md` and a
-  comment composer. NS-G.7.
+## Moved to v1 (no longer deferred)
+
+| Original deferral | Now implemented in |
+|---|---|
+| Bidirectional CalDAV sync | NS-L + `sync-engine.md` SE-Q |
+| Comments / replies on events | NS-M + `data-model.md` DM-K + `ui-spec.md` UI-V+ |
+| CSV import for tasks | NS-N + `cli-tooling.md` CLI-* |
+| Cross-device snooze sync | NS-O |
+| Cross-repo identity unification (basic) | D.23 signed commits + committer email |
+| CalDAV server-side write-back | NS-L (bidi mode) |
+
+## Still deferred to v1.1
 
 - **In-app collaborator listing.** Requires elevated provider OAuth
   scopes we don't ask for. Deep-link approach is sufficient v1.
-  NS-E.3.
-
-- **Bidirectional CalDAV sync.** `tools/caldav-bridge.py` stubbed.
-  Real implementation = a long-running server/process; out of scope
-  for an Android client app. Power users who want CalDAV today wire
-  up `tools/ics-export.sh` cron-driven. NS-K.6 + NS-K.9.
-
-- **CSV import.** Fragile mapping and ambiguous semantics; VTODO
-  import covers the realistic use case. NS-J.6.
-
-- **Self-served webcal/CalDAV endpoint from the app.** Would require
-  background server + port-forwarding/discovery; not an Android
-  client's job. NS-K.9.
+  Re-evaluate after v1 ships. D.39 + NS-E.3.
 
 - **Per-recipient deploy-key generation in the app.** The recipient
   must hold their own private key; generating it in the granter's
-  app would be the wrong trust model. We provide guidance + paste
-  field instead. NS-E.2.
+  app would be the wrong trust model. Paste-recipient-pubkey is the
+  v1 contract. NS-E.2.
 
-- **CalDAV server-side write-back.** Same v2 territory as
-  `caldav-bridge.py`. NS-K.6.
+- **OAuth-for-CalDAV (Apple, Google).** Provider-specific dances;
+  app-password path covers v1. NS-L.1.2.
 
-- **Cross-device snooze sync.** Snoozes are local; if a user moves
-  between devices, snoozes don't follow. Acceptable v1 trade. NS-D.8.
+- **Provider-API PR-state polling.** Manual `skb branch link-pr` is
+  the v1 contract. NS-P.3.6.
+
+- **Branch-protection PR creation in-app.** Provider-side workflow;
+  deep-link is enough. D.40 + NS-P.1.
 
 - **Notification group importance RAISE above channel ceiling.**
   Would require dynamic channel proliferation. Lower-only is the
   v1 contract. NS-A.14.
+
+- **Cross-repo identity auto-merge via public-key match.** D.23
+  signed commits cover the basic identity story; auto-merge across
+  repos is v1.1+. NS-G.6.
+
+- **QR code for SSH public-key export.** Marginal value over
+  clipboard/share; zxing dep cost. D.40.
+
+## Still out of scope (rejected, not postponed)
+
+- **Self-served webcal/CalDAV endpoint from the app.** Would require
+  background server + port-forwarding/discovery; not an Android
+  client's job. Power users cron `tools/ics-export.sh` to a static
+  host instead. NS-K.9.
+
+- **Alpha-blend overlap.** Colorblind + screen-reader regression.
+  Striped overlay model in `resolver.md` stays. D.40.
+
+- **Multi-finger calendar gestures.** Undiscoverable for most users.
+  D.40.
+
+- **Semantic TOML auto-merge.** One-file-per-entity invariant +
+  manual conflict UI is sufficient. Adding semantic merge would
+  obscure the explicit data model. D.40.
+
+- **Web app / desktop app.** Android-only in v1. The `skb` CLI (D.24)
+  covers the cross-platform power-user surface. D.40.
+
+- **End-to-end encrypted repo contents.** Repo can be private at the
+  provider level; that's the v1 data-at-rest story. D.40.

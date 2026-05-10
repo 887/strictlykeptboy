@@ -323,6 +323,179 @@ Deep-dive: [`ui-spec.md`](ui-spec.md) phase UI-O.
 
 ---
 
+---
+
+# Round 2 — v1 scope expansion (Phases X–LL)
+
+After Round 1, the user reviewed scope and directed that the entire
+v2-deferral pile be pulled into v1, plus signed commits demoted from
+required to optional, plus a `skb` CLI promoted to **primary interface
+for the calendar data**. License constraint: prebuilt open-source
+components only, no GPL. See `decisions.md` D.23–D.40.
+
+Cross-references for Round 2:
+- CLI deep-dive: [`cli-tooling.md`](cli-tooling.md) (new)
+- Sync engine extensions: [`sync-engine.md`](sync-engine.md) (extends with SE-Q+)
+- Data model extensions: [`data-model.md`](data-model.md) (extends with DM-K+)
+- UI extensions: [`ui-spec.md`](ui-spec.md) (extends with UI-V+)
+- Notifications/sharing extensions: [`notifications-sharing-import.md`](notifications-sharing-import.md) (extends with NS-L+)
+- Resolver extensions: [`resolver.md`](resolver.md) (extends with RV-H+)
+
+---
+
+## Phase X — `skb` CLI primary interface
+
+Deep-dive: [`cli-tooling.md`](cli-tooling.md) phases CLI-A through CLI-K.
+
+- [ ] **X.1** Define subcommand surface (D.24)
+- [ ] **X.2** Implement JVM-jar entrypoint (shared `:cli` Gradle subproject already planned in NS for tools/skb-cli.jar — promote to top-level `:cli`)
+- [ ] **X.3** Shell-script wrapper for distribution (`skb` POSIX shell launcher; finds java, launches jar)
+- [ ] **X.4** Atomic write + auto-commit hooks (same commit-message format as GUI)
+- [ ] **X.5** `--json` machine-readable output mode for AI consumers
+- [ ] **X.6** `--dry-run` flag (prints proposed change, no write)
+- [ ] **X.7** Exit-code taxonomy (0=ok, 1=usage, 2=not-found, 3=conflict, 4=auth, 5=corrupt, 6=schema-mismatch)
+- [ ] **X.8** Bundle in release pipeline alongside APK (GitHub Releases asset; homebrew tap `887/tap/skb`; `curl ... | sh` one-liner)
+- [ ] **X.9** AGENTS.md content references CLI as primary path (rewrite per DM-K of data-model.md extensions)
+- [ ] **X.10** Help system (`skb help <command>`, contextual examples, machine-readable `skb help --json` for AI agents)
+- [ ] **X.11** Repo discovery: walk-up to find `.strictlykeptboy/` from CWD; `--repo <path>` override; `SKB_REPO` env var
+- [ ] **X.12** Test suite — pure JVM, Robolectric-free
+
+## Phase Y — Bidirectional CalDAV
+
+Deep-dive: [`sync-engine.md`](sync-engine.md) extension phases SE-Q+, [`notifications-sharing-import.md`](notifications-sharing-import.md) extension phases NS-L+.
+
+- [ ] **Y.1** Add `ical4j` + `dav4jvm` deps; verify MPL-2.0 license-clean for our distribution
+- [ ] **Y.2** CalDAV discovery flow (well-known URL `/.well-known/caldav`, then PROPFIND for calendars)
+- [ ] **Y.3** Server credential storage (alongside git creds in EncryptedSharedPreferences)
+- [ ] **Y.4** Pull-only mirror calendar mode (CalDAV → repo, read-only target)
+- [ ] **Y.5** Push-only export mode (repo → CalDAV)
+- [ ] **Y.6** Bidirectional sync mode (full two-way, with conflict detection)
+- [ ] **Y.7** Conflict resolution shared with git conflict UI
+- [ ] **Y.8** `skb caldav add|sync|remove|list` subcommands
+- [ ] **Y.9** Per-CalDAV-mirror sync interval (default 30m)
+- [ ] **Y.10** ETag-based change detection (avoid full re-pull)
+
+## Phase Z — Git LFS
+
+- [ ] **Z.1** JGit LFS config wiring (`.gitattributes` for `attachments/**` over threshold)
+- [ ] **Z.2** Threshold-based auto-routing (default 1MB, configurable per repo)
+- [ ] **Z.3** Provider capability detection (probe LFS endpoint; on failure, fall back to in-tree)
+- [ ] **Z.4** Fallback warning UI on no-LFS providers ("this provider does not support LFS; large attachments stored inline")
+- [ ] **Z.5** Migration helper: convert existing repo's large in-tree attachments to LFS (`skb migrate --lfs`)
+
+## Phase AA — Multi-timezone first-class
+
+Deep-dives: [`data-model.md`](data-model.md) extension DM-L, [`resolver.md`](resolver.md) extension RV-H+I, [`ui-spec.md`](ui-spec.md) extension UI-V.
+
+- [ ] **AA.1** Per-event `tz_id` field (additive, optional, non-breaking)
+- [ ] **AA.2** Repo default tz in `repo.toml`
+- [ ] **AA.3** Display-tz toggle in top bar; per-event "pin to event tz" flag
+- [ ] **AA.4** Multi-tz common-time finder
+- [ ] **AA.5** DST edge-case test corpus
+- [ ] **AA.6** `skb tz convert <event-id> <new-tz>` CLI subcommand
+- [ ] **AA.7** Participant-tz declaration in Together-tab common-time UI
+
+## Phase BB — Weather overlay
+
+- [ ] **BB.1** Open-Meteo client integration (Apache-2.0 lib)
+- [ ] **BB.2** Per-repo location setting + location-permission flow
+- [ ] **BB.3** Cache layer (per-(location, date) day forecast, refresh every 6h)
+- [ ] **BB.4** Day view weather strip (3h granularity)
+- [ ] **BB.5** Week view header icons
+- [ ] **BB.6** Month view day-cell icons
+- [ ] **BB.7** Per-event location override (for travel events)
+- [ ] **BB.8** CC-BY attribution in About screen
+- [ ] **BB.9** `skb weather show <date>` CLI subcommand
+
+## Phase CC — Replies / comments on events
+
+Deep-dives: [`data-model.md`](data-model.md) extension DM-K, [`ui-spec.md`](ui-spec.md) extension UI-W, [`notifications-sharing-import.md`](notifications-sharing-import.md) extension NS-M.
+
+- [ ] **CC.1** Schema: `events/<yyyy>/<mm>/<event-id>.comments/<comment-id>.md`
+- [ ] **CC.2** Event detail comments UI section (list + add)
+- [ ] **CC.3** `comments` notification channel + per-event mute toggle (D.37)
+- [ ] **CC.4** `skb comment add|list` CLI subcommands
+- [ ] **CC.5** Comment author chip rendering (same shape as event chip)
+- [ ] **CC.6** Threaded `in_reply_to` rendering (indented under parent)
+
+## Phase DD — Drag-to-reschedule + pinch-to-zoom
+
+- [ ] **DD.1** Long-press detector on event chips (Day + Week views)
+- [ ] **DD.2** Drag gesture with grid snapping (configurable grid; default 15min)
+- [ ] **DD.3** Drop commit with auto-message `move event "<title>" from <old> to <new>`
+- [ ] **DD.4** Pinch-to-zoom timeline (5min / 15min / 30min / 1h levels)
+- [ ] **DD.5** Zoom-level persistence per device
+- [ ] **DD.6** Recurrence drag: prompt "this instance only / this and future / entire series" — creates appropriate exception or rule edit
+
+## Phase EE — Inline-markdown body styling
+
+- [ ] **EE.1** Markwon Compose integration (Apache-2.0)
+- [ ] **EE.2** Editor toolbar with raw/rendered toggle
+- [ ] **EE.3** M3E-aligned theming (heading typography, code block surface, link color)
+- [ ] **EE.4** Inline image rendering for `![alt](attachments/...)` references
+
+## Phase FF — Custom sticker / icon packs
+
+- [ ] **FF.1** Pack format spec (directory + optional `pack.toml`)
+- [ ] **FF.2** Install from local picker (zip or unzipped dir)
+- [ ] **FF.3** Install from URL fetch
+- [ ] **FF.4** `:sticker-name:` shortcut in title editors with autocomplete
+- [ ] **FF.5** Icon picker integration (repos, calendars, todolists)
+- [ ] **FF.6** Settings → Appearance → Sticker packs (list, install, remove)
+
+## Phase GG — Signed commits (optional capability)
+
+- [ ] **GG.1** GPG private-key import flow (file picker + paste-armored-text)
+- [ ] **GG.2** Per-identity signing-key picker (lists imported key fingerprints)
+- [ ] **GG.3** JGit + BouncyCastle signing wiring (PGP signature on commits when toggle on)
+- [ ] **GG.4** Verified-author chip on entries from signed commits (small verified-checkmark badge)
+- [ ] **GG.5** "Off by default" — confirmed throughout UI and CLI
+- [ ] **GG.6** Key revocation flow (remove imported key; stops signing; existing signed commits unaffected)
+- [ ] **GG.7** Per-repo signing-key picker (override per repo if the active identity has multiple keys)
+
+## Phase HH — Android Auto voice-create
+
+- [ ] **HH.1** Voice intent registration (`com.eight87.strictlykeptboy.action.CREATE_EVENT`)
+- [ ] **HH.2** Natural-language parsing (date / time / title / calendar) — use Android's `Recognizer` + simple regex; fall back to ChatGPT-style fuzzy if a future ML model is wired in
+- [ ] **HH.3** Default-repo + default-calendar resolution
+- [ ] **HH.4** Confirm-by-voice flow ("create event 'dentist' tomorrow at 3pm in Personal — say yes to confirm")
+
+## Phase II — Cross-device snooze sync (opt-in)
+
+- [ ] **II.1** Setting toggle: Settings → Notifications → "Sync snoozes across devices"
+- [ ] **II.2** `_local/snoozes.toml` schema (`[[snooze]]` entries with `event_id`, `until`, `device_id`)
+- [ ] **II.3** Auto-merge resolver for snoozes (latest-wins per entry; idempotent)
+- [ ] **II.4** Conflict-free idempotency verification (write a snooze, write the same snooze, confirm no double-entry)
+
+## Phase JJ — Multi-branch awareness
+
+- [ ] **JJ.1** Repo switcher shows current branch under repo name
+- [ ] **JJ.2** Branch picker in repo settings
+- [ ] **JJ.3** Branch creation flow (`skb branch create <name>`; UI form)
+- [ ] **JJ.4** Branch switching (with stash + reset path for uncommitted local changes)
+- [ ] **JJ.5** PR deep-link to provider's compare page
+- [ ] **JJ.6** `skb branch list|create|switch` CLI subcommands
+
+## Phase KK — CSV import for tasks
+
+- [ ] **KK.1** Settings → Templates → "Import tasks from CSV" flow
+- [ ] **KK.2** Column mapping UI (auto-detect common names, user confirms unknowns)
+- [ ] **KK.3** `skb task import-csv <file> --list <todolist>` CLI subcommand
+- [ ] **KK.4** Idempotency on re-import (by row hash; subsequent imports update existing entries)
+
+## Phase LL — License audit + release scope
+
+- [ ] **LL.1** Audit every dep against the no-GPL constraint:
+  - Apache-2.0: kotlinx, Compose, Room, JGit modules, ktoml, commonmark, lib-recur, BouncyCastle, Markwon, open-meteo
+  - MPL-2.0: ical4j, dav4jvm — link-clean for our distribution; document in About
+  - EPL-2.0 / EDL: JGit core — link-clean; document
+  - BSD/MIT: anything that pops up; should be fine
+  - **Flagged**: anything LGPL/AGPL/GPL — reject; find alternative
+- [ ] **LL.2** Licensee plugin allowlist updated for Round 2 deps
+- [ ] **LL.3** About screen license list extended
+
+---
+
 ## Notes on parallel deep-dives
 
 Phases A through W are intentionally exhaustive but rely on the deep-dive

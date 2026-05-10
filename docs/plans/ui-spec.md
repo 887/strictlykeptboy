@@ -2026,48 +2026,1214 @@ spec and the calls made (per the "never punt" directive).
 
 ## Deferred to future versions (with rationale)
 
+> **Round 2 update — re-triaged against decisions.md D.23–D.40.** Many
+> Round 1 deferrals have been pulled into v1 scope. The list below
+> preserves the original wording for historical context, then annotates
+> each entry with its current v1 status. See Phases UI-V through UI-EE
+> below for the v1 UI specs of the items now in scope.
+
 - **Per-event color override** — a single event can carry its own
   color. v1 uses calendar color only. Adding per-event color creates
   a third color resolution layer (event > calendar > repo seed); not
   worth the complexity for v1. **Defer to v2.**
+  ⚠️ **STILL DEFERRED v1.1.** Calendar-level color + emoji prefix on
+  the event title (D.19) covers the common "make this event stand out"
+  case in v1.
 
 - **Drag-to-reschedule on Day/Week views** — long-press an event chip
   and drag to a new time. Requires gesture detection + collision
   recompute mid-drag. Cool but not blocking. **Defer to v1.1.**
+  ✅ **MOVED TO v1** per D.30. See **Phase UI-X**.
 
 - **Pinch-to-zoom on timeline (Day/Week)** — adjust hour-row height.
   Useful for fine scheduling but not core. **Defer to v1.1.**
+  ✅ **MOVED TO v1** per D.30. See **Phase UI-X**.
 
 - **Calendar overlap blending mode beyond accent stripes** — full
   alpha-blend of overlapping events instead of stripes. The stripe
   approach is clearer for screen readers + colorblind users; blending
   loses information. **Don't ship; stripes are better.**
+  ✅ **STILL REJECTED.** Colorblind + screen-reader regression. The
+  striped overlay model stays.
 
 - **Auto edit/create** — voice or list-based event creation on Auto.
   Read-only is the v1 promise per D.17. Adding write surfaces a slew
   of safety/testing concerns. **Defer to v2.**
+  ✅ **MOVED TO v1 (voice-create only)** per D.33. No on-screen
+  edit/delete (those stay deferred for safety). See **Phase UI-DD**.
 
 - **Multi-window / split-screen tablet** — Compose handles this
   semi-automatically via WindowSizeClass; we test it but don't add
   bespoke split-screen UI. **No deferral, tested-as-acceptable.**
+  ⚠️ **STILL DEFERRED v1.1** for a bespoke split-screen UI; rely on
+  Android system split-screen + WindowSizeClass in v1.
 
 - **Per-day weather overlay** — nice-to-have on Day view; out of
   scope. **Defer indefinitely.**
+  ✅ **MOVED TO v1** per D.28 (Open-Meteo, CC-BY data). See
+  **Phase UI-Z**.
 
 - **Inline Markdown editing in the body field with WYSIWYG preview**
   — v1 ships plain markdown editor + commonmark renderer in detail
   view; no live WYSIWYG. **Defer to v1.1.**
+  ✅ **MOVED TO v1** per D.31 (inline-rendered Markwon, not full
+  WYSIWYG — Markdown source stays the canonical edit surface, but
+  styling renders inline as you type). See **Phase UI-Y**.
 
 - **Custom emoji / sticker packs for repo icons** — v1 supports
   emoji-as-icon from the system emoji set. Custom stickers require
   asset management. **Defer to v2.**
+  ✅ **MOVED TO v1** per D.32 (open pack format, no DRM). See
+  **Phase UI-AA**.
 
 - **Multi-finger gestures on calendar (e.g. two-finger tap = add
   block)** — discoverable by no-one. **Skip permanently.**
+  ✅ **STILL REJECTED.** Undiscoverable. The long-press + drag
+  gesture (UI-X) is the discoverable replacement.
 
 - **iCal *live* sync (not just import)** — D.16 explicitly defers
   CalDAV server-side sync to a `tools/` cron path. UI for it would
   duplicate per-repo sync UI. **Defer to v2 unless user demand.**
+  ✅ **MOVED TO v1 (as bidirectional CalDAV bridge)** per D.25.
+  See **Phase UI-CC** for the mirror-management UI.
+
+---
+
+# Round 2 — extensions (Phases UI-V through UI-EE)
+
+Round 2 of `decisions.md` (D.23–D.40) expanded v1 scope. The phases
+below extend this spec to cover the new UI surfaces: multi-timezone
+display, comments on events, drag-to-reschedule + pinch-to-zoom,
+inline-rendered Markdown, weather overlay, sticker packs, GPG signed-
+commits settings, multi-branch + CalDAV mirror management, and Android
+Auto voice-create. The "Deferred to future versions" list above was
+surgically updated to reflect the new status of each item.
+
+Each phase here follows the same conventions as UI-A through UI-U
+above: sub-step checkboxes with `**UI-X.Y**` prefixes, ASCII mockups
+for the load-bearing visual states, M3E component references, and
+cross-links back to `main.md`, `decisions.md`, and the sibling
+deep-dive docs.
+
+**Round 2 phase index:**
+
+| Phase | Topic | main.md tie-in | decisions.md tie-in |
+|---|---|---|---|
+| UI-V | Multi-timezone display | (cross-cutting) | D.27 |
+| UI-W | Replies / comments on events | CC | D.29, D.37 |
+| UI-X | Drag-to-reschedule + pinch-to-zoom | DD | D.30 |
+| UI-Y | Inline-markdown body styling | EE | D.31 |
+| UI-Z | Weather overlay | BB | D.28 |
+| UI-AA | Custom sticker / icon packs | FF | D.32 |
+| UI-BB | GPG signed-commits UI | GG | D.23 |
+| UI-CC | Multi-branch UI + CalDAV mirror UI | JJ, (CalDAV cross-cuts) | D.25, D.36 |
+| UI-DD | Android Auto voice-create | HH | D.33 |
+| UI-EE | Updated deferrals (housekeeping) | — | D.40 |
+
+---
+
+## UI-V — Multi-timezone display
+
+`decisions.md` D.27. Cross-cuts every schedule view (UI-D through UI-H),
+the event detail sheet (UI-I), the event editor, the recurrence editor,
+the Together tab (UI-M), and the top app bar (UI-B).
+
+**Design center.** Default render mode is "in my tz" (the device tz).
+Users who travel, or who collaborate with partners in other tzs, can
+either pin individual events to render in their own tz, or flip the
+whole view to "render in event tz" via the top-bar tz badge. The
+Together-tab common-time finder evaluates candidate slots from each
+participant's tz perspective.
+
+**Sub-steps:**
+
+- [ ] **UI-V.1** Add a `TzRenderMode` enum to the schedule state:
+  `DEVICE_TZ` (default), `EVENT_TZ` (pin to each event's own tz),
+  `REPO_TZ` (pin to the repo default tz). The current mode persists
+  per device in DataStore. The mode is a *display* concern only —
+  the underlying `Instant` of every event is timezone-agnostic; the
+  tz is purely a render parameter.
+
+- [ ] **UI-V.2** Top-bar tz badge. When the visible date range contains
+  any event whose `tz_id` differs from the device tz, render a small
+  pill on the trailing edge of the top app bar (right of the sync
+  button, left of the identity icon). Pill content:
+  `🌐 DEVICE_TZ · N events in OTHER_TZ`. Tap → bottom sheet to switch
+  `TzRenderMode`. If the visible range has no foreign-tz events, the
+  pill is absent (zero chrome).
+
+- [ ] **UI-V.3** Per-event "Pin to event timezone" toggle in event
+  detail sheet. When on, this specific event always renders in its
+  own `tz_id` regardless of the global `TzRenderMode`. State persists
+  in the event frontmatter as `display_pin_tz = true` (additive field
+  — absent = default). Tap target: a small clock-with-globe icon in
+  the detail sheet's metadata row.
+
+- [ ] **UI-V.4** Together-tab common-time finder gains a per-participant
+  tz column. Each participant row: avatar + display name + tz dropdown
+  (defaults to that participant's identity's declared tz, falling back
+  to repo default). The result grid renders each candidate slot as a
+  small horizontal band of N tz columns showing the slot's local time
+  in each participant's tz. See `resolver.md` Phase RV-H for the
+  evaluation semantics; this checkbox is the UI side only.
+
+- [ ] **UI-V.5** Event creation/edit form: tz picker.
+  `ExposedDropdownMenuBox` between the start-time picker and the
+  end-time picker, labelled "Timezone". Defaults to repo default;
+  on first override per session, an inline help line appears:
+  "this event will render in <tz> regardless of where you are."
+  The picker uses IANA tz IDs grouped by region (Africa, America,
+  Asia, Europe, Pacific, …) with a search field at the top.
+
+- [ ] **UI-V.6** Recurrence creation/edit form: same tz picker as UI-V.5.
+  DST behaviour callout: when the recurrence frequency would cross a
+  DST boundary, a tertiary info line under the picker reads:
+  "instances on either side of DST keep wall-clock time" (which is
+  what `lib-recur` does by default — call it out so the user is not
+  surprised).
+
+- [ ] **UI-V.7** Visual chip treatment for non-device-tz events: a
+  small clock-icon badge (12dp) in the leading corner of the chip in
+  Day/Week views. The badge tinted with `surfaceVariant` so it doesn't
+  compete with the calendar color stripe. Long-press on the badge:
+  toast "starts <local time> · <tz name>". This is the at-a-glance
+  signal that a chip is non-local.
+
+- [ ] **UI-V.8** Accessibility: the chip badge gets a
+  `contentDescription` of "in timezone <tz id>". Screen readers
+  announce "Dentist appointment, 3pm Europe/Berlin, in timezone
+  Europe/Berlin" when in DEVICE_TZ mode and the event tz differs.
+
+- [ ] **UI-V.9** Cross-link back to `main.md` Phase (cross-cutting —
+  no single phase; touches G, K's event editor, and the resolver
+  output structures from `resolver.md` Phase RV-H).
+
+**ASCII mockup — top-bar tz badge:**
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│ [≡] [Repo: 🦊 personal ▾]   Schedule · Week    [🌐 CET · 3 in EST] [🔄] [👤] │
+└──────────────────────────────────────────────────────────────────────┘
+                                          └─────── tap to toggle ──────┘
+
+   Tapping the pill opens the bottom sheet:
+
+   ┌────────────────────────────────────────────────────┐
+   │  Timezone render mode                              │
+   │                                                    │
+   │  ○ Show times in my timezone   (CET)              │
+   │  ● Show times in each event's timezone            │
+   │  ○ Show times in repo default  (Europe/Berlin)    │
+   │                                                    │
+   │  [ Close ]                                         │
+   └────────────────────────────────────────────────────┘
+```
+
+**Tradeoffs resolved inline.**
+
+- *Bottom sheet vs. inline cycle on tap.* A two-state cycle (device ↔
+  event) on tap was tempting, but the three-mode model (device / event
+  / repo) needs a picker. Bottom sheet wins; the pill itself stays
+  one-tap to open.
+- *Badge placement.* Trailing edge keeps the leading edge (repo
+  switcher) clean for the most-frequent interaction.
+- *Pin field name.* `display_pin_tz` rather than `pin_tz` to keep it
+  obvious that this is a display-only flag, not a tz override.
+
+---
+
+## UI-W — Replies / comments on events
+
+`decisions.md` D.29, D.37. `main.md` Phase CC. File model:
+`events/<yyyy>/<mm>/<event-id>.comments/<comment-id>.md`, one file
+per comment (see `data-model.md` Phase DM-K for the schema).
+
+**Sub-steps:**
+
+- [ ] **UI-W.1** Event detail sheet gains a **Comments** section
+  below the event metadata and above the attachments section.
+  Section header: "Comments (N)" with a count. Empty state: a single
+  centered row "no comments yet — be the first" with a small chat
+  icon (24dp, `Icons.AutoMirrored.Outlined.Chat`, tinted
+  `onSurfaceVariant`).
+
+- [ ] **UI-W.2** Each comment row: author chip (24dp avatar +
+  display name) on the leading edge, relative timestamp on the
+  trailing edge ("3h ago", "Tue"), Markdown-rendered body
+  (Markwon via UI-Y) below the chip row, and a small action row
+  (Reply · Edit · Delete) below the body. Edit/Delete only show
+  on comments authored by the active identity.
+
+- [ ] **UI-W.3** Threading. A comment with `in_reply_to = <parent-id>`
+  renders indented 16dp under the parent, with a vertical 1dp
+  divider on the leading edge tinted `outlineVariant`. **Only one
+  level of nesting** is rendered structurally; deeper replies
+  flatten back to top-level with a "↳ in reply to <author>" prefix
+  on the body. This keeps the visual tree shallow on phones; the
+  data model still preserves the full graph.
+
+- [ ] **UI-W.4** Add-comment composer pinned at the bottom of the
+  Comments section. `OutlinedTextField` (multiline, max 6 visible
+  rows before scroll) + a small toolbar above it: rendered-preview
+  toggle (eye icon), bold (`B`), italic (`I`), list, link, attach.
+  Submit button is a paper-plane icon in the trailing corner;
+  disabled until the field has non-whitespace content.
+
+- [ ] **UI-W.5** Rendered-preview toggle in the composer flips the
+  field between raw Markdown source and a read-only Markwon-rendered
+  view of the same content. The toggle keeps the cursor position
+  on the raw side (preview mode is read-only).
+
+- [ ] **UI-W.6** "Reply" action on a comment pre-fills the composer
+  with `in_reply_to` bound to that comment ID, and inserts a small
+  chip above the composer "Replying to <author>" with an ✕ to clear.
+
+- [ ] **UI-W.7** Per-event mute toggle in the detail sheet header
+  (right of the title). Bell icon: filled = receiving notifications
+  for new comments on this event; outlined = muted. State persists
+  in app prefs (not in the repo — local concern).
+
+- [ ] **UI-W.8** Notification routing: new comments fire on the
+  `comments` channel (D.37, IMPORTANCE_DEFAULT) rather than the
+  `events` channel. Detail in `notifications-sharing-import.md`
+  Phase NS-M; this checkbox is the UI side (mute toggle wiring).
+
+- [ ] **UI-W.9** Long-press on a comment row opens a context menu:
+  Copy text · Share · Report (for shared repos, opens provider
+  issue tracker deep link). On the active identity's own comments,
+  Edit and Delete also appear.
+
+- [ ] **UI-W.10** Accessibility: each comment is a single focus
+  group for TalkBack. Announcement: "<author>, <relative time>:
+  <body>". Reply/Edit/Delete are nested actions reachable via
+  the rotor.
+
+- [ ] **UI-W.11** Cross-link back to `main.md` Phase CC and
+  `data-model.md` Phase DM-K (file schema for comments).
+
+**ASCII mockup — Comments section in event detail sheet:**
+
+```
+   ┌────────────────────────────────────────────────────┐
+   │  Dentist appointment        [🔔] [✏️] [×]           │  ← header
+   │  Tue 12 May · 14:00–14:45 · 🌐 Europe/Berlin       │
+   │  Calendar: 🦷 Health                                │
+   │  ────────────────────────────────────────────────  │
+   │                                                    │
+   │  Comments (3)                                      │
+   │  ┌──────────────────────────────────────────────┐ │
+   │  │ 🦊 Alex                            3h ago    │ │
+   │  │ Don't forget to **fast** 2h before.          │ │
+   │  │ Reply · Edit · Delete                         │ │
+   │  └──────────────────────────────────────────────┘ │
+   │   │  ┌─────────────────────────────────────────┐ │
+   │   │  │ 🐱 Sam                          1h ago  │ │
+   │   │  │ OK, will skip lunch.                    │ │
+   │   │  │ Reply                                    │ │
+   │   │  └─────────────────────────────────────────┘ │
+   │  ┌──────────────────────────────────────────────┐ │
+   │  │ 🐺 Pat                             20m ago   │ │
+   │  │ ↳ in reply to Sam                            │ │
+   │  │ I can drop you off at 13:30 if you want.    │ │
+   │  │ Reply                                         │ │
+   │  └──────────────────────────────────────────────┘ │
+   │                                                    │
+   │  ┌──────────────────────────────────────────────┐ │
+   │  │ [👁] [B] [I] [•] [🔗] [📎]                    │ │
+   │  │ ┌────────────────────────────────────────┐   │ │
+   │  │ │ Replying to Pat  [×]                    │   │ │
+   │  │ │ Thanks, see you at 13:30.               │   │ │
+   │  │ └────────────────────────────────────────┘  ✈│ │
+   │  └──────────────────────────────────────────────┘ │
+   └────────────────────────────────────────────────────┘
+```
+
+**Tradeoffs resolved inline.**
+
+- *Visual nesting depth.* One level structurally + flat-with-prefix
+  for deeper threads. Two-plus structural levels would collapse the
+  body to a 200dp-wide column on phones.
+- *Mute scope.* Per-event mute, not per-thread. Per-thread mute
+  would be a third level of subscription state; not worth the
+  complexity for v1.
+- *Composer placement.* Pinned at the bottom of the sheet, not
+  modal. Modal composer would lose context of the surrounding
+  thread when writing a reply.
+
+---
+
+## UI-X — Drag-to-reschedule + pinch-to-zoom
+
+`decisions.md` D.30. `main.md` Phase DD. Day and Week views (UI-D,
+UI-E). Own Compose implementation — no external dep.
+
+**Sub-steps:**
+
+- [ ] **UI-X.1** Long-press detector on event chips. 500ms threshold,
+  matching M3 long-press default. Visual feedback when the threshold
+  trips: the chip lifts (elevation 0 → 6dp), shadow expands (`tonal`
+  shadow), and a haptic `LongPress` performHapticFeedback fires.
+
+- [ ] **UI-X.2** Drag state — once lifted, the chip follows the
+  pointer y-coordinate. A *ghost* of the chip remains at the original
+  position (alpha 0.35) for the duration of the drag. The dragged
+  chip displays its proposed new time band (start–end) in a small
+  callout to the leading edge of the chip ("→ 15:30–16:15") that
+  updates in real time as the chip moves.
+
+- [ ] **UI-X.3** Grid snap. The chip's top edge snaps to the
+  configured grid (default 15min; see UI-X.6). Snap is visual + value:
+  the chip's y-position rounds to the nearest grid line as the pointer
+  moves, and the proposed-time callout reflects the snapped value.
+  Sub-grid motion is not free; the chip moves in discrete steps.
+
+- [ ] **UI-X.4** Drop commit. Releasing the pointer over a valid slot
+  commits the move. Commit semantics:
+  - One-off event: rewrite the single file with new `dtstart`/`dtend`.
+  - Recurring instance: see UI-X.5 (extra prompt).
+  - Auto-commit message: `move event "<title>" from <old> to <new>`.
+  Releasing outside the timeline (e.g. on the nav rail) cancels the
+  drag and the chip springs back to its original position with a
+  short `EaseOutBack` animation.
+
+- [ ] **UI-X.5** Recurrence drag prompt. When the dragged chip is a
+  recurring instance, on drop a `ModalBottomSheet` interrupts the
+  commit with three radio options:
+  - "This instance only" — create an `exceptions/<rule-id>/<date>.md`
+    override with the new time.
+  - "This and future" — split the rule: cancel the old rule at the
+    dragged date, create a new rule from the dragged date with the
+    new time.
+  - "Entire series" — rewrite the rule's `dtstart` (the rule file
+    itself).
+  Default focus: "This instance only" — least destructive.
+
+- [ ] **UI-X.6** Pinch-to-zoom on the timeline. Detect two-finger
+  pinch via `Modifier.pointerInput { detectTransformGestures }`.
+  Zoom levels (4 discrete steps):
+  1. 5min — fine
+  2. 15min — default
+  3. 30min — coarse
+  4. 1h — very coarse
+  Pinch crosses thresholds in scale to step up/down; the active step
+  persists per device in DataStore.
+
+- [ ] **UI-X.7** Zoom buttons in the timeline gutter. A vertical pair
+  of `IconButton`s (`+` / `−`, 32dp each) pinned to the leading edge
+  of the timeline, anchored to the top-of-visible-range. Provides
+  accessibility for users who can't or won't pinch. Pressing `+` or
+  `−` cycles through the same 4 steps as UI-X.6.
+
+- [ ] **UI-X.8** Touch-target safety. While a chip is in long-press-
+  lifted state, all other gesture handlers (pinch, scroll) on the
+  timeline are suppressed. Releasing the chip restores them. This
+  prevents the pinch-zoom recogniser from stealing the drag when a
+  second finger touches down.
+
+- [ ] **UI-X.9** Conflict feedback. If the drop target overlaps with
+  another event in the same calendar, the proposed-time callout
+  tints `error` and the chip border tints `error`. Drop is still
+  allowed (overlap is a calendar property, not an error) but the
+  visual is unmistakable.
+
+- [ ] **UI-X.10** Accessibility alternative. For TalkBack users,
+  long-press a chip → context menu includes "Move to time…" which
+  opens a `TimePicker` (M3) and commits the same way as drag.
+  Equivalent surface, no gesture required.
+
+- [ ] **UI-X.11** Cross-link back to `main.md` Phase DD.
+
+**ASCII mockup — drag in progress on Week view:**
+
+```
+   Mon       Tue       Wed       Thu       Fri
+  ┌────────┬────────┬────────┬────────┬────────┐
+13│        │        │        │        │        │
+  │        │        │        │        │        │
+14│ ░░░░░░ │        │ Stand- │        │        │  ← ghost at original
+  │ ░Den-░ │        │ up     │        │        │
+  │ ░░░░░░ │        │        │        │        │
+15├────────┼────────┼────────┼────────┼────────┤
+  │        │        │        │        │        │
+  │        │        │┏━━━━━━┓│        │        │  ← lifted chip
+  │        │        │┃Den-  ┃│  → 15:30–16:15│  ← callout
+16│        │        │┃tist  ┃│        │        │
+  │        │        │┗━━━━━━┛│        │        │
+  │        │        │        │        │        │
+17├────────┼────────┼────────┼────────┼────────┤
+
+  Pinch-to-zoom: [+]   ── grid: 15min ──
+                 [−]
+```
+
+**Tradeoffs resolved inline.**
+
+- *Long-press threshold.* 500ms matches M3 default and gives the
+  pinch recogniser room to win on legitimate pinch starts.
+- *Snap step.* 15min default chosen for ergonomic match to common
+  meeting durations; 5min/30min/1h are explicit power-user steps.
+- *Recurrence drop default.* "This instance only" — the smallest
+  blast radius. Users wanting series edits choose explicitly.
+
+---
+
+## UI-Y — Inline-markdown body styling
+
+`decisions.md` D.31. `main.md` Phase EE. Library: `noties/Markwon`
+(Apache-2.0) with a thin Compose wrapper (`MarkwonBody` composable
+that bridges `EditText` rendering to Compose's `AndroidView`).
+
+**Sub-steps:**
+
+- [ ] **UI-Y.1** Compose wrapper for Markwon. `MarkwonBody` composable
+  accepts `value: TextFieldValue`, `onValueChange: (TextFieldValue) ->
+  Unit`, `mode: BodyMode` (`RAW` | `RENDERED`). In `RENDERED` mode
+  the wrapper styles inline as the user types — headings scale,
+  `**bold**` renders bold, `*italic*` italic, lists indent, links
+  tint `primary`. Source characters remain in the buffer (it's not
+  WYSIWYG that strips the markup); it's just a styled view of the
+  source.
+
+- [ ] **UI-Y.2** Editor toolbar. A horizontal `Row` above the body
+  field with the following icon-buttons (32dp tap targets):
+  - Raw/Rendered toggle (eye icon)
+  - Bold (`B`)
+  - Italic (`I`)
+  - Bulleted list (`•`)
+  - Numbered list (`1.`)
+  - Link (chain icon)
+  - Attach (paperclip icon)
+  Toggling formatting wraps the selection (or inserts at cursor)
+  with the appropriate Markdown delimiters — same UX as standard
+  rich-text editors.
+
+- [ ] **UI-Y.3** M3E typography alignment. Heading levels map:
+  - `# h1` → `displaySmall`
+  - `## h2` → `headlineSmall`
+  - `### h3` → `titleLarge`
+  - `#### h4` → `titleMedium`
+  - body → `bodyLarge`
+  Code blocks: `surfaceContainerHighest` background, monospace
+  (`JetBrainsMono` if available, `Default` fallback), 4dp internal
+  padding, `RoundedCornerShape(8.dp)`. Inline code: same background
+  applied via `SpanStyle`.
+
+- [ ] **UI-Y.4** Link styling. Markdown `[text](url)` renders as
+  `primary`-tinted text with underline. Tap (in rendered mode) opens
+  the URL via `Intent.ACTION_VIEW`. In raw mode the tap goes to
+  cursor placement as normal.
+
+- [ ] **UI-Y.5** Inline image rendering. `![alt](attachments/<sha>.<ext>)`
+  paths resolve against the repo's `attachments/` directory. Images
+  render at the natural width up to the body field's max width,
+  preserving aspect. Tap → full-screen viewer (the existing
+  attachments viewer from UI-I). Broken paths render a placeholder
+  card with the alt text.
+
+- [ ] **UI-Y.6** Cursor visibility in rendered mode. The challenge:
+  rendered Markdown changes character heights mid-line. Solution:
+  Markwon renders into a single `EditText`-backed view; the cursor
+  stays an `EditText` cursor at the source position, which on Android
+  natively follows styled spans correctly.
+
+- [ ] **UI-Y.7** Same wrapper used in: event body editor, task body
+  editor, comment composer (UI-W.4), comment display (UI-W.2), event
+  detail sheet body (UI-I read-only mode), task detail sheet body.
+
+- [ ] **UI-Y.8** Performance: Markwon caches parsed AST. Re-rendering
+  on each keystroke is debounced 80ms so typing on the longest body
+  field (~5KB) does not hit the parser per character.
+
+- [ ] **UI-Y.9** Raw/rendered toggle remembers the last mode per
+  surface (event vs. task vs. comment) in DataStore.
+
+- [ ] **UI-Y.10** Accessibility: TalkBack reads the underlying source
+  text in raw mode and the rendered text (with role announcements
+  for headings, lists, links) in rendered mode.
+
+- [ ] **UI-Y.11** Cross-link back to `main.md` Phase EE.
+
+**ASCII mockup — event body editor with rendered toggle on:**
+
+```
+   ┌────────────────────────────────────────────────────┐
+   │  Edit event · Dentist appointment                  │
+   │  ────────────────────────────────────────────────  │
+   │  [Title]      Dentist appointment                  │
+   │  [Calendar]   🦷 Health                  ▾         │
+   │  [Start]      Tue 12 May  14:00                    │
+   │  [End]        Tue 12 May  14:45                    │
+   │  [Timezone]   Europe/Berlin              ▾         │
+   │  [Author]     🦊 Alex                              │
+   │                                                    │
+   │  Body:                                             │
+   │  ┌──────────────────────────────────────────────┐ │
+   │  │ [👁● rendered] [B] [I] [•] [1.] [🔗] [📎]     │ │
+   │  └──────────────────────────────────────────────┘ │
+   │  ┌──────────────────────────────────────────────┐ │
+   │  │                                              │ │
+   │  │ # Pre-appointment checklist                  │ │  ← rendered h1
+   │  │                                              │ │
+   │  │ Bring:                                       │ │
+   │  │  • Insurance card                            │ │  ← rendered list
+   │  │  • Previous X-rays                           │ │
+   │  │                                              │ │
+   │  │ **Fast** for 2h before. See                  │ │  ← bold + link
+   │  │ [pre-care guide](attachments/abc.pdf).       │ │
+   │  │                                              │ │
+   │  │ ![tooth](attachments/de/de4f...png)          │ │  ← inline image
+   │  │ ┌──────────┐                                 │ │
+   │  │ │ (image)  │                                 │ │
+   │  │ └──────────┘                                 │ │
+   │  └──────────────────────────────────────────────┘ │
+   │                                                    │
+   │  [Cancel]                          [Save]          │
+   └────────────────────────────────────────────────────┘
+```
+
+**Tradeoffs resolved inline.**
+
+- *WYSIWYG vs. inline-rendered.* D.31 says "inline-rendered" — source
+  stays canonical, styling overlays it. Full WYSIWYG (markup hidden,
+  buttons synthesize markup) was rejected because round-trip fidelity
+  with hand-edited files would erode.
+- *Bridging Markwon (View) into Compose.* `AndroidView` wrap is the
+  pragmatic answer. Native Compose Markdown libraries exist but
+  Markwon has the most complete plugin set (tables, code, images,
+  task lists) and is Apache-2.0.
+
+---
+
+## UI-Z — Weather overlay
+
+`decisions.md` D.28. `main.md` Phase BB. Library: open-meteo Java
+client (Apache-2.0), data CC-BY.
+
+**Sub-steps:**
+
+- [ ] **UI-Z.1** Day view: thin weather strip (32dp tall) above the
+  timeline, below the date header. The strip shows 8 temperature
+  + icon cells across the day at 3h intervals (00, 03, 06, 09, 12,
+  15, 18, 21). Each cell: weather-condition icon (16dp) above
+  temperature ("21°"). Cells separated by 1dp `outlineVariant`
+  hairline.
+
+- [ ] **UI-Z.2** Week view: small icon (16dp) per day in the column
+  header, right of the day-of-week + day-number. No temperature
+  (too cramped at week density).
+
+- [ ] **UI-Z.3** Month view: tiny icon (12dp) in the corner of each
+  day cell, anchored bottom-trailing. No temperature.
+
+- [ ] **UI-Z.4** Settings → Appearance → "Show weather overlay"
+  toggle. Default ON. When OFF, none of UI-Z.1/2/3 render — the
+  weather strip is `null` in the composition.
+
+- [ ] **UI-Z.5** Settings → Repos → tap repo → "Weather location"
+  picker. Three modes:
+  - **Device location** (default if permission granted) — uses
+    Fused Location Provider's last known position.
+  - **Pick on map** — opens a `MapView` (OSMDroid, Apache-2.0;
+    avoids Google Play Services dep). User taps to drop a pin;
+    coords stored in `repo.toml` as `weather_location = "lat,lon"`.
+  - **None** — disables weather for this repo even when the global
+    setting is on.
+
+- [ ] **UI-Z.6** Per-event location override in the event editor.
+  A small "Override weather location" expander below the tz picker.
+  When expanded, three modes (same as UI-Z.5) per event. Useful for
+  travel events ("trip to Tokyo" → override to Tokyo coords). The
+  Day view weather strip *for that event's day* prefers the
+  event-override location if present.
+
+- [ ] **UI-Z.7** Weather data fetch + cache. The open-meteo client
+  fetches per-location-day forecasts and caches them in Room. Cache
+  TTL: 1h for the current day, 12h for future days. Detail:
+  `sync-engine.md` Phase SE-W. UI side: a small spinner replaces
+  the weather strip while fetching.
+
+- [ ] **UI-Z.8** About screen attribution. "Weather: Open-Meteo
+  (CC-BY) — https://open-meteo.com" line in the About section. Tap
+  opens the attribution page. Required by CC-BY.
+
+- [ ] **UI-Z.9** Icon set. 14 condition icons (clear / partly cloudy
+  / overcast / fog / drizzle / rain / heavy rain / freezing rain /
+  snow / heavy snow / showers / thunderstorm / thunder+hail / wind).
+  Source: Material Symbols where available, hand-drawn fallbacks
+  shipped as vector drawables for the few not in MS.
+
+- [ ] **UI-Z.10** Failure mode. If open-meteo is unreachable, the
+  weather strip collapses to height 0 (no error UI inline — the
+  schedule is the priority). A small persistent "weather unavailable"
+  pill appears in the top bar if 3 consecutive fetches fail.
+
+- [ ] **UI-Z.11** Cross-link back to `main.md` Phase BB,
+  `resolver.md` Phase RV-K (weather as non-busy data layer), and
+  `sync-engine.md` Phase SE-W (fetch cadence).
+
+**ASCII mockup — Day view weather strip:**
+
+```
+   ┌──────────────────────────────────────────────────────────────┐
+   │  Tue 12 May 2026                                              │
+   │  ┌──────┬──────┬──────┬──────┬──────┬──────┬──────┬──────┐  │
+   │  │  🌙   │  🌙   │  ☁️    │  ⛅    │  ☀️    │  ☀️    │  ⛅    │  🌧    │  │
+   │  │ 12°  │ 11°  │ 14°  │ 17°  │ 21°  │ 23°  │ 22°  │ 18°  │  │
+   │  │ 00   │ 03   │ 06   │ 09   │ 12   │ 15   │ 18   │ 21   │  │
+   │  └──────┴──────┴──────┴──────┴──────┴──────┴──────┴──────┘  │
+   │  ────────────────────────────────────────────────────────── │
+   │  09 │                                                        │
+   │     │  ╔══════════════════════╗                              │
+   │  10 │  ║ 🦷 Dentist            ║                              │
+   │     │  ║ 14:00–14:45           ║                              │
+   │  …  │                                                        │
+```
+
+**ASCII mockup — Month view cell with icon:**
+
+```
+   ┌────────────┐
+   │ 12      ⛅   │  ← day number top-leading, weather icon bottom-trailing
+   │            │
+   │ ▓ ▓        │  ← event chip rows
+   │ ▓          │
+   │ +2         │  ← overflow indicator
+   └────────────┘
+```
+
+**Tradeoffs resolved inline.**
+
+- *3h interval on Day view.* 24 cells (hourly) would be too dense;
+  8 cells (3h) gives a usable shape at phone widths.
+- *Map library.* OSMDroid not Google Maps — avoids Play Services
+  dependency, stays GitHub-Releases distributable.
+- *Per-event location.* Surfaces only when the user explicitly
+  opens the expander; default is "use repo location" — most events
+  don't need an override.
+
+---
+
+## UI-AA — Custom sticker / icon packs
+
+`decisions.md` D.32. `main.md` Phase FF. Open format:
+`<pack-name>/<sticker-name>.{png,svg,webp}` + optional `pack.toml`.
+
+**Sub-steps:**
+
+- [ ] **UI-AA.1** Settings → Appearance → **Sticker packs** section.
+  Header: "Sticker packs (N installed)". List rows per installed
+  pack: thumbnail (the first 3 stickers in the pack tiled), pack
+  name (from `pack.toml` or directory name), author, install date,
+  remove button (trash icon).
+
+- [ ] **UI-AA.2** "Install from local" button at the bottom of the
+  list. Opens the system SAF picker. Accepts either:
+  - A `.zip` file (unpacked to the app's pack directory on import).
+  - A directory (copied verbatim).
+  On success, the new pack appears in the list with a brief
+  "Installed <pack-name>" snackbar.
+
+- [ ] **UI-AA.3** "Install from URL" button. Opens a dialog with a
+  URL `OutlinedTextField`. On submit, the app downloads the file
+  once (HTTP, with TLS), validates it as a zip, and unpacks it
+  into the pack directory. The URL is *not* persisted — packs are
+  fetch-once, not live-mirrored.
+
+- [ ] **UI-AA.4** Icon picker upgrade. The existing icon picker
+  (used for repo, calendar, todolist icons; see UI-L for repo
+  icon, UI-Q for theming) gains a tab strip at the top:
+  - **Emoji** (system emoji, existing)
+  - **Photo** (user-picked image, existing)
+  - **<Pack name>** (one tab per installed sticker pack)
+  Tabs scroll horizontally when more than ~3 packs are installed.
+
+- [ ] **UI-AA.5** `:sticker-name:` typing autocomplete. In the
+  event title editor, task title editor, and comment composer
+  (UI-W.4), typing `:` opens a dropdown of matching sticker names
+  across all installed packs. Selecting an entry inserts the
+  resolved image inline (via Markwon image extension) at that
+  position in the title or body.
+
+- [ ] **UI-AA.6** Pack format validator. On import, the app checks:
+  - At least one image file present.
+  - No image > 256KB.
+  - No image dim > 512×512.
+  - Optional `pack.toml` if present must parse and contain
+    `name = "..."` at minimum.
+  Validation failures show a dialog "this pack is invalid:
+  <reason>" and abort the install.
+
+- [ ] **UI-AA.7** Remove button on each pack row. Confirmation
+  dialog: "Remove <pack-name>? Stickers in this pack will stop
+  rendering in titles and icons that referenced them." On confirm,
+  the pack directory is deleted; references in user data
+  (`:sticker-name:` strings, etc.) remain as text fallback.
+
+- [ ] **UI-AA.8** Built-in starter pack. v1 ships one tiny default
+  pack (`com.eight87.skb-default`) with ~12 schedule-themed
+  stickers (clock, calendar, alarm, etc.) so the UI is not empty
+  on first run.
+
+- [ ] **UI-AA.9** Cross-link back to `main.md` Phase FF.
+
+**ASCII mockup — icon picker with sticker pack tabs:**
+
+```
+   ┌──────────────────────────────────────────────────────────────┐
+   │  Pick an icon for "Personal"                                  │
+   │  ┌────────┬────────┬─────────────────┬─────────────────┐    │
+   │  │ Emoji  │ Photo  │ schedule-stickers│ retro-icons     │    │
+   │  └────────┴────────┴─────────────────┴─────────────────┘    │
+   │                                ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔            │  ← active
+   │                                                              │
+   │  ┌────┬────┬────┬────┬────┬────┬────┐                       │
+   │  │ ⏰ │ 📆 │ ⏳ │ 🌅 │ 🛏  │ 🎯 │ ✅ │                       │
+   │  ├────┼────┼────┼────┼────┼────┼────┤                       │
+   │  │ 🚴 │ 🏊 │ 🥋 │ 🎵 │ 📚 │ 🧹 │ 🍳 │                       │
+   │  └────┴────┴────┴────┴────┴────┴────┘                       │
+   │                                                              │
+   │  [Cancel]                                       [Select]     │
+   └──────────────────────────────────────────────────────────────┘
+```
+
+**Tradeoffs resolved inline.**
+
+- *URL packs not live-mirrored.* Live mirroring would couple sticker
+  visibility to network state; one-shot fetch keeps the UI
+  deterministic offline.
+- *Validation limits.* 256KB / 512×512 keeps a pack of ~50 stickers
+  under ~12MB. Larger assets get rejected with a clear reason; the
+  user can repack and retry.
+- *`pack.toml` optional.* A directory of images alone installs fine;
+  metadata is a polish layer.
+
+---
+
+## UI-BB — GPG signed-commits UI
+
+`decisions.md` D.23. `main.md` Phase GG. JGit + BouncyCastle do the
+crypto. UI surfaces are settings + a per-entry verified-chip.
+
+**Sub-steps:**
+
+- [ ] **UI-BB.1** Settings → Identities → tap identity → identity
+  detail screen gains a **Signing** section below the avatar/email
+  fields. Header: "Signing".
+
+- [ ] **UI-BB.2** "Sign commits with GPG" toggle. Default OFF. When
+  toggled ON for the first time on an identity, the row expands to
+  reveal "Import GPG private key" (UI-BB.3) and "Sign with key"
+  (UI-BB.4). When OFF, the expanded section collapses but imported
+  keys are retained (the toggle is the on/off switch; keys live
+  independently).
+
+- [ ] **UI-BB.3** "Import GPG private key" section. Two import
+  paths:
+  - **From file** — opens SAF picker for `.asc` / `.gpg` files.
+  - **Paste armored text** — opens a dialog with a multiline
+    `OutlinedTextField` for ASCII-armored key paste.
+  After import, if the key is passphrase-protected, a passphrase
+  prompt appears. The passphrase is stored encrypted in
+  `EncryptedSharedPreferences` (the user opts in via a checkbox
+  "remember passphrase" — default off; per-sign prompt otherwise).
+
+- [ ] **UI-BB.4** "Sign with key" picker. After at least one private
+  key is imported, this `ExposedDropdownMenuBox` lists imported
+  keys, each row showing: short fingerprint (last 8 hex chars),
+  primary UID (name <email>), and key flags ("[E,S]"). Selection
+  binds the identity to that key.
+
+- [ ] **UI-BB.5** Settings → Repos → tap repo → "Signing override"
+  section. Optional per-repo override of the identity-default
+  signing. Modes:
+  - **Use identity default** (the active identity's toggle wins).
+  - **Force sign** (sign every commit regardless of identity
+    default).
+  - **Force unsigned** (never sign in this repo even if identity
+    defaults to sign).
+  Useful for: shared work repos that mandate signing, scratch
+  repos where signing churn is noise.
+
+- [ ] **UI-BB.6** Verified-author chip on event/task chips. When the
+  underlying file was authored by a commit with a valid GPG
+  signature whose public key matches the author's declared public
+  keys in `identities/<author-id>.md`, a small ✓ badge (12dp,
+  `primary`-tinted) renders in the trailing corner of the chip.
+  Tap → bottom sheet with signature details: signing key
+  fingerprint, signer name+email, sign date, and a "View public
+  key" link to the identity profile.
+
+- [ ] **UI-BB.7** "Import public keys for verification" section in
+  Settings → Identities → tap identity. Same two paths as UI-BB.3
+  (file picker, paste-armored) but for *public* keys to verify
+  *other people's* signed commits. Keys imported here populate the
+  identity's `public_keys` field in `identities/<id>.md`
+  (see `data-model.md` Phase DM-K).
+
+- [ ] **UI-BB.8** Signature failure handling. If a commit claims a
+  signature but verification fails (key unknown, signature
+  invalid, key expired), the author chip on entries from that
+  commit gets a small ⚠ badge (instead of ✓). Tap → "signature
+  invalid — <reason>" with options "Trust this key" (if just
+  unknown) or "Report" (if invalid).
+
+- [ ] **UI-BB.9** First-time signing flow. When the user turns on
+  "Sign commits with GPG" on an identity that has no imported keys,
+  a "Quick setup" sheet offers:
+  - "Import an existing GPG key" (UI-BB.3).
+  - "Generate a new key on this device" — opens a key-generation
+    dialog with name / email / passphrase / key type (ed25519 /
+    RSA-4096).
+  Generation uses BouncyCastle (no `gpg` binary on Android).
+
+- [ ] **UI-BB.10** Cross-link back to `main.md` Phase GG and
+  `sync-engine.md` Phase SE-S (signing during commit), and
+  `data-model.md` Phase DM-K (public-keys field on identity).
+
+**ASCII mockup — GPG settings section in identity detail:**
+
+```
+   ┌──────────────────────────────────────────────────────────────┐
+   │  ← Identity · Alex                                            │
+   │                                                              │
+   │  ┌──┐  Alex                                                  │
+   │  │🦊│  alex@example.com                                       │
+   │  └──┘                                                        │
+   │                                                              │
+   │  ────────────────────────────────────────────────────────── │
+   │  Signing                                                     │
+   │                                                              │
+   │  Sign commits with GPG                            [● ON]    │
+   │                                                              │
+   │    Imported private keys                                     │
+   │    ┌────────────────────────────────────────────────────┐  │
+   │    │ 🔑 12AB34CD   Alex <alex@example.com>     [Remove] │  │
+   │    │              ed25519, [E,S], expires 2028-05-12     │  │
+   │    └────────────────────────────────────────────────────┘  │
+   │    [+ Import private key]   [+ Generate new key]            │
+   │                                                              │
+   │    Sign with key   [ 12AB34CD · Alex ▾ ]                    │
+   │                                                              │
+   │    Remember passphrase                            [○ OFF]    │
+   │                                                              │
+   │  ────────────────────────────────────────────────────────── │
+   │  Public keys (for verifying others' commits)                 │
+   │                                                              │
+   │    ┌────────────────────────────────────────────────────┐  │
+   │    │ 🔓 56EF78AB   Sam <sam@example.com>       [Remove] │  │
+   │    └────────────────────────────────────────────────────┘  │
+   │    [+ Import public key]                                     │
+   └──────────────────────────────────────────────────────────────┘
+```
+
+**Tradeoffs resolved inline.**
+
+- *Passphrase storage.* Opt-in only. The default of per-sign prompt
+  preserves the security property of a passphrase; the opt-in
+  trades that off for CLI-driven workflows where prompts break
+  automation.
+- *Key generation on device.* Offered as a path because the project
+  audience includes users who don't have an existing GPG setup;
+  rejecting "generate" would force everyone to set up GPG on a
+  laptop first.
+- *Verification ✓ vs. ⚠.* Two distinct visual treatments — silence
+  on unverified would lose the trust signal; loud red error on
+  unverified would over-alarm given that "unsigned" is the
+  default-OK state.
+
+---
+
+## UI-CC — Multi-branch UI + CalDAV mirror UI
+
+`decisions.md` D.25 (CalDAV) and D.36 (multi-branch). `main.md`
+Phase JJ (branches) plus CalDAV cross-cuts (sync-engine.md SE-Q+,
+data-model.md DM-K+). Two related but distinct UI surfaces, grouped
+in one phase because both live under "Settings → Repos → tap repo".
+
+### Part 1 — Multi-branch UI
+
+**Sub-steps:**
+
+- [ ] **UI-CC.1** Repo switcher chip in the top bar shows current
+  branch below repo name in smaller text. Layout:
+  ```
+  ┌─────────────────┐
+  │ 🦊 personal     │  ← repo display name, titleMedium
+  │   main          │  ← branch name, bodySmall, onSurfaceVariant
+  └─────────────────┘
+  ```
+  When repo is on the default branch (`main` / `master`), the second
+  line still shows. When on a non-default branch, the second line
+  tints `tertiary` to flag the divergence.
+
+- [ ] **UI-CC.2** Settings → Repos → tap repo → "Current branch"
+  row. Tap opens a bottom sheet listing all branches (remote +
+  local) with the current one selected. Each row:
+  - Branch name.
+  - Source indicator: 🌐 (remote only), 💻 (local only), 🔁
+    (tracked).
+  - Ahead/behind counts ("↑2 ↓0") for tracked branches.
+
+- [ ] **UI-CC.3** "Create branch" form, opened from the branch
+  bottom sheet via a "+ Create branch" button at the bottom. Fields:
+  - **Name** (`OutlinedTextField`, validated against git ref naming
+    rules — no spaces, no `..`, no leading `-`, etc.).
+  - **Base branch** (`ExposedDropdownMenuBox`, defaults to current
+    branch).
+  - **Switch to new branch immediately** (Checkbox, default ON).
+  Submit creates the branch via JGit and (if checked) checks it out.
+
+- [ ] **UI-CC.4** "Switch branch" with dirty working tree. When the
+  user picks a different branch in UI-CC.2 and there are
+  uncommitted local changes, a dialog interrupts:
+  - **Stash changes** — `git stash`-equivalent via JGit; restored
+    on next switch back.
+  - **Discard** — drop the changes; second confirmation dialog
+    because destructive.
+  - **Cancel** — bail.
+  Default focus: **Stash changes** (least destructive).
+
+- [ ] **UI-CC.5** "Compare & propose change" deep-link. When the
+  current branch is non-default and has commits not in the default
+  branch, the branch bottom sheet exposes a button "Open compare
+  page". This builds the provider-specific compare URL:
+  - GitHub: `https://github.com/<owner>/<repo>/compare/<base>...<head>`
+  - Forgejo: `https://<host>/<owner>/<repo>/compare/<base>...<head>`
+  And opens it via `Intent.ACTION_VIEW`. The app does not create
+  the PR itself (D.40 keeps in-app PR creation deferred).
+
+- [ ] **UI-CC.6** Branch indicator in the schedule shell. When on a
+  non-default branch, a thin (4dp) `tertiary`-tinted strip renders
+  along the top of the schedule view, below the top app bar, with
+  text "viewing branch: <branch-name>". Tap → branch bottom sheet.
+  This is the safety net so the user never forgets they're on a
+  feature branch.
+
+- [ ] **UI-CC.7** Sync behaviour on non-default branches. Inherits
+  from `sync-engine.md` Phase SE-T; UI side: the sync icon's
+  spinner tooltip on a feature branch reads "syncing branch
+  <name>" instead of "syncing repo <name>".
+
+### Part 2 — CalDAV mirror UI
+
+**Sub-steps:**
+
+- [ ] **UI-CC.8** Settings → Repos → tap repo → **CalDAV mirrors**
+  section, below the branch section. Header: "CalDAV mirrors (N)".
+
+- [ ] **UI-CC.9** Per-mirror row content:
+  - Server URL (truncated middle, e.g. `dav.example.com/…/work-cal/`).
+  - Calendar display name on the server.
+  - Mode badge: 🡆 (pull-only) / 🡄 (push-only) / 🡆🡄 (bidi).
+  - Last sync time ("3m ago" / "yesterday" / "—").
+  - Sync interval ("30m").
+  - Status dot (UI-CC.13).
+  Tap → mirror detail screen (UI-CC.12).
+
+- [ ] **UI-CC.10** "+ Add CalDAV mirror" button. Multi-step flow:
+  1. **Server** — `OutlinedTextField` URL + auth credentials
+     (username, password OR token). "Test connection" button.
+  2. **Discovery** — app calls dav4jvm to enumerate calendars on
+     the server. Shows a list with checkboxes for each calendar.
+     User picks exactly one (one mirror = one calendar).
+  3. **Mode** — radio: Pull-only / Push-only / Bidi. Each option
+     has a tertiary helper line explaining the implication.
+  4. **Interval** — chip group: 5m / 15m / 30m / 1h / 4h / Manual.
+     Default 30m.
+  5. **Local target** — picker for which app calendar the mirror
+     binds to. Defaults to a new calendar named
+     `<server-cal-name> (mirror)`.
+  6. **Confirm** — summary screen, "Add mirror" button.
+
+- [ ] **UI-CC.11** Discovery failure modes. If the server URL is
+  not a CalDAV endpoint, step 1's "Test connection" surfaces
+  "this URL doesn't expose CalDAV — try the base URL of your
+  account, e.g. `https://dav.example.com/<username>/`". If auth
+  fails, "credentials rejected — check username + password or
+  token".
+
+- [ ] **UI-CC.12** Mirror detail screen. Same fields as UI-CC.9 row
+  plus:
+  - "Sync now" button (one-shot).
+  - "Change interval" picker.
+  - "Change mode" picker (with a warning if changing pull → push
+    direction would re-overwrite remote data).
+  - "Remove mirror" button (with confirmation; removal does NOT
+    delete the locally-mirrored calendar, only the bridge).
+  - Recent-syncs log: last 10 sync results with timestamp,
+    direction, items pulled/pushed, error message if any.
+
+- [ ] **UI-CC.13** Mirror status dot. 8dp circle:
+  - **Green** — last sync ≤ 1 interval ago and succeeded.
+  - **Yellow** — sync currently running.
+  - **Red** — last sync failed or > 2 intervals ago without a
+    success.
+  - **Grey** — never synced (just added).
+  Shape matches the per-repo sync indicator from UI-B so the
+  visual language is consistent.
+
+- [ ] **UI-CC.14** Notification on mirror error. If a mirror sync
+  fails 3 times in a row, fire a notification on the `errors`
+  channel: "CalDAV mirror <name> failing — tap to inspect". Tap
+  opens the mirror detail screen.
+
+- [ ] **UI-CC.15** Cross-link back to `main.md` Phase JJ (branches)
+  and the CalDAV cross-cuts (no dedicated main.md phase — CalDAV
+  spans sync-engine + data-model + notifications-sharing-import).
+
+**ASCII mockup — CalDAV mirror section in repo settings:**
+
+```
+   ┌──────────────────────────────────────────────────────────────┐
+   │  ← Repo · personal                                            │
+   │                                                              │
+   │  …                                                           │
+   │  Current branch                              [ main ▾ ]       │
+   │  Auto-sync                                     [● 15m]        │
+   │  …                                                           │
+   │                                                              │
+   │  ────────────────────────────────────────────────────────── │
+   │  CalDAV mirrors (2)                                          │
+   │                                                              │
+   │  ┌────────────────────────────────────────────────────────┐ │
+   │  │ ● dav.example.com/…/work-cal/    🡆🡄  30m     3m ago   │ │
+   │  │   Work (Outlook)                                       │ │
+   │  └────────────────────────────────────────────────────────┘ │
+   │  ┌────────────────────────────────────────────────────────┐ │
+   │  │ ● caldav.icloud.com/…/family/    🡆   1h     yesterday │ │
+   │  │   Family (iCloud)                                      │ │
+   │  └────────────────────────────────────────────────────────┘ │
+   │                                                              │
+   │  [ + Add CalDAV mirror ]                                     │
+   └──────────────────────────────────────────────────────────────┘
+
+   Status dots:
+     ● green   = healthy
+     ● yellow  = syncing
+     ● red     = error
+     ● grey    = never synced
+```
+
+**Tradeoffs resolved inline.**
+
+- *One mirror = one calendar.* Forces clarity. A "mirror everything"
+  mode would surface auth scope creep and conflict-resolution
+  ambiguity (which calendar wins when the server-side names collide
+  with locals).
+- *Mirror removal preserves local calendar.* Removing the bridge
+  should never silently delete user data. The mirrored calendar
+  stays as a regular local calendar; user can delete it explicitly
+  if desired.
+- *Branch strip warning vs. badge.* A thin 4dp strip is loud enough
+  to remind but quiet enough not to dominate. A toast or banner
+  would be noisier; a tiny badge would be too easy to miss.
+
+---
+
+## UI-DD — Android Auto voice-create
+
+`decisions.md` D.33. `main.md` Phase HH. Bumped from read-only
+(D.17) to read-only + voice-create. No on-screen edit or delete in
+Auto for safety.
+
+**Sub-steps:**
+
+- [ ] **UI-DD.1** Voice intent registration. The app's
+  `CarAppService` registers for voice utterances matching:
+  - "Schedule event …"
+  - "Add event …"
+  - "Create appointment …"
+  - "Add reminder …" (routed to event-with-notification)
+  Patterns documented in `automotiveapp.xml` and the manifest's
+  `<intent-filter>` for `android.intent.action.VOICE_COMMAND`.
+
+- [ ] **UI-DD.2** NLU pass on the utterance. The CarApp implementation
+  parses:
+  - Title (free-text, the bit after the schedule verb and before
+    the time-anchor words).
+  - Time anchor ("tomorrow at 3pm", "next Tuesday", "in an hour",
+    "Friday morning").
+  - Duration ("for 30 minutes" → end time = start + 30m; default
+    1h if absent).
+  - Calendar ("in Personal", "to Work") — optional; defaults to
+    the active repo's default calendar.
+  Parser: `Natty` (Apache-2.0) for natural-language dates.
+
+- [ ] **UI-DD.3** Confirmation card. After parsing, the Auto session
+  renders a `PaneTemplate` (Auto-specific):
+  ```
+  ┌────────────────────────────────────────────────────────┐
+  │  Create event?                                          │
+  │                                                        │
+  │  "Dentist"                                              │
+  │  Tomorrow · 3:00 PM – 4:00 PM                           │
+  │  in Personal (personal repo)                            │
+  │                                                        │
+  │  Say "yes" to confirm  ·  "no" to cancel               │
+  │  [Confirm]                          [Cancel]            │
+  └────────────────────────────────────────────────────────┘
+  ```
+  Voice listener active for yes/no. On-screen Confirm/Cancel
+  buttons are large-touch-target backups.
+
+- [ ] **UI-DD.4** On confirm, the app:
+  1. Writes the event file via the same code path the phone UI
+     uses (atomic single-file write).
+  2. Commits with the standard auto-message.
+  3. Refreshes the Auto "today/tomorrow" list to show the new
+     event immediately.
+  4. Speaks back "Event 'Dentist' added for tomorrow at 3 PM."
+
+- [ ] **UI-DD.5** Parse-failure handling. If the utterance cannot
+  be parsed (no time, ambiguous), speak back:
+  - "I couldn't tell when. Try 'schedule dentist tomorrow at 3 PM'."
+  - "Which calendar? Personal or Work?"
+  Up to 1 clarification round; if still ambiguous, abandon with
+  "Sorry, please try again."
+
+- [ ] **UI-DD.6** No edit / no delete in Auto. The list view from
+  D.17 (read-only) is preserved as-is. Items are not tappable for
+  edit. A voice command "delete event …" is explicitly NOT
+  registered — too easy to mis-fire.
+
+- [ ] **UI-DD.7** Active repo + calendar context. The repo + default
+  calendar at the time of utterance are baked into the new event.
+  Switching active repo from Auto is out of scope; the user picks
+  the active repo on the phone before driving.
+
+- [ ] **UI-DD.8** Cross-link back to `main.md` Phase HH.
+
+**Tradeoffs resolved inline.**
+
+- *NLU dependency.* Natty handles English natural-language dates
+  competently; locales beyond English ship as v1.1. Stating this
+  scope cap so the test plan focuses on en-US.
+- *No delete by voice.* "Delete event Dentist" is too easy to
+  collide with "schedule event Dentist". Asymmetric safety
+  preference: easy to add, hard to remove.
+
+---
+
+## UI-EE — Updated deferrals (housekeeping)
+
+`decisions.md` D.40. This phase is a single deliverable: the
+"Deferred to future versions" section above has been surgically
+updated to reflect the new v1 scope. See the annotations on each
+entry there.
+
+**Sub-steps:**
+
+- [ ] **UI-EE.1** Each Round-1 deferral has been re-triaged with a
+  trailing annotation: ✅ MOVED TO v1, ✅ STILL REJECTED, or ⚠️
+  STILL DEFERRED v1.1. (Shipped in this edit of `ui-spec.md`.)
+
+- [ ] **UI-EE.2** New deferrals from Round 2 are explicitly *not*
+  added — every item from the Round 1 v2-deferral pile that wasn't
+  rejected is now in v1 scope per D.40. (Shipped in this edit.)
+
+- [ ] **UI-EE.3** "Done-when" criteria at the bottom of this doc
+  updated implicitly: UI-V through UI-EE join UI-A through UI-U
+  in the "every phase must tick" gating. (Tracked in main.md.)
 
 ---
 

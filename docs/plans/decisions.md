@@ -427,7 +427,346 @@ calendars (D.5).** Differences:
 
 ---
 
-## Subagent task assignment
+# Round 2 — v1 scope expansion (D.23 onward)
+
+After Round 1 the user reviewed scope and directed that the entire v2
+deferral pile from each deep-dive be pulled into v1, plus signed
+commits demoted from required to optional, plus a `skb` CLI promoted to
+**primary interface for the calendar data** (Claude editing schedules
+via CLI is the main use case; the GUI is the human's window). License
+constraint: prebuilt open-source components only, no GPL infestation
+(Apache-2.0 / MIT / BSD / MPL-2.0 / LGPL-with-linking-exception OK).
+
+The decisions below extend the locked set. Subagents in Round 2
+elaborate the mechanics.
+
+## D.23 — Signed commits: optional capability, not required identity
+
+GPG/SSH-signed commits are a **capability**, not the identity model.
+Primary identity stack stays:
+
+1. Git committer email + `user.name` from active identity (always set).
+2. `author = "<person-id>"` frontmatter field on every entity.
+3. Signed commits — optional, off by default; adds cryptographic
+   receipts; useful for shared repos where attribution must be
+   verifiable.
+
+**Why optional, not required:** the main use case is Claude editing
+schedules via CLI. Signing every CLI commit is friction. Make signing
+available for users who want it (verified-author chips, GitHub
+verified-commits badge) without taxing the default path.
+
+UI: Settings → Identities → tap identity → "Sign commits with GPG"
+toggle → "Import GPG private key" file picker + paste-armored-text
+input → "Sign with key" picker (lists imported key fingerprints).
+Private keys live in `EncryptedSharedPreferences`. JGit +
+BouncyCastle do the signing when the toggle is on.
+
+Verified-author chip on entries from signed commits shows a small
+verified-checkmark badge in the corner.
+
+## D.24 — `skb` CLI: the primary interface for calendar data
+
+**Reframe of the design center:** the GUI is one window into the
+data; `skb` is another. They are peers. **Claude (and other AI
+agents) use `skb` first; the GUI is for the human.**
+
+`skb` is a small portable binary distributed as:
+- A shell-script wrapper + bundled Kotlin/JVM jar (v1 default; works
+  anywhere Java 17+ is available, including Claude Code's sandbox).
+- A Kotlin/Native binary (later, if startup-time on JVM proves heavy
+  in Claude's loop).
+
+Subcommand surface (full spec in `cli-tooling.md`):
+
+- `skb event add|list|edit|show|cancel`
+- `skb task add|done|list|show|edit`
+- `skb recurrence add|edit|cancel-instance`
+- `skb cal add|list|edit` (calendars)
+- `skb list add|list|edit` (todolists)
+- `skb identity list|set-active|create`
+- `skb attach add|list|show`
+- `skb show <date>` — today/specified-date view
+- `skb week|month <date>`
+- `skb find-free --repos X,Y --duration 1h --range 2w`
+- `skb sync [--all | <repo>]`
+- `skb apply-template <template-name> [--repo X]`
+- `skb migrate`
+- `skb verify`
+- `skb comment add|list` (D.29)
+- `skb weather show <date>` (D.28)
+- `skb tz convert <event-id> <new-tz>` (D.27)
+- `skb caldav add|sync|remove` (D.25)
+- `skb branch list|create|switch` (D.36)
+
+Every command:
+
+- `--json` emits machine-readable structured output (for AI consumers).
+- Default stdout is human-readable.
+- Errors on stderr with exit codes (0=ok, 1=usage, 2=not-found,
+  3=conflict, 4=auth, 5=corrupt, 6=schema-mismatch).
+- Atomic single-file writes per command — the one-entity-per-file
+  invariant holds at every layer.
+- Auto-commits with the same message format as the GUI.
+- `--dry-run` prints the proposed change without writing.
+
+**AGENTS.md** in every user repo **leads with the `skb` commands**,
+not the file format. Claude is told: "to add an event, run
+`skb event add --calendar Personal --start ... --title ...`."
+File format remains documented (so Claude can read/diff directly), but
+`skb` is the recommended write path.
+
+Distribution: shipped alongside the APK in GitHub Releases, plus a
+homebrew tap (`brew install 887/tap/skb`), plus a `curl ... | sh`
+one-liner.
+
+Detailed spec: `docs/plans/cli-tooling.md`.
+
+## D.25 — Bidirectional CalDAV bridge (in v1)
+
+Two-way sync between a calendar in the repo and a CalDAV server.
+Use cases:
+
+- Pull work calendar from Google/Microsoft/Apple/Nextcloud into a
+  read-only mirror calendar that overlays the user's repo schedule.
+- Push a calendar from the repo *out* to a CalDAV server so a partner
+  using Thunderbird/Outlook/Apple Calendar sees it.
+
+Libraries:
+- `ical4j` (MPL-2.0, file-level copyleft, link-clean for our
+  distribution).
+- `dav4jvm` (MPL-2.0, the engine inside DAVx⁵).
+
+MPL-2.0 is file-level copyleft — only modifications to ical4j/dav4jvm
+themselves would trigger share-back, which we don't intend.
+
+UX: Settings → Repos → tap repo → "+ Add CalDAV mirror" → server URL
++ credentials → discover calendars → pick which to mirror (per
+calendar: pull-only mirror, push-only export, or full bidi). Bridge
+runs alongside git sync on its own interval (default 30m). Conflicts
+mirror the git conflict-resolution UI.
+
+CLI: `skb caldav add|sync|remove|list`.
+
+Detailed mechanics: extension phases in `sync-engine.md`.
+
+## D.26 — Git LFS for large attachments (in v1)
+
+Attachments over a threshold (default 1MB, configurable per repo)
+auto-route through Git LFS. JGit has LFS support built in.
+
+UI: per-repo "Use Git LFS for attachments larger than [N MB]" setting
+in repo settings. Defaults on for new repos.
+
+When LFS is enabled at the provider side (GitHub/Forgejo both support
+it), the bridge is transparent. When not, app falls back to in-tree
+storage and warns once with "this provider does not support LFS;
+large attachments are stored inline".
+
+## D.27 — Multi-timezone first-class (in v1)
+
+Many users (the project's user explicitly) work and RP across
+timezones. v1 ships:
+
+- Per-event `tz_id` field (optional; defaults to repo tz).
+- Per-recurrence `tz_id` (already in D.6).
+- Repo default tz in `repo.toml` (defaults to device tz at scaffold;
+  user-changeable).
+- Display modes:
+  - "Render in my tz" (default).
+  - "Render in event tz" (per-event pin, useful for travel events).
+  - "Render in <participant>'s tz" (Together-tab common-time finder).
+- Multi-tz common-time finder: each participant declares their tz;
+  finder evaluates each candidate slot from each participant's
+  perspective (their working hours, their busy slots in their tz)
+  and surfaces slots that work for everyone.
+- DST handled by IANA tz database via `java.time.ZoneId`.
+- UI badge in top bar when any active calendar has events in a
+  non-device tz: "showing in DEVICE_TZ (some events in OTHER_TZ)"
+  with one-tap toggle.
+
+Schema field added as optional in v1 — no migration needed for repos
+without it.
+
+Detailed: extension phases in `data-model.md` + `resolver.md` +
+`ui-spec.md`.
+
+## D.28 — Weather overlay (in v1)
+
+Library: `open-meteo` Java client (Apache-2.0). No API key required.
+CC-BY data attribution.
+
+Per-location-day forecast cached in Room. Display:
+
+- Day view: thin weather strip above the timeline showing temp + icon
+  every 3h.
+- Week view: small icon per day in the header.
+- Month view: tiny icon in the corner of each day cell.
+
+Location: per-repo (defaults to device-location with permission),
+optional per-event override for "trip to X" events.
+
+Setting: "Show weather overlay" toggle (default on); "Weather
+location" per repo. Data attribution in About screen.
+
+CLI: `skb weather show <date> [--location LAT,LON]`.
+
+## D.29 — Replies/comments on events (in v1)
+
+Per-event comments via a sibling directory:
+
+```
+events/<yyyy>/<mm>/<event-id>.md
+events/<yyyy>/<mm>/<event-id>.comments/
+  <comment-id>.md   # one comment per file
+```
+
+Each comment file: TOML frontmatter (`id`, `event_id`, `author`,
+`created_at`, `in_reply_to` optional) + Markdown body.
+
+**Why file-per-comment:** preserves the no-merge-conflict invariant.
+Two people commenting at the same time produce two files, no conflict.
+
+UI: event detail sheet has a Comments section. Add comment → new file
+→ commit. Per-event mute toggle (notifications when new comment
+appears).
+
+CLI: `skb comment add --event <id> --body "..."` /
+`skb comment list --event <id> [--in-reply-to <id>]`.
+
+Author chip on each comment, just like events.
+
+## D.30 — Drag-to-reschedule + pinch-to-zoom (in v1)
+
+Day and Week views:
+
+- **Long-press → drag** an event chip to a new time slot. Snap to
+  configured grid (15min default; configurable). Releasing commits the
+  move with auto-message `move event "<title>" from <old> to <new>`.
+- **Pinch-to-zoom** on the timeline: pinch-out → finer grid (5min
+  steps visual); pinch-in → coarser (1h). Persists per device.
+
+Own Compose implementation. No external dep.
+
+## D.31 — Inline-markdown body styling (in v1)
+
+Body editor renders Markdown inline as the user types — headings,
+bold, italic, lists, links — via `noties/Markwon` (Apache-2.0) with a
+thin Compose wrapper.
+
+Toggle in editor toolbar: raw / rendered. Default: rendered.
+
+## D.32 — Custom sticker / icon packs (in v1)
+
+User can install a sticker pack = a directory of named images. App
+indexes them for:
+
+- `:sticker-name:` shortcut in event/task title editors.
+- Icon picker for repos / calendars / todolists.
+
+Format: `<pack-name>/<sticker-name>.{png,svg,webp}` + optional
+`pack.toml` (display name, author, license). Open format, no DRM.
+
+Pack source: local file picker (zip or unzipped dir) or HTTP URL
+(app fetches once, stores locally).
+
+## D.33 — Android Auto: voice-create in v1
+
+Bumped from read-only (D.17) to read-only + voice-create.
+
+Voice intent: "Schedule event tomorrow at 3pm called dentist" →
+creates an event in the active repo's default calendar.
+
+No in-Auto-screen editor (keyboard surface too narrow). No
+in-Auto-screen delete (too easy to mis-tap). Pure voice for writes,
+list for reads.
+
+## D.34 — Cross-device snooze sync (opt-in, in v1)
+
+Default: snooze stays local (D.14 mainline).
+
+Opt-in toggle: Settings → Notifications → "Sync snoozes across
+devices" → snoozes recorded in `_local/snoozes.toml` in the repo.
+File is git-tracked.
+
+Conflicts on `_local/snoozes.toml`: auto-merged with "latest wins
+per snooze entry" rule. Snoozes are idempotent — snoozing an
+already-snoozed alarm just extends the snooze. No conflict UI ever
+surfaces this file.
+
+## D.35 — ssh-agent forwarding (in v1, advanced)
+
+For users on dev machines with an ssh-agent socket available, JGit's
+`SshdSessionFactory` can be configured with an `AuthenticationKeySource`
+that queries the agent. Advanced setting: Settings → Sync → SSH →
+"Use ssh-agent if available" (default off; device-stored ed25519 key
+is the default for mobile).
+
+## D.36 — Multi-branch awareness (in v1)
+
+A repo can have multiple branches. The app exposes the current branch
+in the repo switcher (small text under repo name) and offers branch
+switching for repos that have alternate branches.
+
+Use cases:
+
+- AI agent works on a feature branch (`claude/plan-2026-q3`) before
+  proposing changes for merge into `main`.
+- User experiments with a calendar arrangement on a branch without
+  affecting `main`.
+- Team workflows where pending changes go through PR review.
+
+UI: Settings → Repos → branch picker; `skb branch list|create|switch`.
+PR creation handled at the provider side (deep link to provider's
+"Compare & pull request" page).
+
+## D.37 — Comments / replies notification channel
+
+Comments-on-events get their own notification channel (`comments`,
+IMPORTANCE_DEFAULT). Mutable per-event. Sync notification is silent
+when only comments changed (lower visual noise than events).
+
+## D.38 — CSV import for tasks (in v1)
+
+`skb task import-csv <file>` and Settings → Templates → "Import tasks
+from CSV". Mapping: column header row required; common mappings
+(`title|task|todo`, `due|due_date`, `done|completed`, `priority`,
+`list|todolist`) auto-detected; user confirms mapping for unknown
+columns.
+
+## D.39 — In-app collaborator listing (deferred to v1.1, not v1)
+
+Listing repo collaborators in-app requires elevated OAuth scopes
+(`read:org` for GitHub, more for Forgejo). Adding this changes the
+auth scope footprint, which has user-trust implications. **Deferred
+to v1.1**: by then the project will have shipped once and have a
+clearer answer on whether the scope expansion is justified.
+
+The "share read access" deep-link to the provider's collaborator
+screen (NS-E) covers the v1 use case adequately.
+
+## D.40 — Items remaining deferred (with rationale)
+
+These stay out of v1 because they're either rejected (not just
+deferred) or genuinely don't make sense for v1:
+
+| Item | Status | Why |
+|---|---|---|
+| Alpha-blend overlap | Rejected | Colorblind + screen-reader regression. Striped overlay model is better and stays. |
+| Multi-finger calendar gestures | Rejected | Undiscoverable for most users. |
+| Semantic TOML auto-merge | Deferred v1.1 | The file model is designed to avoid conflicts; manual UI is sufficient for the rare conflicts that surface. Adding semantic merge adds significant complexity for marginal value. |
+| Web app / desktop app | Out of scope | Android-only in v1. |
+| End-to-end encrypted repo contents | Out of scope | Repo can be private at the provider level; that's the v1 data-at-rest story. |
+| Self-served webcal / CalDAV from the app | Out of scope | Server territory, not client. |
+| In-app per-recipient deploy-key generation | Rejected | Wrong trust model; recipient generates on their device. |
+| QR code for SSH public-key export | Deferred v1.1 | Marginal value over clipboard/share; zxing dep cost. |
+| Branch-protection PR creation in-app | Deferred v1.1 | Provider-side workflow; deep-link is enough. |
+
+Anything else from the original v2-deferral pile is now in v1 scope.
+
+---
+
+# Subagent task assignment
 
 Six parallel Opus subagents flesh out the deep-dive planning docs.
 Each writes ONE document to `docs/plans/<name>.md`. Each document
@@ -449,3 +788,17 @@ Each subagent receives this decisions doc as context and a per-section
 brief. They elaborate; they do not decide. If an unforeseen tradeoff
 appears, they resolve it themselves with a recommended choice, write
 the resolution inline, and continue.
+
+## Round 2 — v1 scope expansion subagents
+
+| Doc | Action | Scope | Subagent |
+|---|---|---|---|
+| `cli-tooling.md` | NEW | Full deep-dive for `skb` CLI (primary interface). Phase prefix `CLI-`. | SA-7 |
+| `sync-engine.md` | EXTEND | Append phases SE-Q+ for bidi CalDAV, Git LFS, optional signed commits, ssh-agent, multi-branch | SA-8 |
+| `data-model.md` | EXTEND | Append phases DM-K+ for comments folder, multi-tz fields, GPG keys on identity, AGENTS.md rewrite (CLI-first) | SA-9 |
+| `ui-spec.md` | EXTEND | Append phases UI-V+ for drag-reschedule, pinch-zoom, weather, replies UI, GPG settings, Markwon body, sticker packs, multi-tz display, Auto voice-create | SA-10 |
+| `notifications-sharing-import.md` | EXTEND | Append phases NS-L+ for bidi CalDAV UX, comments-on-events UI/notifications, CSV import, cross-device snooze sync, multi-branch sharing | SA-11 |
+| `resolver.md` | EXTEND | Append phases RV-H+ for multi-tz semantics + multi-tz common-time + weather overlay as non-busy data layer | SA-12 |
+
+Round 2 agents follow the same "elaborate, don't decide" rule. They
+treat `decisions.md` Round 2 (D.23–D.40) as locked.
