@@ -980,6 +980,13 @@ Dom has push access). `default_author = false`.
 | 2026-06-06 | 15:00 | Monthly call | sir | Co-schedule (with Sir)¹ |
 | 2026-06-08 | 09:00 | Eye-doctor appointment | bat | Special Events |
 | 2026-06-10 | 18:00 | Cinema with friends | bat | Special Events |
+| 2026-06-21 | 17:30 | Sir's visit | bat | Special Events² |
+
+² **Decision SP-9 (countdown widget seed, Phase VV):** the "Sir's visit"
+event ships with `pin_to_widget = true` so the demo's first-run "Add
+widget?" prompt has a ready target. Title is SFW-readable; the
+countdown widget reads "42 days until Sir's visit" without further
+copy. Same SFW guarantee as VV.12.
 
 ¹ The sub's repo also has `master-scheduled` partially applied —
 **Decision SP-8:** when the demo composer runs `sub-scheduled` in a

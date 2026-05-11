@@ -678,6 +678,25 @@ Peer to **Phase Y** (bidirectional CalDAV ↔ git), but the overlay **never** to
 
 ---
 
+## Phase VV — Homescreen countdown widget
+
+Android AppWidget that shows a large-numerals count to any event the user picks ("X days until …"). Neutral surface; works equally well for a trip, a wedding, a partner's visit, a release date. SFW-coded at every surface (title comes from the underlying event, which is user-controlled — see the wizard's surface-phrasing decisions SP-1..SP-5 in `templates-demo-wizard.md`).
+
+- [ ] **VV.1** Surface: `AppWidgetProvider` + a configure-activity to pick the target. Two picker modes: **(a)** specific event by `event_id`; **(b)** "next upcoming event in calendar X" — re-resolves each midnight tick.
+- [ ] **VV.2** Optional event-frontmatter flag `pin_to_widget = true` (additive; resolver-ignored). Picker mode (a) defaults to the most-recently-pinned event, with all events still browsable.
+- [ ] **VV.3** Layout (Material3 Expressive, glanceable): big numerals (days), small label below ("until Sir's visit" / "until Berlin trip" / etc.), optional subtitle line. Lockscreen preview shows numerals only (subtitle hidden — privacy default).
+- [ ] **VV.4** Sizes: `2x1` (numerals only), `4x2` (numerals + label), `4x4` (numerals + label + subtitle + next-3-upcoming list).
+- [ ] **VV.5** Update strategy: `AlarmManager` daily at local-midnight rollover (timezone-aware); `WorkManager` job piggybacks on the git-sync debounce (Phase J) to refresh after pulls.
+- [ ] **VV.6** Tap behavior: opens the target event's detail screen via deep-link (Phase MM).
+- [ ] **VV.7** Multiple widgets per device — each pinned to its own target. Configure-activity supports re-pinning without removing the widget.
+- [ ] **VV.8** Strings: "in X days" / "tomorrow" / "today" / "X days ago" (past-due). All in `strings.xml` (Phase U i18n).
+- [ ] **VV.9** Past-due styling: emphasized color from the M3E `error-container` role when count ≤ 0; subtle, never alarm-screaming.
+- [ ] **VV.10** Demo seed (consumed by Phase L): `demo-sub` ships with one pinned event — "Sir's visit" on 2026-06-21 in `Special Events` — so the wizard's "Add widget" prompt has something to point at on first run.
+- [ ] **VV.11** Test fixtures: time-frozen render previews at +30d / +7d / +1d / 0d / -1d to lock styling at each transition.
+- [ ] **VV.12** SFW phrasing guarantee: widget renders **only** user-authored event titles + locale-formatted day count. No editorial copy, no decorative text, nothing the app generates that could surface non-SFW phrasing on a lockscreen preview.
+
+---
+
 ## Notes on parallel deep-dives
 
 Phases A through W are intentionally exhaustive but rely on the deep-dive
