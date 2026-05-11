@@ -2546,3 +2546,132 @@ lands. Use `jj log -r @ -T 'change_id.short()'` for the ID; do not use
 git commit hashes (this is a `jj` repo per the global CLAUDE.md
 convention if `.jj/` exists; otherwise commit hashes are fine but jj is
 preferred for stability across rebases).
+
+---
+
+## Phase SE-X — CalDAV overlay (read-only, no-repo) — DEFERRED IMPLEMENTATION
+
+Corresponds to `main.md` Phase **UU** and locks in `decisions.md`
+**D.53**. Peer to **SE-Q** (bidirectional CalDAV mirror) but
+fundamentally different: no repo binding, no file materialization, no
+push, no conflict resolution.
+
+> **Status:** surface planned, implementation deferred until the
+> cross-provider test matrix (Google + MS Graph + Apple iCloud +
+> Nextcloud + generic RFC4791) is feasible. See D.53 for rationale.
+
+### Differences from SE-Q
+
+| Aspect | SE-Q (mirror) | SE-X (overlay) |
+|---|---|---|
+| Repo binding | Required (`repoId`) | None |
+| File materialization | Yes — events → `calendars/<id>/events/...` | **No** — Room cache only |
+| Direction | PULL_ONLY / PUSH_ONLY / BIDI | PULL_ONLY only |
+| Conflict resolution | Shared with git conflict UI | N/A — no writes |
+| CLI surface | `skb caldav add` | `skb caldav add --overlay` |
+| Settings entry | `Settings → Repos → <repo> → + Add CalDAV mirror` | `Settings → Calendars → + Add external calendar` |
+| Default poll | 30m | 60m (less interactive) |
+| Cleanup on remove | Optional repo file purge | Drop Room rows + secret only |
+
+### Data model
+
+```kotlin
+data class CalDavOverlay(
+    val overlayId: String,           // sha256(serverUrl + calendarPath)
+    val displayName: String,
+    val serverUrl: String,           // CalDAV root
+    val calendarHomePath: String,    // discovered via PROPFIND
+    val calendarPath: String,        // selected calendar
+    val priority: Int,               // 1..1000, same as repo calendars
+    val syncIntervalMinutes: Int,    // default 60
+    val credentialBindingId: String, // shared SecretsStore
+    val lastSyncedCtag: String?,
+    val lastSyncedSyncToken: String?,
+    val lastSyncedAt: Long?,
+    val lastError: CalDavError?
+)
+```
+
+Persisted in `EncryptedSharedPreferences` keyed by `overlayId`.
+Credentials reuse the SE-Q `CalDavCredential` sealed interface
+(BasicAuth / BearerToken). No `repoId`, no `targetCalendarId`, no
+`mode` — overlays are always pull-only.
+
+### Cache
+
+A separate Room table — **not** the repo-events table:
+
+```kotlin
+@Entity(tableName = "overlay_events")
+data class OverlayEventRow(
+    @PrimaryKey val rowId: String,   // overlayId + ":" + caldavUid
+    val overlayId: String,           // FK
+    val caldavUid: String,
+    val etag: String,
+    val rawIcs: String,              // parsed lazily by resolver
+    val startUtc: Long,
+    val endUtc: Long,
+    val summary: String,
+    val rrule: String?,
+    val updatedAt: Long
+)
+```
+
+Separation rationale: overlay rows must never collide with repo event
+rows in indexing, must never leak into git via `repo.toml` scan, and
+must drop cleanly when the overlay is removed.
+
+### Resolver integration
+
+`CalendarMeta` gains an additive optional:
+
+```kotlin
+data class CalendarMeta(
+    /* ... existing fields ... */
+    val overlaySource: CalDavOverlayRef? = null
+)
+
+data class CalDavOverlayRef(val overlayId: String)
+```
+
+When non-null, the resolver:
+
+- Sources events from `overlay_events` keyed by `overlayId`, not from
+  repo file scan.
+- Skips all write paths. Edit/drag/long-press UI checks
+  `overlaySource != null` and refuses with the "external calendar"
+  message.
+- Otherwise treats the calendar identically — same priority tiebreak,
+  same active-window gate, same multi-tz handling.
+
+No separate resolver phase required; this is purely an additive field
+read by existing RV-C overlay code via a one-line branch.
+
+### Per-provider rate-limit profiles
+
+| Provider | Quota | Throttling signal | Default poll |
+|---|---|---|---|
+| Google Calendar | 1M req/day per project | `429` + `Retry-After` | 60m |
+| Microsoft 365 / Graph | per-tenant variable | `429` + `Retry-After` + `X-RateLimit-*` | 60m |
+| Apple iCloud | undocumented, conservative | `503` with backoff | 90m |
+| Nextcloud | server-configurable | varies | 30m (self-hosted, generous) |
+| Generic RFC4791 | unknown | honor `Retry-After` only | 60m |
+
+Profile selection: heuristic on `serverUrl` host (`*.googleusercontent.com`, `outlook.office365.com`, `caldav.icloud.com`) with explicit override.
+
+### Sub-steps
+
+- [ ] **SE-X.1** Add `CalDavOverlay` data class + `OverlayStore` persistence layer
+- [ ] **SE-X.2** Factor SE-Q PROPFIND discovery into a shared helper consumed by both mirror + overlay setup paths
+- [ ] **SE-X.3** Room schema for `overlay_events` table; migration; index on `(overlayId, startUtc)`
+- [ ] **SE-X.4** `CalDavOverlayWorker` in `SyncService`: per-overlay poll, ETag/CTag/sync-token incremental, conservative backoff on rate-limit responses
+- [ ] **SE-X.5** Per-provider rate-limit profiles (heuristic + override)
+- [ ] **SE-X.6** Resolver branch: `CalendarMeta.overlaySource` triggers overlay-table read instead of repo-file scan
+- [ ] **SE-X.7** CLI: `skb caldav add --overlay` flag wiring; `skb caldav list` `kind` column; `skb caldav remove` handles both kinds
+- [ ] **SE-X.8** Settings UI: top-level `Settings → Calendars → + Add external calendar` entry; overlay management list separate from repo CalDAV mirror list
+- [ ] **SE-X.9** Write-path refusal: edit/drag/long-press paths check `overlaySource` and surface "this calendar lives on a remote server" banner with provider link
+- [ ] **SE-X.10** `🔗 external` badge in calendar drawer + event details + Together-tab participant pickers
+- [ ] **SE-X.11** Removal: drop `overlay_events` rows + `OverlayStore` entry + `SecretsStore` credential binding. No git cleanup needed
+- [ ] **SE-X.12** Test fixtures: recorded HTTP traffic for one calendar each on Google / MS 365 / Apple iCloud / Nextcloud / Radicale (generic). Live tests gated behind `--live-caldav` flag
+- [ ] **SE-X.13** Documentation: AGENTS.md note that overlay events are remote-only; CLI agents reading the repo will NOT see them on the filesystem
+- [ ] **SE-X.14** Privacy review: overlay event bodies are cached locally in Room — confirm Room is on the encrypted-storage path (per SE-C data-at-rest policy)

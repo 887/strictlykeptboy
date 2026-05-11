@@ -1156,6 +1156,57 @@ New `skb` subcommands:
 All subject to the cross-cutting design rules in CLI-tooling (atomic
 writes, auto-commits, `--json`, etc.).
 
+## D.53 — CalDAV overlay (read-only, no-repo) — DEFERRED IMPLEMENTATION
+
+A second CalDAV mode, **peer to D.25 but with no git repo**. The user
+adds an external CalDAV calendar (Office 365, Google Calendar, Apple
+iCloud, Nextcloud, generic RFC4791) as a **read-only priority-calendar
+overlay**. Events render in the resolver alongside repo-backed
+calendars; nothing is materialized to disk; nothing is ever pushed
+back.
+
+**Why separate from D.25.** D.25 assumes a repo target — every CalDAV
+event becomes a Markdown file under `calendars/<id>/events/...`. That
+is correct when the user wants bidirectional CalDAV ↔ git. It is
+**wrong** when the user just wants Office 365's "Team Holidays"
+calendar to *show up* in their priority view without polluting any
+repo with files they neither own nor control.
+
+**Why deferred.** The cross-provider test matrix is hard: live accounts
+on Google + Microsoft 365 + Apple iCloud + Nextcloud, OAuth
+refresh-token rotation, per-provider quota behavior, throttling-header
+parsing. The plan locks the surface so future implementers don't
+re-litigate the shape; ship once the testing story (recorded fixtures
++ optional `--live-caldav` integration suite) exists.
+
+**Surface.**
+
+- Settings: `Settings → Calendars → + Add external calendar` —
+  top-level, NOT nested under any repo. Distinct surface from D.25's
+  `Settings → Repos → <repo> → + Add CalDAV mirror`.
+- CLI: `skb caldav add --overlay <url>` — flag on the existing
+  `caldav` group rather than a new `caldav-overlay` group. Keeps the
+  surface flat. `skb caldav list` shows both mirrors and overlays with
+  a `kind` column.
+
+**Resolver integration.** Overlay calendars are first-class — they
+participate in priority (1..1000), master toggles, active-windows, the
+priority-tiebreak comparator. The only difference from a repo-backed
+calendar is that write paths refuse with a clear message and overlay
+events never reach the filesystem. Implemented as an additive optional
+`CalendarMeta.overlaySource: CalDavOverlayRef?` field; no separate
+resolver phase required.
+
+**Auth.** Reuses the SE-Q `CalDavCredential` sealed interface
+(BasicAuth + OAuth Device Flow for Google/Microsoft +
+app-specific-password for Apple). One auth surface for both modes.
+
+**Cache.** Per-overlay Room table (separate from repo events,
+`overlayId` FK). ETag / CTag / `sync-token` incremental fetch.
+
+**Plan locations.** `main.md` Phase UU, `sync-engine.md` Phase SE-X.
+No resolver phase — additive field only.
+
 ---
 
 # Subagent task assignment
