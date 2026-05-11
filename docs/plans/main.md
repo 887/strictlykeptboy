@@ -284,11 +284,13 @@ Deep-dive: [`ui-spec.md`](ui-spec.md) phase UI-O.
 
 ## Phase T — theming + personalization
 
-- [ ] **T.1** Mascot SVG asset wiring (placeholder until user provides real art)
+- [x] **T.1** Launcher icon + mascot art shipped — bat-with-calendar adaptive launcher (`mipmap-*/ic_launcher.webp` + `drawable-*/ic_launcher_foreground.webp`, dark background `#0A0806`); secret about-page mascot scene at `drawable-nodpi/about_bat.webp`. Shipped in change `7afb686+`.
 - [ ] **T.2** Repo icon system: emoji-in-SVG-wrapper, photo, auto-initials
 - [ ] **T.3** Calendar/todolist icon + color picker
 - [ ] **T.4** Event emoji prefix UI
 - [ ] **T.5** Dynamic color override per repo (color seed)
+- [ ] **T.6** Themed-icon monochrome layer (Android 13+) — generate silhouette of the bat-with-calendar for `<monochrome>` adaptive-icon slot; currently omitted so themed icons fall back to the system default
+- [ ] **T.7** Secret About scene unlock — tap the version number 7 times in `Settings → About` to reveal `about_bat.webp` full-screen with the `STRICTLYKEPTBOY — schedule dreams. keep promises.` tagline rendered below. Easter-egg only; never linked from main UI
 
 ---
 
