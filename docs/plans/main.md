@@ -349,11 +349,13 @@ Cross-references for Round 2:
 
 Deep-dive: [`cli-tooling.md`](cli-tooling.md) phases CLI-A through CLI-K.
 
-- [ ] **X.1** Define subcommand surface (D.24)
-- [ ] **X.2** Implement JVM-jar entrypoint (shared `:cli` Gradle subproject already planned in NS for tools/skb-cli.jar — promote to top-level `:cli`)
-- [ ] **X.3** Shell-script wrapper for distribution (`skb` POSIX shell launcher; finds java, launches jar)
+Scaffold shipped (X.2, X.3, partial X.5) — Clikt + fat-jar + POSIX wrapper smoke-tested on `--version` (human + JSON).
+
+- [ ] **X.1** Define subcommand surface (D.24) — stub `event/task/cal/repo` dispatch present; real surfaces ship in their CLI-A.* phases
+- [x] **X.2** Implement JVM-jar entrypoint (`:cli` Gradle subproject, `fatJar` task → `cli/build/libs/skb-cli-<ver>-<sha>.jar`)
+- [x] **X.3** Shell-script wrapper for distribution (`tools/skb` POSIX shell launcher; finds java 17+, dev-fallback to repo build dir)
 - [ ] **X.4** Atomic write + auto-commit hooks (same commit-message format as GUI)
-- [ ] **X.5** `--json` machine-readable output mode for AI consumers
+- [x] **X.5** `--json` machine-readable output mode for AI consumers — root flag + envelope shipped for `--version`; per-subcommand JSON lands with each CLI-A.* phase
 - [ ] **X.6** `--dry-run` flag (prints proposed change, no write)
 - [ ] **X.7** Exit-code taxonomy (0=ok, 1=usage, 2=not-found, 3=conflict, 4=auth, 5=corrupt, 6=schema-mismatch)
 - [ ] **X.8** Bundle in release pipeline alongside APK (GitHub Releases asset; homebrew tap `887/tap/skb`; `curl ... | sh` one-liner)

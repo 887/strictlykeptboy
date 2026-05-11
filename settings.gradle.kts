@@ -19,3 +19,4 @@ plugins {
 
 rootProject.name = "strictlykeptboy"
 include(":app")
+include(":cli")

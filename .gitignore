@@ -4,6 +4,7 @@
 /.idea
 *.iml
 /app/build
+/cli/build
 /.kotlin
 /captures
 /.cxx

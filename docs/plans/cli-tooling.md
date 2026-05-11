@@ -1760,22 +1760,27 @@ CLI-side instructions look like.
 
 ## Phase CLI-H — JVM module + shell wrapper + distribution
 
-- [ ] **CLI-H.1** Gradle subproject `:cli`. Pure JVM, no Android
-  dependencies. Shares `:core` with the Android app (where `:core`
-  houses `RepoWriter`, `RepoScanner`, schema typed objects, RRULE
-  expansion, common-time finder, etc.).
-- [ ] **CLI-H.2** Arg parser: `com.github.ajalt.clikt:clikt` (Apache-2.0).
-  Battle-tested, supports nested subcommands, generates help. Compose-
-  friendly is irrelevant here; we want strict POSIX-ish parsing.
-- [ ] **CLI-H.3** JSON: `kotlinx.serialization` (already in the stack).
+Scaffold landed: `:cli` module + Clikt + fat-jar task + POSIX `tools/skb` wrapper smoke-tested on `--version` (both human and `--json` envelope). `:core` extraction deferred to Phase C — until then `:cli` carries its own copy of any helpers it needs.
+
+- [x] **CLI-H.1** Gradle subproject `:cli`. Pure JVM, no Android
+  dependencies. (`:core` extraction deferred to Phase C — for now `:cli`
+  stands alone; will depend on `:core` once it exists.)
+- [x] **CLI-H.2** Arg parser: `com.github.ajalt.clikt:clikt` 5.0.3
+  (Apache-2.0). Root command + 4 stub subcommand groups
+  (`event/task/cal/repo`) dispatched via `subcommands()`.
+- [x] **CLI-H.3** JSON: `kotlinx-serialization-json` 1.7.3 wired;
+  `skb --version --json` returns `{name, version, git_sha, build_date}`
+  envelope. Per-subcommand JSON output lands with each CLI-A.* phase.
 - [ ] **CLI-H.4** TOML: `ktoml` (already in the stack) — same parser
   as the app, so round-trip parity is automatic.
 - [ ] **CLI-H.5** Git: JGit 6.x (same as the app). `:cli` depends on
   `:core` which depends on JGit; no duplicate transitive.
-- [ ] **CLI-H.6** Build: `./gradlew :cli:shadowJar` produces
-  `cli/build/libs/skb-cli-<version>.jar` (fat JAR with all deps).
-  Main class: `com.eight87.skb.cli.Main`.
-- [ ] **CLI-H.7** Shell wrapper `skb` (POSIX `sh`, ~50 lines):
+- [x] **CLI-H.6** Build: `./gradlew :cli:fatJar` produces
+  `cli/build/libs/skb-cli-<version>-<sha7>.jar` (fat JAR with all deps).
+  Main class: `com.eight87.skb.cli.MainKt`. Built without the shadow
+  plugin — using a plain `Jar` task with `zipTree`-bundled deps to
+  avoid Gradle 9.1 / shadow-plugin compat risk.
+- [x] **CLI-H.7** Shell wrapper `skb` (POSIX `sh`, ~50 lines) shipped at `tools/skb`. Adds a dev-mode fallback: if `$SKB_HOME/skb-cli.jar` and `/usr/local/share/skb/` are both empty, picks the most recent `cli/build/libs/skb-cli-*.jar` from the repo, so `tools/skb` works straight after `./gradlew :cli:fatJar`.
 
   ```sh
   #!/bin/sh

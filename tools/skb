@@ -1,0 +1,51 @@
+#!/bin/sh
+# skb — strictlykeptboy CLI launcher (POSIX sh)
+# Per cli-tooling.md CLI-H.7. Locates the fat JAR, locates java 17+,
+# execs the JAR with all args passed through.
+set -e
+
+SKB_HOME="${SKB_HOME:-$HOME/.skb}"
+SKB_JAR="${SKB_JAR:-$SKB_HOME/skb-cli.jar}"
+
+# Dev fallback: if running from the repo and ~/.skb is empty, use the
+# most recent fat JAR from cli/build/libs/.
+if [ ! -f "$SKB_JAR" ]; then
+  script_dir=$(cd "$(dirname "$0")" && pwd)
+  candidate=$(ls -1t "$script_dir/../cli/build/libs/"skb-cli-*.jar 2>/dev/null | head -1 || true)
+  if [ -n "$candidate" ] && [ -f "$candidate" ]; then
+    SKB_JAR="$candidate"
+  fi
+fi
+
+if [ ! -f "$SKB_JAR" ] && [ -f "/usr/local/share/skb/skb-cli.jar" ]; then
+  SKB_JAR="/usr/local/share/skb/skb-cli.jar"
+fi
+
+if [ ! -f "$SKB_JAR" ]; then
+  echo "error: skb-cli.jar not found" >&2
+  echo "  searched: \$SKB_HOME/skb-cli.jar ($SKB_HOME/skb-cli.jar)" >&2
+  echo "            <repo>/cli/build/libs/skb-cli-*.jar" >&2
+  echo "            /usr/local/share/skb/skb-cli.jar" >&2
+  echo "  hint:    build with: ./gradlew :cli:fatJar" >&2
+  exit 8
+fi
+
+# locate java: $JAVA_HOME, bundled JRE, then PATH
+if [ -n "$JAVA_HOME" ] && [ -x "$JAVA_HOME/bin/java" ]; then
+  JAVA="$JAVA_HOME/bin/java"
+elif [ -x "$SKB_HOME/bundled-jre/bin/java" ]; then
+  JAVA="$SKB_HOME/bundled-jre/bin/java"
+elif command -v java >/dev/null 2>&1; then
+  JAVA="java"
+else
+  echo "error: no java found; install Temurin 17+ or use --with-jre install variant" >&2
+  exit 8
+fi
+
+JV=$("$JAVA" -version 2>&1 | head -1 | sed -E 's/.*"([0-9]+).*/\1/')
+if [ "$JV" -lt 17 ]; then
+  echo "error: java $JV found, but skb requires java 17+" >&2
+  exit 8
+fi
+
+exec "$JAVA" -XX:+UseSerialGC -Xshare:auto -jar "$SKB_JAR" "$@"
