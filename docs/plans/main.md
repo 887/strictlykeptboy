@@ -364,20 +364,54 @@ Scaffold shipped (X.2, X.3, partial X.5) — Clikt + fat-jar + POSIX wrapper smo
 - [ ] **X.11** Repo discovery: walk-up to find `.strictlykeptboy/` from CWD; `--repo <path>` override; `SKB_REPO` env var
 - [ ] **X.12** Test suite — pure JVM, Robolectric-free
 
-## Phase Y — Bidirectional CalDAV
+## Phase Y — CalDAV ↔ git repo mirror (events become files)
 
 Deep-dive: [`sync-engine.md`](sync-engine.md) extension phases SE-Q+, [`notifications-sharing-import.md`](notifications-sharing-import.md) extension phases NS-L+.
 
+> **The critical property of Phase Y:** CalDAV events are **materialized
+> into the target git repo as Markdown-with-frontmatter files** under
+> `calendars/<target-calendar-id>/events/<yyyy>/<mm>/<event-id>.md`,
+> committed and pushed like any other event. Anyone who can read the
+> repo can read these events — Claude (reading repo files), AI agents
+> via the CLI, partners with shared repo access (dom/sub/family/team),
+> and the user themselves on any device. This is the difference that
+> matters versus Phase UU (overlay-only, never on disk, never visible
+> to other agents or partners).
+>
+> **Canonical use case:** *"Work owns my Office 365 calendar. I want
+> the events they schedule on me to land in my own git repo as files
+> so Claude can see what's been put on my plate, my dom can see what
+> work is doing to my time without asking, and I have one canonical
+> place where my whole life lives."* This is `PULL_ONLY` mode against
+> the work CalDAV endpoint, target-calendar = `work` (or similar) in
+> the user's personal repo.
+
+Three modes, picked per-mirror at setup time:
+
+- **`PULL_ONLY`** (Y.4) — CalDAV → repo, one-way. The most common
+  shape. Work / school / shared family calendars where the user does
+  not own the upstream and just wants the events visible in their git
+  world. Target calendar in the repo is marked read-only-from-app to
+  prevent accidental edits that would be overwritten on next pull.
+- **`PUSH_ONLY`** (Y.5) — repo → CalDAV, one-way. The user is the
+  source of truth and wants their schedule visible on a partner's
+  Outlook / Apple Calendar / phone-native CalDAV consumer.
+- **`BIDI`** (Y.6) — full two-way. The user edits in both places and
+  the bridge reconciles. Uses the shared git-conflict UI when both
+  sides changed the same event between syncs.
+
 - [ ] **Y.1** Add `ical4j` + `dav4jvm` deps; verify MPL-2.0 license-clean for our distribution
-- [ ] **Y.2** CalDAV discovery flow (well-known URL `/.well-known/caldav`, then PROPFIND for calendars)
-- [ ] **Y.3** Server credential storage (alongside git creds in EncryptedSharedPreferences)
-- [ ] **Y.4** Pull-only mirror calendar mode (CalDAV → repo, read-only target)
-- [ ] **Y.5** Push-only export mode (repo → CalDAV)
-- [ ] **Y.6** Bidirectional sync mode (full two-way, with conflict detection)
+- [ ] **Y.2** CalDAV discovery flow (well-known URL `/.well-known/caldav`, then PROPFIND for calendars); in-app setup wizard `Settings → Repos → <repo> → + Add CalDAV mirror` with provider-aware presets (Google / Microsoft 365 / Apple iCloud / Nextcloud / custom)
+- [ ] **Y.3** Server credential storage (alongside git creds in EncryptedSharedPreferences); OAuth Device Flow for Google + Microsoft; app-specific-password flow for Apple with clear in-UI instructions
+- [ ] **Y.4** `PULL_ONLY` mirror mode (CalDAV → repo) — events materialize as repo files under `calendars/<target-id>/events/...`; target calendar gets `mirror = { source = "caldav", direction = "pull" }` in its `calendar.toml` so the app refuses local edits; commits are made under a configurable identity (default: "CalDAV mirror <server-host>") so blame stays readable
+- [ ] **Y.5** `PUSH_ONLY` mode (repo → CalDAV) — repo files → CalDAV `VEVENT`s; tracks `imported_uid` on repo files to maintain identity across pushes
+- [ ] **Y.6** `BIDI` mode (full two-way, with conflict detection)
 - [ ] **Y.7** Conflict resolution shared with git conflict UI
-- [ ] **Y.8** `skb caldav add|sync|remove|list` subcommands
-- [ ] **Y.9** Per-CalDAV-mirror sync interval (default 30m)
-- [ ] **Y.10** ETag-based change detection (avoid full re-pull)
+- [ ] **Y.8** `skb caldav add|sync|remove|list` subcommands — covers all three modes; `--mode pull|push|bidi` flag at add-time
+- [ ] **Y.9** Per-CalDAV-mirror sync interval (default 30m for mirrors)
+- [ ] **Y.10** ETag- + CTag- + RFC6578 `sync-token`-based incremental change detection (avoid full re-pull)
+- [ ] **Y.11** Mirror-source attribution in event detail UI: small "↻ mirrored from <server-host>" line + last-sync timestamp + link to re-sync now
+- [ ] **Y.12** AGENTS.md note for repos with mirrored calendars: "the `work` calendar is a CalDAV mirror; edits to its files will be overwritten on next pull — change events upstream instead"
 
 ## Phase Z — Git LFS
 
