@@ -4,55 +4,62 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.lifecycle.lifecycleScope
+import com.eight87.strictlykeptboy.resolver.RepoSnapshot
+import com.eight87.strictlykeptboy.resolver.Renderer
+import com.eight87.strictlykeptboy.theme.AppearancePrefs
 import com.eight87.strictlykeptboy.theme.StrictlyKeptBoyTheme
+import com.eight87.strictlykeptboy.ui.scaffold.AppScaffold
+import com.eight87.strictlykeptboy.ui.schedule.ScheduleViewState
+import kotlinx.coroutines.flow.MutableStateFlow
 
 class MainActivity : ComponentActivity() {
-  override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
-    enableEdgeToEdge()
-    setContent {
-      StrictlyKeptBoyTheme {
-        Scaffold(modifier = Modifier.fillMaxSize()) { inner ->
-          Splash(modifier = Modifier.padding(inner))
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+
+        val appearancePrefs = AppearancePrefs.open(this)
+
+        // Phase F stub: RepoStore + DAO wiring lands in Phase F→G integration.
+        // For now we feed an empty snapshot + empty sources so SchedulePane
+        // renders the EmptyScheduleState (F.5).
+        val activeRepoName = MutableStateFlow("demo-repo")
+        val snapshot = MutableStateFlow(RepoSnapshot(emptyList(), emptyList(), emptyList()))
+        val sources = MutableStateFlow(
+            Renderer.Sources(
+                events = emptyList(),
+                rules = emptyList(),
+                exceptionsByRule = emptyMap(),
+                deviations = emptyList(),
+                overrides = emptyList(),
+            ),
+        )
+
+        setContent {
+            val appearance by appearancePrefs.state.collectAsState()
+            StrictlyKeptBoyTheme(
+                themeMode = appearance.themeMode,
+                densityScale = appearance.densityScale,
+                dynamicColor = appearance.dynamicColor,
+            ) {
+                val scope = rememberCoroutineScope()
+                val scheduleState = remember {
+                    ScheduleViewState(
+                        scope = scope,
+                        snapshotFlow = snapshot,
+                        sourcesFlow = sources,
+                    )
+                }
+                AppScaffold(
+                    activeRepoNameFlow = activeRepoName,
+                    scheduleState = scheduleState,
+                )
+            }
         }
-      }
     }
-  }
-}
-
-@Composable
-private fun Splash(modifier: Modifier = Modifier) {
-  Column(
-    modifier = modifier.fillMaxSize().padding(24.dp),
-    verticalArrangement = Arrangement.Center,
-    horizontalAlignment = Alignment.CenterHorizontally,
-  ) {
-    Text(text = "strictlykeptboy", style = MaterialTheme.typography.displayMedium)
-    Text(
-      text = "git-backed calendar + timeboxing + todolist",
-      style = MaterialTheme.typography.bodyLarge,
-    )
-    Text(
-      text = "v${BuildConfig.VERSION_NAME} · ${BuildConfig.GIT_SHA} · ${BuildConfig.BUILD_DATE}",
-      style = MaterialTheme.typography.labelSmall,
-    )
-  }
-}
-
-@Preview
-@Composable
-private fun SplashPreview() {
-  StrictlyKeptBoyTheme { Splash() }
 }

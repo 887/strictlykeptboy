@@ -110,13 +110,13 @@ Deep-dive: [`resolver.md`](resolver.md) phases RV-A through RV-F.
 
 ## Phase F — core UI scaffold
 
-Deep-dive: [`ui-spec.md`](ui-spec.md) phases UI-A through UI-C.
+Deep-dive: [`ui-spec.md`](ui-spec.md) phases UI-A through UI-C. **Shipped in autonomous Round 1.**
 
-- [ ] **F.1** App scaffold with `NavigationSuiteScaffold` (rail on tablets, bottom bar on phones — but we override to use rail-collapsed on phone too per user direction)
-- [ ] **F.2** Top app bar with repo switcher (left) + view tabs (center) + sync button + identity icon (right)
-- [ ] **F.3** Material3 Expressive theme + dynamic color + light/dark/auto + density toggle
-- [ ] **F.4** Schedule day view (the first real view) wired to resolver
-- [ ] **F.5** Empty state with mascot placeholder
+- [x] **F.1** App scaffold with `NavigationSuiteScaffold` (rail on tablets, bottom bar on phones — but we override to use rail-collapsed on phone too per user direction) — `ui/scaffold/AppScaffold.kt`, 5 destinations (Schedule/Tasks/Repos/Wizard/Settings), `NavigationSuiteType.NavigationRail` pinned at every width
+- [x] **F.2** Top app bar with repo switcher (left) + view tabs (center) + sync button + identity icon (right) — `ui/scaffold/SkbTopBar.kt` + `ui/components/{RepoSwitcherChip,SyncButton,IdentityAvatar}.kt`; Day/Week/Month/Agenda/Year tabs (only Day functional this phase)
+- [x] **F.3** Material3 Expressive theme + dynamic color + light/dark/auto + density toggle — `theme/Theme.kt` extended; `theme/Appearance.kt` adds `ThemeMode`, `DensityScale`, `AppearancePrefs` (plain SharedPreferences) + `LocalDensityScale` CompositionLocal
+- [x] **F.4** Schedule day view (the first real view) wired to resolver — `ui/schedule/{SchedulePane,ScheduleDayView,ScheduleViewState}.kt`; lane layout from `DayBand.laneIndex/totalLanes`, now-line on today only, tap-hour and tap-band callbacks stubbed
+- [x] **F.5** Empty state with mascot placeholder — `ui/schedule/EmptyScheduleState.kt`; hardcoded "good boy" praise + neutral fallback (`identity.toml` wiring deferred to Phase K per brief)
 
 ---
 
