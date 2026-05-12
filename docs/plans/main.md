@@ -124,13 +124,22 @@ Deep-dive: [`ui-spec.md`](ui-spec.md) phases UI-A through UI-C. **Shipped in aut
 
 Deep-dive: [`ui-spec.md`](ui-spec.md) phases UI-D through UI-G.
 
-- [ ] **G.1** Day view — vertical timeline, hour grid, overlap bands, current-time indicator
-- [ ] **G.2** Week view — 7-column timeline
-- [ ] **G.3** Month view — month grid with event chips
-- [ ] **G.4** Timebox-mode view — today's planned blocks edge-to-edge, big targets
-- [ ] **G.5** Year view — 12-month grid with heat-map density
-- [ ] **G.6** View-mode tabs in top bar with persisted last-view per device
-- [ ] **G.7** Event detail sheet — slide-up sheet with full event content + author chip + attachments + edit button
+Round 1 shipped in commit `phase-G` — Week / Month / Timebox / Year
+views + view-mode persistence + event-detail bottom-sheet. The
+`Agenda` top-bar tab is wired to the Phase G.4 Timebox view (today's
+planned blocks edge-to-edge with a Now-emphasis card) — the top-bar
+`ScheduleViewTab` enum was left at five entries (Day / Week / Month /
+Agenda / Year) per Phase F.2; promoting Agenda to its own dedicated
+agenda-list view is deferred. Markdown body in the event detail sheet
+renders as plain text (full commonmark rendering is Phase EE per UI-Y).
+
+- [x] **G.1** Day view — vertical timeline, hour grid, overlap bands, current-time indicator (Phase F.4 + `NowLine`)
+- [x] **G.2** Week view — 7-column timeline (`ScheduleWeekView.kt`)
+- [x] **G.3** Month view — month grid with event chips (`ScheduleMonthView.kt`)
+- [x] **G.4** Timebox-mode view — today's planned blocks edge-to-edge, big targets (`ScheduleTimeboxView.kt`, wired to the Agenda tab)
+- [x] **G.5** Year view — 12-month grid with heat-map density (`ScheduleYearView.kt`)
+- [x] **G.6** View-mode tabs in top bar with persisted last-view per device (`ScheduleViewModePrefs.kt`, plain SharedPreferences `schedule_view_mode_v1.xml`)
+- [x] **G.7** Event detail sheet — slide-up sheet with full event content + author chip + attachments + edit button (`EventDetailSheet.kt`, Markdown rendered as plain text — full Markdown deferred to Phase EE)
 
 ---
 

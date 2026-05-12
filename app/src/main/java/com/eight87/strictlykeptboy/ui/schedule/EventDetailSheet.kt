@@ -1,0 +1,231 @@
+package com.eight87.strictlykeptboy.ui.schedule
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.QrCode
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.eight87.strictlykeptboy.resolver.CompletionState
+import com.eight87.strictlykeptboy.resolver.DayBand
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+
+const val TestTagEventDetailSheet = "EventDetailSheet"
+const val TestTagEventDetailTitle = "EventDetailTitle"
+const val TestTagEventDetailTime = "EventDetailTime"
+const val TestTagEventDetailCalendar = "EventDetailCalendar"
+const val TestTagEventDetailBody = "EventDetailBody"
+const val TestTagEventDetailTag = "EventDetailTag"
+const val TestTagEventDetailAttachment = "EventDetailAttachment"
+const val TestTagEventDetailAuthor = "EventDetailAuthor"
+const val TestTagEventDetailCompletion = "EventDetailCompletion"
+const val TestTagEventDetailEdit = "EventDetailEdit"
+
+/**
+ * Phase G.7 — modal bottom sheet that surfaces an event's full content.
+ *
+ * Stateless: caller controls visibility via the [band] non-null flag.
+ * Markdown is rendered as plain text for now per the brief — full
+ * Markdown rendering is Phase EE.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EventDetailSheet(
+    band: DayBand,
+    onDismiss: () -> Unit,
+    onEdit: () -> Unit = {},
+    attachments: List<AttachmentRef> = emptyList(),
+    calendarName: String? = null,
+    modifier: Modifier = Modifier,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val tz = band.instance.effectiveStart.zone
+    val fmt = DateTimeFormatter.ofPattern("EEE MMM d  HH:mm", Locale.getDefault())
+    val endFmt = DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        modifier = modifier.testTag(TestTagEventDetailSheet),
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 24.dp)) {
+            // Title
+            Text(
+                text = (band.instance.emoji?.let { "$it  " } ?: "") + band.instance.title,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.testTag(TestTagEventDetailTitle),
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            // Time + tz
+            Text(
+                text = "${fmt.format(band.instance.effectiveStart)} – " +
+                    "${endFmt.format(band.instance.effectiveEnd)}  ($tz)",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testTag(TestTagEventDetailTime),
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            // Calendar source
+            calendarName?.let {
+                AssistChip(
+                    onClick = {},
+                    label = { Text(it) },
+                    modifier = Modifier.testTag(TestTagEventDetailCalendar),
+                )
+            } ?: AssistChip(
+                onClick = {},
+                label = { Text(band.instance.calendar.id) },
+                modifier = Modifier.testTag(TestTagEventDetailCalendar),
+            )
+            CompletionBadge(state = band.completionState)
+
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Body
+            if (band.instance.body.isNotBlank()) {
+                Text(
+                    text = band.instance.body,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.testTag(TestTagEventDetailBody),
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            // Tags
+            if (band.instance.tags.isNotEmpty()) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    band.instance.tags.forEach { tag ->
+                        SuggestionChip(
+                            onClick = {},
+                            label = { Text("#$tag") },
+                            modifier = Modifier.testTag("$TestTagEventDetailTag-$tag"),
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            // Attachments (HV-M)
+            if (attachments.isNotEmpty()) {
+                Text(
+                    text = "Attachments",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                attachments.forEach { att ->
+                    AttachmentRow(att)
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            // Author
+            band.instance.author?.let { author ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        shape = CircleShape,
+                        modifier = Modifier.size(24.dp),
+                    ) {}
+                    Spacer(modifier = Modifier.size(8.dp))
+                    Text(
+                        text = "Author: ${author.id}",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.testTag(TestTagEventDetailAuthor),
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            FilledTonalButton(
+                onClick = onEdit,
+                modifier = Modifier.testTag(TestTagEventDetailEdit),
+            ) {
+                Icon(Icons.Filled.Edit, contentDescription = null)
+                Spacer(modifier = Modifier.size(6.dp))
+                Text("Edit")
+            }
+        }
+    }
+}
+
+@Composable
+private fun CompletionBadge(state: CompletionState) {
+    val (label, color) = when (state) {
+        CompletionState.Scheduled -> "Scheduled" to MaterialTheme.colorScheme.surfaceContainer
+        CompletionState.InProgress -> "In progress" to MaterialTheme.colorScheme.primaryContainer
+        CompletionState.CompletedBySchedule -> "Completed" to MaterialTheme.colorScheme.secondaryContainer
+        CompletionState.Skipped -> "Skipped" to MaterialTheme.colorScheme.surfaceContainer
+        CompletionState.PartiallyDone -> "Partially done" to MaterialTheme.colorScheme.tertiaryContainer
+        CompletionState.CompletedEarly -> "Completed early" to MaterialTheme.colorScheme.secondaryContainer
+        CompletionState.CompletedLate -> "Completed late" to MaterialTheme.colorScheme.tertiaryContainer
+    }
+    Spacer(modifier = Modifier.height(6.dp))
+    AssistChip(
+        onClick = {},
+        label = { Text(label) },
+        colors = AssistChipDefaults.assistChipColors(containerColor = color),
+        modifier = Modifier.testTag(TestTagEventDetailCompletion),
+    )
+}
+
+@Composable
+private fun AttachmentRow(att: AttachmentRef) {
+    val icon: ImageVector = when (att.kind) {
+        AttachmentKind.Link -> Icons.Filled.AttachFile
+        AttachmentKind.Qr -> Icons.Filled.QrCode
+        AttachmentKind.File -> Icons.Filled.Description
+        AttachmentKind.Barcode -> Icons.Filled.QrCode
+        AttachmentKind.Vcard -> Icons.Filled.Person
+        AttachmentKind.Location -> Icons.Filled.LocationOn
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)
+            .testTag("$TestTagEventDetailAttachment-${att.label}"),
+    ) {
+        Icon(icon, contentDescription = att.kind.name, modifier = Modifier.size(20.dp))
+        Spacer(modifier = Modifier.size(8.dp))
+        Text(text = att.label, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+/** HV-M attachment kinds — minimal surface for Phase G; full model in Phase EE. */
+enum class AttachmentKind { Link, Qr, File, Barcode, Vcard, Location }
+
+data class AttachmentRef(val kind: AttachmentKind, val label: String)
