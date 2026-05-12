@@ -124,7 +124,7 @@ Deep-dive: [`ui-spec.md`](ui-spec.md) phases UI-A through UI-C. **Shipped in aut
 
 Deep-dive: [`ui-spec.md`](ui-spec.md) phases UI-D through UI-G.
 
-Round 1 shipped in commit `phase-G` — Week / Month / Timebox / Year
+Round 1 shipped in commit `3b34b2a` — Week / Month / Timebox / Year
 views + view-mode persistence + event-detail bottom-sheet. The
 `Agenda` top-bar tab is wired to the Phase G.4 Timebox view (today's
 planned blocks edge-to-edge with a Now-emphasis card) — the top-bar
