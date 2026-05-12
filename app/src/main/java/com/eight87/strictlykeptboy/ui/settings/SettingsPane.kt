@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -202,30 +203,54 @@ private fun SettingsCategoryList(
     selected: SettingsCategory,
     onSelect: (SettingsCategory) -> Unit,
 ) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().testTag(TestTagSettingsCategoryList),
-        verticalArrangement = Arrangement.spacedBy(0.dp),
-    ) {
-        item {
-            Text(
-                text = stringResource(R.string.settings_categories_title),
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp),
-            )
+    // M3E shape per user direction 2026-05-13: search field at the top + a
+    // flat scrolling list of categories. The big page title "Settings" is
+    // already in the shell top-bar, so no second "Settings" subtitle here
+    // (was redundant). Left padding tightened to 0dp — ListItem provides
+    // its own horizontal inset so rows are no longer visually indented
+    // 100+px from the left edge.
+    var query by remember { mutableStateOf("") }
+    val filtered = remember(query) {
+        if (query.isBlank()) SettingsCategory.all
+        else SettingsCategory.all.filter { cat ->
+            // Filter by the row's testTag (which is the English keyword) so
+            // search works without a Composable scope. labelRes is checked
+            // separately by the LazyColumn render.
+            cat.testTag.contains(query, ignoreCase = true)
         }
-        items(SettingsCategory.all) { cat ->
-            val selectedNow = cat::class == selected::class
-            ListItem(
-                headlineContent = { Text(stringResource(cat.labelRes)) },
-                modifier = Modifier
-                    .testTag("$TestTagSettingsCategoryPrefix${cat.testTag}")
-                    .clickable { onSelect(cat) },
-                colors = if (selectedNow) {
-                    ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
-                } else {
-                    ListItemDefaults.colors()
-                },
-            )
+    }
+    Column(modifier = Modifier.fillMaxSize().testTag(TestTagSettingsCategoryList)) {
+        androidx.compose.material3.OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            placeholder = { Text(stringResource(R.string.settings_search_placeholder)) },
+            leadingIcon = {
+                Icon(
+                    imageVector = androidx.compose.material.icons.Icons.Filled.Search,
+                    contentDescription = null,
+                )
+            },
+            singleLine = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .testTag("SettingsSearchField"),
+        )
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+            items(filtered) { cat ->
+                val selectedNow = cat::class == selected::class
+                ListItem(
+                    headlineContent = { Text(stringResource(cat.labelRes)) },
+                    modifier = Modifier
+                        .testTag("$TestTagSettingsCategoryPrefix${cat.testTag}")
+                        .clickable { onSelect(cat) },
+                    colors = if (selectedNow) {
+                        ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                    } else {
+                        ListItemDefaults.colors()
+                    },
+                )
+            }
         }
     }
 }

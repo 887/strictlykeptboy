@@ -68,7 +68,11 @@
     <string name="schedule_detail_empty">Select an event to see details</string>
     <string name="tasks_detail_empty">Select a task to see details</string>
     <string name="settings_category_general">General</string>
-    <string name="settings_category_identity">Identity</string>
+    <!-- Renamed from "Identity" to "Authors" to disambiguate from the
+         personal-preferences "Identity" surface (HV-R / S.8b) — both used
+         to render as "Identity" which read as a duplicate in the list. -->
+    <string name="settings_category_identity">Authors</string>
+    <string name="settings_search_placeholder">Search settings</string>
     <string name="settings_category_mode">Mode</string>
     <string name="settings_category_notifications">Notifications</string>
     <string name="settings_category_repos">Repos</string>
