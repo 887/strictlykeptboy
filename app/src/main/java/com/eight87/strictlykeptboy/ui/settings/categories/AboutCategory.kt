@@ -57,6 +57,7 @@ const val ABOUT_EASTER_EGG_RESET_MS = 2_000L
 fun AboutCategory(
     onOpenLicenses: () -> Unit = {},
     onOpenRepo: () -> Unit = {},
+    onOpenPrivacyPolicy: () -> Unit = {},
     nowMs: () -> Long = { System.currentTimeMillis() },
     modifier: Modifier = Modifier,
 ) {
@@ -105,6 +106,12 @@ fun AboutCategory(
             modifier = Modifier.testTag("$TestTagCatAbout-Repo"),
         ) {
             Text(stringResource(R.string.settings_about_repo_link))
+        }
+        TextButton(
+            onClick = onOpenPrivacyPolicy,
+            modifier = Modifier.testTag("$TestTagCatAbout-Privacy"),
+        ) {
+            Text(stringResource(R.string.settings_about_privacy_policy))
         }
         if (showEgg) {
             BackHandler { showEgg = false; taps = 0 }

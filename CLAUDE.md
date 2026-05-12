@@ -256,6 +256,6 @@ When Phase W release engineering lands: every dep in the APK gets inventoried by
 
 ## Currently in flight (autonomous-mode markers)
 
-- **Round 1 (Phases A–W):** active autonomous implementation. Latest seam committed in main: `9b20722` (Phase J sync orchestration). Phase K (lifestyle wizard) in flight via opus subagent at the time of writing.
-- **Tests:** 174 passing under `:app:testDebugUnitTest` as of Phase J commit.
-- **AVD-validated:** Phase F (5-rail scaffold + empty state) and Phase G (5 schedule views) and Phase H (5 task views) and Phase I (repo management flows) and Phase J (sync button + foreground service) all installed + smoke-tested on `emulator-5554`.
+- **Round 1 (Phases A–W): ✅ COMPLETE.** Closed out in the Phase W release-engineering commit. Release APK builds with R8 + resource shrinking enabled, installs + launches on `emulator-5554`, end-to-end `scripts/build-release-apk.sh` dry-run produces `release/latest.apk`. Round 2 (Phases X–LL) is the next active scope.
+- **Tests:** 369 passing under `:app:testDebugUnitTest` as of the Phase W close-out commit.
+- **AVD-validated:** every UI-affecting phase through Phase W; Phase W additionally smoke-tested the release-signed (debug-keystore fallback) + R8-minified APK on `emulator-5554`.

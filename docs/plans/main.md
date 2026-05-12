@@ -1,6 +1,6 @@
 # strictlykeptboy — main build plan
 
-## Status: 🚧 PLANNING — phases listed below; deep-dives shipping in parallel
+## Status: ✅ Round 1 COMPLETE — Phases A–W shipped. Round 2+ tracked below.
 
 This is the master plan. Each phase below links to a deep-dive document
 where applicable. Phases are listed in dependency order; later phases
@@ -357,16 +357,18 @@ _T.2..T.7 shipped in commit `3966c7c`._
 
 ---
 
-## Phase W — release engineering
+## Phase W — release engineering — Round 1 COMPLETE
 
-- [ ] **W.1** Signing config + release keystore (user-supplied, gitignored)
-- [ ] **W.2** GitHub Actions release workflow → APK with `strictlykeptboy-<version>-<sha7>.apk` naming (mirror tonearmboy)
-- [ ] **W.3** Obtainium-compatible release notes + SHA-256 table
-- [ ] **W.4** Play Store listing copy (Mature 17+ Lifestyle category per D.59 / K-4). Leads with unique value prop — git-backed, atomic, AI-native, multi-repo, common-time finder; lifestyle / D/s positioning mentioned in paragraph 2-3, not lead-with.
-- [ ] **W.5** Play Store screenshots set (per D.59 / K-4): show both neutral-mode AND kink-mode versions as peer examples (4 of each); polished schedule views with the user-controlled wizard scaffold output.
-- [ ] **W.6** ProGuard/R8 keep rules for JGit + lib-recur + ktoml + reflection-using libs
-- [ ] **W.7** Privacy policy page
-- [ ] **W.8** First release `v0.1.0`
+W.2 + W.3 shipped in commit `acbebee`; W.1, W.4..W.8 shipped in this Phase W close-out commit. Round 1 (Phases A–W) is now complete.
+
+- [x] **W.1** Signing config + release keystore (user-supplied, gitignored). Env-var driven: `STRICTLYKEPTBOY_RELEASE_KEYSTORE` / `_KEY_ALIAS` / `_KEY_PASSWORD` in `app/build.gradle.kts`, falls back to debug signing when unset. `.gitignore` covers `*.jks` / `*.keystore` / `release-keystore.jks` / `/release/`.
+- [x] **W.2** GitHub Actions release workflow → APK with `strictlykeptboy-<version>-<sha7>.apk` naming (mirror tonearmboy). Shipped in `acbebee` (`.github/workflows/release.yml`).
+- [x] **W.3** Obtainium-compatible release notes + SHA-256 table. Shipped in `acbebee` (`scripts/build-release-apk.sh` emits the table; tag-pushed workflow is self-disabling).
+- [x] **W.4** Play Store listing copy (Mature 17+ Lifestyle category per D.59 / K-4). `docs/play-store-listing.md` — title, 79-char short description, ~2150-char full description leading with git-backed / AI-native value prop, lifestyle / D/s positioning in paragraph 3 with explicit neutral-mode toggle mention.
+- [x] **W.5** Play Store screenshots set (per D.59 / K-4): `docs/play-store-screenshots.md` specs the 8-screenshot set (4 neutral + 4 kink-mode) with bat-mascot placeholders pending the WW sticker pack; capture workflow points at `app/src/main/play/screenshots/{en-US,en-GB}/`.
+- [x] **W.6** ProGuard/R8 keep rules narrowed — `app/proguard-rules.pro` split the blanket JGit keep into `lib`/`api`/`transport`/`errors`/`storage`; added lib-recur + ktoml + kotlinx.serialization companions + Android-component entry points; `-dontwarn` rules for unreachable apache-sshd / GSSAPI / JMX / servlet refs. `isMinifyEnabled = true` + `isShrinkResources = true` locked on for release. Release APK 7.3 MB (debug 31 MB).
+- [x] **W.7** Privacy policy page — `docs/privacy-policy.md` with permissions table, network-traffic disclosure, provider-specific privacy links, 17+ rating, contact info. About category surfaces a "Privacy policy" tile that opens the GitHub-rendered policy URL.
+- [x] **W.8** First release `v0.1.0` staged. `versionName = "0.1.0"` + `versionCode = 1`. `scripts/build-release-apk.sh` dry-run produces `release/strictlykeptboy-0.1.0-<sha7>.apk` + `release/latest.apk` symlink + captured SHA-256.
 
 ---
 

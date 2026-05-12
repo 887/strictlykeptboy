@@ -9,3 +9,6 @@
 /captures
 /.cxx
 /release-keystore.jks
+*.jks
+*.keystore
+/release/

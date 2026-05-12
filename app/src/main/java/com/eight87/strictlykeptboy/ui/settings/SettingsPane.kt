@@ -116,6 +116,7 @@ data class SettingsAccess(
     val onOpenLicenses: () -> Unit = {},
     val onOpenRepoLink: () -> Unit = {},
     val onOpenReposList: () -> Unit = {},
+    val onOpenPrivacyPolicy: () -> Unit = {},
 )
 
 @Composable
@@ -285,6 +286,7 @@ private fun SettingsCategoryContent(
             SettingsCategory.About -> AboutCategory(
                 onOpenLicenses = access.onOpenLicenses,
                 onOpenRepo = access.onOpenRepoLink,
+                onOpenPrivacyPolicy = access.onOpenPrivacyPolicy,
             )
             SettingsCategory.Mode -> access.modePrefs?.let { p ->
                 ModeCategory(prefs = p)

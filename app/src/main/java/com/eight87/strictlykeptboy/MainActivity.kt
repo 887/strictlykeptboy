@@ -240,6 +240,15 @@ class MainActivity : ComponentActivity() {
                                     startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                                 }
                             },
+                            // Phase W.7 — privacy policy lives in-repo at
+                            // docs/privacy-policy.md; the canonical URL is the
+                            // GitHub rendering of that file on the main branch.
+                            onOpenPrivacyPolicy = {
+                                val url = "https://github.com/887/strictlykeptboy/blob/main/docs/privacy-policy.md"
+                                runCatching {
+                                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                                }
+                            },
                         ),
                         onWizardScaffold = { draft ->
                             runCatching {

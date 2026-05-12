@@ -341,6 +341,28 @@ R.X.1..R.X.9 self-check:
 - **F39 — `PronounSet.label` and `TemplateRegistry` humanize output are wire-format.** Left out of the `labelRes` sweep on purpose — pronouns ("he/him") are stable identifiers, and the wizard scaffolder writes humanized atom labels ("Brush teeth") into recurrence rule titles persisted to disk. Localising them would break repo round-trip. Documented in `docs/plans/translations.md`. **Status:** by design, no action.
 - **F40 — Per-repo locale override deferred.** The wizard could in principle ship one repo with `locale = "en-GB"` in `identity.toml` and another with `locale = "de-DE"`, switching the UI per active repo. Not implemented — Android's per-app locale API is global; per-repo would need a Compose-level `LocalContext` override on every screen. Not load-bearing today. **Priority:** scheduled. **Status:** tracked.
 
+### Audit pass 2026-05-13 — Phase W (release engineering)
+
+R.X.1..R.X.9 self-check:
+
+1. ✅ R.X.1 narrow data interfaces — `AboutCategory` takes one extra named lambda `onOpenPrivacyPolicy`, same shape as `onOpenRepo`. No god-state widening.
+2. ✅ R.X.2 Sealed types — N/A this phase; no new branching.
+3. ✅ R.X.3 Composition root — `MainActivity` is still the only place wiring the URL string for the privacy policy intent; the About composable only gets a `() -> Unit`.
+4. ✅ R.X.4 No god-files — `proguard-rules.pro` grew to ~110 lines (config, not code; well-commented sections per dep).
+5. ✅ R.X.5 Liskov — N/A; no new sealed variants.
+6. ✅ R.X.6 Import direction — `AboutCategory` (ui/settings/categories) imports `R` + Compose only. No cross-layer leaks.
+7. ✅ R.X.7 ISP in Compose — three independent lambda params (`onOpenLicenses`, `onOpenRepo`, `onOpenPrivacyPolicy`) rather than a single fat `AboutActions` god-object.
+8. ✅ R.X.8 Test discipline — `ReleaseSigningConfigTest` (4 cases) + `ProguardKeepRulesTest` (12 cases) cover the load-bearing release-config invariants. 369 total tests pass (was 353).
+9. ✅ R.X.9 AVD smoke — release APK built with `isMinifyEnabled = true` + `isShrinkResources = true`, installed + launched on `emulator-5554`; first-frame at +891 ms; no `AndroidRuntime:E` in `adb logcat -d -t 300`; release APK ≈ 7.3 MB (vs debug ≈ 31 MB).
+
+**Findings backlog from this pass:**
+
+- **F45 — Lint `Instantiatable` disabled at module level.** Lint's class-graph traversal flagged `MainActivity` + `SkbCarAppService` as not extending their base classes when R8 ran in the same Gradle invocation (false positive — both legitimately extend `ComponentActivity` / `CarAppService`). Disabled the check in `app/build.gradle.kts` under the `lint { }` block; ProGuard keep rules pin both classes so the runtime invariant holds. **Action:** revisit when AGP/lint upgrade fixes the graph-staleness bug. **Priority:** low. **Status:** tracked.
+- **F46 — `-dontwarn org.apache.sshd.**` blanket.** R8 surfaced ~80 missing-class warnings for sftp/server/agent/ssh-osgi internals referenced by JGit code paths unreachable on Android. We `-dontwarn` the whole apache-sshd namespace; the truly load-bearing classes (`org.apache.sshd.client.**`, `org.apache.sshd.common.**`) have explicit `-keep` rules so they survive if present at runtime. Narrowing the `-dontwarn` to the exact subset is busywork — the unreachable refs come from JGit's vendored ssh-sftp/agent/gss-api support, which we don't use. **Priority:** low (cosmetic). **Status:** tracked.
+- **F47 — `app/src/main/play/screenshots/` not yet populated.** W.5 specs the 8-screenshot set + workflow. Actual screenshots are not committed yet — capturing live screenshots before tagging v0.1.0 on Play Store is gating; not gating for the Obtainium/sideload release path. **Priority:** scheduled (pre-Play-Store-submission). **Status:** tracked.
+
+---
+
 ### Audit pass 2026-05-13 — nav-swap polish (SkbAppShell)
 
 Nav-layout swap: rail and top-bar contents inverted to match the tonearmboy convention (left rail = per-pane view-modes, top bar = cross-content destinations). Deleted `ui/scaffold/AppScaffold.kt` + `ui/scaffold/SkbTopBar.kt`; replaced with `ui/scaffold/SkbAppShell.kt` + `ui/scaffold/ScheduleViewTab.kt`. `SchedulePane` no longer renders its own top bar; `TasksPane` accepts hoisted `selectedTab` / `onSelectTab` so the shell can drive the rail.

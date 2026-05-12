@@ -190,6 +190,7 @@
     <string name="settings_about_build_date">Built: %1$s</string>
     <string name="settings_about_licenses">Licenses (Phase W)</string>
     <string name="settings_about_repo_link">Source on GitHub</string>
+    <string name="settings_about_privacy_policy">Privacy policy</string>
     <string name="settings_about_version_tap">strictlykeptboy v%1$s</string>
 
     <!-- S.11 Mode -->

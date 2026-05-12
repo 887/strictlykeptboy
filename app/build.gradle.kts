@@ -38,10 +38,39 @@ android {
         buildConfigField("String", "BUILD_DATE", "\"$buildDateUtc\"")
     }
 
+    // Phase W.1 — release signing config. Env-var driven: when the three
+    // STRICTLYKEPTBOY_RELEASE_* vars are set, the release buildType signs
+    // with the user's keystore; otherwise the release build falls back to
+    // the debug keystore (same as `assembleDebug`) so personal sideload
+    // through Obtainium still works end-to-end without ceremony.
+    val releaseKeystorePath: String? = System.getenv("STRICTLYKEPTBOY_RELEASE_KEYSTORE")
+    val releaseKeyAlias: String? = System.getenv("STRICTLYKEPTBOY_RELEASE_KEY_ALIAS")
+    val releaseKeyPassword: String? = System.getenv("STRICTLYKEPTBOY_RELEASE_KEY_PASSWORD")
+    val hasReleaseSigning =
+        !releaseKeystorePath.isNullOrBlank() &&
+            !releaseKeyAlias.isNullOrBlank() &&
+            !releaseKeyPassword.isNullOrBlank() &&
+            file(releaseKeystorePath!!).exists()
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = file(releaseKeystorePath!!)
+                storePassword = releaseKeyPassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // Phase W.6 — R8/minify locked ON for release builds going forward.
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.findByName("release")
+                ?: signingConfigs.getByName("debug")
         }
     }
 
@@ -49,6 +78,16 @@ android {
         unitTests {
             isIncludeAndroidResources = true
         }
+    }
+
+    // Phase W.6 — Lint's `Instantiatable` check sees a stale class graph
+    // when R8 runs in the same Gradle invocation (KSP-generated classes
+    // + multi-module classpath ordering). MainActivity and
+    // SkbCarAppService both legitimately subclass the required base
+    // classes; the false-positive blocks `assembleRelease`. The keep
+    // rules in proguard-rules.pro ensure both survive minification.
+    lint {
+        disable += "Instantiatable"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
