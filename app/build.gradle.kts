@@ -4,8 +4,10 @@ import java.time.format.DateTimeFormatter
 
 plugins {
   alias(libs.plugins.android.application)
+  alias(libs.plugins.kotlin.android)
   alias(libs.plugins.compose.compiler)
   alias(libs.plugins.kotlin.serialization)
+  alias(libs.plugins.ksp)
 }
 
 // Capture build-time metadata for the splash / About screen. Mirrors
@@ -119,6 +121,17 @@ dependencies {
   // avoid ktoml's internal-tree-node coupling; the dep is wired so future
   // schema work (e.g. comment preservation, v2 migrations) can adopt it.
   implementation(libs.ktoml.core)
+
+  // Phase D — Room cache + indexer (D.8 read-through cache)
+  implementation(libs.androidx.room.runtime)
+  implementation(libs.androidx.room.ktx)
+  ksp(libs.androidx.room.compiler)
+  testImplementation(libs.androidx.room.testing)
+  // Robolectric runs on the host JVM. The default Android variant of
+  // androidx.sqlite:sqlite-bundled ships only the Android NDK .so; the
+  // -jvm variant ships host-OS shared libs (linux-x64, macos-arm64, …).
+  testImplementation(libs.androidx.sqlite.bundled)
+  testRuntimeOnly("androidx.sqlite:sqlite-bundled-jvm:2.5.0")
 
   // Local tests
   testImplementation(libs.junit)

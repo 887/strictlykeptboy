@@ -52,6 +52,24 @@ object RepoScanner {
             scanAll(sub)
         }
 
+    /**
+     * Parse a single file by absolute path, applying the same skip and
+     * decode rules as [scanAll]. Used by the incremental indexer
+     * (Phase D.3) to avoid re-walking the whole tree on small diffs.
+     * Returns `null` if the file would have been skipped by the
+     * walker (hidden, attachments, unrecognised extension).
+     */
+    suspend fun parseSingle(rootDir: File, absolutePath: Path): ParseResult? =
+        withContext(Dispatchers.IO) {
+            val root = rootDir.toPath().toAbsolutePath().normalize()
+            val p = absolutePath.toAbsolutePath().normalize()
+            if (!Files.isRegularFile(p)) return@withContext null
+            if (shouldSkip(root, p)) return@withContext null
+            val name = p.fileName.toString()
+            if (!(name.endsWith(".md") || name.endsWith(".toml"))) return@withContext null
+            parseOne(root, p)
+        }
+
     private fun shouldSkip(root: Path, p: Path): Boolean {
         val rel = root.relativize(p).toString().replace('\\', '/')
         if (rel.startsWith(".git/") || rel == ".git") return true
