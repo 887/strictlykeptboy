@@ -442,51 +442,32 @@ private fun DestinationButton(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    // Tonearmboy-shape: tiny icon-only IconButton in the top-right action row.
-    // No label — the big title on the left tells the user what's selected. A
-    // small tinted dot under the icon indicates the active destination.
+    // Tonearmboy-shape: standard M3 IconButton (40dp circular hit target +
+    // circular ripple). Selected destination renders as FilledTonalIconButton
+    // so the active tab reads as a tinted circular pill — same visual
+    // language as M3 NavigationBar / NavigationRail selected items.
     val label = dest.labelString()
     val tag = "$TestTagShellDestPrefix${dest.name}"
-    val tint = if (selected) {
-        MaterialTheme.colorScheme.primary
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    }
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-        modifier = Modifier
-            .testTag(tag)
-            .semantics { contentDescription = label }
-            .clickable(onClick = onClick)
-            .size(width = 40.dp, height = 40.dp),
-    ) {
-        Icon(
-            imageVector = dest.icon,
-            contentDescription = null,
-            tint = tint,
-            modifier = Modifier.size(22.dp),
-        )
-        if (selected) {
-            Spacer(Modifier.height(2.dp))
-            Box(
-                modifier = Modifier
-                    .size(width = 16.dp, height = 2.dp)
-                    .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(1.dp)),
+    val mod = Modifier
+        .testTag(tag)
+        .semantics { contentDescription = label }
+    if (selected) {
+        androidx.compose.material3.FilledTonalIconButton(onClick = onClick, modifier = mod) {
+            Icon(
+                imageVector = dest.icon,
+                contentDescription = null,
+                modifier = Modifier.size(22.dp),
             )
-        } else {
-            // Reserve the height so the icon doesn't jitter on selection.
-            Spacer(Modifier.height(4.dp))
         }
-        // Stub the remaining slot height to keep layout stable
-        Spacer(Modifier.height(0.dp))
-        // Hidden text for tests + a11y; kept off-screen via height=0.
-        Text(
-            text = label,
-            color = Color.Transparent,
-            style = MaterialTheme.typography.labelSmall,
-            maxLines = 1,
-        )
+    } else {
+        androidx.compose.material3.IconButton(onClick = onClick, modifier = mod) {
+            Icon(
+                imageVector = dest.icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(22.dp),
+            )
+        }
     }
 }
 
