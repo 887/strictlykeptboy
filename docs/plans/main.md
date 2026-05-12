@@ -324,6 +324,8 @@ Deep-dive: [`ui-spec.md`](ui-spec.md) phase UI-R.
 
 ## Phase T — theming + personalization
 
+_T.2..T.7 shipped in commit `3966c7c`._
+
 - [x] **T.1** Launcher icon + mascot art shipped — bat-with-calendar adaptive launcher (`mipmap-*/ic_launcher.webp` + `drawable-*/ic_launcher_foreground.webp`, dark background `#0A0806`); secret about-page mascot scene at `drawable-nodpi/about_bat.webp`. Shipped in change `7afb686+`.
 - [x] **T.2** Repo icon system: sealed `RepoIconKind` (Emoji / Photo / AutoInitials) under `ui/theming/`, picker wired into `RepoSettingsScreen`. Defaults to `AutoInitials(initialsFromName, seedColorFromName)`; user can switch to mascot emoji subset or SAF-picked photo. Shipped in this change.
 - [x] **T.3** Calendar/todolist icon + color picker — `CalendarColorPicker` (12-swatch M3E palette + HEX field) + `CalendarThemePrefs` for per-`<repoId>/<calId>` JSON-backed icon + seed persistence. Shipped in this change.
