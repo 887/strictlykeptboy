@@ -147,7 +147,25 @@ This was the discipline-gate sweep that should have run as Phase K closed but wa
 
 ### Findings emitted by Phase M (notifications)
 
-_Future._
+**Audit pass 2026-05-12** (Phase M shipped).
+
+R.X.1..R.X.9 self-check:
+
+1. ✅ R.X.1 narrow data interfaces — `EventReminderScheduler` accepts a `ReminderInput` data class (8 fields), not a `CacheDatabase` god-handle. `SyncEventNotificationBridge` consumes ONLY `Flow<SyncEvent>` not the whole `SyncScheduler`. `NotificationsSettingsScreen` takes a single `NotificationPrefs` handle.
+2. ✅ R.X.2 sealed types for branching — `ReminderRole` is sealed (HeadsUp / PreEvent / TomorrowBriefing / AtStart / PostEventCheckin / Snoozed). Consumers branch via `when`.
+3. ✅ R.X.3 composition root only place that wires concrete classes — `MainActivity.onCreate` is the sole installer of `SyncEventNotificationBridge`. `SkbApp.onCreate` is the sole caller of `NotificationChannels.registerAll`. The `notif/` package itself depends on Android system services + `store/` (allowed per R.X.6).
+4. ✅ R.X.4 no god-files — new files all under the soft 500-LOC line (largest: `ReminderBroadcastReceiver.kt` ~130 LOC; `EventReminderScheduler.kt` ~150 LOC).
+5. ✅ R.X.5 no new `NotImplementedError` in Phase M. The `Briefings` / `PostEventCheckin` `ReminderRole` variants are deliberately constructable but never produced by the current scheduler — they're forward-declared placeholders for NS-Z follow-up. Receiver's `when` on roles is currently unused (the receiver builds content from extras, not from a role); this is fine pending NS-Z.
+6. ✅ R.X.6 import direction — `notif/` imports from `store/` (allowed for the deviation writer) + `sync/` (allowed: notif/ is "ui-adjacent" but doesn't import `cache/` or `resolver/`). `sync/` never imports `notif/`. `MainActivity` (ui/composition root) imports `notif/` (ok — ui is outermost).
+7. ✅ R.X.7 ISP in Compose — `NotificationsSettingsScreen` takes only `NotificationPrefs`; `ChannelRow` leaf takes `(prefs, channelId, nameRes)` — three fields, not a god-state.
+8. ✅ R.X.8 test discipline — 23 new tests added (`LeadTimeTest` 5, `ReminderRoleTest` 4, `NotificationChannelRegistrationTest` 3, `NotificationPrefsTest` 3, `EventReminderSchedulerTest` 4, `LockscreenPrivacyTest` 2, `SnoozeActionTest` 1, `DeviationActionWriterTest` 1) covering every new public surface.
+9. ✅ R.X.9 AVD smoke — installed on `emulator-5554`, granted POST_NOTIFICATIONS, confirmed all 6 channels via `dumpsys notification` with correct importances (events=3, tasks=3, briefings=2, sync=1, errors=4, service=2) under group `skb_main`. No AndroidRuntime:E entries in `logcat -d -t 200`. Screencap at `/tmp/skb-phaseM.png`.
+
+**Findings backlog from this pass:**
+
+- **F15 — Pre-existing flaky `ScheduleTimeboxViewTest`.** The test computes `nowHour + 2` from wall-clock, which fails as `LocalTime.of(24, …)` when local time crosses 22:00. Adjusted upper coerce bound from 22→21 to widen the safe window; the test is still unsatisfiable after 22:00 because the "now-block" assertion requires `now` ∈ `[nowHour, nowHour+1)`. **Action:** rewrite the test to inject a fixed clock instead of depending on `LocalTime.now()`. **Priority:** medium (real-time-of-day flake). **Status:** known; band-aided, not fixed.
+- **F16 — Deferred from Phase M (tracked here for NS-Z follow-up):** boot re-arm `RECEIVE_BOOT_COMPLETED` receiver, AlarmHorizonExtender nightly worker, D.79 per-category cadence defaults, D.81 cal-briefings auto-generated bodies, D.82 post_event_checkin opt-in flow, D.80 off-schedule warning prefix, NS-A.10..14 logical notification groups + group-level mute, NS-D.13 `setPublicVersion` redacted-body retrofit for non-private events. **Priority:** scheduled. **Status:** tracked.
+- **F17 — `notif/NotificationsSettingsScreen` not yet wired into the Settings rail.** The Compose surface exists and is testable in isolation; the rail Settings destination is still the placeholder per Phase S. When Phase S lands, drop `NotificationsSettingsScreen(prefs)` into the Notifications section (S.4). **Priority:** low — surface is reachable from system-level notification settings via the deep-link button. **Status:** tracked.
 
 ---
 

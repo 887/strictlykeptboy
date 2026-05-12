@@ -1,6 +1,7 @@
 package com.eight87.strictlykeptboy
 
 import android.app.Application
+import com.eight87.strictlykeptboy.notif.NotificationChannels
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.security.Security
 
@@ -26,5 +27,9 @@ class SkbApp : Application() {
         Security.insertProviderAt(BouncyCastleProvider(), 1)
 
         super.onCreate()
+
+        // Phase M.1 — register all six notification channels at app start.
+        // Idempotent: the OS dedupes by id, so we re-run on every cold start.
+        NotificationChannels.registerAll(this)
     }
 }

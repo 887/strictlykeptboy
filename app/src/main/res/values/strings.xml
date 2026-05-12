@@ -236,4 +236,41 @@
     <string name="wizard_done_praise_line">— %1$s</string>
     <string name="wizard_done_open">Open my calendar</string>
     <string name="wizard_done_fallback_now_card_title">brush teeth</string>
+
+    <!-- Phase M — notification channels -->
+    <string name="notif_channel_events_name">Events</string>
+    <string name="notif_channel_events_desc">Reminders for upcoming calendar events.</string>
+    <string name="notif_channel_tasks_name">Tasks</string>
+    <string name="notif_channel_tasks_desc">Reminders for tasks with a due date.</string>
+    <string name="notif_channel_briefings_name">Briefings</string>
+    <string name="notif_channel_briefings_desc">Morning and evening summaries of upcoming events.</string>
+    <string name="notif_channel_sync_name">Sync results</string>
+    <string name="notif_channel_sync_desc">Silent updates after each sync attempt.</string>
+    <string name="notif_channel_errors_name">Errors</string>
+    <string name="notif_channel_errors_desc">Authentication failures and conflicts that need review.</string>
+    <string name="notif_channel_foreground_name">Background sync</string>
+    <string name="notif_channel_foreground_desc">Persistent notification shown while a sync is in progress.</string>
+
+    <!-- Phase M — notification content + actions -->
+    <string name="notif_event_role_pre">Upcoming event</string>
+    <string name="notif_event_private_title">Scheduled event</string>
+    <string name="notif_action_open">Open</string>
+    <string name="notif_action_snooze_10">Snooze 10m</string>
+    <string name="notif_action_snooze_30">Snooze 30m</string>
+    <string name="notif_action_snooze_60">Snooze 1h</string>
+    <string name="notif_action_i_didnt">I didn\'t</string>
+    <string name="notif_action_partial">Partial</string>
+
+    <!-- Phase M.4 — sync result notifications -->
+    <string name="notif_sync_success">Synced %1$d repos · %2$s</string>
+    <string name="notif_sync_conflict_title">Sync conflict</string>
+    <string name="notif_sync_conflict">%1$d conflict(s) need review</string>
+    <string name="notif_sync_auth_title">Sign in needed</string>
+    <string name="notif_sync_auth_body">%1$s — session expired, tap to sign in again.</string>
+
+    <!-- Phase M.3 — settings -->
+    <string name="settings_notifications_title">Notifications</string>
+    <string name="settings_notif_channel_enabled">Enabled</string>
+    <string name="settings_notif_channel_silent">Silent (no sound)</string>
+    <string name="settings_notif_open_system">Open system notification settings</string>
 </resources>

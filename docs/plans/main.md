@@ -229,16 +229,18 @@ Deep-dive: [`draft-lifestyle-wizard.md`](draft-lifestyle-wizard.md) phases LW-A 
 
 ---
 
-## Phase M — notifications
+## Phase M — notifications (shipped in commit `_TBD_`)
 
 Deep-dive: [`notifications-sharing-import.md`](notifications-sharing-import.md) phases NS-A through NS-D.
 
-- [ ] **M.1** Notification channels: events, tasks, sync, errors
-- [ ] **M.2** AlarmManager scheduling per event lead-time
-- [ ] **M.3** Notification groups in settings — per-calendar membership, group-level toggles
-- [ ] **M.4** Sync status notification (silent default)
-- [ ] **M.5** Foreground service notification (low-importance, persistent)
-- [ ] **M.6** Snooze + dismiss + open-event actions
+- [x] **M.1** Notification channels: events, tasks, briefings, sync, errors, foreground (all 6 registered in `SkbApp.onCreate` via `notif/NotificationChannels.kt`)
+- [x] **M.2** AlarmManager scheduling per event lead-time (`notif/EventReminderScheduler.kt` + `ReminderBroadcastReceiver`; lead-time grammar in `notif/LeadTime.kt`; `setExactAndAllowWhileIdle` + `USE_EXACT_ALARM`)
+- [x] **M.3** Notification settings: per-channel enable + silent toggles + per-calendar enable/silent/lead-time overrides in `notif/NotificationPrefs.kt` + `NotificationsSettingsScreen` composable. Per-calendar logical groups (D.14 NS-A.10..14) DEFERRED to follow-up.
+- [x] **M.4** Sync status notification (silent default) via `notif/SyncResultNotifier.kt` + `SyncEventNotificationBridge` listening on `SyncScheduler.eventsFlow`.
+- [x] **M.5** Foreground service notification — `SyncService` now points at the `skb.service` low-importance channel (registered by `NotificationChannels`).
+- [x] **M.6** Snooze (10/30/60m) + Open + I-didn't / Partial actions; deviation actions go through `notif/DeviationActionWriter` which calls `EntityWriter.write` of a `Deviation`.
+
+**Deferred (NS-Z follow-up):** boot re-arm (`RECEIVE_BOOT_COMPLETED`), AlarmHorizonExtender nightly worker, D.79 per-category cadence defaults, D.81 cal-briefings auto-bodies, D.82 post_event_checkin opt-in flow, D.80 off-schedule warning prefix, NS-A.10..14 logical notification groups + group-level mute, NS-D.13 `setPublicVersion` redacted-body retrofit for non-private events.
 
 ---
 

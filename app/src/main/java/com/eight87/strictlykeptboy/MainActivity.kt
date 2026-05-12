@@ -77,6 +77,12 @@ class MainActivity : ComponentActivity() {
         SyncRuntime.scheduler = scheduler
         SyncRuntime.statusStore = statusStore
 
+        // Phase M.4 — bridge scheduler events to the silent sync-result
+        // notification channel. Lives in MainActivity (composition root) per
+        // R.X.3 — only place that knows the concrete types.
+        com.eight87.strictlykeptboy.notif.SyncEventNotificationBridge
+            .install(applicationContext, scheduler.eventsFlow)
+
         // Phase F stub: RepoStore + DAO wiring lands in Phase F→G integration.
         // For now we feed an empty snapshot + empty sources so SchedulePane
         // renders the EmptyScheduleState (F.5).

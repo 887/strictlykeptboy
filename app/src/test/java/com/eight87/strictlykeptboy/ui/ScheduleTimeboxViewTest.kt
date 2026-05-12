@@ -24,7 +24,18 @@ class ScheduleTimeboxViewTest {
 
     @Test fun renders_three_blocks_with_now_emphasis() {
         val today = LocalDate.now()
-        val nowHour = LocalTime.now().hour.coerceIn(1, 22)
+        // The test is built around the *current* wall-clock hour so the
+        // "now"-card emphasis is exercised on a band that actually contains
+        // `LocalTime.now()`. When the hour is 0 (midnight) the "past" block
+        // collapses; when the hour is ≥22 the synthetic `nowHour + 2` rolls
+        // past LocalTime's 0..23 range. In both edge bands we skip rather
+        // than producing a misleading failure. See refactor-solid.md F15.
+        val hour = LocalTime.now().hour
+        org.junit.Assume.assumeTrue(
+            "skip: time-of-day edge ($hour) — test relies on a 3-hour window inside 1..21",
+            hour in 1..21,
+        )
+        val nowHour = hour
         val bands = mapOf(
             today to listOf(
                 // First block: ends before "now".

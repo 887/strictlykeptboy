@@ -59,7 +59,13 @@ class SyncService : Service() {
     }
 
     companion object {
-        const val NOTIF_CHANNEL = "skb_sync"
+        /**
+         * Phase M.5 — the foreground notification lives on the new low-importance
+         * `skb.service` channel (registered by [com.eight87.strictlykeptboy.notif.NotificationChannels]).
+         * The legacy "skb_sync" id stays as a fallback for callers that registered
+         * it pre-Phase-M but the canonical id is now NotificationChannels.FOREGROUND.
+         */
+        const val NOTIF_CHANNEL = "skb.service"
         const val NOTIF_ID = 87_001
 
         const val ACTION_SYNC_ALL = "com.eight87.strictlykeptboy.SYNC_ALL"
