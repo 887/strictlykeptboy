@@ -346,7 +346,7 @@ _T.2..T.7 shipped in commit `3966c7c`._
 
 ---
 
-## Phase V — performance pass — shipped (see `docs/perf-baseline-2026-05.md`)
+## Phase V — performance pass — shipped in commit `cb3cbf9` (see `docs/perf-baseline-2026-05.md`)
 
 - [x] **V.1** Cold start budget: < 600ms to schedule day view — AVD COLD ≈ 1.5–1.7s (swiftshader; real-device re-measure pending); Robolectric AppGraph init ≈ 28ms; `PerfTraceRecorder` shipped wrapping `android.os.Trace.beginSection` for `app_oncreate` / `appgraph_init` / `mainactivity_oncreate` / `schedulepane_first_render`.
 - [x] **V.2** Sync small repo: < 2s — Robolectric (50-entity fullScan+fetch+pullRebase, file-transport bare) ≈ 34ms (within budget by 60×).
