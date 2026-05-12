@@ -229,7 +229,7 @@ Deep-dive: [`draft-lifestyle-wizard.md`](draft-lifestyle-wizard.md) phases LW-A 
 
 ---
 
-## Phase M — notifications (shipped in commit `_TBD_`)
+## Phase M — notifications (shipped in commit `4ad0deb`)
 
 Deep-dive: [`notifications-sharing-import.md`](notifications-sharing-import.md) phases NS-A through NS-D.
 
