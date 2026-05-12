@@ -45,6 +45,11 @@ import com.eight87.strictlykeptboy.git.RemoteBinding
 import com.eight87.strictlykeptboy.git.RemoteName
 import com.eight87.strictlykeptboy.git.RepoConfig
 import com.eight87.strictlykeptboy.git.Transport
+import com.eight87.strictlykeptboy.ui.theming.CalendarColorPicker
+import com.eight87.strictlykeptboy.ui.theming.RepoIconKind
+import com.eight87.strictlykeptboy.ui.theming.RepoIconPicker
+import com.eight87.strictlykeptboy.ui.theming.initialsFromName
+import com.eight87.strictlykeptboy.ui.theming.seedColorFromName
 
 const val TestTagRepoSettings = "RepoSettings"
 const val TestTagRepoSettingsRemotes = "RepoSettings-Remotes"
@@ -112,11 +117,43 @@ fun RepoSettingsScreen(
                 label = { Text(stringResource(R.string.repo_settings_display_name)) },
                 modifier = Modifier.fillMaxWidth(),
             )
-            OutlinedTextField(
-                value = draft.iconEmoji.orEmpty(),
-                onValueChange = { draft = draft.copy(iconEmoji = it.ifBlank { null }) },
-                label = { Text(stringResource(R.string.repo_settings_icon_emoji)) },
-                modifier = Modifier.fillMaxWidth(),
+            // Phase T.2 — repo icon picker. The legacy `iconEmoji` field
+            // remains the persisted source for emoji-kind icons; photo +
+            // auto-initials map onto the same field for now (photo: store
+            // the URI string, prefix-tagged; initials: empty → renderer
+            // re-derives from displayName + seedColor).
+            val currentKind: RepoIconKind = run {
+                val raw = draft.iconEmoji
+                when {
+                    raw == null -> RepoIconKind.AutoInitials(
+                        initials = initialsFromName(draft.displayName),
+                        seedColor = seedColorFromName(draft.displayName),
+                    )
+                    raw.startsWith("photo:") -> RepoIconKind.Photo(raw.removePrefix("photo:"))
+                    else -> RepoIconKind.Emoji(raw)
+                }
+            }
+            RepoIconPicker(
+                displayName = draft.displayName,
+                current = currentKind,
+                onKindChange = { kind ->
+                    draft = draft.copy(
+                        iconEmoji = when (kind) {
+                            is RepoIconKind.Emoji -> kind.glyph
+                            is RepoIconKind.Photo -> "photo:${kind.uri}"
+                            is RepoIconKind.AutoInitials -> null
+                        },
+                    )
+                },
+            )
+            // Phase T.5 — per-repo color seed override.
+            Text(
+                stringResource(R.string.repo_settings_color_seed_header),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            CalendarColorPicker(
+                currentArgb = draft.colorSeed,
+                onSeedChange = { argb -> draft = draft.copy(colorSeed = argb) },
             )
         }
 

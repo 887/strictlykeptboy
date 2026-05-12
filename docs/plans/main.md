@@ -325,12 +325,12 @@ Deep-dive: [`ui-spec.md`](ui-spec.md) phase UI-R.
 ## Phase T — theming + personalization
 
 - [x] **T.1** Launcher icon + mascot art shipped — bat-with-calendar adaptive launcher (`mipmap-*/ic_launcher.webp` + `drawable-*/ic_launcher_foreground.webp`, dark background `#0A0806`); secret about-page mascot scene at `drawable-nodpi/about_bat.webp`. Shipped in change `7afb686+`.
-- [ ] **T.2** Repo icon system: emoji-in-SVG-wrapper, photo, auto-initials. Default repo icon defaults to the user's chosen avatar species (per Phase K.3 / Phase WW) unless explicitly overridden.
-- [ ] **T.3** Calendar/todolist icon + color picker
-- [ ] **T.4** Event emoji prefix UI
-- [ ] **T.5** Dynamic color override per repo (color seed)
-- [ ] **T.6** Themed-icon monochrome layer (Android 13+) — generate silhouette of the bat-with-calendar for `<monochrome>` adaptive-icon slot; currently omitted so themed icons fall back to the system default
-- [ ] **T.7** Secret About scene unlock — tap the version number 7 times in `Settings → About` to reveal `about_bat.webp` full-screen with the `STRICTLYKEPTBOY — schedule dreams. keep promises.` tagline rendered below. Easter-egg only; never linked from main UI
+- [x] **T.2** Repo icon system: sealed `RepoIconKind` (Emoji / Photo / AutoInitials) under `ui/theming/`, picker wired into `RepoSettingsScreen`. Defaults to `AutoInitials(initialsFromName, seedColorFromName)`; user can switch to mascot emoji subset or SAF-picked photo. Shipped in this change.
+- [x] **T.3** Calendar/todolist icon + color picker — `CalendarColorPicker` (12-swatch M3E palette + HEX field) + `CalendarThemePrefs` for per-`<repoId>/<calId>` JSON-backed icon + seed persistence. Shipped in this change.
+- [x] **T.4** Event emoji prefix UI — `splitLeadingEmoji` + `EventTitleEmojiPreview` Composable strips leading emoji codepoint and renders it larger next to the title. Convention persisted on the raw title; full editor lands when Phase EE ships. Shipped in this change.
+- [x] **T.5** Dynamic color override per repo (color seed) — `PerRepoColorScope` + `LocalSchemeProvider` CompositionLocal install a seed-derived M3E `ColorScheme` over the app-wide scheme for the active pane; per-repo `colorSeed` editable in repo settings via `CalendarColorPicker`. Shipped in this change.
+- [x] **T.6** Themed-icon monochrome layer (Android 13+) — `drawable/ic_launcher_monochrome.xml` bat silhouette vector + `<monochrome>` slot in both `mipmap-anydpi-v26/ic_launcher.xml` and `ic_launcher_round.xml`. Shipped in this change.
+- [x] **T.7** Secret About scene unlock — `AboutCategory` now uses 7 rapid taps with a 2-second reset window (`ABOUT_EASTER_EGG_TAP_COUNT`, `ABOUT_EASTER_EGG_RESET_MS`); reveals `about_bat.webp` full-screen plus the `about_easter_egg_tagline` ("STRICTLYKEPTBOY — schedule dreams. keep promises."); BackHandler + tap-to-dismiss. Shipped in this change.
 
 ---
 

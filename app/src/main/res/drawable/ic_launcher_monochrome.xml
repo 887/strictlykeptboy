@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Phase T.6 — Monochrome adaptive-icon layer (Android 13+).
+
+  Silhouette of the bat-with-calendar mascot, rendered as a single-tint
+  vector so the system can re-color it from the user's themed-icon
+  palette. The path data is the bat outline only — no calendar grid,
+  no eye highlights — so the silhouette reads cleanly at launcher size.
+
+  Drawn into the standard 108dp adaptive-icon safe zone (66dp visible
+  inset, 21dp padding each side per Google's adaptive-icon spec).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Bat head + body: rounded rect torso with a tilted oval head -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M54,42
+            C46,42 40,48 40,56
+            L40,64
+            C40,72 46,78 54,78
+            C62,78 68,72 68,64
+            L68,56
+            C68,48 62,42 54,42 Z" />
+    <!-- Pointed ears -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M44,44 L42,32 L50,42 Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M64,44 L66,32 L58,42 Z" />
+    <!-- Left wing -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M40,56
+            C30,52 20,54 14,62
+            C22,62 28,64 30,70
+            C28,66 26,72 22,76
+            C30,74 36,72 40,68 Z" />
+    <!-- Right wing -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M68,56
+            C78,52 88,54 94,62
+            C86,62 80,64 78,70
+            C80,66 82,72 86,76
+            C78,74 72,72 68,68 Z" />
+</vector>

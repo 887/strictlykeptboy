@@ -505,4 +505,17 @@
     <string name="auto_time_until_minutes">in %1$d minutes</string>
     <string name="auto_time_until_hours">in %1$d hours</string>
     <string name="auto_open_in_app">Open in app</string>
+
+    <!-- Phase T — theming + personalization -->
+    <string name="repo_icon_picker_preview">Icon preview</string>
+    <string name="repo_icon_kind_emoji">Emoji</string>
+    <string name="repo_icon_kind_photo">Photo</string>
+    <string name="repo_icon_kind_initials">Auto-initials</string>
+    <string name="repo_icon_emoji_subset">Pick a mascot</string>
+    <string name="repo_icon_emoji_custom">Custom emoji or character</string>
+    <string name="cal_color_picker_pick_swatch">Pick a swatch</string>
+    <string name="cal_color_picker_hex_label">HEX (#RRGGBB)</string>
+    <string name="repo_settings_color_seed_header">Color seed (per-repo theme)</string>
+    <string name="about_easter_egg_tagline">STRICTLYKEPTBOY — schedule dreams. keep promises.</string>
+    <string name="about_easter_egg_cd">Mascot scene</string>
 </resources>
