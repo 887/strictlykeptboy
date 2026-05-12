@@ -1,5 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.MyApplication" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- Base app theme. Compose-driven UI (MaterialExpressiveTheme) renders
+         on top; this theme only governs window-level chrome (splash background,
+         status-bar handling). The Light parent is incidental — windowBackground
+         is overridden to the bat-charcoal so the system splash + cold-start
+         frame don't flashbang against the dark Compose surface. -->
+    <style name="Theme.MyApplication" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/splash_background</item>
+        <!-- Android 12+ (API 31+) SplashScreen API attrs. The system draws
+             these for the cold-start splash; without them it falls back to
+             white. -->
+        <item name="android:windowSplashScreenBackground">@color/splash_background</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@color/splash_background</item>
+    </style>
+
 </resources>

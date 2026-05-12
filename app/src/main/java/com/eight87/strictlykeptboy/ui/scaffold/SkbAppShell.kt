@@ -343,13 +343,12 @@ private fun ShellTopBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            // Far-left: identity (bat avatar) — moved here from far-right per
-            // user direction. Tapping it opens the identity sheet (HV-R Settings → Identity).
-            IdentityAvatar(onClick = onIdentityClick)
-            // Repo switcher reduced to a compact icon button (folder glyph) —
-            // active repo name surfaces via tooltip / contentDescription. The old
-            // chip-with-text was eating row width on Compact.
-            RepoSwitcherIconButton(activeRepoName = activeRepoName, onClick = onRepoSwitcherClick)
+            // Far-left: bat avatar IS the repo switcher. User observed the
+            // bat + folder were doing the same job visually. The bat carries
+            // the active-repo context (one bat per repo if user customises
+            // identity.toml later); tap opens the repo-switcher sheet.
+            // Identity preferences live in Settings → Identity (S.8b), not here.
+            IdentityAvatar(onClick = onRepoSwitcherClick)
             // Destination buttons fill the rest of the row.
             val destScroll = rememberScrollState()
             Row(
@@ -439,7 +438,7 @@ private fun DestinationButton(
             .semantics { contentDescription = label }
             .background(containerColor, RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
-            .requiredWidth(56.dp)
+            .requiredWidth(70.dp)
             .padding(horizontal = 4.dp, vertical = 4.dp),
     ) {
         Icon(

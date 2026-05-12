@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Splash + window background. Matches the bat launcher icon background
+         (`mipmap-anydpi-v26/ic_launcher.xml` → `@drawable/ic_launcher_background`
+         → charcoal `#0A0806`) so the cold-start transition reads continuous
+         from launcher → splash → Compose dark surface. No flashbang. -->
+    <color name="splash_background">#0A0806</color>
+</resources>
