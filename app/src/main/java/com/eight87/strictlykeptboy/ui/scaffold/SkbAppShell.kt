@@ -343,10 +343,14 @@ private fun ShellTopBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            RepoSwitcherChip(activeRepoName = activeRepoName, onClick = onRepoSwitcherClick)
-            // Destination buttons — horizontally arranged, scroll if narrow.
-            // Each button is icon+label so the destination is readable
-            // without TalkBack; icons-only is deferred to a future polish.
+            // Far-left: identity (bat avatar) — moved here from far-right per
+            // user direction. Tapping it opens the identity sheet (HV-R Settings → Identity).
+            IdentityAvatar(onClick = onIdentityClick)
+            // Repo switcher reduced to a compact icon button (folder glyph) —
+            // active repo name surfaces via tooltip / contentDescription. The old
+            // chip-with-text was eating row width on Compact.
+            RepoSwitcherIconButton(activeRepoName = activeRepoName, onClick = onRepoSwitcherClick)
+            // Destination buttons fill the rest of the row.
             val destScroll = rememberScrollState()
             Row(
                 modifier = Modifier
@@ -364,7 +368,6 @@ private fun ShellTopBar(
                 }
             }
             SyncButton(onClick = onSyncClick)
-            IdentityAvatar(onClick = onIdentityClick)
         }
     }
 }
@@ -375,6 +378,35 @@ private fun ShellTopBar(
 private fun Modifier.androidx_horizontalScroll(
     state: androidx.compose.foundation.ScrollState,
 ): Modifier = this.horizontalScroll(state)
+
+@Composable
+private fun RepoSwitcherIconButton(
+    activeRepoName: String,
+    onClick: () -> Unit,
+) {
+    // Compact icon-only repo switcher — active repo name carried by
+    // contentDescription for a11y + tooltip. Folder glyph mirrors the
+    // Repos destination icon so the visual language stays consistent.
+    Box(
+        modifier = Modifier
+            .testTag("ShellRepoSwitcher")
+            .semantics { contentDescription = "Repo: $activeRepoName" }
+            .background(
+                MaterialTheme.colorScheme.surfaceVariant,
+                RoundedCornerShape(12.dp),
+            )
+            .clickable(onClick = onClick)
+            .size(40.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Folder,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(22.dp),
+        )
+    }
+}
 
 @Composable
 private fun DestinationButton(
