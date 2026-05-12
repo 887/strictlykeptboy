@@ -181,7 +181,7 @@ Round 1 shipped in commit `3fbfb78` — `ui/repos/` package with `ReposPane` hos
 
 Deep-dive: [`sync-engine.md`](sync-engine.md) phases SE-G through SE-L.
 
-Shipped in change `<pending>` (see commit message — `Implement Phase J — sync orchestration`).
+Shipped in change `9b20722`.
 
 - [x] **J.1** Foreground service `SyncService` with `FOREGROUND_SERVICE_TYPE_DATA_SYNC`. Per Phase ZZ.H, no foreground work is scheduled for repos where `remotes.isEmpty()`.
 - [x] **J.2** Sync scheduler — per-repo interval + on-app-foreground + on-connectivity-restored. Per Phase ZZ.D, scheduler iterates every fetch-enabled remote per repo and collects per-remote results.
