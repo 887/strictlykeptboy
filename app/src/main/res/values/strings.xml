@@ -347,4 +347,18 @@
     <string name="import_preview_cancel">Cancel</string>
     <string name="import_done">Imported %1$d entries</string>
     <string name="export_done">Export saved</string>
+
+    <!-- Phase Q — Android Auto (UI-S). All user-facing literals on the
+         CarAppService surface live here per the standing string-resource
+         convention. -->
+    <string name="auto_today_title">Today</string>
+    <string name="auto_today_empty">Nothing scheduled today.</string>
+    <string name="auto_row_title">%1$s  %2$s</string>
+    <string name="auto_next_up_title">Next up</string>
+    <string name="auto_pane_duration">Duration: %1$s</string>
+    <string name="auto_pane_time_until">Starts %1$s</string>
+    <string name="auto_time_until_now">now</string>
+    <string name="auto_time_until_minutes">in %1$d minutes</string>
+    <string name="auto_time_until_hours">in %1$d hours</string>
+    <string name="auto_open_in_app">Open in app</string>
 </resources>

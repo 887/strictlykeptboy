@@ -211,6 +211,30 @@ R.X.1..R.X.9 self-check:
 
 ---
 
+## Audit pass `Phase Q (Android Auto)` — Q.1..Q.3 shipped in commit `<pending>`
+
+Files touched: `composition/AppGraph.kt` (new; +223 LOC), `auto/SkbCarAppService.kt` (new; +50), `auto/TodayEventSource.kt` (new; +42), `auto/TodayScreen.kt` (new; +71), `auto/NextUpScreen.kt` (new; +115), `MainActivity.kt` (rewrite; 417 → 327 LOC), manifest + `res/xml/automotive_app_desc.xml` + `auto_*` strings, `libs.versions.toml` + `app/build.gradle.kts` (`androidx.car.app:app:1.7.0`). Tests: `TodayScreenTest` (2), `NextUpScreenTest` (2), `CarAppRuntimeTest` (3). Suite 263 → 270.
+
+1. ✅ R.X.1 narrow data interface — `TodayEventSource` is a single-method `fun interface`; the Auto surface takes only that, not `Renderer` / `RepoStore` / `CacheDatabase`.
+2. ✅ R.X.2 sealed types — n/a; the Auto template surface is a small two-screen stack, no branching that wanted sealedness.
+3. ✅ R.X.3 composition root — **F22 closed.** Extracted `AppGraph` as the single place that knows `RepoStore.open`, `SyncScheduler(...)`, `CommonTimeFinder(...)`, `TodayEventSource` factory, etc. `MainActivity` now only constructs + parks the graph, wires SAF launchers, and hands narrow surfaces to `AppScaffold`. `SkbCarAppService` reaches the graph via the new `CarAppRuntime` handle (mirrors `SyncRuntime`).
+4. ✅ R.X.4 — every new file under SRP soft threshold. `AppGraph.kt` 223 LOC, `MainActivity.kt` 327 LOC (down 90), Auto screens 50-115 each.
+5. ✅ R.X.5 — no `NotImplementedError` on the new public surface. `TodayEventSource` has a real empty-list fallback in `SkbSession.onCreateScreen` when `CarAppRuntime.todayEventSource` is `null` (Auto cold-start before phone-side `onCreate`).
+6. ✅ R.X.6 import direction — `composition/AppGraph.kt` is the only place that imports both `auto/*` and `sync/*` and `git/*`; `auto/*` files import only `resolver/*` (data) + `androidx.car.app.*`. No reverse-direction imports.
+7. ✅ R.X.7 ISP in Compose — n/a directly (Auto isn't Compose) but the analog holds: `TodayScreen` takes `(CarContext, TodayEventSource)`, not a god-state. `NextUpScreen` takes `(CarContext, focus, allToday)` — three narrow params.
+8. ✅ R.X.8 — 7 new tests on the new public surfaces (`TodayScreen.onGetTemplate`, `NextUpScreen.onGetTemplate`, `CarAppRuntime` contract). Suite 263 → 270.
+9. ✅ R.X.9 AVD smoke — `:app:assembleDebug` + `adb install -r` + `am start` clean; app process up (pid present, no `AndroidRuntime:E`); `cmd package query-services -a androidx.car.app.CarAppService` lists `com.eight87.strictlykeptboy.auto.SkbCarAppService`; `dumpsys package` shows the service resolver registration + the automotive `<meta-data>` reference. **DHU deferred** — no `~/Android/Sdk/extras/google/auto/desktop-head-unit` on this host; running the Auto Simulator end-to-end is a follow-up.
+
+**Findings backlog from this pass:**
+
+- **F26 — `AppGraph` shipped; F22 closed.** The composition-root extraction landed inline with Phase Q. `MainActivity` is back under 350 LOC and `AppGraph` (223 LOC) absorbs the wiring growth from Phases J/K/N/P/Q. The new "creep" trigger should now be `AppGraph` itself crossing ~500 LOC, at which point we sub-divide into `SyncGraph` / `UiGraph` / `AutoGraph` modules. **Priority:** low. **Status:** tracked.
+- **F27 — `TodayEventSource` reads from `AppGraph.sources` directly, which is the Phase F→G integration stub (empty list).** Once the Room → snapshot bridge lands, the Auto surface lights up "for free" but the `renderTodaySync()` fast-path skips recurrence materialization, supersedence, and off-schedule tagging. That's fine for v1 (the car UI doesn't show those annotations) but if a future Q.4/Q.5 voice surface needs the full Renderer output, replace `TodayEventSource` with a coroutine-suspending variant that runs the real `Renderer.render(...)` over a today-scoped `DateRange`. **Priority:** low. **Status:** tracked.
+- **F28 — DHU not available in this environment.** The Desktop Head Unit binaries are not on this host; we verified the service is registered + the app launches cleanly, but cannot click through the actual ListTemplate / PaneTemplate rendering in a car projection. **Action:** when the user has DHU installed (or on a real Android Auto head unit), exercise: cold-start Auto → expect empty Today; phone-launch → Auto reload → expect populated Today once Phase F→G bridge lands. **Priority:** low. **Status:** deferred.
+- **F29 — `setHeaderAction` / `setTitle` deprecated in `androidx.car.app:1.7.0`.** Kotlin emits deprecation warnings on `ListTemplate.Builder.setHeaderAction` + `setTitle` and `PaneTemplate.Builder.setHeaderAction` + `setTitle`. The car-app library moved to `Header` objects in the post-1.7 line. **Action:** migrate to `Header.Builder()` API when we bump to the next stable. **Priority:** low. **Status:** tracked.
+- **F30 — `CarAppRuntime` is a process-wide global, same posture as `SyncRuntime`.** Acceptable for the same reasons (no DI framework in v1, decoupled service binding), but the pair-of-globals pattern will repeat if Phase R / Phase S add more headless services. When the third one lands, replace with a lightweight service-locator holder owned by `AppGraph`. **Priority:** low. **Status:** tracked.
+
+---
+
 ## Standing work-streams
 
 These are continuous, NOT one-shot phases:

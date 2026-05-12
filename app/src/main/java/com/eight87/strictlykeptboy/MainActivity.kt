@@ -14,41 +14,34 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import com.eight87.strictlykeptboy.composition.AppGraph
 import com.eight87.strictlykeptboy.git.AuthorIdentity
 import com.eight87.strictlykeptboy.git.GitRepo
 import com.eight87.strictlykeptboy.git.GitRepoRegistry
 import com.eight87.strictlykeptboy.git.RepoConfig
 import com.eight87.strictlykeptboy.git.RepoStore
-import com.eight87.strictlykeptboy.git.auth.SecretsStore
-import com.eight87.strictlykeptboy.sync.SyncRuntime
-import com.eight87.strictlykeptboy.sync.SyncScheduler
 import com.eight87.strictlykeptboy.sync.SyncService
-import com.eight87.strictlykeptboy.sync.SyncStatusStore
 import java.io.File
-import com.eight87.strictlykeptboy.resolver.RepoSnapshot
-import com.eight87.strictlykeptboy.resolver.Renderer
-import com.eight87.strictlykeptboy.theme.AppearancePrefs
 import com.eight87.strictlykeptboy.theme.StrictlyKeptBoyTheme
-import com.eight87.strictlykeptboy.ui.repos.ReposViewState
 import com.eight87.strictlykeptboy.ui.scaffold.AppScaffold
-import com.eight87.strictlykeptboy.ui.schedule.ScheduleViewModePrefs
 import com.eight87.strictlykeptboy.ui.schedule.ScheduleViewState
-import com.eight87.strictlykeptboy.ui.together.BusySource
-import com.eight87.strictlykeptboy.ui.together.CommonTimeFinderPort
-import com.eight87.strictlykeptboy.ui.together.TogetherRepoOption
 import com.eight87.strictlykeptboy.ui.together.TogetherViewModel
-import com.eight87.strictlykeptboy.resolver.CommonTimeFinder
-import com.eight87.strictlykeptboy.ui.wizard.AgeGatePrefs
 import com.eight87.strictlykeptboy.ui.wizard.AgeGateScreen
-import com.eight87.strictlykeptboy.ui.wizard.NeutralModePrefs
 import com.eight87.strictlykeptboy.ui.wizard.WizardScaffolder
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
+/**
+ * Composition root (R.X.3). Per F22 the concrete-class instantiation
+ * was extracted into [AppGraph] in Phase Q. This file now does three
+ * things only:
+ *   1. Construct + park the [AppGraph].
+ *   2. Wire up the SAF launchers (they need `ActivityResultLauncher`,
+ *      which is `ComponentActivity`-scoped).
+ *   3. Set Compose content + pass the narrow surfaces down.
+ *
+ * Anything that adds more than a handful of LOC here should land in
+ * `AppGraph` instead.
+ */
 class MainActivity : ComponentActivity() {
 
     private var deepLinkHandler: ((Intent) -> Unit)? = null
@@ -104,94 +97,28 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        val appearancePrefs = AppearancePrefs.open(this)
-        val viewModePrefs = ScheduleViewModePrefs.open(this)
-
-        // Phase I — RepoStore + SecretsStore live in EncryptedSharedPreferences;
-        // open here so the Repos rail destination can write through them.
-        val repoStore = RepoStore.open(this)
-        val secretsStore = SecretsStore.open(this)
-        val reposState = ReposViewState.open(this, repoStore)
+        // Phase Q (R.X.3 / F22) — composition root extracted.
+        val graph = AppGraph(applicationContext)
+        graph.parkRuntimes()
+        graph.installSyncEventBridge()
 
         // Phase O.2 — handle strictlykeptboy://share deep links.
         deepLinkHandler = { intent ->
             intent.dataString?.let { data ->
                 val action = com.eight87.strictlykeptboy.ui.share.ShareLinkReceiver.classify(data)
-                handleShareAction(action, repoStore)
+                handleShareAction(action, graph.repoStore)
             }
         }
         // Cold-start: process the launching intent immediately.
         intent?.dataString?.let { data ->
             val action = com.eight87.strictlykeptboy.ui.share.ShareLinkReceiver.classify(data)
-            handleShareAction(action, repoStore)
+            handleShareAction(action, graph.repoStore)
         }
-
-        // Phase K.14 — age gate + neutral-mode toggle prefs.
-        val ageGate = AgeGatePrefs.open(this)
-        val neutralMode = NeutralModePrefs.open(this)
-
-        // Phase J — sync orchestration. Build the scheduler once per process and
-        // park it in SyncRuntime so the foreground service can reach it.
-        val statusStore = SyncStatusStore.open(this)
-        val scheduler = SyncScheduler(
-            repoStore = repoStore,
-            statusStore = statusStore,
-            repoProvider = { cfg ->
-                GitRepoRegistry.get(cfg.repoId) ?: runCatching {
-                    GitRepo.open(
-                        rootDir = File(cfg.rootDir),
-                        repoId = cfg.repoId,
-                        remotes = cfg.remotes,
-                        primaryRemote = cfg.primaryRemote,
-                        authorIdentity = cfg.authorIdentity,
-                        defaultBranch = cfg.defaultBranch,
-                    ).also(GitRepoRegistry::put)
-                }.getOrNull()
-            },
-        )
-        scheduler.startPeriodicTicks()
-        SyncRuntime.scheduler = scheduler
-        SyncRuntime.statusStore = statusStore
-
-        // Phase M.4 — bridge scheduler events to the silent sync-result
-        // notification channel. Lives in MainActivity (composition root) per
-        // R.X.3 — only place that knows the concrete types.
-        com.eight87.strictlykeptboy.notif.SyncEventNotificationBridge
-            .install(applicationContext, scheduler.eventsFlow)
-
-        // Phase F stub: RepoStore + DAO wiring lands in Phase F→G integration.
-        // For now we feed an empty snapshot + empty sources so SchedulePane
-        // renders the EmptyScheduleState (F.5).
-        val activeRepoName = MutableStateFlow("demo-repo")
-        val snapshot = MutableStateFlow(RepoSnapshot(emptyList(), emptyList(), emptyList()))
-        val sources = MutableStateFlow(
-            Renderer.Sources(
-                events = emptyList(),
-                rules = emptyList(),
-                exceptionsByRule = emptyMap(),
-                deviations = emptyList(),
-                overrides = emptyList(),
-            ),
-        )
-
-        // Phase N — Together pane wiring. The composition root owns
-        // concrete BusySource + finder per R.X.3. v1 ships with an
-        // empty BusySource because the full RepoStore → Room indexer
-        // bridge for live calendar data lands in Round 2 (Phase F→G
-        // integration). The UI is fully usable; result list shows the
-        // empty-state until the bridge ships.
-        @Suppress("OPT_IN_USAGE")
-        val togetherRepoOptions = repoStore.state
-            .map { list -> list.map { TogetherRepoOption(it.repoId, it.displayName) } }
-            .stateIn(GlobalScope, SharingStarted.Eagerly, repoStore.state.value.map { TogetherRepoOption(it.repoId, it.displayName) })
-        val emptyBusySource = BusySource { _, _, _, _ -> emptyMap() }
-        val finderImpl = CommonTimeFinder()
-        val finderPort = CommonTimeFinderPort { q -> finderImpl.find(q) }
 
         // Phase P — import/export view state. Confirm callback runs the
         // writer + commit on Dispatchers.IO. R.X.3: composition root only.
         val importExportState = com.eight87.strictlykeptboy.ui.import_export.ImportExportViewState(
-            repos = repoStore.state,
+            repos = graph.repoStore.state,
             onConfirmedImport = { report ->
                 val repo = pendingImportRepo ?: return@ImportExportViewState
                 kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
@@ -200,15 +127,15 @@ class MainActivity : ComponentActivity() {
                         val all = (report.events + report.rules + report.exceptions)
                             .map { it as com.eight87.strictlykeptboy.store.TypedEntity }
                         com.eight87.strictlykeptboy.store.EntityWriter.writeBatch(rootDir, all)
-                        val gitRepo = com.eight87.strictlykeptboy.git.GitRepoRegistry.get(repo.repoId)
-                            ?: com.eight87.strictlykeptboy.git.GitRepo.open(
+                        val gitRepo = GitRepoRegistry.get(repo.repoId)
+                            ?: GitRepo.open(
                                 rootDir = rootDir,
                                 repoId = repo.repoId,
                                 remotes = repo.remotes,
                                 primaryRemote = repo.primaryRemote,
                                 authorIdentity = repo.authorIdentity,
                                 defaultBranch = repo.defaultBranch,
-                            ).also(com.eight87.strictlykeptboy.git.GitRepoRegistry::put)
+                            ).also(GitRepoRegistry::put)
                         gitRepo.commitAll("import: ${report.totalEntities} entities from .ics")
                     }
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
@@ -224,9 +151,8 @@ class MainActivity : ComponentActivity() {
         onParsed = { report -> importExportState.showPreview(report) }
 
         setContent {
-            val appearance by appearancePrefs.state.collectAsState()
-            // Re-evaluate age-gate on each composition; flip on accept.
-            var ageOk by remember { mutableStateOf(ageGate.isConfirmed()) }
+            val appearance by graph.appearancePrefs.state.collectAsState()
+            var ageOk by remember { mutableStateOf(graph.ageGatePrefs.isConfirmed()) }
             StrictlyKeptBoyTheme(
                 themeMode = appearance.themeMode,
                 densityScale = appearance.densityScale,
@@ -236,7 +162,7 @@ class MainActivity : ComponentActivity() {
                 if (!ageOk) {
                     AgeGateScreen(
                         onAccept = {
-                            ageGate.confirm()
+                            graph.ageGatePrefs.confirm()
                             ageOk = true
                         },
                         onDecline = { finish() },
@@ -245,25 +171,25 @@ class MainActivity : ComponentActivity() {
                     val scheduleState = remember {
                         ScheduleViewState(
                             scope = scope,
-                            snapshotFlow = snapshot,
-                            sourcesFlow = sources,
-                            initialTab = viewModePrefs.selected.value,
+                            snapshotFlow = graph.snapshot,
+                            sourcesFlow = graph.sources,
+                            initialTab = graph.viewModePrefs.selected.value,
                         )
                     }
                     val togetherVm = remember(scope) {
                         TogetherViewModel(
                             scope = scope,
-                            repoOptionsFlow = togetherRepoOptions,
-                            busySource = emptyBusySource,
-                            finder = finderPort,
+                            repoOptionsFlow = graph.togetherRepoOptions,
+                            busySource = graph.emptyBusySource,
+                            finder = graph.finderPort,
                         )
                     }
                     AppScaffold(
-                        activeRepoNameFlow = activeRepoName,
+                        activeRepoNameFlow = graph.activeRepoName,
                         scheduleState = scheduleState,
-                        onPersistTab = viewModePrefs::set,
-                        reposState = reposState,
-                        secretsStore = secretsStore,
+                        onPersistTab = graph.viewModePrefs::set,
+                        reposState = graph.reposState,
+                        secretsStore = graph.secretsStore,
                         togetherViewModel = togetherVm,
                         importExportState = importExportState,
                         onPickImportFile = { repo ->
@@ -280,11 +206,11 @@ class MainActivity : ComponentActivity() {
                             }
                         },
                         onSyncClick = {
-                            if (repoStore.list().any { it.remotes.isNotEmpty() }) {
+                            if (graph.repoStore.list().any { it.remotes.isNotEmpty() }) {
                                 SyncService.startSyncAll(this@MainActivity)
                             }
                         },
-                        neutralMode = neutralMode.isEnabled(),
+                        neutralMode = graph.neutralModePrefs.isEnabled(),
                         onWizardScaffold = { draft ->
                             runCatching {
                                 val outcome = WizardScaffolder.materialize(
@@ -292,9 +218,7 @@ class MainActivity : ComponentActivity() {
                                     draft = draft,
                                     author = AuthorIdentity("me", "me@example.com"),
                                 )
-                                // Register the new repo with RepoStore so the
-                                // rest of the app picks it up.
-                                repoStore.add(
+                                graph.repoStore.add(
                                     RepoConfig(
                                         repoId = outcome.repoId,
                                         displayName = draft.displayName.ifBlank { "my calendar" },
@@ -316,7 +240,7 @@ class MainActivity : ComponentActivity() {
                                         },
                                     ),
                                 )
-                                activeRepoName.value = draft.displayName.ifBlank { "my calendar" }
+                                graph.activeRepoName.value = draft.displayName.ifBlank { "my calendar" }
                                 Unit
                             }
                         },
@@ -329,16 +253,6 @@ class MainActivity : ComponentActivity() {
     /**
      * Phase O.2 — dispatch a [ShareLinkReceiver.Action] into concrete side effects.
      * Composition root only place that wires concrete classes (R.X.3).
-     *
-     * Read-only: clone (deferred for v1 if network unreachable) → register a
-     * `readOnlyViaShare = true` RepoConfig pointing at the URL. For the cold-start
-     * + on-AVD smoke test, the v1 implementation registers a stub entry that
-     * the next sync round will populate by clone. A full background-clone path
-     * lands in a Phase O follow-up; intent dispatch + UI banner ship now.
-     *
-     * Read-write: surface a toast pointing the user at the Add-Repo flow with
-     * the URL prefilled — wiring the wizard pre-fill end-to-end is a follow-up
-     * in the AddRepo nav-host.
      */
     private fun handleShareAction(
         action: com.eight87.strictlykeptboy.ui.share.ShareLinkReceiver.Action,
@@ -361,7 +275,6 @@ class MainActivity : ComponentActivity() {
                 val rootDir = filesDir.resolve("shared-readonly/$repoId").apply { mkdirs() }
                 val label = link.sourceLabel?.takeIf { it.isNotBlank() }
                     ?: link.urls.first().substringAfterLast('/').removeSuffix(".git")
-                // Persist intent — actual clone happens on next sync tick.
                 kotlinx.coroutines.GlobalScope.launch {
                     runCatching {
                         repoStore.add(
@@ -386,9 +299,6 @@ class MainActivity : ComponentActivity() {
                 ).show()
             }
             is com.eight87.strictlykeptboy.ui.share.ShareLinkReceiver.Action.LaunchAddRepo -> {
-                // Wizard pre-fill: deferred to a follow-up; for v1, surface a toast
-                // pointing the user at Repos → Add. The URL is observable in the
-                // intent for any future receiver to consume.
                 Toast.makeText(
                     this,
                     action.link.urls.first(),

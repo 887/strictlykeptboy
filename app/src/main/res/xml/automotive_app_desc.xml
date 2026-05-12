@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Phase Q — Android Auto manifest companion (UI-S.1 / D.17).
+
+  Declares strictlykeptboy as a template-rendering Android Auto app.
+  The `template` use is the read-only ListTemplate + PaneTemplate
+  surface implemented by `auto.SkbCarAppService`.
+-->
+<automotiveApp>
+    <uses name="template" />
+</automotiveApp>

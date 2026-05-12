@@ -283,15 +283,15 @@ _Shipped Phase P (.ics import + export, v1 scope) in commit `d800c84`: hand-roll
 
 ---
 
-## Phase Q — Android Auto
+## Phase Q — Android Auto — Q.1..Q.3 shipped in commit `<pending>`
 
-Deep-dive: [`ui-spec.md`](ui-spec.md) phase UI-N.
+Deep-dive: [`ui-spec.md`](ui-spec.md) phase UI-S (corrected from UI-N).
 
-- [ ] **Q.1** `CarAppService` skeleton
-- [ ] **Q.2** Today list template
-- [ ] **Q.3** "Next up" pane template
+- [x] **Q.1** `CarAppService` skeleton — `auto/SkbCarAppService` + `SkbSession` + manifest service entry + `res/xml/automotive_app_desc.xml` + `androidx.car.app:app:1.7.0` dep. F22 also triggered an `AppGraph` extraction (`composition/AppGraph.kt`; MainActivity 417 → 327 LOC).
+- [x] **Q.2** Today list template — `auto/TodayScreen` renders `ListTemplate` from the ISP-narrow `TodayEventSource` interface (R.X.1). Row tap pushes `NextUpScreen`.
+- [x] **Q.3** "Next up" pane template — `auto/NextUpScreen` renders `PaneTemplate` with title + duration + time-until + 3 follow-ups + "Open in app" action that fires an intent at MainActivity.
 - [ ] **Q.4** Voice prompts ("what's next?")
-- [ ] **Q.5** Read-only enforcement
+- [ ] **Q.5** Read-only enforcement (already true by construction — Q.1..Q.3 expose no edit affordances; formalize as a service-level invariant + test in Q.5)
 
 ---
 

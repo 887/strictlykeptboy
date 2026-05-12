@@ -41,6 +41,22 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
+        <!-- Phase Q — Android Auto template surface (UI-S / D.17). -->
+        <service
+            android:name=".auto.SkbCarAppService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="androidx.car.app.CarAppService" />
+                <category android:name="androidx.car.app.category.IOT" />
+            </intent-filter>
+            <meta-data
+                android:name="androidx.car.app.minCarApiLevel"
+                android:value="1" />
+        </service>
+        <meta-data
+            android:name="com.google.android.gms.car.application"
+            android:resource="@xml/automotive_app_desc" />
+
         <receiver
             android:name=".notif.ReminderBroadcastReceiver"
             android:exported="false" />

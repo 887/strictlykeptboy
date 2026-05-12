@@ -164,6 +164,10 @@ dependencies {
   // Phase E — resolver (RRULE expansion per D.5)
   implementation(libs.lib.recur)
 
+  // Phase Q — Android Auto (CarAppService template surface, D.17 / UI-S).
+  implementation(libs.androidx.car.app)
+  testImplementation(libs.androidx.car.app.testing)
+
   // Local tests
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)
