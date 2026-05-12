@@ -194,7 +194,7 @@ Shipped in change `9b20722`.
 
 ---
 
-## Phase K — design-a-lifestyle wizard (REPLACED — was wizard+templates) — shipped in change `pending-K`
+## Phase K — design-a-lifestyle wizard (REPLACED — was wizard+templates) — shipped in change `3c4f989`
 
 Deep-dive: [`draft-lifestyle-wizard.md`](draft-lifestyle-wizard.md) phases LW-A through LW-M. (Replaces the previous K.1..K.6 wizard+templates phase wholesale per D.54. The wizard's output IS the user's canonical starting state; no demo mode. The bat-mascot guides every wizard screen and is distinct from the user's chosen avatar species per D.56. Kink-positive openly per D.55; `unaligned-private` alignment is the in-wizard kink-off path. Phone-only is a first-class wizard outcome via `GitRepo.initLocalOnly` per ZZ.A.)
 
