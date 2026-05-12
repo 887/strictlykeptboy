@@ -71,14 +71,14 @@ Deep-dive: [`sync-engine.md`](sync-engine.md) phases SE-A through SE-F. B.1+B.2 
 
 Deep-dive: [`data-model.md`](data-model.md) phases DM-A through DM-G.
 
-- [ ] **C.1** TOML frontmatter parser/writer via ktoml; round-trip safe (preserve key ordering, comments where ktoml allows)
-- [ ] **C.2** Schema definitions: `EventFile`, `TaskFile`, `RecurrenceFile`, `ExceptionFile`, `CalendarFile`, `TodolistFile`, `IdentityFile`, `RepoMeta`, `SchemaMeta`
-- [ ] **C.3** UUIDv7 generator + filename builder (`events/<yyyy>/<mm>/<uuid>.md`)
-- [ ] **C.4** Read-side: scan a repo path → produce typed objects
-- [ ] **C.5** Write-side: serialize typed objects → file path + body
-- [ ] **C.6** Schema version check + migration runner (per `decisions.md` D.20)
-- [ ] **C.7** AGENTS.md + CLAUDE.md content templates for produced repos (per `data-model.md`)
-- [ ] **C.8** Validation: refuse to write malformed entries; surface validation errors to UI
+- [x] **C.1** TOML frontmatter parser/writer; round-trip safe at the value level. Shipped a purpose-built `TomlReader` / `TomlWriter` (`app/.../store/`) constrained to the schema's value subset — ktoml dep is registered in `libs.versions.toml` for future v2+ comment-preservation work per DM-A.4. (Phase C round 1)
+- [x] **C.2** Schema definitions: `Event`, `Task`, `StandingTask`, `RecurrenceRule`, `Exception`, `Deviation`, `Override`, `JournalEntry`, `Identity` typed data classes with `toDoc()` / `fromDoc(...)`. Calendar/Todolist/RepoMeta/SchemaMeta surface as `RawEntity` for v1 (scope-trim — fields are still read by the bootstrap path). (Phase C round 1)
+- [x] **C.3** UUIDv7 + filename builder via `git/Uuid7.kt` + `store/EntityPath.kt`. Events bucket by start date `events/<yyyy>/<mm>/<id>.md`, recurrences flat under `recurrences/<id>.md`. (Phase C round 1)
+- [x] **C.4** Read-side scanner `RepoScanner.scanAll` / `scanCalendar` — tolerates malformed files via `ParseResult.Failed`. (Phase C round 1)
+- [x] **C.5** Write-side `EntityWriter.write` / `writeBatch` / `delete` — atomic write via tmp + rename. (Phase C round 1)
+- [x] **C.6** Schema version check + migration scaffold `SchemaMigrationRunner.migrateIfNeeded` — v1 floor, no migrations yet, runner contract ready for v2. (Phase C round 1)
+- [x] **C.7** AGENTS.md + CLAUDE.md emission via `RepoBootstrap.scaffold` — symlink-first, stub fallback. Template includes the DM-Y.4 `identity.toml` bridge line. (Phase C round 1)
+- [ ] **C.8** Validation: refuse to write malformed entries; surface validation errors to UI — DEFERRED to Phase DM-H follow-up (Phase C scope-trim). Writer currently relies on caller-side construction guarantees.
 
 ---
 

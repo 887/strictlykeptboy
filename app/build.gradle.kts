@@ -113,6 +113,12 @@ dependencies {
   implementation(libs.androidx.work.runtime.ktx)
   implementation(libs.slf4j.android)
   implementation(libs.kotlinx.serialization.json)
+  implementation(libs.kotlinx.datetime)
+  // Phase C — ktoml dependency registered per D.12. The store layer currently
+  // uses a small purpose-built TOML reader/writer (see store/TomlReader.kt) to
+  // avoid ktoml's internal-tree-node coupling; the dep is wired so future
+  // schema work (e.g. comment preservation, v2 migrations) can adopt it.
+  implementation(libs.ktoml.core)
 
   // Local tests
   testImplementation(libs.junit)
