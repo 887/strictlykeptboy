@@ -9,7 +9,15 @@ package com.eight87.strictlykeptboy.ui.wizard
  * on Screen 8 (K.9 / LW-I) — the wizard is otherwise pure draft state.
  */
 
-/** 8 species + custom pack (K.3 / LW-C). */
+/**
+ * 8 species + custom pack (K.3 / LW-C).
+ *
+ * Phase U.4 / F11 note: [label] is the **wire-format** identifier — used for
+ * stable TOML payload (e.g. `species = "Bat"` in repo identity files) and for
+ * fallback toString display. The user-facing translatable label is resolved
+ * via `SpeciesChoice.labelString()` in `ui/a11y/EnumLabels.kt`. Do NOT change
+ * these literals — they participate in the on-disk repo schema.
+ */
 enum class SpeciesChoice(val id: String, val label: String) {
     Bat("bat", "Bat"),
     Bunny("bunny", "Bunny"),
@@ -21,7 +29,13 @@ enum class SpeciesChoice(val id: String, val label: String) {
     ChooseYourOwn("custom", "Choose your own"),
 }
 
-/** Four alignments per K.4 / LW-D. */
+/**
+ * Four alignments per K.4 / LW-D.
+ *
+ * Phase U.4 / F11 note: [label] + [tagline] are **wire-format** identifiers.
+ * Translatable UI labels resolve via `Alignment.labelString()` /
+ * `Alignment.taglineString()` in `ui/a11y/EnumLabels.kt`.
+ */
 enum class Alignment(val id: String, val label: String, val tagline: String) {
     Dominant("dominant", "Dominant", "you set the rules"),
     Submissive("submissive", "Submissive", "you follow the rules"),
@@ -57,7 +71,14 @@ fun Lifestyle.labelFor(alignment: Alignment): String {
     }
 }
 
-/** 17 roles per K.6 / LW-F.1. `self-care` is always-on; `kink` hidden when unaligned. */
+/**
+ * 17 roles per K.6 / LW-F.1. `self-care` is always-on; `kink` hidden when
+ * unaligned.
+ *
+ * Phase U.4 / F11 note: [label] is **wire-format** — written to
+ * `calendars/<id>/calendar.toml` `name = ...` field by [WizardScaffolder].
+ * Translatable UI labels resolve via `RoleId.labelString()` in `ui/a11y/`.
+ */
 enum class RoleId(val id: String, val label: String, val emoji: String, val priority: Int) {
     Work("work", "Work", "💼", 550),
     University("university", "University", "🎓", 550),
@@ -172,7 +193,13 @@ data class PronounSet(
     }
 }
 
-/** Honorific options per K.5a; skipped if alignment ∈ {Dominant, UnalignedPrivate}. */
+/**
+ * Honorific options per K.5a; skipped if alignment ∈ {Dominant, UnalignedPrivate}.
+ *
+ * Phase U.4 / F11 note: [label] is **wire-format** — written to
+ * `identity.toml` `[honorific].term = ...` by [WizardScaffolder].
+ * Translatable UI labels resolve via `Honorific.labelString()`.
+ */
 enum class Honorific(val label: String) {
     None("(none)"),
     Sir("Sir"),
@@ -184,7 +211,12 @@ enum class Honorific(val label: String) {
     Captain("Captain"),
 }
 
-/** Tone register per K.5a / LW Screen 3.5. */
+/**
+ * Tone register per K.5a / LW Screen 3.5.
+ *
+ * Phase U.4 / F11 note: [label] is **wire-format** (matches [id] by convention).
+ * Translatable UI labels resolve via `ToneRegister.labelString()`.
+ */
 enum class ToneRegister(val id: String, val label: String) {
     SoftKinky("soft-kinky", "soft-kinky"),
     Playful("playful", "playful"),
@@ -193,7 +225,12 @@ enum class ToneRegister(val id: String, val label: String) {
     StrictClinical("strict-clinical", "strict-clinical"),
 }
 
-/** Emoji density per K.5a. */
+/**
+ * Emoji density per K.5a.
+ *
+ * Phase U.4 / F11 note: [label] is **wire-format**.
+ * Translatable UI labels resolve via `EmojiDensity.labelString()`.
+ */
 enum class EmojiDensity(val id: String, val label: String) {
     Off("off", "off"),
     Light("light", "light"),

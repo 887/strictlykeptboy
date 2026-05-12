@@ -202,6 +202,18 @@ Subagents working on this repo run in worktrees (or inline if the change is smal
 
 The user has standing authorization to autonomously work through Round 1 (Phases A–W) with opus subagents; see `~/.claude/projects/-home-laragana-workspace/memory/project_strictlykeptboy_autonomous_mode.md` if available.
 
+## Translations
+
+User-facing copy goes through `app/src/main/res/values/strings.xml`
+(canonical English). Locale variants live under `values-<bcp47>/` and
+are **partial overrides** — Android falls back to the canonical file
+for un-overridden keys, which is the correct outcome (do NOT mirror
+the whole canonical file into every locale). Wire-format enum `.label`
+fields used by `WizardScaffolder` for `calendar.toml` / `identity.toml`
+persistence remain English by design; UI display routes through
+`labelString()` / `labelRes` extensions in `ui/a11y/EnumLabels.kt`.
+Full workflow + tested-locales table: [`docs/plans/translations.md`](docs/plans/translations.md).
+
 ## Editorial — user-facing copy
 
 The user follows Paul Graham's *Keep Your Identity Small* for their personal writing, but **strictlykeptboy is kink-positive by design** — the wizard alignment + lifestyle copy + dom-persona register + praise terms / pronouns / honorifics live in `identity.toml` per user choice. App chrome copy outside the identity-driven surfaces (settings labels, error messages, About text) stays plain and factual. Translation workflow (when added) follows the tonearmboy / shutterboy pattern: user + Claude per-language in dedicated sessions, no community PRs assumed.

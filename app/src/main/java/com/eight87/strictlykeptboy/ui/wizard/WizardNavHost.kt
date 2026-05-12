@@ -46,6 +46,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
+import com.eight87.strictlykeptboy.ui.a11y.labelString
+import com.eight87.strictlykeptboy.ui.a11y.taglineString
 import kotlinx.coroutines.launch
 
 // Test tags
@@ -342,7 +344,7 @@ private fun SpeciesScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
                         modifier = Modifier.padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        Text(species.label, style = MaterialTheme.typography.titleMedium)
+                        Text(species.labelString(), style = MaterialTheme.typography.titleMedium)
                         if (selected) Icon(Icons.Filled.Check, contentDescription = null)
                     }
                 }
@@ -380,8 +382,8 @@ private fun AlignmentScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit)
                     .testTag("Wizard-Alignment-${a.id}"),
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text(a.label, style = MaterialTheme.typography.titleMedium)
-                    Text(a.tagline, style = MaterialTheme.typography.bodySmall)
+                    Text(a.labelString(), style = MaterialTheme.typography.titleMedium)
+                    Text(a.taglineString(), style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
@@ -436,7 +438,7 @@ private fun IdentityScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) 
                     FilterChip(
                         selected = draft.honorific == h,
                         onClick = { onUpdate(draft.copy(honorific = h)) },
-                        label = { Text(h.label) },
+                        label = { Text(h.labelString()) },
                         modifier = Modifier.testTag("Wizard-Honorific-${h.name}"),
                     )
                 }
@@ -449,7 +451,7 @@ private fun IdentityScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) 
                 FilterChip(
                     selected = draft.tone == t,
                     onClick = { onUpdate(draft.copy(tone = t)) },
-                    label = { Text(t.label) },
+                    label = { Text(t.labelString()) },
                     modifier = Modifier.testTag("Wizard-Tone-${t.id}"),
                 )
             }
@@ -461,7 +463,7 @@ private fun IdentityScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) 
                 FilterChip(
                     selected = draft.emojiDensity == e,
                     onClick = { onUpdate(draft.copy(emojiDensity = e)) },
-                    label = { Text(e.label) },
+                    label = { Text(e.labelString()) },
                     modifier = Modifier.testTag("Wizard-Emoji-${e.id}"),
                 )
             }
@@ -474,7 +476,7 @@ private fun IdentityScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) 
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
                 Text(stringResource(R.string.wizard_identity_preview_label), style = MaterialTheme.typography.labelMedium)
-                val honoraryPrefix = if (draft.honorific != Honorific.None) "${draft.honorific.label}, " else ""
+                val honoraryPrefix = if (draft.honorific != Honorific.None) "${draft.honorific.labelString()}, " else ""
                 val praiseDefault = stringResource(R.string.wizard_identity_praise_default)
                 val praise = draft.praiseTerms.firstOrNull() ?: praiseDefault
                 val emoji = when (draft.emojiDensity) {
@@ -528,7 +530,7 @@ private fun LifestyleScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit)
                     .testTag("Wizard-Lifestyle-${opt.id}"),
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text(opt.labelFor(draft.alignment), style = MaterialTheme.typography.titleMedium)
+                    Text(opt.labelString(draft.alignment), style = MaterialTheme.typography.titleMedium)
                 }
             }
         }
@@ -582,7 +584,7 @@ private fun RolesScreen(
                         Row(verticalAlignment = ComposeAlign.CenterVertically) {
                             Text(role.emoji)
                             Spacer(Modifier.size(4.dp))
-                            Text(role.label)
+                            Text(role.labelString())
                         }
                     },
                     modifier = Modifier.fillMaxWidth().testTag("Wizard-Role-${role.id}"),
@@ -619,7 +621,7 @@ private fun TemplatesScreen(
             Card(modifier = Modifier.fillMaxWidth().testTag("Wizard-TemplateGroup-${role.id}")) {
                 Column(modifier = Modifier.padding(8.dp)) {
                     Text(
-                        stringResource(R.string.wizard_templates_role_label, role.emoji, role.label),
+                        stringResource(R.string.wizard_templates_role_label, role.emoji, role.labelString()),
                         style = MaterialTheme.typography.titleSmall,
                     )
                     WrappingChipRow {
@@ -787,7 +789,7 @@ private fun DoneScreen(draft: WizardDraft, onOpen: () -> Unit) {
     ) {
         Text(stringResource(R.string.wizard_done_title), style = MaterialTheme.typography.headlineSmall)
         Text(
-            stringResource(R.string.wizard_done_blurb, draft.species.label),
+            stringResource(R.string.wizard_done_blurb, draft.species.labelString()),
             style = MaterialTheme.typography.bodyMedium,
         )
         // Live-ish preview

@@ -1,0 +1,12 @@
+<resources>
+    <!-- Phase U.5 — English (United Kingdom) locale overrides.
+         This file is INTENTIONALLY PARTIAL. The canonical English copy lives
+         in `values/strings.xml`; Android's resource resolver falls back to
+         that canonical file for every key not overridden here. Adding strings
+         here is opt-in per ceremonial spelling difference (colour / favour /
+         organise / centre). Do NOT mirror the whole values/strings.xml — that
+         defeats the fallback. See docs/plans/translations.md. -->
+    <string name="locale_demo_color_seed">Colour seed</string>
+    <string name="repo_settings_color_seed_header">Colour seed (per-repo theme)</string>
+    <string name="cal_color_picker_pick_swatch">Pick a swatch</string>
+</resources>

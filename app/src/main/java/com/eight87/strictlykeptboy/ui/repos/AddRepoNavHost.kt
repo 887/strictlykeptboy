@@ -31,6 +31,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
+import com.eight87.strictlykeptboy.ui.a11y.labelString
 import com.eight87.strictlykeptboy.git.AuthMethod
 import com.eight87.strictlykeptboy.git.AuthorIdentity
 import com.eight87.strictlykeptboy.git.RemoteBinding
@@ -375,7 +376,7 @@ private fun RemoteProviderStep(
         AddRepoProvider.entries.forEach { p ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(selected = provider == p, onClick = { onProvider(p) })
-                Text(p.label())
+                Text(p.labelString())
             }
         }
         if (provider == AddRepoProvider.Forgejo || provider == AddRepoProvider.GitLab) {
@@ -389,13 +390,9 @@ private fun RemoteProviderStep(
     }
 }
 
-private fun AddRepoProvider.label(): String = when (this) {
-    AddRepoProvider.GitHub -> "GitHub"
-    AddRepoProvider.Forgejo -> "Forgejo / Gitea"
-    AddRepoProvider.GitLab -> "GitLab"
-    AddRepoProvider.Other -> "Other (generic git URL)"
-    AddRepoProvider.AlreadyCloned -> "Already cloned locally"
-}
+// Phase U.4 / F11: provider labels resolved via ui/a11y/EnumLabels.kt
+// (`AddRepoProvider.labelString()`). The private extension previously here
+// is removed — call sites use `p.labelString()` directly.
 
 @Composable
 private fun RemoteAuthStep(

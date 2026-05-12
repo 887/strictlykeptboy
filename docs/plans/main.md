@@ -336,13 +336,13 @@ _T.2..T.7 shipped in commit `3966c7c`._
 
 ---
 
-## Phase U — accessibility + i18n scaffolding
+## Phase U — accessibility + i18n scaffolding — shipped
 
-- [ ] **U.1** TalkBack labels on every interactive element
-- [ ] **U.2** Content descriptions for icons (repo switcher, sync, identity)
-- [ ] **U.3** Large-text + high-contrast verified at 200% scale
-- [ ] **U.4** `strings.xml` discipline (no hardcoded user-facing strings) — mirror tonearmboy's stringResource discipline
-- [ ] **U.5** Locale wiring (English-only at v1; structure ready for additions)
+- [x] **U.1** TalkBack labels on every interactive element — sync button, repo switcher chip, identity avatar, age gate, wizard mascot all carry `Modifier.semantics { contentDescription = ... }`; SyncButton states (idle / syncing / error / success) each route to a distinct `cd_*` string; `TalkBackLabelTest` smokes the core surfaces
+- [x] **U.2** Content descriptions for icons (repo switcher, sync, identity) — `cd_sync_button_*`, `cd_repo_switcher_*`, `cd_identity_avatar_for` namespace established in `strings.xml`; per-state sync cd carries the failure reason
+- [x] **U.3** Large-text + high-contrast verified at 200% scale — AVD-smoked at `font_scale = 2.0`: Schedule/Tasks/Together/Repos/Wizard/Settings rail labels remain readable, view-tab strip char-wraps gracefully, no clipping or off-screen widgets in the chrome; `LargeTextSnapshotTest` (Robolectric) guards composition-time overflow regressions
+- [x] **U.4** `strings.xml` discipline (closes F11) — new `ui/a11y/EnumLabels.kt` central package exposes `@StringRes labelRes: Int` + `@Composable fun T.labelString(): String` + `fun T.labelString(context: Context): String` extensions for `TopDestination` / `ScheduleViewTab` / `TaskViewTab` / `SpeciesChoice` / `Alignment` (+ `taglineRes`) / `RoleId` / `Honorific` / `ToneRegister` / `EmojiDensity` / `Lifestyle` (`labelString(alignment)`) / `AddRepoProvider` / `QuickAddTarget`; call sites updated in `AppScaffold` / `SkbTopBar` / `TasksPane` / `TaskQuickAddFab` / `AddRepoNavHost` / `WizardNavHost`; enum `.label: String` constructor fields preserved + documented as **wire-format** because `WizardScaffolder` persists them verbatim to `calendar.toml` (`name = ...`) and `identity.toml` (`[honorific].term = ...`) — those values are on-disk repo schema and must not be localised; `EnumLabelLocalizationTest` walks every variant and asserts each resolves to a non-empty English string
+- [x] **U.5** Locale wiring — `values-en-rGB/strings.xml` ships as a *partial* override (Colour seed vs Color seed) proving Android's locale-fallback behaviour; `LocaleFallbackTest` verifies the en-US/en-GB split + canonical-English fallback for un-overridden keys; AVD smoke via `adb shell cmd locale set-app-locales com.eight87.strictlykeptboy --locales en-GB`; `docs/plans/translations.md` documents the canonical-EN + partial-override workflow, mirrors the shutterboy / tonearmboy / whisperboy pattern (user + Claude per-language in dedicated sessions); CLAUDE.md gains a Translations section pointing at the plan
 
 ---
 

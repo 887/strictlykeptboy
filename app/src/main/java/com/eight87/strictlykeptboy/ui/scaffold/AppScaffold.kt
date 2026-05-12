@@ -31,6 +31,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.git.auth.SecretsStore
+import com.eight87.strictlykeptboy.ui.a11y.labelString
 import com.eight87.strictlykeptboy.ui.adaptive.LocalWindowWidthSizeClass
 import com.eight87.strictlykeptboy.ui.adaptive.ProvideWindowSizeClass
 import com.eight87.strictlykeptboy.ui.adaptive.WindowWidthSizeClass
@@ -62,6 +63,11 @@ const val TestTagAppScaffold = "AppScaffold"
  *
  * Five destinations per the F.1 brief. Only Schedule has real content this
  * phase; the rest are stubbed placeholder screens.
+ */
+/**
+ * Phase U.4 / F11 note: [label] is **wire-format** / stable English fallback
+ * for testTag composition and toString. Translatable UI display routes
+ * through `TopDestination.labelString()` in `ui/a11y/EnumLabels.kt`.
  */
 enum class TopDestination(val label: String, val icon: ImageVector) {
     Schedule("Schedule", Icons.Filled.CalendarMonth),
@@ -160,11 +166,11 @@ private fun AppScaffoldContent(
                     icon = {
                         Icon(
                             imageVector = dest.icon,
-                            contentDescription = dest.label,
+                            contentDescription = dest.labelString(),
                             modifier = Modifier.testTag("$TestTagDestPrefix${dest.name}"),
                         )
                     },
-                    label = { Text(dest.label) },
+                    label = { Text(dest.labelString()) },
                 )
             }
         },

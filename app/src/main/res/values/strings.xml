@@ -518,4 +518,137 @@
     <string name="repo_settings_color_seed_header">Color seed (per-repo theme)</string>
     <string name="about_easter_egg_tagline">STRICTLYKEPTBOY — schedule dreams. keep promises.</string>
     <string name="about_easter_egg_cd">Mascot scene</string>
+
+    <!-- Phase U — accessibility + i18n.
+         Closes F11: enum-property labels now route through labelRes/labelString()
+         extensions defined in ui/a11y/. The .label String fields on enums remain
+         as STABLE WIRE FORMAT for TOML/identity.toml persistence (WizardScaffolder)
+         and must NOT be localized — UI display uses labelString() instead. -->
+
+    <!-- Top-level navigation destinations (TopDestination). -->
+    <string name="dest_schedule">Schedule</string>
+    <string name="dest_tasks">Tasks</string>
+    <string name="dest_together">Together</string>
+    <string name="dest_repos">Repos</string>
+    <string name="dest_wizard">Wizard</string>
+    <string name="dest_settings">Settings</string>
+    <!-- Per-destination content-description (TalkBack reads "navigate to X" cleanly). -->
+    <string name="cd_dest_schedule">Schedule</string>
+    <string name="cd_dest_tasks">Tasks</string>
+    <string name="cd_dest_repos">Repos</string>
+    <string name="cd_dest_wizard">Wizard</string>
+    <string name="cd_dest_settings">Settings</string>
+
+    <!-- ScheduleViewTab labels. -->
+    <string name="schedule_view_tab_day">Day</string>
+    <string name="schedule_view_tab_week">Week</string>
+    <string name="schedule_view_tab_month">Month</string>
+    <string name="schedule_view_tab_agenda">Agenda</string>
+    <string name="schedule_view_tab_year">Year</string>
+
+    <!-- TaskViewTab labels. -->
+    <string name="task_view_tab_combined">Combined</string>
+    <string name="task_view_tab_today">Today</string>
+    <string name="task_view_tab_per_list">Per-list</string>
+    <string name="task_view_tab_shopping">Shopping</string>
+    <string name="task_view_tab_standing">Standing</string>
+
+    <!-- Wizard SpeciesChoice labels. -->
+    <string name="species_bat">Bat</string>
+    <string name="species_bunny">Bunny</string>
+    <string name="species_cat">Cat</string>
+    <string name="species_fox">Fox</string>
+    <string name="species_lion">Lion</string>
+    <string name="species_tiger">Tiger</string>
+    <string name="species_wolf">Wolf</string>
+    <string name="species_choose_your_own">Choose your own</string>
+
+    <!-- Wizard Alignment labels + taglines. -->
+    <string name="alignment_dominant">Dominant</string>
+    <string name="alignment_dominant_tagline">you set the rules</string>
+    <string name="alignment_submissive">Submissive</string>
+    <string name="alignment_submissive_tagline">you follow the rules</string>
+    <string name="alignment_switch">Switch</string>
+    <string name="alignment_switch_tagline">you do both — depending</string>
+    <string name="alignment_unaligned_private">Unaligned (private)</string>
+    <string name="alignment_unaligned_private_tagline">skip the kink framing entirely</string>
+
+    <!-- Wizard RoleId labels. -->
+    <string name="role_work">Work</string>
+    <string name="role_university">University</string>
+    <string name="role_freelance">Freelance</string>
+    <string name="role_workout">Workout</string>
+    <string name="role_study">Study</string>
+    <string name="role_kink">Kink</string>
+    <string name="role_social">Social</string>
+    <string name="role_family">Family</string>
+    <string name="role_creative">Creative</string>
+    <string name="role_hobby">Hobby</string>
+    <string name="role_recovery">Recovery</string>
+    <string name="role_spirituality">Spirituality</string>
+    <string name="role_health">Health</string>
+    <string name="role_finance">Finance</string>
+    <string name="role_household">Household</string>
+    <string name="role_pet_care">Pet Care</string>
+    <string name="role_self_care">Self-Care</string>
+
+    <!-- Wizard Honorific labels. -->
+    <string name="honorific_none">(none)</string>
+    <string name="honorific_sir">Sir</string>
+    <string name="honorific_daddy">Daddy</string>
+    <string name="honorific_master">Master</string>
+    <string name="honorific_mistress">Mistress</string>
+    <string name="honorific_owner">Owner</string>
+    <string name="honorific_keeper">Keeper</string>
+    <string name="honorific_captain">Captain</string>
+
+    <!-- Wizard ToneRegister labels. -->
+    <string name="tone_soft_kinky">soft-kinky</string>
+    <string name="tone_playful">playful</string>
+    <string name="tone_warm_neutral">warm-neutral</string>
+    <string name="tone_clinical">clinical</string>
+    <string name="tone_strict_clinical">strict-clinical</string>
+
+    <!-- Wizard EmojiDensity labels. -->
+    <string name="emoji_density_off">off</string>
+    <string name="emoji_density_light">light</string>
+    <string name="emoji_density_medium">medium</string>
+    <string name="emoji_density_heavy">heavy</string>
+
+    <!-- Wizard Lifestyle labels (composed by labelFor(alignment) in code). -->
+    <string name="lifestyle_partner_word_partnered">partnered</string>
+    <string name="lifestyle_partner_word_single">single</string>
+    <string name="lifestyle_suffix_free">free</string>
+    <string name="lifestyle_suffix_routine">routine</string>
+    <string name="lifestyle_suffix_strictly_kept">strictly-kept</string>
+    <string name="lifestyle_suffix_strictly_keeping">strictly-keeping</string>
+    <string name="lifestyle_suffix_strictly_shared">strictly-shared</string>
+    <string name="lifestyle_label_format">%1$s — %2$s</string>
+
+    <!-- TaskQuickAddFab QuickAddTarget labels. -->
+    <string name="quick_add_target_today_event">Today as event</string>
+    <string name="quick_add_target_tomorrow_event">Tomorrow as event</string>
+
+    <!-- AddRepoProvider labels. -->
+    <string name="add_repo_provider_github">GitHub</string>
+    <string name="add_repo_provider_forgejo">Forgejo / Gitea</string>
+    <string name="add_repo_provider_gitlab">GitLab</string>
+    <string name="add_repo_provider_other">Other (generic git URL)</string>
+    <string name="add_repo_provider_already_cloned">Already cloned locally</string>
+
+    <!-- Extended cd_* namespace for icons-only controls. -->
+    <string name="cd_sync_button_idle">Sync now</string>
+    <string name="cd_sync_button_syncing">Syncing</string>
+    <string name="cd_sync_button_error">Sync failed: %1$s</string>
+    <string name="cd_sync_button_success">Sync complete</string>
+    <string name="cd_identity_avatar_for">Identity: %1$s — %2$s</string>
+    <string name="cd_close">Close</string>
+    <string name="cd_dropdown_indicator">More</string>
+    <string name="cd_stepper_state">%1$d of %2$d</string>
+
+    <!-- Phase U.5 — locale fallback marker.
+         Overridden in values-en-rGB/strings.xml to "Colour seed" to prove
+         locale-fallback works at runtime. The canonical English form ships
+         here in values/strings.xml. -->
+    <string name="locale_demo_color_seed">Color seed</string>
 </resources>

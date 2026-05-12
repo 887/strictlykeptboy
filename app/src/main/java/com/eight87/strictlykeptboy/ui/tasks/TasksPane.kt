@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
+import com.eight87.strictlykeptboy.ui.a11y.labelString
 import com.eight87.strictlykeptboy.ui.adaptive.LocalWindowWidthSizeClass
 import com.eight87.strictlykeptboy.ui.adaptive.MasterDetailLayout
 import com.eight87.strictlykeptboy.ui.adaptive.isTwoPane
@@ -81,7 +82,7 @@ fun TasksPane(
                                     selected = tab == selectedTab,
                                     onClick = { selectedTab = tab },
                                     modifier = Modifier.testTag("$TestTagTaskViewTab-${tab.name}"),
-                                    text = { Text(tab.label) },
+                                    text = { Text(tab.labelString()) },
                                 )
                             }
                         }

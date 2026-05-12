@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import com.eight87.strictlykeptboy.ui.a11y.labelString
 import com.eight87.strictlykeptboy.ui.components.IdentityAvatar
 import com.eight87.strictlykeptboy.ui.components.RepoSwitcherChip
 import com.eight87.strictlykeptboy.ui.components.SyncButton
@@ -22,7 +23,15 @@ import com.eight87.strictlykeptboy.ui.components.SyncButton
 const val TestTagTopBar = "SkbTopBar"
 const val TestTagViewTab = "ViewTab"
 
-/** UI-B — Day / Week / Month / Agenda / Year. Only Day is functional in Phase F. */
+/**
+ * UI-B — Day / Week / Month / Agenda / Year. Only Day is functional in Phase F.
+ *
+ * Phase U.4 / F11 note: [label] is **wire-format** — used by
+ * [com.eight87.strictlykeptboy.ui.schedule.ScheduleViewModePrefs] as the
+ * persisted SharedPreferences key form (alongside `name`) and as a stable
+ * toString fallback. Translatable UI display routes through
+ * `ScheduleViewTab.labelString()` in `ui/a11y/EnumLabels.kt`.
+ */
 enum class ScheduleViewTab(val label: String) {
     Day("Day"), Week("Week"), Month("Month"), Agenda("Agenda"), Year("Year");
 }
@@ -72,7 +81,7 @@ private fun ViewTabStrip(
                 selected = tab == selected,
                 onClick = { onSelect(tab) },
                 modifier = Modifier.testTag("$TestTagViewTab-${tab.name}"),
-                text = { Text(tab.label) },
+                text = { Text(tab.labelString()) },
             )
         }
     }

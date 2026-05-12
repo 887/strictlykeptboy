@@ -5,7 +5,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-/** Phase H — five top-level task views per UI-J. */
+/**
+ * Phase H — five top-level task views per UI-J.
+ *
+ * Phase U.4 / F11 note: [label] is **wire-format** / stable toString fallback.
+ * Translatable UI display routes through `TaskViewTab.labelString()` in
+ * `ui/a11y/EnumLabels.kt`.
+ */
 enum class TaskViewTab(val label: String) {
     Combined("Combined"),
     Today("Today"),

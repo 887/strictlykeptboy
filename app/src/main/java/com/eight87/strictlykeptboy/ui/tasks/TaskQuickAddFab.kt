@@ -28,6 +28,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
+import com.eight87.strictlykeptboy.ui.a11y.labelString
 
 const val TestTagQuickAddFab = "QuickAddFab"
 const val TestTagQuickAddSheet = "QuickAddSheet"
@@ -35,7 +36,15 @@ const val TestTagQuickAddInput = "QuickAddInput"
 const val TestTagQuickAddSubmit = "QuickAddSubmit"
 const val TestTagQuickAddTarget = "QuickAddTarget"
 
-/** UI-J.7 — quick-add target. */
+/**
+ * UI-J.7 — quick-add target.
+ *
+ * Phase U.4 / F11 note: [label] on [TodayEvent] / [TomorrowEvent] is
+ * **wire-format / fallback only**. Translatable UI display routes through
+ * `QuickAddTarget.labelString()` in `ui/a11y/EnumLabels.kt`. The
+ * [Todolist] variant's label is user-supplied (todolist name + emoji),
+ * not framework chrome, so it is not localised.
+ */
 sealed interface QuickAddTarget {
     val label: String
     data class Todolist(val info: TodolistInfo) : QuickAddTarget {
@@ -106,7 +115,7 @@ fun TaskQuickAddSheet(
                     FilterChip(
                         selected = target == t,
                         onClick = { target = t },
-                        label = { Text(t.label) },
+                        label = { Text(t.labelString()) },
                         modifier = Modifier.testTag("$TestTagQuickAddTarget-$key"),
                     )
                 }
