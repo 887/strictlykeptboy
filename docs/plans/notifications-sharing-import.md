@@ -2467,3 +2467,39 @@ for v1.1 or rejected as wrong-fit.*
 
 - [ ] **NS-Y.8** Notification when a new feedback file arrives in any registered repo whose entities are owned by repos the user owns. Per-direction isolation per D.72: if the writer repo is `isolate_from`'d by the viewer repo, NO notification fires (structurally invisible per FB-F.3).
 - [ ] **NS-Y.9** Bonus-task assignment deep-link `strictlykeptboy://bonus?target=<sub-repo-fp>:<task-uuid>&title=...&due=...&priority=...` (FB-G.5) opens on sub's device with one-tap accept that materializes the task in the sub's chosen todolist.
+
+---
+
+## Phase NS-Z — Briefings + multi-reminder + stacking + attachment-lift (Round 5; main.md Phase BBB)
+
+See [`draft-household-travel-vacation.md`](draft-household-travel-vacation.md) HV-M / HV-N and `decisions.md` D.79 / D.80 / D.81 / D.82. Per HV-J.10.
+
+### Multi-reminder firing (D.79)
+
+- [ ] **NS-Z.1** Per-event multi-reminder schema honored by NS-C AlarmManager scheduler: every entry in `event.reminders[]` is scheduled as its own `setExactAndAllowWhileIdle` alarm, keyed `(event-id, offset)`. Boot re-arm pass (NS-C.5) walks all reminders, not just `at_start`.
+- [ ] **NS-Z.2** Per-`ReminderKind` notification channel mapping: `heads_up` → `events-heads-up` (LOW); `pre_event` / `at_start` → `events` (DEFAULT); `post_event_checkin` → `events-checkin` (DEFAULT, with Yes/No/Partial/Snooze actions per D.82); `all_day_banner` → `events-all-day` (DEFAULT); `tomorrow_briefing` → `events-briefings` (LOW, expandable).
+- [ ] **NS-Z.3** Default cadences per template category (D.79) materialized at template-apply time: medical / flight / travel-prep / vacation-daily / household / medication / ADHD / birthdays. User-edit per event overrides; per-template wizard surface for category-level opt-in.
+
+### Notification stacking (HV-N.7)
+
+- [ ] **NS-Z.4** Stacking rule: when N reminders fire within a 60-second window, collapse into a single `NotificationCompat.InboxStyle` notification with N expansion lines. Channel hierarchy = highest-importance among the constituents. Tap-anywhere expands; per-line quick-actions preserved.
+- [ ] **NS-Z.5** Privacy on collapse: if ANY constituent event is `private = true`, the collapsed preview shows "N reminders" with no titles. Expanded view honors per-event privacy independently.
+
+### Briefing surfaces (D.81)
+
+- [ ] **NS-Z.6** System `cal-briefings` calendar scaffolded by default at wizard time; user disable at Settings → Notifications → "Show briefings". Two recurring events: `morning-briefing` (default 07:00 daily) and `evening-briefing` (default 21:00 daily). Both `FREQ=DAILY`.
+- [ ] **NS-Z.7** Body AUTO-GENERATED at fire time: walk the upcoming-window query (today for morning; tomorrow for evening). Render inline Markdown list, one item per event with off-schedule items ⚠-prefixed and contextual hint (per RV-Q.3 / D.80).
+- [ ] **NS-Z.8** Non-user-editable bodies: user edit attempts get a "regenerate?" prompt. Body field marked `auto_generated = true` in frontmatter; resolver overwrites on next fire.
+- [ ] **NS-Z.9** Notification expand-actions per line: `snooze`, `re-arm`, `mark-done-early`, `mark-skipped`. Map to existing deviation / exception write paths.
+- [ ] **NS-Z.10** Off-schedule highlight rendering: ⚠ glyph in notification body + AccentColor on the line; expanded view shows contextual hint *"(off-schedule — work calendar normally runs 9-17)"*.
+
+### Post-event checkin (D.82)
+
+- [ ] **NS-Z.11** `post_event_checkin` is opt-in per event and per template (default off everywhere). When opted-in, notification fires at `event.end + checkin_offset` (default `event.end`). Actions: `Yes` (no-op — default-by-schedule already wins per D.70), `No` (writes `deviations/.../<date>.md` with `kind = "skipped"`), `Partial` (writes `kind = "partial"` with sub-beat picker bottom-sheet), `Remind me again in X` (re-arms at `now + X`).
+
+### Attachment-lift import paths (HV-M.6)
+
+- [ ] **NS-Z.12** `.ics` import (extends NS-I): `URL` and `DESCRIPTION` field URLs → `link` attachments.
+- [ ] **NS-Z.13** `.eml` airline-confirmation import (NEW): boarding-pass PDF → `barcode` (decoded) + `file` (raw PDF) attachments; gate/seat/PNR → event description; arrival/departure → event start/end.
+- [ ] **NS-Z.14** `.pkpass` Apple Wallet pass import (NEW): unzip; primary barcode → `barcode` attachment; metadata → event fields; original archive → `file` attachment for future re-use.
+- [ ] **NS-Z.15** Travel-prep events (HV-B) inherit attachments at materialization time (passport photo, insurance card scan, visa PDF) from the wizard's per-trip input sheet.

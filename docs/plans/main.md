@@ -182,6 +182,7 @@ Deep-dive: [`draft-lifestyle-wizard.md`](draft-lifestyle-wizard.md) phases LW-A 
 - [ ] **K.2** Screen 1 Welcome (LW-B): bat-mascot wave, single "let's go" CTA
 - [ ] **K.3** Screen 2 Species selection (LW-C): 8-tile grid (7 default species + "choose your own"); bat default if skipped
 - [ ] **K.4** Screen 3 Alignment (LW-D): Dominant / Submissive / Switch / Unaligned-private; unaligned-private propagates kink-off downstream
+- [ ] **K.5a** Screen 3.5 Praise + pronouns + honorific + tone + emoji-density (LW Screen 3.5, per HV-R.2 / D.83): writes `identity.toml` at calendar-repo root. Praise picker (10 default chips + custom, multi-select for alternation), pronouns (he/she/they/it/custom + extra sets), honorific (Sir / Daddy / Master / Mistress / Owner / Keeper / Captain / custom; skipped if alignment = dominant or unaligned-private), tone register (soft-kinky default for kinky alignments, warm-neutral for unaligned-private), emoji density (default medium). Bat sticker `bat-holding-name-tag` (neutral variant `bat-with-clipboard`). All revisable in Settings → Identity (Phase S.8b).
 - [ ] **K.5** Screen 4 Lifestyle (LW-E): Single/Partnered × free/strictly-kept/strictly-keeping/strictly-shared, computed from alignment
 - [ ] **K.6** Screen 5 Roles (LW-F): 17-role multi-select grid; `self-care` always-on; `kink` auto-on for kinky alignments and hidden under unaligned-private
 - [ ] **K.7** Screen 6 Templates per role (LW-G): collapsible sections of atomic-activity templates (from XX) with smart-default toggle matrix per (alignment, lifestyle)
@@ -769,6 +770,95 @@ Deep-dive: [`draft-no-origin-multi-origin.md`](draft-no-origin-multi-origin.md) 
 - [ ] **ZZ.F** Multi-origin conflict UI for N-way diamonds (MO-F): SE-J 3-way diff UI only fires for local-vs-primary conflicts (non-primary divergence stays in the banner UI). Conflict UI "Remote" label carries primary's display label. Diamond-merge mini-flow reuses the same UI with the mirror's label. Force-push affordance lives in repo settings → Remotes → `<remote>` → Advanced with typed-URL confirmation. **No force-push to primary, ever, in v1.**
 - [ ] **ZZ.G** No-origin UI representation + grow-into-remote path (MO-G): per the inline edits at I.2 / I.3 / PP.2 / PP.6 / QQ.1 / K.8 above. Add-repo flow gets a "Create local-only" peer option (not buried under advanced). No-origin repo switcher gets a small house "local" badge. Repo settings Remotes section with first-class no-origin treatment. Add-remote-later path: `git remote add origin <url>` + `git push -u origin main` against the extant local history (no history rewrite). First-launch no-deep-link path: 2-option splash "Start a local calendar (you can sync it later)" vs "Connect to a git remote now". Wizard (Phase K) repo-picker + auth steps become skippable; skipping runs the local-only scaffolder.
 - [ ] **ZZ.H** Cross-cutting: tests, docs, CLI parity (MO-H): `data-model.md` note that on-disk D.3 layout is unchanged (no `origin`-related files on disk; all remote state is in per-device `RepoConfig`). CLI: `skb repo init --local`, `skb remote add|remove|list|set-primary|set-policy`. Invariants: (i) `repo.remotes.isEmpty() ⇒ no foreground SyncService work for that repo`, (ii) `primaryRemote != null ⇔ remotes.isNotEmpty()`, (iii) `repoId stable across remote-set changes`. Robolectric end-to-end: no-origin → add origin → add mirror-1 → push to both → simulate mirror-1 read-only → primary still pushes.
+
+---
+
+## Phase AAA — Lifestyle templates (atomic + comprehensive)
+
+Source draft: [`draft-household-travel-vacation.md`](draft-household-travel-vacation.md) phases HV-A, HV-B, HV-C, HV-D, HV-K, HV-L, HV-P. Folds 8 new atomic-template families into the Phase XX (atomic activities, inverted habits) family — same TOML schema as AT-D / AT-E / AT-F, same inverted-default semantics. Cross-references: Phase XX (parent family), Phase K (lifestyle wizard registers role-toggles per template), Phase M (notifications honor per-category defaults from D.79), [`templates-demo-wizard.md`](templates-demo-wizard.md) TW-J (register all 8 templates).
+
+- [ ] **AAA.1** `templates/atomic-household.toml` per HV-A (~88 base entries + 4 kink variants across 13 categories: trash, laundry, dishes/kitchen, bathroom, bedroom, living spaces, entry/mudroom, outdoor, mail/paperwork, pantry/fridge, pets, seasonal, misc). All entries carry `neutral_title`; sub-beats validated against the atomic envelope. Wizard role-toggle: "household chores".
+- [ ] **AAA.2** `templates/atomic-travel-prep.toml` per HV-B (~52 entries across 7 lead-time tiers: T-90d documents, T-30d health/visa, T-14d logistics, T-7d cleaning, T-3d packing, T-1d final, T-0 doorstop). Parameterized by `TripDraft`; lead-offsets computed at materialization.
+- [ ] **AAA.3** `templates/atomic-flight-day.toml` per HV-C (19 parameterized entries per flight leg: wake-up, transport, airport-arrive, check-in, security, lounge, board, taxi, fly, arrive, customs, baggage, hotel-shuttle, etc.). Domestic/international toggle adjusts pre-airport buffer (120/180 min).
+- [ ] **AAA.4** `templates/atomic-vacation-daily.toml` per HV-D (15 anchors: 11 self-care + 4 kink). Slob-drift prevention while away from home routine; meal-anchor configurable.
+- [ ] **AAA.5** `templates/atomic-adhd-anchors.toml` per HV-K (34 anchors across 6 categories: hydration 5, food 5, meds adherence 8, body-state 5, cognitive 4, sleep-hygiene 4, maintenance 6 — incl. hyperfocus-recovery trigger). Wizard role-toggle: "ADHD anchors".
+- [ ] **AAA.6** `templates/atomic-medication.toml` per HV-L.A (22 management entries: supply chain, emergency stash, vaccinations, specialist follow-ups, preventative screenings, bodywork). All `privacy_flag = true` by default; all `nonSuperseable` tag (per D.76). Wizard role-toggle: "managing meds".
+- [ ] **AAA.7** `templates/atomic-menstrual-cycle.toml` per HV-L.B (12 entries: cycle anchors, contraception, preventative screenings, supplies). Sub-toggle "pause kink-care during period?" wires `cal-period-grace` per HV-L.B.5.
+- [ ] **AAA.8** `templates/atomic-leisure.toml` per HV-P + D.87 (~46 entries across 8 categories: passive-consumption 10, active-play 8, movement-play 8, social-recreation 8, solo-decompress 7, caged-play-affordances 3 incl. one kink variant, recovery-leisure 4, long-cycle-leisure-cadence 4). The `dog-walk` atomic carries 7 named sub-beats. Always scaffolded (leisure first-class per D.87).
+- [ ] **AAA.9** Tests per HV-I + HV-O (template-content ktoml round-trip, sub-beat envelope validation, neutral-mode rendering, kink-variant gating, period-grace overlay, hyperfocus-recovery materialization, leisure cadence). See `app/src/test/.../templates/`.
+
+---
+
+## Phase BBB — Event-level extensions: supersedence + attachments + multi-reminder
+
+Source draft: [`draft-household-travel-vacation.md`](draft-household-travel-vacation.md) phases HV-E (supersedence), HV-M (attachments), HV-N (multi-reminder + briefings + off-schedule). Cross-references: Phase E / [`resolver.md`](resolver.md) RV-P + RV-Q, Phase M / [`notifications-sharing-import.md`](notifications-sharing-import.md) NS-Z, Phase P / [`data-model.md`](data-model.md) DM-W..DM-AA. Locks D.75 / D.76 / D.77 / D.78 / D.79 / D.80 / D.81 / D.82.
+
+- [ ] **BBB.1** Calendar-frontmatter extensions per HV-E.1: `supersedes`, `superseded_during`, `nonSuperseable`. Calendar-config also carries optional `[baseline_cadence]` block per HV-N.4.
+- [ ] **BBB.2** Resolver supersedence pass per HV-E.2 + HV-E.6 invariants S1–S5. See [`resolver.md`](resolver.md) RV-P. Cache: Room table `event_visibility(date, event_id, hidden_by_calendar_id NULLABLE)` invalidated per HV-E.5.
+- [ ] **BBB.3** `overrides/<superseded-cal-id>/<event-id>/<yyyy-mm-dd>.md` directory per HV-E.4 / D.77. Two `kind` values: `force-show`, `force-show-for-range`. Materialized by the vacation wizard's Screen 5 (Phase CCC) when the user picks "but keep these on".
+- [ ] **BBB.4** UI surfaces per HV-E.3 (schedule hides; manage-overlays renders strikethrough+grey with per-event override toggle; week/month show leaf-glyph). See [`ui-spec.md`](ui-spec.md) UI-PP.
+- [ ] **BBB.5** Event-frontmatter `attachments: List<Attachment>` array per HV-M, six sealed kinds (link / qr / file / barcode / vcard / location). Storage at `attachments/<event-id>/<filename>`; >100KB files Git-LFS'd (Phase Z); privacy inheritance from event's `private` flag. See DM-W.
+- [ ] **BBB.6** Attachment renderers per HV-M.4 (per-kind Composable specs: link, qr, file, barcode, vcard, location). See [`ui-spec.md`](ui-spec.md) UI-QQ.
+- [ ] **BBB.7** Event-frontmatter `reminders: List<Reminder>` array per HV-N.1, sealed kinds (heads_up / all_day_banner / tomorrow_briefing / pre_event / at_start / post_event_checkin). See DM-X.
+- [ ] **BBB.8** Default reminder cadences per template category per HV-N.3 / D.79 (medical / flight / travel-prep / vacation-daily / household / medication / ADHD / birthdays).
+- [ ] **BBB.9** Off-schedule detection per HV-N.4 / D.80: per-calendar `baseline_cadence`; events outside window flagged `off_schedule = true`. See [`resolver.md`](resolver.md) RV-Q.
+- [ ] **BBB.10** Multi-reminder firing + notification stacking per HV-N.7 (60s collision window collapses into one Android notification with N expansion lines, privacy-aware). See [`notifications-sharing-import.md`](notifications-sharing-import.md) NS-Z.
+- [ ] **BBB.11** System `cal-briefings` calendar per HV-N.6 / D.81: morning + evening briefing events with auto-generated bodies; user disable in Settings → Notifications → "Show briefings". See NS-Z.
+- [ ] **BBB.12** Inverted-habit `post_event_checkin` opt-in per HV-N.8 / D.82.
+- [ ] **BBB.13** Import path extensions per HV-M.6: `.ics` URL/DESCRIPTION → `link` attachments; `.eml` airline confirmation → boarding-pass `barcode` + `file`; `.pkpass` → primary `barcode` + metadata + original archive `file`. See NS-Z import-lift.
+- [ ] **BBB.14** CLI per HV-E.8 + HV-M.8 + HV-N + HV-J: `skb supersede`, `skb override`, `skb attach`, `skb reminder add|rm`, `skb briefing show`. See [`cli-tooling.md`](cli-tooling.md) CLI-U.
+- [ ] **BBB.15** Tests per HV-I.6 (supersedence invariants S1–S5) + HV-O.2 (attachment round-trip + LFS threshold + privacy inheritance) + HV-O.3..O.5 (multi-reminder fire + off-schedule detection + briefing rendering) + HV-O.8 (notification stacking).
+
+---
+
+## Phase CCC — Quick-trip wizard + entry-points + sticker beats
+
+Source draft: [`draft-household-travel-vacation.md`](draft-household-travel-vacation.md) phases HV-F (vacation wizard), HV-G (entry-points), HV-H (sticker beats). Cross-references: Phase K (lifestyle wizard — sibling, NOT first-launch), Phase CCC's wizard reuses LW-K's bat-mascot sticker pipeline, [`ui-spec.md`](ui-spec.md) UI-OO.
+
+- [ ] **CCC.1** Compose nav-graph per HV-F.1: 6 screens + confirm modal, `TripDraft` state backed by Room until commit. See UI-OO.
+- [ ] **CCC.2** Screen 1 — Trip basics per HV-F.2 (name, start/end dates, destination with offline-only autocomplete, travel mode flight/train/car/boat/none). Sticker: `trip-suitcase-waving`.
+- [ ] **CCC.3** Screen 2 — Travel-prep cadence per HV-F.3 (HV-B back-fill preview with per-row toggles + lead-offset edit; conditional gating on visa.required etc.). Sticker: `flight-paw-prints`.
+- [ ] **CCC.4** Screen 3 — Flight details per HV-F.4 (conditional on mode=flight; multi-leg list with IATA codes; per-leg international toggle adjusts buffer). Sticker: `flight-paw-prints`.
+- [ ] **CCC.5** Screen 4 — Vacation-daily anchors per HV-F.5 (HV-D toggles + relax-cadence + meal-anchor + pack-kink-kit gate). Sticker: `beach-loungin-with-cage-still-on` (neutral variant `beach-loungin`).
+- [ ] **CCC.6** Screen 5 — Supersedence picker per HV-F.6 (per-calendar pause toggle defaults; nonSuperseable calendars visually locked; per-event "keep this on" override list materializes `overrides/` files). Sticker: `supersedence-snooze-toggle`.
+- [ ] **CCC.7** Screen 6 — Confirm per HV-F.7 (mini-month preview with greyed-strikethrough superseded events; re-edit hop-back). Sticker: `confirm-tail-flick` + `good-boy-stays-good-boy-on-vacation` (neutral `staying-on-track`).
+- [ ] **CCC.8** Materialization per HV-F.8: new `calendars/cal-trip-<uuidv7>/` with `supersedes` + `superseded_during`; HV-B events as one-off files; HV-C per-leg events; HV-D recurring rule bounded by trip window; `overrides/` files; single atomic commit.
+- [ ] **CCC.9** Edit-in-flight + cancel-trip per HV-F.9 / HV-F.10 (rehydrate `TripDraft` from existing `cal-trip-<id>/`; diff-commit; cancel deletes the calendar dir + overrides atomically).
+- [ ] **CCC.10** Entry-points per HV-G: Settings → "+ Plan a trip" (between Calendars and Sharing); Calendar-detail → "+ overlay from template"; Now-card empty-state "no plans today — want to plan a trip?" (ONLY in-card promotion).
+- [ ] **CCC.11** Sticker beats per HV-H: 6 new bat-mascot beats added to LW-K's sprite sheet (`trip-suitcase-waving`, `flight-paw-prints`, `beach-loungin-with-cage-still-on` + neutral `beach-loungin`, `supersedence-snooze-toggle`, `confirm-tail-flick`, `good-boy-stays-good-boy-on-vacation` + neutral `staying-on-track`). 64/128/256 export sizes per LW-K pipeline.
+- [ ] **CCC.12** Tests per HV-I.4 / HV-I.5 / HV-I.7 / HV-I.8 (back-fill math, flight-day timeline math, Compose UI path-coverage incl. cancel + edit-in-flight + override-write, sticker neutral-swap screenshot test).
+
+---
+
+## Phase DDD — Mode + identity + dom-persona
+
+Source draft: [`draft-household-travel-vacation.md`](draft-household-travel-vacation.md) phases HV-Q (free-vs-kept + review-feed + AI-dom + migration paths + safety), HV-R (identity.toml + LW Screen 3.5 + AGENTS.md split). Cross-references: Phase YY (cross-repo feedback — review-feed builds on it), Phase OO (cross-repo state — `dom_persona_pointer`), Phase ZZ (remote-removal = revoke-dom-access), Phase K.5a (the LW Screen 3.5 insert above), Phase S.8b (Settings → Identity), [`shared-schedules.md`](shared-schedules.md) Phase SH-K + SH-L, [`data-model.md`](data-model.md) DM-Y / DM-Z, [`ui-spec.md`](ui-spec.md) UI-SS..VV. Locks D.83 / D.84 / D.85 / D.86.
+
+- [ ] **DDD.1** `mode.toml` at calendar-repo root per HV-Q.1 + D.84: `mode = "free" | "strictly-kept"` (per-repo default, per-calendar override block); optional `write_back_target`, `dom_persona`, `dom_cadence`, `kept_since`. Mode IS committed (transitions are history). See DM-Y.
+- [ ] **DDD.2** Review-feed mechanic per HV-Q.2: post-commit JGit callback materializes `reviews/<commit-sha>/reviewable_change.md` (auto-summary + collapsed diff hunks + empty `responses/`). Auto-summary maps changed-path families to register-aware blurbs using `identity.toml`'s praise term. See DM-Z.
+- [ ] **DDD.3** Dom responses per HV-Q.2.4: dom writes to `reviews/<commit-sha>/responses/<dom-fingerprint>-<ts>.md` IN THE DOM'S OWN REPO; cross-repo resolver (Phase YY) surfaces back to boy's per-commit feedback feed. Reaction set: `locked` / `collar` / `good-boy` / `paw` / `heart` / `fire` / `thumbsup` / `🦇` / `smirk`. Empty-text + `good-boy` reaction renders as the cute-coded LGTM. See [`shared-schedules.md`](shared-schedules.md) SH-K.
+- [ ] **DDD.4** AI-dom-persona system per HV-Q.3 + D.85: 6 shipped personas + `custom-prompt` at `~/.config/skb/dom-personas/<name>.md` (app-private, NOT in calendar repo); cadence `realtime` / `end-of-day` / `weekly` (default end-of-day); explicit-content guardrails default ON (opt-in setting + K-6 age-gate). Per-link `dom_persona_pointer` state file per Phase OO extension (SH-L).
+- [ ] **DDD.5** Migration paths per HV-Q.4 (six locked flows): free→kept-by-AI, free→kept-by-human, kept-by-AI↔kept-by-human, kept→free with 24h cooling-off, kept-by-human↔self-keep, self-keep→kept-by-human. All transitions committed; git log is the authoritative record of who held the keys when.
+- [ ] **DDD.6** Toxic-dom safety affordances per HV-Q.5 + D.86: boy ALWAYS retains write access; revoke-dom-read via Phase ZZ remote-removal; mode-flip cannot be blocked by dom; always-visible "transition my mode" affordance reachable from most-kept UI state (NOT buried); self-keep as fully-supported exit ramp (identity.toml carries over unchanged). See UI-TT mode-aware chrome.
+- [ ] **DDD.7** `identity.toml` at calendar-repo root per HV-R.1 + D.83: `[praise]`, `[pronouns]`, `[honorific_for_dom]`, `[tone]` blocks. Locked defaults on repo creation (`praise.term = "good boy"`, he/him/his/himself, `Sir`, `soft-kinky`, `medium` emoji density). IS committed. See DM-Y.
+- [ ] **DDD.8** LW Screen 3.5 — Praise + pronouns insert per HV-R.2 (registered as K.5a above). Bat sticker `bat-holding-name-tag` added to LW-K's sticker list (neutral variant `bat-with-clipboard`).
+- [ ] **DDD.9** Settings → Identity surface per HV-R.3 (registered as Phase S.8b below): same fields as K.5a, "Reset to wizard defaults" button, live-preview panel (rendered now-card + template title + briefing salutation + dom-Claude response using pending values). See UI-VV.
+- [ ] **DDD.10** AGENTS.md / identity.toml split per HV-R.4 + D.83: AGENTS.md carries exactly one bridge line referencing identity.toml; no praise/pronoun/register content embedded. Test asserts byte-identicality of AGENTS.md across praise-term changes (HV-O.14).
+- [ ] **DDD.11** Agent integration per HV-R.5: agents (incl. dom-Claude) read `identity.toml` on session start; template-title renderer resolves `{{praise}}` with `alt_terms` alternation; briefing salutations + dom-Claude register + notification bodies all use the chosen term + emoji density.
+- [ ] **DDD.12** Mode-aware chrome per HV-J.21 (UI-TT): always-visible mode pill (free / kept / self-keep) with long-press → "transition my mode" affordance; small dom-presence indicator in kept mode.
+- [ ] **DDD.13** Reviews tab per HV-J.21 (UI-SS): dom-side surface listing unreviewed `reviewable_change` entries grouped by date; per-entry preview shows boy's identity + auto-summary + reaction-strip + free-text composer. Boy-side: response-on-my-commits view extends existing per-commit feed.
+- [ ] **DDD.14** Dom-persona picker UI per HV-J.21 (UI-UU): settings sub-screen listing 6 shipped personas + custom-prompt with per-persona register preview + cadence control.
+- [ ] **DDD.15** CLI per HV-J.19 (CLI-U): `skb mode`, `skb dom set-persona`, `skb dom respond`, `skb dom cadence`, `skb identity edit`, `skb identity preview`, `skb review list`.
+- [ ] **DDD.16** Tests per HV-O.10..O.16 (mode toggle commits + no-block-by-dom; review-feed cross-repo roundtrip with reactions; AI-dom persona safety; identity.toml round-trip + alternation; AGENTS.md byte-identicality; toxic-dom safety; leisure template content).
+
+---
+
+## Phase S addendum — Identity + Mode surfaces
+
+(Inline addendum to Phase S above — sub-steps S.8b + S.11 land at the same nav-level as the existing S.1–S.10.)
+
+- [ ] **S.8b** Identity section — Settings → Identity surface per HV-R.3 / DDD.9. Same fields as K.5a (praise / pronouns / honorific / tone / emoji density), "Reset to wizard defaults" button, live-preview panel rendering now-card + template title + briefing salutation + dom-Claude response with currently-pending values. In `strictly-kept` mode the saving commit goes through the review-feed.
+- [ ] **S.11** Mode section — Settings → Mode surface per HV-Q.1 / DDD.1 / DDD.12: mode pill + transition affordance + 24h cooling-off confirmation flow (D.86); dom-persona picker (DDD.14); dom cadence selector (realtime/end-of-day/weekly).
 
 ---
 

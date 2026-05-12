@@ -2613,3 +2613,43 @@ calendar-wide.
 - [ ] **RV-N.8** `FeedbackResolver.aggregate(targetGlobalId): AggregatedFeedback` queries the `FeedbackEntry` Room index across every repo in `allVisibleTo(viewerFp)`. Returns `{reactionsByToken: Map<String, List<Author>>, comments: List<Comment>, threads: List<Thread>}`. Threading by `reply_to`, linear `created` order within threads.
 - [ ] **RV-N.9** Aggregation memoization keyed on `(targetGlobalId, set-of-visible-repo-HEADs)`. Invalidated when any visible repo's HEAD changes (incremental indexer hook).
 - [ ] **RV-N.10** Isolation invariants verified by privacy tests (Phase YY.6 / FB-F.5): no count masking ("N hidden" leak forbidden); notification suppression; search/autocomplete masking; author-chip rendering uses the receiving repo's local label.
+
+---
+
+## Phase RV-P — Supersedence pass (Round 5; main.md Phase BBB)
+
+See [`draft-household-travel-vacation.md`](draft-household-travel-vacation.md) HV-E and `decisions.md` D.75 / D.76 / D.77 / D.78 for the authoritative spec. A NEW resolver pass layered on top of the existing overlay-priority resolution (RV-D). A calendar may temporally pause other calendars without deleting their content (vacation pauses routine; medical/pet calendars never paused).
+
+- [ ] **RV-P.1** New resolver pass `supersedencePass(candidateEvents, activeCalendars, date)` inserted AFTER RV-D's overlay-priority pass and BEFORE final render. Pass marks events `hidden-by-supersedence(X)` rather than removing them so the manage-overlays UI can still render them strikethrough+grey.
+- [ ] **RV-P.2** Algorithm per HV-E.2:
+  ```
+  for each candidate event E on date D from calendar Y:
+    if any active calendar X exists where:
+        X.supersedes contains Y.id
+        AND (X.superseded_during is empty OR
+             some range in X.superseded_during covers D)
+        AND Y.nonSuperseable == false
+        AND E.tags does not contain "nonSuperseable"
+        AND no overrides/<Y.id>/<E.id>/<D>.md with kind="force-show" exists
+        AND no overrides/<Y.id>/<E.id>/range covering D with kind="force-show-for-range" exists
+    then:
+      mark E as hidden-by-supersedence(X)
+  ```
+  Tiebreak when multiple X candidates supersede the same Y on D: highest-priority X per TT-priority wins as the attribution; the hide-result is the same. Per D.78 / S1.
+- [ ] **RV-P.3** Invariants enforced (D.78): **S1** at-most-one hiding calendar; **S2** non-cascading (resolver checks direct relationships only); **S3** self-supersede rejected by validator; **S4** `nonSuperseable = true` calendars ignore all supersedence; **S5** events with `nonSuperseable` tag survive even inside superseable calendars.
+- [ ] **RV-P.4** `overrides/<cal-id>/<event-id>/<yyyy-mm-dd>.md` (D.77) — opt-out from supersedence. Two `kind` values: `force-show` (single date), `force-show-for-range` (date range). Parallel to `exceptions/` (cancel) and `deviations/` (reported-not-done).
+- [ ] **RV-P.5** Room cache table `event_visibility(repo, date, event_id, hidden_by_calendar_id NULLABLE)` (HV-E.5). Invalidated when (a) any calendar's `supersedes` / `superseded_during` changes, (b) any `nonSuperseable` flag flips, (c) any `overrides/` file added/removed.
+- [ ] **RV-P.6** UI consumer surfaces (per [`ui-spec.md`](ui-spec.md) UI-PP): schedule + now-card hide; manage-overlays renders strikethrough+grey with hover/tap tooltip "paused by <X.title> until <range.to>" + per-event force-show toggle; week/month view shows small leaf-glyph indicating an active vacation overlay.
+- [ ] **RV-P.7** Tests per HV-I.6: red/green fixtures for each invariant S1..S5; priority tiebreak when two overlays supersede the same calendar on the same date; per-event override survives; `nonSuperseable` calendar + event-tag both honored.
+
+---
+
+## Phase RV-Q — Off-schedule detection (Round 5; main.md Phase BBB)
+
+See [`draft-household-travel-vacation.md`](draft-household-travel-vacation.md) HV-N.4 and `decisions.md` D.80. Detects events that fall outside their parent calendar's declared `baseline_cadence` and flags them for briefing surface highlighting.
+
+- [ ] **RV-Q.1** Calendar-config schema extension per HV-N.4 (also DM-AA): optional `[baseline_cadence]` block carrying `weekdays = [...]`, `window = ["HH:MM", "HH:MM"]`, `timezone = "..."`. Missing block = no flagging.
+- [ ] **RV-Q.2** Detection algorithm: for each materialized event E on calendar Y with baseline B, set `off_schedule = true` iff `(weekday(E.start in B.timezone), local_time(E.start in B.timezone)) ∉ (B.weekdays × B.window)`. Per-calendar; non-cascading (no promotion to other events on the same date).
+- [ ] **RV-Q.3** Briefing-surface integration (D.81): the `tomorrow_briefing` body generator (NS-Z) prefixes off-schedule items with ⚠ and a contextual hint like *"(off-schedule — work calendar normally runs 9-17)"*.
+- [ ] **RV-Q.4** Room cache: `event_instances.off_schedule` boolean column. Invalidated when (a) event time changes, (b) calendar's `baseline_cadence` block changes, (c) calendar's `timezone` changes.
+- [ ] **RV-Q.5** Tests per HV-O.4: Sat-14:00 doctor event on a Mon-Fri 9-17 baseline calendar → `off_schedule = true`; day-before `tomorrow_briefing` body contains ⚠ prefix.

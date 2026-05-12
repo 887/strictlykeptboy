@@ -1806,3 +1806,44 @@ validator.
 demo:** the new species-pick step lands inside Phase K Screen 2
 (LW-C, was originally proposed in AV integration notes). Bat
 preselected by default per D.64.
+
+---
+
+## Phase TW-J — Lifestyle templates (Round 5; main.md Phase AAA)
+
+See [`draft-household-travel-vacation.md`](draft-household-travel-vacation.md) phases HV-A / HV-B / HV-C / HV-D / HV-K / HV-L / HV-P for the authoritative content. Eight new template files ship at scaffold time per Phase K and Phase XX. All carry `neutral_title` per entry and follow the AT-D / AT-E / AT-F schema. Per HV-J.1 / HV-J.11 / HV-J.20.
+
+- [ ] **TW-J.1** `templates/atomic-household.toml` per HV-A. `neutral_safe = true`. ~88 base entries + 4 kink variants across 13 categories (trash variants, laundry cycle with sub-beats, dishes/kitchen, bathroom with quadrant sub-beats, bedroom, living spaces, entry/mudroom, outdoor, mail/paperwork, pantry/fridge, pets, seasonal, misc). Wizard role-toggle: "household chores".
+- [ ] **TW-J.2** `templates/atomic-travel-prep.toml` per HV-B. `neutral_safe = true`. ~52 entries across 7 lead-time tiers (T-90d/30d/14d/7d/3d/1d/0). Parameterized by `TripDraft` — lead-offsets back-fill to absolute dates at materialization. Conditional entries gated on `visa.required`, `kink_kit.requested`, etc.
+- [ ] **TW-J.3** `templates/atomic-flight-day.toml` per HV-C. `neutral_safe = true`. 19 parameterized entries per flight leg (wake-up, transport, airport-arrive, check-in, security, lounge, board, taxi, fly, arrive, customs, baggage, hotel-shuttle). Pre-airport buffer 120/180 min toggle.
+- [ ] **TW-J.4** `templates/atomic-vacation-daily.toml` per HV-D. `neutral_safe = false` (4 kink anchors included). 15 anchors: 11 self-care + 4 kink. Slob-drift prevention; meal-anchor configurable; kink anchors filtered when neutral-mode or `unaligned-private`.
+- [ ] **TW-J.5** `templates/atomic-adhd-anchors.toml` per HV-K. `neutral_safe = true`. 34 anchors across 6 categories: hydration 5, food 5, meds adherence 8, body-state 5, cognitive 4, sleep-hygiene 4, maintenance 6 (incl. hyperfocus-recovery trigger). Wizard role-toggle: "ADHD anchors".
+- [ ] **TW-J.6** `templates/atomic-medication.toml` per HV-L.A. `neutral_safe = true`; ALL entries `privacy_flag = true` by default; ALL entries carry the `nonSuperseable` tag per D.76. 22 management entries (supply chain, emergency stash, vaccinations, specialist follow-ups, preventative screenings, bodywork). Wizard role-toggle: "managing meds" → surfaces a per-med wizard sheet for adherence entries from HV-K.4.
+- [ ] **TW-J.7** `templates/atomic-menstrual-cycle.toml` per HV-L.B. `neutral_safe = true`; ALL entries `privacy_flag = true` by default. 12 entries (cycle anchors, contraception, preventative screenings, supplies). Wizard role-toggle: "menstrual cycle"; sub-toggle "pause kink-care during period?" wires `cal-period-grace` per HV-L.B.5.
+- [ ] **TW-J.8** `templates/atomic-leisure.toml` per HV-P + D.87. `neutral_safe = false` (caged-play affordances; gated). ~46 entries across 8 categories (passive-consumption 10, active-play 8, movement-play 8, social-recreation 8, solo-decompress 7, caged-play-affordances 3 incl. one kink variant, recovery-leisure 4, long-cycle-leisure-cadence 4). The `dog-walk` atomic carries 7 named sub-beats (leash / poop-bag / water-for-dog / route-pick / actual-walk / post-walk-dog-water / paw-wipe). ALWAYS scaffolded (leisure first-class). Role-toggle "has a dog" enables `dog-walk` + `dog-play-time` family; role-toggle "owns a video-game console / PC gaming" enables `video-games-session` family incl. kink variant *"good boy gets video-game time while caged"* (gated on K-mode); sub-toggle "kink leisure affordances" gates cage-comfort-check + locked-leisure-marker + safeword-aware-leisure (default OFF until K-mode ON).
+- [ ] **TW-J.9** System `cal-briefings` calendar per HV-N.6 / D.81. Auto-scaffolded by wizard at default `active_toggle = true` (user disable in Settings → Notifications). Two recurring events (`morning-briefing` 07:00 daily, `evening-briefing` 21:00 daily) with auto-generated bodies (NS-Z.7); non-user-editable.
+
+---
+
+## Phase TW-K — LW Screen 3.5 (Round 5; main.md Phase K.5a + Phase DDD)
+
+See HV-R.2 / HV-J.20 and `decisions.md` D.83.
+
+- [ ] **TW-K.1** New wizard screen **LW Screen 3.5 — Praise + pronouns** inserted between LW-D Alignment and LW-E Lifestyle. Writes `identity.toml` at calendar-repo root on save.
+- [ ] **TW-K.2** Fields per HV-R.2: praise picker (10 default chips + custom, multi-select for alternation → `[praise].alt_terms`); pronouns (he/she/they/it/custom + extra sets); honorific (Sir/Daddy/Master/Mistress/Owner/Keeper/Captain/custom — SKIPPED if alignment = dominant or unaligned-private); tone register (soft-kinky default for kinky alignments, warm-neutral for unaligned-private); emoji density (default medium).
+- [ ] **TW-K.3** Bat-mascot sticker `bat-holding-name-tag` (ears tilted, fang-flash) — NEW LW-K sticker beat added to LW-K's sticker list; neutral variant `bat-with-clipboard` for `tone.register = "warm-neutral"` and below.
+- [ ] **TW-K.4** Locked default on repo creation (when wizard skipped or for first-launch defaults per HV-R.1.3): `praise.term = "good boy"`, pronouns he/him/his/himself, `Sir`, `soft-kinky`, `medium` emoji density.
+
+---
+
+## Phase TW-L — Vacation wizard sticker beats (Round 5; main.md Phase CCC)
+
+See HV-H. Per HV-J.20. SIX new bat-mascot sticker beats added to LW-K's sprite sheet:
+
+- [ ] **TW-L.1** `trip-suitcase-waving` — bat with tiny suitcase waving paw. Used on HV-F.2 (Screen 1 — Trip basics).
+- [ ] **TW-L.2** `flight-paw-prints` — paw prints curving across a cloud. Used on HV-F.3 + HV-F.4 (Screens 2 + 3).
+- [ ] **TW-L.3** `beach-loungin-with-cage-still-on` — bat on a pool float, tiny cage visible. NEUTRAL VARIANT `beach-loungin` (no cage). Switched at render-time by K-mode. Used on HV-F.5 (Screen 4).
+- [ ] **TW-L.4** `supersedence-snooze-toggle` — bat tucking a tiny calendar under a blanket. Used on HV-F.6 (Screen 5).
+- [ ] **TW-L.5** `confirm-tail-flick` — bat tail-flick with thumbs-up paw. Used on HV-F.7 (Screen 6 — Confirm).
+- [ ] **TW-L.6** `good-boy-stays-good-boy-on-vacation` — bat in sunglasses brushing tiny teeth with a determined face. NEUTRAL VARIANT `staying-on-track`. Used on HV-F.7 reassurance bubble.
+- [ ] **TW-L.7** All new sticker assets follow LW-K's SVG-with-PNG-fallback pipeline, 64×64 + 128×128 + 256×256 export sizes.

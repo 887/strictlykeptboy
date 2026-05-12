@@ -3421,3 +3421,66 @@ the top-of-file status from `🚧 IN-PLANNING` to `✅ DONE`.
 - [ ] **DM-N.7** Repo ID file. Path: `.strictlykeptboy/repo-id` — **committed** to the repo per D.74 for cross-device state-file consistency (Phase OO). One-line plain text UUIDv7. Generated at `init`/`clone` time.
 - [ ] **DM-N.8** Sticker pack manifest schema (Phase WW / D.65). Path: `<pack-root>/pack.toml`. Fields: `schema_version`, `name`, `species`, `author`, `license`, `style`, repeating `[[sticker]]` with `activity_id`, `file`, `tags: list<string>` (taxonomy in D.65), `animated: bool` (hint, decoder auto-detects).
 - [ ] **DM-N.9** AGENTS.md content for produced repos: document `feedback/` directory layout, `skb react` / `skb comment` / `skb repo fingerprint` as primary path, deviation file format, and the "what is NOT in this repo" list (device-level sticker overrides per D.67, repo registry per D.72, fingerprint cache per D.71, OAuth tokens per Phase B).
+
+---
+
+## Phase DM-W — Event attachments schema (Round 5; main.md Phase BBB)
+
+See [`draft-household-travel-vacation.md`](draft-household-travel-vacation.md) HV-M and `decisions.md` D.57 (privacy inheritance) for the authoritative spec. Per HV-J.9.
+
+- [ ] **DM-W.1** Event-frontmatter `attachments: List<Attachment>` array. Empty by default; missing == empty. Sealed-union discriminator field `kind`.
+- [ ] **DM-W.2** Six sealed kinds (LOCKED): `link` (`url`, optional `label`); `qr` (`file` and/or `data`); `file` (`file`, `mime_type`, `size_bytes`, optional `description`); `barcode` (`file`, `format ∈ {aztec, pdf417, code128}`, `data`); `vcard` (`file`); `location` (`lat`, `lon`, optional `label`).
+- [ ] **DM-W.3** Storage path: `attachments/<event-id>/<filename>` (repo-relative). Files >100KB MUST be Git-LFS'd (Phase Z); resolver warns at write-time when threshold exceeded without LFS configured for `attachments/*`.
+- [ ] **DM-W.4** Privacy inheritance per D.57: event `private = true` ⇒ attachments inherit `private = true`; lockscreen previews show NO attachment indicator (only "scheduled event").
+- [ ] **DM-W.5** Validation: ktoml round-trip every kind; reject `file` paths outside repo root; reject `lat` ∉ ±90, `lon` ∉ ±180; warn (don't refuse) when `mime_type` disagrees with file magic-bytes.
+- [ ] **DM-W.6** Kink-aware auto-private hint (HV-M.5): events tagged `kink` OR with attachments matching toy/scene/contract filename heuristics → resolver write-time dismissable nudge "this looks private, want to flag it private?"
+
+---
+
+## Phase DM-X — Multi-reminder schema (Round 5; main.md Phase BBB)
+
+See HV-N and `decisions.md` D.79 / D.82. Per HV-J.9.
+
+- [ ] **DM-X.1** Event-frontmatter `reminders: List<Reminder>` array. Empty by default; missing == empty.
+- [ ] **DM-X.2** Each `Reminder`: `offset` (ISO 8601 duration; negative = before, positive = after, `"0"` = at start), `kind` (sealed enum below), optional `channel` override, optional `lockscreen_visibility` (default derived from event's `private` flag).
+- [ ] **DM-X.3** Sealed `ReminderKind` enum: `heads_up` (soft, channel `events-heads-up`), `all_day_banner` (fires at user's morning briefing time for `all_day = true` events), `tomorrow_briefing` (fires at evening briefing the day before), `pre_event`, `at_start` (current single-reminder default), `post_event_checkin` (opt-in per D.82; offers Yes/No/Partial/Remind-in-X).
+- [ ] **DM-X.4** Default cadences per template category per D.79 (medical / flight / travel-prep / vacation-daily / household / medication / ADHD / birthdays).
+- [ ] **DM-X.5** Interaction: events with `all_day = true` SKIP `at_start` and fire `all_day_banner` instead. If both are configured, `at_start` ignored (resolver warns at write-time).
+- [ ] **DM-X.6** Notification stacking (HV-N.7): N reminders within a 60s window collapse into one Android notification with N expansion lines; channel hierarchy = highest-importance among collapsed; privacy = collapsed preview shows "N reminders" if ANY constituent is private.
+- [ ] **DM-X.7** Room cache `event_reminders(repo, event_id, offset, kind, scheduled_at)`. Invalidated on (a) event file change, (b) `now` crosses any scheduled_at, (c) calendar's `baseline_cadence` changes (D.80).
+
+---
+
+## Phase DM-Y — `mode.toml` + `identity.toml` (Round 5; main.md Phase DDD)
+
+See HV-Q.1 / HV-R.1 and `decisions.md` D.83 / D.84 / D.86. Per HV-J.17.
+
+- [ ] **DM-Y.1** `mode.toml` at calendar-repo root. Schema: `mode = "free" | "strictly-kept"` (default `"free"` on repo creation), `write_back_target = "<repo-url-or-self>"` optional, `dom_persona = "<persona-name>"` optional, `dom_cadence = "realtime" | "end-of-day" | "weekly"` optional (default `"end-of-day"` per D.85), `kept_since = "<ISO-8601>"` optional. Per-calendar override block: `[calendars.<id>] mode = "..."`.
+- [ ] **DM-Y.2** `identity.toml` at calendar-repo root. IS committed (per D.83). Blocks: `[praise]` (`term`, optional `alt_terms: list<string>`), `[pronouns]` (`subject`/`object`/`possessive`/`reflexive`, optional `extra_sets: list<table>`), `[honorific_for_dom]` (`term`), `[tone]` (`register`, `emoji_density`).
+- [ ] **DM-Y.3** Locked default `identity.toml` on repo creation: `praise.term = "good boy"`, pronouns he/him/his/himself, `honorific_for_dom.term = "Sir"`, `tone.register = "soft-kinky"`, `tone.emoji_density = "medium"`. Wizard's job is to confirm or override.
+- [ ] **DM-Y.4** AGENTS.md bridge line per D.83: exactly one line *"See `identity.toml` at repo root for the user's praise term, pronouns, and tone register — use these when generating content for this user."* No further personal-preference content embedded in AGENTS.md / CLAUDE.md.
+- [ ] **DM-Y.5** Validation: schema-versioned; ktoml round-trip per block; reject empty `praise.term`; reject malformed pronoun sets.
+
+---
+
+## Phase DM-Z — `reviews/<commit-sha>/` directory (Round 5; main.md Phase DDD)
+
+See HV-Q.2 and `decisions.md` D.84. Per HV-J.17.
+
+- [ ] **DM-Z.1** `reviews/<commit-sha>/reviewable_change.md` (boy's repo, in `strictly-kept` mode only). Frontmatter: `commit_sha`, `author`, `timestamp`, `changed_paths: list<string>`, `auto_summary` (register-aware blurb using `identity.toml` praise term), `kind = "reviewable_change"`. Body: collapsed Markdown details section with diff hunks.
+- [ ] **DM-Z.2** `reviews/<commit-sha>/responses/<dom-fingerprint>-<timestamp>.md` (in DOM'S repo per Phase YY write-back-target). Frontmatter: `reactions: list<string>` drawn from the canonical reaction set (`locked` / `collar` / `good-boy` / `paw` / `heart` / `fire` / `thumbsup` / `🦇` / `smirk`), `responder_fingerprint`, `responder_label`, `created`. Body: free-text Markdown.
+- [ ] **DM-Z.3** Auto-summary generator: maps changed-path families to register-aware blurbs. Fixtures cover: new-event, moved-event, deleted-event, deviation-logged, recurrence-edit, attachment-add, mode-flip.
+- [ ] **DM-Z.4** Cute-coded LGTM: empty body + `good-boy` reaction renders specially in the boy's feed (the dom looked, the dom approved).
+- [ ] **DM-Z.5** Cross-repo surfacing per Phase YY: `kind = "review"` joins existing feedback-kind sealed union; cross-repo resolver surfaces unreviewed entries to the dom's Reviews tab and surfaces responses back to the boy's per-commit feed.
+
+---
+
+## Phase DM-AA — `baseline_cadence` + `overrides/` directory (Round 5; main.md Phase BBB)
+
+See HV-E + HV-N.4 and `decisions.md` D.77 / D.80. Per HV-J.3 / HV-J.9.
+
+- [ ] **DM-AA.1** Calendar-frontmatter (`calendar.toml`) optional fields per HV-E.1: `supersedes: list<calendar-id>`, `superseded_during: list<{from, to}>`, `nonSuperseable: bool = false`.
+- [ ] **DM-AA.2** Calendar-frontmatter optional `[baseline_cadence]` block per HV-N.4: `weekdays: list<string>`, `window: [HH:MM, HH:MM]`, `timezone: string`. Missing block = no off-schedule flagging (D.80).
+- [ ] **DM-AA.3** `overrides/<superseded-cal-id>/<event-id>/<yyyy-mm-dd>.md` per D.77. Two `kind` values: `"force-show"` (single date), `"force-show-for-range"` (with `from` / `to` fields). Parallel to `exceptions/` (cancel) and `deviations/` (reported-not-done) — three sibling directories, three distinct semantics.
+- [ ] **DM-AA.4** Event-frontmatter `nonSuperseable` tag in `tags` array per HV-E.6 S5: event survives supersedence even when parent calendar is superseable. Default-tagged categories: medication, pet-care, vet, critical-health.
+- [ ] **DM-AA.5** Validator rejections: self-supersede (S3); negative date ranges; cross-repo `supersedes` references (must be local-repo calendar-id).

@@ -3452,3 +3452,39 @@ All commands ship with `--json` envelopes per D.24 and `--dry-run` per X.6.
 ### `skb mode neutral` (Phase K.14 / D.58)
 
 - [ ] **CLI-L.26** `skb mode neutral on|off|toggle` — aliases the neutral-mode setting (parallel to `skb mode simplified|full|toggle` from D.52).
+
+---
+
+## Phase CLI-U — Mode / dom / identity / trip / attach / reminder / briefing (Round 5; main.md Phases BBB + CCC + DDD)
+
+See [`draft-household-travel-vacation.md`](draft-household-travel-vacation.md) HV-E.8 / HV-M.8 / HV-N / HV-J.13 / HV-J.19. CLI surface for the four new main.md phases AAA / BBB / CCC / DDD. All commands honor `--json`, `--dry-run`, `--repo` per CLI-A/B/C and exit codes per D.24.
+
+### Mode + identity + dom (main.md Phase DDD; D.83 / D.84 / D.85 / D.86)
+
+- [ ] **CLI-U.1** `skb mode <free|kept> [--cooling-off] [--calendar <id>]` — flip `mode.toml`'s `mode` field (per-repo by default; per-calendar with `--calendar`). `--cooling-off` runs the 24h confirmation flow per D.86 (boy-side only; never gateable by dom).
+- [ ] **CLI-U.2** `skb dom set-persona <persona-name>` — set the active AI-dom-persona; writes `dom_persona` in `mode.toml`. Validates against shipped personas + `custom-prompt`.
+- [ ] **CLI-U.3** `skb dom respond <commit-sha> [--reactions a,b,c] [--body "text"]` — open the dom-side response composer; writes `reviews/<sha>/responses/<dom-fp>-<ts>.md` in the dom's own repo. Reaction set per D.84.
+- [ ] **CLI-U.4** `skb dom cadence <realtime|end-of-day|weekly>` — configure when the AI-dom-agent fires; writes `dom_cadence` in `mode.toml`.
+- [ ] **CLI-U.5** `skb identity edit` — open `identity.toml` for editing; validates schema on save. In `strictly-kept` mode the resulting commit goes through the review-feed.
+- [ ] **CLI-U.6** `skb identity preview` — render a sample now-card + template title + briefing salutation + dom-Claude response using the current `identity.toml` (same live-preview as Settings → Identity).
+- [ ] **CLI-U.7** `skb review list [--unreviewed-only]` — list `reviewable_change` entries (dom-side surface).
+
+### Trip + supersedence (main.md Phase CCC + BBB; D.75 / D.77 / D.78)
+
+- [ ] **CLI-U.8** `skb trip plan` — launch the trip wizard in CLI form (interactive prompts mirroring the 6 wizard screens in HV-F); materializes a `cal-trip-<uuidv7>/` calendar with HV-B prep events, HV-C flight events, HV-D daily anchors, and `overrides/` files in one atomic commit.
+- [ ] **CLI-U.9** `skb trip edit <trip-id>` — re-enter the wizard rehydrating `TripDraft` from the existing trip calendar; commit produces a diff-commit, not a fresh calendar.
+- [ ] **CLI-U.10** `skb trip cancel <trip-id>` — delete `cal-trip-<id>/` directory and all `overrides/` it created in one atomic commit.
+- [ ] **CLI-U.11** `skb supersede --calendar <X> --supersedes <Y> [--from <date>] [--to <date>]` / `skb supersede remove --calendar <X> --supersedes <Y>` — calendar-to-calendar supersedence (HV-E.8).
+- [ ] **CLI-U.12** `skb override force-show --calendar <Y> --event <id> --date <yyyy-mm-dd>` / `skb override force-show-for-range --calendar <Y> --event <id> --from <d> --to <d>` — per-event opt-out from supersedence (D.77).
+
+### Attachments + reminders + briefings (main.md Phase BBB; HV-M / HV-N / D.79 / D.81)
+
+- [ ] **CLI-U.13** `skb attach <event> <file>` — infers kind from extension (PDF → file, png-with-decoded-QR → qr, vcf → vcard, etc.); `skb attach <event> --kind link <url>`; `skb attach <event> --kind location <lat> <lon> [<label>]`; `skb attach <event> --kind barcode <file> --format aztec|pdf417|code128`. Honors LFS-threshold warning at 100KB+.
+- [ ] **CLI-U.14** `skb attach list <event>` / `skb attach rm <event> <index-or-filename>` — list / remove attachments.
+- [ ] **CLI-U.15** `skb reminder add <event> <offset> <kind>` — `kind ∈ {heads_up, all_day_banner, tomorrow_briefing, pre_event, at_start, post_event_checkin}`; offset in ISO 8601 duration form.
+- [ ] **CLI-U.16** `skb reminder list <event>` / `skb reminder rm <event> <index>` — list / remove reminders.
+- [ ] **CLI-U.17** `skb briefing show <yyyy-mm-dd>` — renders the morning + evening briefing bodies for the given date (same auto-generation logic NS-Z.7 uses; useful for testing the off-schedule highlight prefixing).
+
+### Exit codes + JSON
+
+- [ ] **CLI-U.18** All commands honor existing exit code conventions per D.24. JSON output per CLI-C surfaces full `mode.toml` / `identity.toml` / review-entry / attachment / reminder shapes; structured-error codes for: invalid persona name, invalid reaction token, schema-version mismatch, cooling-off-not-elapsed, dom-side-not-write-back-target.

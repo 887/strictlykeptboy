@@ -4607,3 +4607,105 @@ Round 3 of this document is "done" (Status: ✅ DONE) when:
 
 - [ ] **UI-NN.1** First-launch age-gate modal (D.61). Modal copy: "This app contains references to adult lifestyle dynamics. You must be 17 or older to use it." Buttons: "I am 17 or older — continue" / "Exit". Decline → app finishes gracefully. Confirmation stored in encrypted app prefs (`age_confirmed_at = <ISO ts>`); re-shown only on app-data clear.
 - [ ] **UI-NN.2** Settings → Appearance → "Neutral mode" toggle (D.58). Also set by Phase K wizard "unaligned-private" alignment. Toggling re-evaluates downstream surfaces (template picker, sticker resolver kink filter per D.66, reaction-picker filter per D.62) without rewriting user-authored content.
+
+---
+
+## Phase UI-OO — Vacation wizard (Round 5; main.md Phase CCC)
+
+See [`draft-household-travel-vacation.md`](draft-household-travel-vacation.md) HV-F and HV-G. Six Compose screens + confirm modal; in-app multi-screen flow distinct from Phase K's first-launch wizard. Reuses `WizardScaffold` from LW-A but rooted at `TripWizardNavHost`.
+
+- [ ] **UI-OO.1** Nav-graph: 6 screens + confirm modal. State stored in `TripDraft` data class backed by Room until commit. Entry-points (per HV-G): Settings → "+ Plan a trip" (between Calendars and Sharing); Calendar-detail → "+ overlay from template" → "Vacation / trip"; Now-card empty-state "no plans today — want to plan a trip?".
+- [ ] **UI-OO.2** Screen 1 — Trip basics: trip name, start/end date pickers, destination free-text with OFFLINE bundled country+capital autocomplete (no network), travel mode radio. Sticker `trip-suitcase-waving`.
+- [ ] **UI-OO.3** Screen 2 — Travel-prep cadence: back-fill preview list of HV-B entries with computed absolute dates; inline toggles + tap-to-edit lead-offset; conditional entries grayed out per parameter eval. Sticker `flight-paw-prints`.
+- [ ] **UI-OO.4** Screen 3 — Flight details (conditional on mode=flight): multi-leg list with IATA codes, per-leg international toggle + buffer override. Sticker `flight-paw-prints`.
+- [ ] **UI-OO.5** Screen 4 — Vacation-daily anchors: HV-D toggles + relax-cadence + meal-anchor radio + pack-kink-kit gate. Sticker `beach-loungin-with-cage-still-on` (neutral `beach-loungin`).
+- [ ] **UI-OO.6** Screen 5 — Supersedence picker: ALL active calendars list with per-calendar "pause during trip" toggle; defaults superseded for work/university/kink-routine/weekly-reset; defaults NOT superseded for medication/health/pet-care/nonSuperseable (visually locked with explanatory chip); per-calendar expandable "but keep these events on" list writes `overrides/` files. Sticker `supersedence-snooze-toggle`.
+- [ ] **UI-OO.7** Screen 6 — Confirm: mini-month preview with back-filled prep events leading into the trip window and daily anchors during; greyed-strikethrough preview of superseded events; "Re-edit" hop-back per section; "Confirm and materialize" CTA. Stickers `confirm-tail-flick` + `good-boy-stays-good-boy-on-vacation` reassurance bubble.
+- [ ] **UI-OO.8** Edit-in-flight: detected-trip chip on Settings → "+ Plan a trip" entry-point ("Continue editing 'Sicily 2026'?"). Selecting it re-enters with rehydrated `TripDraft`; commit produces diff-commit.
+- [ ] **UI-OO.9** Cancel-trip: separate action from overlay-management UI; deletes `cal-trip-<id>/` + `overrides/` in one atomic commit.
+
+---
+
+## Phase UI-PP — Supersedence management overlay (Round 5; main.md Phase BBB)
+
+See HV-E.3 and `decisions.md` D.75 / D.77 / D.78. Per HV-J.8.
+
+- [ ] **UI-PP.1** Schedule + now-card: hidden events do NOT render.
+- [ ] **UI-PP.2** Manage-overlays screen: hidden events render strikethrough + greyed with hover/tap tooltip "paused by <X.title> until <range.to>". Per-event "show this one anyway" toggle writes `overrides/<cal-y-id>/<event-id-or-rule-id>/<yyyy-mm-dd>.md` with `kind = "force-show"`.
+- [ ] **UI-PP.3** Week / month views: hidden events suppressed; small leaf-glyph on the date indicates a vacation-overlay is active (tap drills into what's paused).
+- [ ] **UI-PP.4** `nonSuperseable` indicator: events with the `nonSuperseable` tag (per D.76) carry a tiny lock-icon chip so the user can see at-a-glance what survives vacation.
+- [ ] **UI-PP.5** Empty-state copy for the manage-overlays screen when no calendars supersede: "No vacation overlays active. Plan a trip to pause your routine." with a deep-link button into UI-OO.
+
+---
+
+## Phase UI-QQ — Attachment renderers (Round 5; main.md Phase BBB)
+
+See HV-M.4. Per HV-J.8.
+
+- [ ] **UI-QQ.1** `AttachmentList` Composable on Event-detail screen, below the body. One row per attachment, kind-keyed renderer.
+- [ ] **UI-QQ.2** `link` → `ListItem` with link icon; tap → `Intent.ACTION_VIEW` in system browser.
+- [ ] **UI-QQ.3** `qr` → thumbnail at 64dp; tap → full-screen scan-friendly view (max-brightness override, no chrome, 80% screen fill, swipe-down to close).
+- [ ] **UI-QQ.4** `file` → `ListItem` with file icon + mime + size; tap → open in viewer (PDF viewer for PDFs, image viewer for images, system chooser for others).
+- [ ] **UI-QQ.5** `barcode` → same as `qr` but full-screen renders at format-appropriate aspect (PDF417 wide, Aztec square, Code128 wide).
+- [ ] **UI-QQ.6** `vcard` → `ListItem` with contact icon; tap → `Intent.ACTION_INSERT` for contacts.
+- [ ] **UI-QQ.7** `location` → map preview thumbnail (static map tile); tap → `Intent.ACTION_VIEW` with `geo:` URI.
+- [ ] **UI-QQ.8** Now-card: tiny paperclip glyph (12dp) if ANY attachments present (the FACT of an attachment is not secret; the CONTENT is). Privacy: glyph appears on private events too; lockscreen previews suppress the glyph per HV-M.3.
+
+---
+
+## Phase UI-RR — Multi-reminder UI (Round 5; main.md Phase BBB)
+
+See HV-N. Per HV-J.8.
+
+- [ ] **UI-RR.1** Per-event reminder editor on Event-detail sheet: list of `Reminder` rows with `offset` / `kind` / optional `channel` + `lockscreen_visibility` overrides. Add-row chip; per-row delete swipe.
+- [ ] **UI-RR.2** Template-default reminder picker per HV-N.3 / D.79: when an event is created via a template, the default cadence pre-populates; user can edit before save.
+- [ ] **UI-RR.3** Stacked-notification rendering preview (read-only docs surface on Settings → Notifications): shows what a collapsed 3-reminder stack looks like, with quick-actions per line.
+- [ ] **UI-RR.4** Briefing-event rendering: `cal-briefings` events (D.81) render with a special "auto-generated body" badge; tap-to-expand shows the materialized list with off-schedule ⚠ items highlighted (D.80). Per-item quick-actions: `snooze` / `re-arm` / `mark-done-early` / `mark-skipped`.
+
+---
+
+## Phase UI-SS — Reviews tab (Round 5; main.md Phase DDD)
+
+See HV-Q.2 / HV-J.21 and `decisions.md` D.84. Dom-side surface AND boy-side per-commit response view.
+
+- [ ] **UI-SS.1** Dom-side Reviews tab: lists unreviewed `reviewable_change` entries grouped by date. Per-entry preview shows boy's identity (praise term + honorific + bat sticker via `identity.toml`), auto-summary, and a reaction-strip + free-text composer. Sorting newest-first with unread pill.
+- [ ] **UI-SS.2** Tap-entry → response composer: 9-token reaction picker (`locked` / `collar` / `good-boy` / `paw` / `heart` / `fire` / `thumbsup` / `🦇` / `smirk`) + free-text Markdown editor. Tapping a reaction with EMPTY text writes the cute-coded LGTM ("good-boy looked, good-boy approved").
+- [ ] **UI-SS.3** Boy-side: response-on-my-commits view extends the existing per-commit feedback feed with the new `review` kind. Renders dom's reactions + comment threading + register-matched chrome from `identity.toml`.
+- [ ] **UI-SS.4** Filter chips: All / Unread / Reactions-only / Threaded.
+- [ ] **UI-SS.5** Empty-state copy: dom-side — "No new reviews from <boy-praise-term> yet."; boy-side — "<honorific> hasn't responded yet — give them time."
+
+---
+
+## Phase UI-TT — Mode-aware chrome (Round 5; main.md Phase DDD)
+
+See HV-Q.1 / HV-Q.5 / HV-J.21 and `decisions.md` D.84 / D.86.
+
+- [ ] **UI-TT.1** Always-visible mode pill in app chrome (top-bar): renders `free` / `kept` / `self-keep` with a small lock-icon on `kept` / `self-keep`.
+- [ ] **UI-TT.2** Long-press on the pill surfaces the "transition my mode" affordance (per D.86 — always reachable from the most-kept UI state, NOT buried).
+- [ ] **UI-TT.3** Transition modal: confirmation copy uses dom-persona voice when present ("are you sure you want to leave this dynamic?"). 24h cooling-off CONFIRMATION (NOT a gate) — boy types confirmation string; second confirm-tap fires the mode-switch commit. Per D.86 — no dom can prolong / veto.
+- [ ] **UI-TT.4** In kept mode: small dom-presence indicator next to the pill (e.g. a tiny avatar or persona-icon) showing which dom (human or AI persona) currently holds the keys.
+- [ ] **UI-TT.5** Self-keep mode: pill renders as `self-keep` with a special glyph (kept-by-self, exit-ramp aware) to make the in-between state visible per D.86.
+
+---
+
+## Phase UI-UU — Dom-persona picker (Round 5; main.md Phase DDD)
+
+See HV-Q.3 / HV-J.21 and `decisions.md` D.85.
+
+- [ ] **UI-UU.1** Settings sub-screen listing 6 shipped personas + custom-prompt with a register preview-snippet per persona (a sample dom-response rendered live using current `identity.toml`).
+- [ ] **UI-UU.2** Per-persona cadence control (realtime / end-of-day / weekly) with a default-end-of-day pre-select per D.85.
+- [ ] **UI-UU.3** `custom-prompt` editor: free-text Markdown editor for the user's custom dom-persona prompt; saved at `~/.config/skb/dom-personas/custom.md` (app-private, NOT in calendar repo).
+- [ ] **UI-UU.4** Explicit-content gate per D.85: a separate toggle "Allow explicit content in dom-responses" (default OFF; requires K-6 age-confirmation to enable). Locks the safety-default in the picker UI.
+- [ ] **UI-UU.5** Migration affordance: "Switch to a human dom" CTA from the picker → triggers Phase RR share-this-repo flow (deep-link offer to partner).
+
+---
+
+## Phase UI-VV — Identity preview panel (Round 5; main.md Phase K.5a + Phase DDD)
+
+See HV-R.3 / HV-J.21 and `decisions.md` D.83.
+
+- [ ] **UI-VV.1** Live-preview panel rendered at Settings → Identity AND on LW-Screen-3.5 final-step. Side-by-side with the editing form.
+- [ ] **UI-VV.2** Preview renders four surfaces using the currently-pending `identity.toml`: (a) a now-card with the chosen praise term in the title, (b) a sample template-title with `{{praise}}` resolved, (c) a briefing salutation ("good morning, good boy 🦇" — emoji density honored), (d) a dom-Claude response snippet using the chosen honorific.
+- [ ] **UI-VV.3** "Reset to wizard defaults" button: writes the HV-R.1.3 locked defaults (`praise.term = "good boy"`, he/him/his/himself, `Sir`, `soft-kinky`, `medium`).
+- [ ] **UI-VV.4** Save behavior: identity changes commit to `identity.toml`. In `strictly-kept` mode (D.84) the commit goes through the review-feed like any other commit.
+- [ ] **UI-VV.5** Multi-pronoun alternation preview: if `[pronouns].extra_sets` is non-empty, the preview alternates pronoun sets across the four preview surfaces to demonstrate the agent-side alternation.

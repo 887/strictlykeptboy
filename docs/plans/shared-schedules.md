@@ -2359,3 +2359,28 @@ single subagent or single dev session.
 - [ ] **SH-J.1** Repo registry per D.72: `<app-data>/repo-registry.toml` device-local. Auto-registers on every successful repo open (Phase B, Phase QQ deep-link, Phase SS own-repo mini-wizard).
 - [ ] **SH-J.2** Per-direction (asymmetric) isolation per D.72: each repo controls only what *it* refuses to see. Aggregation count masking forbidden.
 - [ ] **SH-J.3** Fingerprint cache file `.strictlykeptboy/repo-fingerprint` (gitignored per D.71) — auto-derived on repo open if missing.
+
+---
+
+## Phase SH-K — Review-feed cross-repo contract (Round 5; main.md Phase DDD)
+
+See [`draft-household-travel-vacation.md`](draft-household-travel-vacation.md) HV-Q.2 and `decisions.md` D.84. Per HV-J.18. Extends the Phase YY cross-repo feedback semantics with the kept-mode review-feed contract.
+
+- [ ] **SH-K.1** New sealed-kind `kind = "review"` joins the existing feedback-kind union alongside reactions / comments / journal-replies / bonus-tasks. Review entries are first-class cross-repo feedback objects.
+- [ ] **SH-K.2** In `mode = "strictly-kept"` (D.84), every commit to the boy's repo materializes `reviews/<commit-sha>/reviewable_change.md` via a JGit post-commit callback (NOT a git hook on disk — in-app). Auto-summary uses `identity.toml` praise term per DDD.11.
+- [ ] **SH-K.3** Dom's app picks up unreviewed entries via the existing cross-repo resolver (Phase YY). Sort: newest-first with unread pill. Surface: "Reviews" tab (UI-SS).
+- [ ] **SH-K.4** Dom writes responses to `reviews/<commit-sha>/responses/<dom-fingerprint>-<timestamp>.md` IN THE DOM'S OWN REPO per write-back-target. Reaction set per D.84: `locked` / `collar` / `good-boy` / `paw` / `heart` / `fire` / `thumbsup` / `🦇` / `smirk`.
+- [ ] **SH-K.5** Boy's app surfaces responses on the original commit in the existing per-commit feedback feed (the same feed already used for reaction-on-event), extended with the new `review` kind. Empty-text + `good-boy` reaction renders as the cute-coded LGTM (DM-Z.4).
+- [ ] **SH-K.6** Self-keep mode (D.86): write-back-target is the boy's OWN repo; the boy commits their own reviews on themselves. Same SH-K.4 path with `responder_fingerprint = self`.
+- [ ] **SH-K.7** Mode-flip notification: the dom-side app receives a NEUTRAL informational notification when the boy flips to `free` (per D.86). No veto UI; no negotiation surface.
+
+---
+
+## Phase SH-L — Dom-persona pointer (Round 5; main.md Phase DDD)
+
+See HV-Q.3 / HV-J.18. Extends Phase OO cross-repo state.
+
+- [ ] **SH-L.1** Per-link state file `.strictlykeptboy/ai-dom-pointer.toml` (device-local, NOT committed) records which AI-dom-persona is currently active for which kept-link. Allows the persona to be swapped without churning the cross-repo link itself.
+- [ ] **SH-L.2** Schema: `[[link]]` entries with `repo_fingerprint`, `persona_name` (one of D.85 shipped names or `custom-prompt`), `persona_file_path` (`~/.config/skb/dom-personas/<name>.md`), `cadence` (`realtime` / `end-of-day` / `weekly`), `last_run_at`.
+- [ ] **SH-L.3** Persona file path resolution: app-private at `~/.config/skb/dom-personas/<name>.md` per D.85; ships with 6 defaults + `custom-prompt`. NEVER in the calendar repo (agent-tooling, not user-data).
+- [ ] **SH-L.4** Swap-persona migration (HV-Q.4.3): kept-by-AI → new persona writes a single mode-change commit noting the transition; old reviews remain readable in history.

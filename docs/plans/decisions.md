@@ -1562,3 +1562,198 @@ prohibited in v1.** Per-remote auth bindings keyed on
 reuse). `SecretsStore` re-keyed with one-shot migration. CLI:
 `skb repo init --local`, `skb remote add|remove|list|set-primary|
 set-policy`.
+
+---
+
+## D.75 — Supersedence is a temporal overlay, not deletion
+
+Per Phase BBB (HV-E). A calendar may declare `supersedes = [...]`
++ `superseded_during = [{from, to}, ...]` in its `calendar.toml`,
+which causes the resolver to HIDE events from the listed calendars
+within the listed date ranges. Superseded events are not deleted,
+not cancelled, and not removed from storage — they are hidden from
+schedule views and stay visible (strikethrough + grey) in the
+manage-overlays UI with a per-event "show this one anyway"
+override. Locks the promise: a vacation pauses the routine without
+losing the routine.
+
+---
+
+## D.76 — `nonSuperseable` at calendar AND event granularity
+
+Per Phase BBB (HV-E.6 invariants S4 + S5). Calendars carry a
+`nonSuperseable: Boolean` flag (default false). Events may also
+carry the `nonSuperseable` tag in their `tags` array. Either flag
+makes the event survive supersedence, regardless of its parent
+calendar's setting. Default-nonSuperseable categories: medication,
+pet-care, vet, critical-health. Locks the promise: vacation never
+silently skips meds or pet feedings.
+
+---
+
+## D.77 — `overrides/` directory parallel to `exceptions/` + `deviations/`
+
+Per Phase BBB (HV-E.3 / HV-E.4). Per-event opt-outs of supersedence
+live at `overrides/<superseded-cal-id>/<event-id>/<yyyy-mm-dd>.md`
+with `kind = "force-show"` (single instance) or `kind =
+"force-show-for-range"` (date-range). Three sibling directories,
+three distinct semantics: `exceptions/` = cancel a recurrence
+occurrence; `deviations/` = scheduling held but reality differed;
+`overrides/` = force-render despite supersedence.
+
+---
+
+## D.78 — Supersedence invariants S1–S5
+
+Per Phase BBB (HV-E.6). Locked: **S1** an event is hidden by AT
+MOST one calendar (TT-priority tiebreak attributes; render is the
+same). **S2** supersedence is non-cascading — if X supersedes Y
+and Y supersedes Z, X does not transitively supersede Z. **S3** a
+calendar cannot supersede itself (validator rejects). **S4**
+`nonSuperseable = true` calendars ignore all supersedence requests.
+**S5** events carrying the `nonSuperseable` tag survive supersedence
+even inside otherwise-superseable calendars. Trade-off: simpler
+reasoning, at the cost of users having to list every paused
+calendar explicitly.
+
+---
+
+## D.79 — Default reminder cadences per template category
+
+Per Phase BBB (HV-N.3). Locked defaults: **Medical** `[-7d
+heads_up, -1d tomorrow_briefing, -2h pre_event, 0 at_start]`.
+**Flights** `[-1w heads_up, -24h heads_up "check-in opens", -3h
+pre_event "leave home", -30m pre_event "board call", 0 at_start]`.
+**Travel-prep** (HV-B) `[-3d heads_up]` only. **Vacation-daily**
+(HV-D) `[0 at_start]`. **Household** (HV-A) none (too noisy; opt-in
+per category in wizard). **Medication** (HV-K + HV-L) `[0
+at_start]` only; missed-dose handled via `post_event_checkin`
+recovery. **ADHD anchors** `[0 at_start]`. **Birthdays /
+anniversaries** (`all_day`) `[-1d tomorrow_briefing, 0
+all_day_banner]`.
+
+---
+
+## D.80 — Off-schedule detection via `baseline_cadence`
+
+Per Phase BBB (HV-N.4). Each calendar may declare a
+`[baseline_cadence]` block in `calendar.toml` carrying `weekdays`,
+`window = ["HH:MM", "HH:MM"]`, `timezone`. Events whose `(weekday,
+local_time)` falls OUTSIDE this window are marked `off_schedule =
+true` by the resolver. `tomorrow_briefing` reminders highlight
+off-schedule events with a ⚠ prefix. Detection is per-calendar
+(not per-event); calendars without a baseline are not flagged.
+
+---
+
+## D.81 — System `cal-briefings` calendar with auto-generated bodies
+
+Per Phase BBB (HV-N.6). A system calendar `cal-briefings` is
+scaffolded by default (user can disable in Settings →
+Notifications → "Show briefings"). It carries two recurring
+events: `morning-briefing` (default 07:00 daily) and
+`evening-briefing` (default 21:00 daily). Bodies are AUTO-
+GENERATED at fire time by walking the upcoming-window query;
+non-user-editable (edit attempts get a "regenerate?" prompt). Body
+format = inline Markdown list, one item per upcoming event, with
+off-schedule events ⚠-prefixed and notification quick-actions
+per item.
+
+---
+
+## D.82 — `post_event_checkin` is opt-in per event/template
+
+Per Phase BBB (HV-N.8). The `post_event_checkin` reminder kind is
+OPT-IN per event AND per template. Default off everywhere;
+inverted-habit's default-by-schedule auto-completion (D.70)
+remains the canonical behavior. When opted in, the post-event
+notification offers `Yes` (no-op), `No` (writes a `skipped`
+deviation), `Partial` (writes a `partial` deviation with sub-beat
+picker), `Remind me again in X` (re-arms).
+
+---
+
+## D.83 — `identity.toml` vs `AGENTS.md` split
+
+Per Phase DDD (HV-R.4). Personal-preference content — praise term,
+pronouns, honorific, tone register, emoji density — lives in
+`identity.toml` at calendar-repo root and IS committed.
+Architectural guidance lives in `AGENTS.md` / `CLAUDE.md`.
+`AGENTS.md` contains exactly one bridge line: *"See `identity.toml`
+at repo root for the user's praise term, pronouns, and tone
+register — use these when generating content for this user."* No
+further personal-preference content embedded. Rationale: AGENTS.md
+loads into every agent context (don't bloat); calendar repos may
+be shared with collaborators (AGENTS.md is shared editorial
+content; identity.toml is OWNER preference); when a boy migrates
+between doms, identity.toml follows him while AGENTS.md stays with
+the repo.
+
+---
+
+## D.84 — Free-vs-strictly-kept mode contract
+
+Per Phase DDD (HV-Q.1 / HV-Q.2). Per-calendar AND per-repo
+`mode = "free" | "strictly-kept"` (default per-repo, override
+per-calendar). Committed to `mode.toml` at calendar-repo root —
+mode transitions ARE history. In `free`: edits apply immediately,
+no review surface. In `strictly-kept`: edits STILL APPLY
+immediately (no blocking, no approval gate, no veto); every commit
+materializes a `reviews/<commit-sha>/reviewable_change.md` entry
+consumed by the dom via Phase YY cross-repo feedback. Dom responses
+are reactions (`locked` / `collar` / `good-boy` / `paw` / `heart` /
+`fire` / `thumbsup` / `🦇` / `smirk`) + free-text written to the
+dom's OWN repo. A response with empty text + `good-boy` reaction
+renders as the cute-coded LGTM.
+
+---
+
+## D.85 — AI-dom-persona safety guardrails
+
+Per Phase DDD (HV-Q.3). AI-dom personas are app-private prompt
+templates at `~/.config/skb/dom-personas/<name>.md` — NOT in the
+calendar repo (agent-tooling, not user-data). Shipped personas:
+`stern-but-fair`, `playful-tease`, `kinky-affectionate`,
+`daddy-warmth`, `bratty-switch-energy`, `clinical-protocol`,
+plus `custom-prompt`. Default kink-mode AI-dom emits
+*suggestive-tone, no explicit content* unless the boy has
+explicitly opted in via setting AND age-gated past K-6. AI-dom
+cadence: `realtime` / `end-of-day` / `weekly` with default
+`end-of-day`. AI-dom NEVER proposes mode changes the boy hasn't
+asked about; NEVER withholds responses as a punitive register
+move (silence is allowed only as cadence behavior).
+
+---
+
+## D.86 — Mode transitions to `free` are NEVER blockable by the dom
+
+Per Phase DDD (HV-Q.4 / HV-Q.5). Transitions from `strictly-kept`
+→ `free` require a 24h cooling-off CONFIRMATION by the boy; this
+is a boy-side confirmation, NOT a dom-gate the dom can prolong or
+veto. The boy ALWAYS retains write access to their own repo
+(safeties non-negotiable per Phase ZZ — boy controls SSH keys /
+OAuth tokens). The boy can revoke the dom's read access at any
+time via Phase ZZ remote-removal. The always-visible "transition
+my mode" affordance is reachable from the most-kept UI state
+(NOT buried). The dom-side app receives only a neutral
+notification on mode-flip — no veto UI. Special migration target
+`self-keep` exists as the in-between exit ramp: same
+`mode = "strictly-kept"` but write-back-target = the boy's own
+repo.
+
+---
+
+## D.87 — Leisure is scheduled
+
+Per Phase AAA (HV-P). Downtime, passive consumption, active play,
+movement-play, social-recreation, solo-decompress, caged-play
+affordances, recovery-leisure, and long-cycle leisure cadence
+(weekly-treat / monthly-day-off / quarterly-mini-trip /
+annual-real-vacation) are FIRST-CLASS scheduled atomic entries
+with inverted-habit defaults (default-by-schedule = done = took
+the rest). "I skipped my downtime to grind work" is its own
+deviation the schedule catches. Rationale: a good boy without
+scheduled play turns feral; the schedule lets master/dom see
+at-a-glance whether the boy is busy or available, and lets the
+boy himself say yes to free time without guilt because it is ON
+the schedule.
