@@ -1757,3 +1757,27 @@ scheduled play turns feral; the schedule lets master/dom see
 at-a-glance whether the boy is busy or available, and lets the
 boy himself say yes to free time without guilt because it is ON
 the schedule.
+
+---
+
+## D.88 — A repo IS an identity / account
+
+In strictlykeptboy there is **no app-level user identity**. Each repo carries its own identity:
+
+- **`identity.toml`** at repo root (HV-R / D.83) — praise term, alt_terms, pronouns, honorific, tone register, emoji density, alignment, lifestyle.
+- **`RepoIconKind`** per repo (T.2) — sealed variants `Sticker(species)` / `Photo(uri)` / `Emoji(string)` / `AutoInitials(letter, seedColor)`. The user may draw the per-repo avatar from EITHER a species-sticker (Phase WW pack) OR an uploaded photo — both are first-class.
+- **Repo fingerprint** (FB-A) — SHA-256 of root-commit tree; serves as the cross-repo global-ID author component.
+- **Per-`(repoId, remoteName)` credentials** (Phase ZZ.C) — each repo brings its own keys/tokens.
+
+**Top-bar avatar (the leading slot in `SkbAppShell.ShellTopBar`) reflects the ACTIVE repo's avatar.** Switching repos via that slot also switches the identity context everywhere downstream (praise term in chrome, dom-Claude register, briefing salutations, notification large-icon, lockscreen / now-widget sticker). There is one composable; it just looks different based on which repo is active.
+
+**Write-access scope follows the repo, not a global account:**
+
+- You have **write access** to repos where your SSH key / OAuth token / PAT is configured (Phase ZZ.C credential keying).
+- You have **read-only** access to repos shared *to* you (Phase O.2 read-only-via-share, Phase ZZ.E `readOnlyDetected`).
+- **Shared repos** (mutual write) are first-class — partners may both write to one (household calendar, joint goals, etc.).
+- Common D/s shape: sub writes their own schedule; dom reads it via shared schedules (Phase OO) and leaves feedback via cross-repo write-back-targets (Phase YY); each holds their own `identity.toml` so the dom-Claude addresses each correctly.
+
+Implication for UI work: never hardcode a "current user" outside the active-repo scope. `IdentityAvatar`'s rendering reads from `AppGraph.activeRepoConfig.iconKind` + the active repo's `identity.toml.species`. Until Phase WW's sticker pack lands the fallback chain is: `Sticker(bat) → R.drawable.about_bat`; `Sticker(other-species) → AutoInitials(species[0], seedColor)`; `Photo(uri) → Coil load`; `Emoji → render glyph`; default → `AutoInitials(displayName[0], hash-derived color)`.
+
+Tracked finding: **F48** (refactor-solid.md) — wire `IdentityAvatar` in `SkbAppShell` to read the active-repo `IconKind` + `identity.toml.species`. Currently hardcoded to `R.drawable.about_bat` regardless of active repo. Closes when Phase WW lands (bitmap pipeline) OR earlier as a polish round if we accept the AutoInitials fallback for non-bat species in the interim.
