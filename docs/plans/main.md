@@ -248,7 +248,7 @@ Deep-dive: [`notifications-sharing-import.md`](notifications-sharing-import.md) 
 
 Deep-dive: [`resolver.md`](resolver.md) phase RV-E + [`ui-spec.md`](ui-spec.md) phase UI-M.
 
-_N.1 + N.2 shipped (Round 1). Together rail destination wired into `AppScaffold`, `TogetherPane` + `TogetherInputForm` + `TogetherResultList` + `TogetherEmptyState` + `TogetherViewModel` live under `ui/together/`. ISP-narrow `BusySource` + `CommonTimeFinderPort` ports keep the VM testable. AVD-smoked on `emulator-5554` (input + 10-slot results). 222 tests pass. N.3 (full quick-create event sheet) deferred — current v1 stub shows a "would create event" toast; the editor sheet lands with I-K-EE._
+_N.1 + N.2 shipped in commit `a1ed1ff` (Round 1). Together rail destination wired into `AppScaffold`, `TogetherPane` + `TogetherInputForm` + `TogetherResultList` + `TogetherEmptyState` + `TogetherViewModel` live under `ui/together/`. ISP-narrow `BusySource` + `CommonTimeFinderPort` ports keep the VM testable. AVD-smoked on `emulator-5554` (input + 10-slot results). 222 tests pass. N.3 (full quick-create event sheet) deferred — current v1 stub shows a "would create event" toast; the editor sheet lands with I-K-EE._
 
 - [x] **N.1** Together-tab UI: select repos, calendars (per-repo sub-filter pending; current build picks all calendars in selected repos), date range, duration, day/time filters
 - [x] **N.2** Run finder → ranked free-slot list
