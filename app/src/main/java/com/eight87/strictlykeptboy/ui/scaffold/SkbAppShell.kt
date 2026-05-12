@@ -262,11 +262,11 @@ private fun SkbAppShellContent(
         TopDestination.Settings -> emptyList()
     }
 
-    // Big top-left title — current rail-tab when there is one, else the
-    // destination's own label. Mirrors tonearmboy's "Songs / Albums / …"
-    // big-title pattern at the top-left of the LibraryScreen.
-    val title = railItems.firstOrNull { it.selected }?.let { stringResource(it.labelRes) }
-        ?: selected.labelString()
+    // Big top-left title = destination name ("Schedule" / "Tasks" / etc.).
+    // The rail already shows the current view-mode (rotated "Day" / "Week"
+    // / "Combined" / etc.), so duplicating it as the top-left title reads
+    // redundant — destination is the right granularity here.
+    val title = selected.labelString()
 
     Surface(
         color = MaterialTheme.colorScheme.background,
