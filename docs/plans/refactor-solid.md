@@ -1,0 +1,154 @@
+# strictlykeptboy — SOLID refactor + standing-discipline plan
+
+## Status: 🚧 IN-PROGRESS — standing audit alongside Round 1 implementation.
+
+This is the running list of SOLID audit findings + cross-cutting rules every phase enforces. Started fresh per the project standard inherited from tonearmboy / shutterboy / whisperboy. Findings accumulate per-phase; phases below are work-streams, not implementation phases (those live in `main.md`).
+
+The discipline: **before declaring any phase done, self-check the cross-cutting rules below against the diff.** New file? Run the 5-question SOLID check. Past 500 LOC? Second look. Past 800? Almost always needs splitting.
+
+---
+
+## Cross-cutting rules (every phase must honour these)
+
+These are the load-bearing conventions every subagent + every code-shipping turn must comply with. They are checked BEFORE marking a phase done.
+
+### R.X.1 — Narrow data interfaces
+
+Composables / ViewModels take the smallest interface that satisfies their need, not a god-handle. If `ScheduleDayView` needs only `events.byDateRange()`, it takes a `DayEventSource` (one method) — not the whole `CacheDatabase` (12+ DAOs). When a leaf needs 1–3 fields, pass *those fields*, not the parent object.
+
+**Anti-pattern to watch for:** `fun MyView(database: CacheDatabase)` when the view uses 2 methods.
+
+### R.X.2 — Sealed types for branching, not enum + when-chain
+
+When a behaviour varies by case, prefer a sealed hierarchy with one variant per case (data + variant-specific behaviour co-located), not an `enum + when(it)` that grows in every consumer. Sealed types are open/closed: adding a variant is a new file, not a hunt-and-modify across 5 sites.
+
+**Examples in this codebase that pass:** `FetchResult` / `PullResult` / `PushResult` / `CommitResult` in `git/Results.kt`; `ViewMode` in `resolver/`; `CredentialBinding` in `git/auth/`.
+
+### R.X.3 — Composition root is the only place that wires concrete classes
+
+Concrete `Room` DAOs, JGit wrappers, OkHttp clients, EncryptedSharedPreferences instances live behind interfaces in production code. The composition root (`MainActivity` for now; the future `AppGraph` later) is the *only* place that knows the concrete types. ViewModels / composables / use-cases take the interface.
+
+**Currently passes:** `CredentialResolver` interface + `ProductionCredentialResolver` impl; `RepoStore.openForTest(SharedPreferences)` accepts injection.
+
+**Open work-stream:** introduce `AppGraph` once `MainActivity` wiring crosses ~250 LOC. Currently 174 — fine.
+
+### R.X.4 — No god-files
+
+Soft heuristic: anything past **~500 LOC** of non-trivial Kotlin deserves a second look; past **~800 LOC** almost always needs splitting. The split should follow concerns (single-responsibility), not arbitrary file-size targets.
+
+**Current red flags (audit pass 2026-05-12):**
+
+| File | LOC | Verdict |
+| --- | --- | --- |
+| `git/GitRepo.kt` | 536 | Watch. Single concern (async JGit wrapper) so passes SRP; growing because of multi-origin fan-out + conflict path internals. If it crosses 700, split the multi-origin push fan-out (~70 LOC) into `git/MultiOriginPush.kt`. |
+| `MainActivity.kt` | 174 | OK. Composition-root duties — wiring sync scheduler + status store + repo store. Will need refactor to `AppGraph` if it hits 250. |
+| `ui/scaffold/AppScaffold.kt` | 145 | OK. Will grow with each new nav destination. Split rail-rendering vs destination-routing if past 300. |
+| `ui/schedule/SchedulePane.kt` | 99 | Healthy. |
+
+Subagents must report file LOC of newly created files past 200 in their phase-completion report.
+
+### R.X.5 — Liskov: deferred / NotImplementedError variants must be temporary
+
+A sealed-variant or interface impl that throws `NotImplementedError` is a Liskov violation in spirit, even though it compiles. We allow them ONLY when the consumer UI is also deferred (so the violation is unreachable in practice). Every `NotImplementedError` carries an inline comment referencing the phase that closes the deferral.
+
+**Currently allowed:**
+- `CredentialBindings.forSsh(...)` throws until Phase I's SSH-remote UI lands. The phase that closes this: B.4-remainder (SSH transport plumbing — `SshdSessionFactory` + TOFU verifier + `transportConfigCallbackForSsh`).
+
+### R.X.6 — Wrong-direction imports
+
+Lower layers MUST NOT import upper layers:
+- `git/` cannot import from `cache/`, `resolver/`, `ui/`, `sync/`.
+- `store/` cannot import from `cache/`, `resolver/`, `ui/`, `sync/`.
+- `cache/` cannot import from `resolver/`, `ui/`, `sync/`.
+- `resolver/` cannot import from `ui/`, `sync/`.
+- `sync/` may import from `git/`, `store/`, `cache/` but NOT `ui/`.
+- `ui/` is the outermost layer and may import from any of the above.
+
+Caught early via lint; manually verified per phase.
+
+### R.X.7 — Interface segregation in Compose
+
+In Compose specifically: don't pass a god-state object down 5 levels. Pass the 3 fields the leaf actually reads. State hoisting + small parameter lists keep recomposition scoped.
+
+**Anti-pattern:** `EventBand(state: ScheduleViewState)` when EventBand reads only `state.event` + `state.laneIndex` + `state.totalLanes`. Pass those three.
+
+### R.X.8 — Test discipline
+
+- Every new file with public surface gets a test (Robolectric for Android-dependent, JVM-only otherwise).
+- Tests run in JVM Robolectric under `:app:testDebugUnitTest`. No physical device needed for unit-level work.
+- Tests must pass green before commit (the AVD smoke is additive, not replacement).
+- Subagents must report the test count delta in their phase-completion report.
+
+### R.X.9 — AVD smoke before declaring done
+
+Any phase touching Compose UI (anything visible) MUST be installed on the headless AVD and smoke-tested before ticking. Robolectric does not catch real-device layout bugs (overflow, clipping, sheet z-order, recomposition jank under load).
+
+Per the canonical loop in `CLAUDE.md`. Subagents must report AVD outcome per view-mode (passed / issues + screenshots in `/tmp/<phase>-*.png`).
+
+---
+
+## Per-phase audit checklist (run before ticking phase header)
+
+For each implementation phase in `main.md`, the subagent (or the parent agent verifying) must answer YES to all of these:
+
+1. ✅ Files added → each one has a single responsibility describable in one sentence without "and / also / plus"?
+2. ✅ Branching → no `when (kind)` chains where a sealed hierarchy would express it cleaner?
+3. ✅ Composition root → concrete classes wired only at `MainActivity` (or `AppGraph` once introduced)?
+4. ✅ LOC discipline → no new file past 500 LOC unsplit? No deferral file past 800 LOC?
+5. ✅ Liskov → no `NotImplementedError` variants without an inline comment naming the closing phase?
+6. ✅ Wrong-direction imports → no upward imports per R.X.6?
+7. ✅ ISP in Compose → no god-state objects passed down 5 levels?
+8. ✅ Tests added → each new public surface tested? Suite total ticked up?
+9. ✅ AVD smoke (UI-affecting phases only) → installDebug + launch + screencap + Read?
+
+Subagent prompts should embed this checklist explicitly.
+
+---
+
+## Findings backlog (audit-pass per phase)
+
+Phases below are tracked individually as findings accumulate. Each one rolls in when a subagent surfaces it OR a manual audit pass turns it up.
+
+### Audit pass 2026-05-12 (post-Phase-J, mid-Phase-K)
+
+- **F1 — `git/GitRepo.kt` at 536 LOC.** Single concern (async JGit wrapper) so passes SRP; watch growth. **Action:** if it crosses 700 LOC, split `multi-origin push fan-out` to its own file. **Priority:** low (no immediate action).
+- **F2 — No `AppGraph` composition root.** `MainActivity` does the wiring inline. At 174 LOC it's still OK but each new orchestrator (sync scheduler, conflict registry, view-mode persistence) adds to it. **Action:** introduce `AppGraph` when `MainActivity` crosses 250 LOC, or sooner if a sub-agent has to wire something more than 3 parameters deep. **Priority:** medium (likely triggered in Phase K when wizard wiring lands).
+- **F3 — `EventDetailSheet` Edit button is a no-op.** Phase G shipped with the affordance but no real edit flow. **Action:** wire in Phase EE (inline-markdown editor) or earlier if a real edit need surfaces. **Priority:** low (deferred work-stream).
+- **F4 — `CredentialBindings.forSsh` is NotImplementedError stub.** Documented R.X.5 deferral. **Action:** close with B.4-remainder (SSH transport plumbing). **Priority:** medium — gated on Phase I's UI for adding an SSH remote.
+- **F5 — Wizard input not yet using `string` resources.** Currently uses inline `Text("…")` literals in the new K wizard subagent work (in flight). Strictlykeptboy doesn't have shutterboy-style i18n-from-Phase-0 discipline, but we should adopt it before Phase U (accessibility + i18n). **Action:** retrofit string-resource discipline as Phase K closes — extract every user-facing literal to `app/src/main/res/values/strings.xml`. **Priority:** medium.
+
+### Findings emitted by Phase K (lifestyle wizard — in flight at write time)
+
+_To be populated when Phase K commits._
+
+### Findings emitted by Phase M (notifications)
+
+_Future._
+
+---
+
+## Standing work-streams
+
+These are continuous, NOT one-shot phases:
+
+### R.SD — String-resource discipline (i18n readiness)
+
+Adopt shutterboy's i18n-from-Phase-0 pattern retroactively. Every user-facing string goes through `stringResource(R.string.…)` or `LocalContext.current.getString(R.string.…)`. `app/src/main/res/values/strings.xml` is canonical; locale variants are partial overrides at `values-<locale>/strings.xml`. Naming scheme: `<surface>_<role>` lowercase snake (`wizard_welcome_cta`, `schedule_empty_state_good_boy`, `repo_settings_remove_button`). Surfaces in this app: `wizard_`, `schedule_`, `tasks_`, `repos_`, `sync_`, `settings_`, `dialog_`, `error_`, `cd_` (content descriptions).
+
+**Phase to retrofit:** Phase U (accessibility + i18n scaffolding) — but per-screen extraction can ship per-phase from Phase K onward.
+
+### R.UI — UI testing discipline
+
+Robolectric Compose-UI tests cover the headless surface; AVD smoke covers real-device behaviour. Snapshot-style tests for now (assertion-based, not pixel-diff). Pixel-diff via Paparazzi or similar is a Phase V perf-pass consideration.
+
+### R.LIC — License inventory (deferred to Phase W)
+
+When Phase W release engineering lands: enable Licensee, allow SPDX list `[Apache-2.0, MIT, BSD-2-Clause, BSD-3-Clause]`, ship canonical license texts at `app/src/main/assets/licenses/<spdx>.txt`. Currently deferred; track here when triggered.
+
+---
+
+## How this doc evolves
+
+- Each phase completion adds findings (or a "no findings" line) under "Audit pass YYYY-MM-DD".
+- When a finding rolls up to a real refactor effort, promote it to its own R.A / R.B / … phase here (mirroring tonearmboy's pattern), with sub-step checkboxes and shipped-in-commit annotation.
+- When the codebase reaches a steady state (post-Round-1, post-Round-2 polish), this doc moves to `## Status: ✅ DONE` — but never deleted (the discipline survives).
