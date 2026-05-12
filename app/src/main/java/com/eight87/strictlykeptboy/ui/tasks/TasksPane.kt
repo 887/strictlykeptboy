@@ -18,10 +18,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.eight87.strictlykeptboy.R
+import com.eight87.strictlykeptboy.ui.adaptive.LocalWindowWidthSizeClass
+import com.eight87.strictlykeptboy.ui.adaptive.MasterDetailLayout
+import com.eight87.strictlykeptboy.ui.adaptive.isTwoPane
 
 const val TestTagTasksPane = "TasksPane"
 const val TestTagTaskViewTab = "TaskViewTab"
+const val TestTagTasksDetailEmpty = "TasksDetailEmpty"
 
 /**
  * UI-J — top-level tasks pane. Owns the active [TaskViewTab], the
@@ -29,6 +35,10 @@ const val TestTagTaskViewTab = "TaskViewTab"
  * [TasksViewState].
  *
  * Stateful host. Each sub-view is a stateless composable.
+ *
+ * Phase R.3 — on Medium/Expanded the detail sheet becomes an
+ * always-visible right pane (`MasterDetailLayout`); on Compact the
+ * original ModalBottomSheet behaviour is preserved.
  */
 @Composable
 fun TasksPane(
@@ -37,6 +47,7 @@ fun TasksPane(
     onWriteTask: (TaskQuickAddRequest) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    val widthClass = LocalWindowWidthSizeClass.current
     var selectedTab by remember { mutableStateOf(TaskViewTab.Combined) }
     var selectedListId by remember { mutableStateOf<String?>(null) }
     var openTask by remember { mutableStateOf<TaskItem?>(null) }
@@ -53,69 +64,104 @@ fun TasksPane(
         } else selectedTab
     }
 
-    Box(modifier = modifier.fillMaxSize().testTag(TestTagTasksPane)) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Surface(color = MaterialTheme.colorScheme.surface) {
-                Column {
-                    Text(
-                        text = activeRepoName,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(start = 16.dp, top = 8.dp),
-                    )
-                    SecondaryTabRow(selectedTabIndex = selectedTab.ordinal) {
-                        TaskViewTab.entries.forEach { tab ->
-                            Tab(
-                                selected = tab == selectedTab,
-                                onClick = { selectedTab = tab },
-                                modifier = Modifier.testTag("$TestTagTaskViewTab-${tab.name}"),
-                                text = { Text(tab.label) },
-                            )
+    val master: @Composable () -> Unit = {
+        Box(modifier = Modifier.fillMaxSize().testTag(TestTagTasksPane)) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                Surface(color = MaterialTheme.colorScheme.surface) {
+                    Column {
+                        Text(
+                            text = activeRepoName,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 16.dp, top = 8.dp),
+                        )
+                        SecondaryTabRow(selectedTabIndex = selectedTab.ordinal) {
+                            TaskViewTab.entries.forEach { tab ->
+                                Tab(
+                                    selected = tab == selectedTab,
+                                    onClick = { selectedTab = tab },
+                                    modifier = Modifier.testTag("$TestTagTaskViewTab-${tab.name}"),
+                                    text = { Text(tab.label) },
+                                )
+                            }
                         }
                     }
                 }
+
+                when (effectiveTab) {
+                    TaskViewTab.Combined -> TaskCombinedView(
+                        tasks = uiState.tasks,
+                        onToggleDone = { state.toggleDone(it.id) },
+                        onOpen = { openTask = it },
+                    )
+                    TaskViewTab.Today -> TaskTodayView(
+                        tasks = uiState.tasks,
+                        onToggleDone = { state.toggleDone(it.id) },
+                        onOpen = { openTask = it },
+                    )
+                    TaskViewTab.PerList -> TaskPerListView(
+                        tasks = uiState.tasks,
+                        todolists = uiState.todolists,
+                        selectedListId = selectedListId,
+                        onSelectList = { selectedListId = it },
+                        onToggleDone = { state.toggleDone(it.id) },
+                        onOpen = { openTask = it },
+                    )
+                    TaskViewTab.Shopping -> TaskShoppingView(
+                        tasks = if (selectedListId != null) uiState.tasks.filter { it.todolist.id == selectedListId }
+                        else uiState.tasks.filter { it.todolist.mode == TodolistMode.Shopping },
+                        onToggleDone = { state.toggleDone(it.id) },
+                    )
+                    TaskViewTab.Standing -> TaskStandingView(
+                        tasks = uiState.tasks,
+                        onToggleDone = { state.toggleDone(it.id) },
+                        onOpen = { openTask = it },
+                        onPinToday = { task, pin -> state.pinStanding(task.id, pin) },
+                    )
+                }
             }
 
-            when (effectiveTab) {
-                TaskViewTab.Combined -> TaskCombinedView(
-                    tasks = uiState.tasks,
-                    onToggleDone = { state.toggleDone(it.id) },
-                    onOpen = { openTask = it },
-                )
-                TaskViewTab.Today -> TaskTodayView(
-                    tasks = uiState.tasks,
-                    onToggleDone = { state.toggleDone(it.id) },
-                    onOpen = { openTask = it },
-                )
-                TaskViewTab.PerList -> TaskPerListView(
-                    tasks = uiState.tasks,
-                    todolists = uiState.todolists,
-                    selectedListId = selectedListId,
-                    onSelectList = { selectedListId = it },
-                    onToggleDone = { state.toggleDone(it.id) },
-                    onOpen = { openTask = it },
-                )
-                TaskViewTab.Shopping -> TaskShoppingView(
-                    tasks = if (selectedListId != null) uiState.tasks.filter { it.todolist.id == selectedListId }
-                    else uiState.tasks.filter { it.todolist.mode == TodolistMode.Shopping },
-                    onToggleDone = { state.toggleDone(it.id) },
-                )
-                TaskViewTab.Standing -> TaskStandingView(
-                    tasks = uiState.tasks,
-                    onToggleDone = { state.toggleDone(it.id) },
-                    onOpen = { openTask = it },
-                    onPinToday = { task, pin -> state.pinStanding(task.id, pin) },
-                )
-            }
+            TaskQuickAddFab(
+                onClick = { quickAddOpen = true },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(24.dp),
+            )
         }
+    }
 
-        TaskQuickAddFab(
-            onClick = { quickAddOpen = true },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(24.dp),
+    if (widthClass.isTwoPane()) {
+        MasterDetailLayout(
+            modifier = modifier,
+            widthClass = widthClass,
+            master = master,
+            detail = {
+                val t = openTask
+                if (t != null) {
+                    TaskDetailContent(
+                        task = t,
+                        onEdit = { /* Phase EE — editor stub */ },
+                        onToggleDone = { state.toggleDone(t.id) },
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(24.dp)
+                            .testTag(TestTagTasksDetailEmpty),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.tasks_detail_empty),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            },
         )
-
+    } else {
+        master()
         openTask?.let { t ->
             TaskDetailSheet(
                 task = t,
@@ -124,22 +170,22 @@ fun TasksPane(
                 onToggleDone = { state.toggleDone(t.id) },
             )
         }
+    }
 
-        if (quickAddOpen) {
-            val initialTarget = uiState.todolists.firstOrNull {
-                it.id == selectedListId
-            }?.let { QuickAddTarget.Todolist(it) }
-                ?: uiState.todolists.firstOrNull()?.let { QuickAddTarget.Todolist(it) }
-            TaskQuickAddSheet(
-                todolists = uiState.todolists,
-                initialTarget = initialTarget,
-                onDismiss = { quickAddOpen = false },
-                onSubmit = { title, target ->
-                    onWriteTask(TaskQuickAddRequest(title = title, target = target))
-                    quickAddOpen = false
-                },
-            )
-        }
+    if (quickAddOpen) {
+        val initialTarget = uiState.todolists.firstOrNull {
+            it.id == selectedListId
+        }?.let { QuickAddTarget.Todolist(it) }
+            ?: uiState.todolists.firstOrNull()?.let { QuickAddTarget.Todolist(it) }
+        TaskQuickAddSheet(
+            todolists = uiState.todolists,
+            initialTarget = initialTarget,
+            onDismiss = { quickAddOpen = false },
+            onSubmit = { title, target ->
+                onWriteTask(TaskQuickAddRequest(title = title, target = target))
+                quickAddOpen = false
+            },
+        )
     }
 }
 

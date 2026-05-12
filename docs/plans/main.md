@@ -295,15 +295,15 @@ Deep-dive: [`ui-spec.md`](ui-spec.md) phase UI-S (corrected from UI-N).
 
 ---
 
-## Phase R — tablet + master-detail
+## Phase R — tablet + master-detail — R.1..R.5 shipped pending commit
 
-Deep-dive: [`ui-spec.md`](ui-spec.md) phase UI-O.
+Deep-dive: [`ui-spec.md`](ui-spec.md) phase UI-R.
 
-- [ ] **R.1** WindowSizeClass detection
-- [ ] **R.2** Schedule master-detail (calendar + day detail pane)
-- [ ] **R.3** Tasks master-detail (list + task detail pane)
-- [ ] **R.4** Settings master-detail
-- [ ] **R.5** Tablet-specific touch targets + spacing
+- [x] **R.1** WindowSizeClass detection — `ui/adaptive/WindowSizeClass.kt` sealed type + `LocalWindowWidthSizeClass` CompositionLocal + `ProvideWindowSizeClass` BoxWithConstraints wrapper at AppScaffold root.
+- [x] **R.2** Schedule master-detail — Medium/Expanded use `MasterDetailLayout` Row with always-on `EventDetailContent`; Compact keeps the legacy `ModalBottomSheet`. Now-card resolver (`findActiveBand`) auto-focuses the currently-active event on tablet.
+- [x] **R.3** Tasks master-detail — same split: `TaskDetailContent` extracted from sheet body; Compact uses ModalBottomSheet, Medium/Expanded uses two-pane with empty-state placeholder.
+- [x] **R.4** Settings master-detail — new `ui/settings/SettingsPane.kt` with sealed `SettingsCategory` (General / Identity / Mode / Notifications / Repos / About). Compact = list → push to category content with back arrow; Medium/Expanded = two-pane with persisted selection. ImportExport flow lives under the Repos category (preserves Phase P behaviour).
+- [x] **R.5** Tablet-specific touch targets + spacing — `AdaptiveSpacing` object: min interactive 48dp/56dp/64dp + spacing multiplier 1.0×/1.25×/1.5× across Compact/Medium/Expanded. Layered on top of the Phase F.3 `LocalDensityScale` CompositionLocal via `adaptiveDp(base)`. AppScaffold also opens the rail to `WideNavigationRailExpanded` on Medium/Expanded (verified visually on the tablet-resized AVD).
 
 ---
 

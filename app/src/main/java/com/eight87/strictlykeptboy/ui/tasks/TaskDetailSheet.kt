@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
 
 const val TestTagDetailSheet = "TaskDetailSheet"
+const val TestTagDetailPane = "TaskDetailPane"
 const val TestTagDetailTitle = "TaskDetailTitle"
 const val TestTagDetailAuthor = "TaskDetailAuthor"
 const val TestTagDetailList = "TaskDetailList"
@@ -62,7 +63,23 @@ fun TaskDetailSheet(
         sheetState = sheetState,
         modifier = modifier.testTag(TestTagDetailSheet),
     ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+        TaskDetailContent(task = task, onEdit = onEdit, onToggleDone = onToggleDone)
+    }
+}
+
+/**
+ * Phase R.3 — pane-mode renderer for the task detail. Identical inner
+ * layout to the modal sheet so the test tags + a11y mapping are stable
+ * across Compact and Medium/Expanded.
+ */
+@Composable
+fun TaskDetailContent(
+    task: TaskItem,
+    onEdit: () -> Unit,
+    onToggleDone: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+        Column(modifier = modifier.fillMaxWidth().padding(16.dp).testTag(TestTagDetailPane)) {
             // Title row + completion checkbox.
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(checked = task.done, onCheckedChange = { onToggleDone() })
@@ -203,7 +220,6 @@ fun TaskDetailSheet(
                 }
             }
         }
-    }
 }
 
 private data class SubtaskLine(val checked: Boolean, val label: String)

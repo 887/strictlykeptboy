@@ -45,6 +45,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 const val TestTagEventDetailSheet = "EventDetailSheet"
+const val TestTagEventDetailPane = "EventDetailPane"
 const val TestTagEventDetailTitle = "EventDetailTitle"
 const val TestTagEventDetailTime = "EventDetailTime"
 const val TestTagEventDetailCalendar = "EventDetailCalendar"
@@ -73,16 +74,43 @@ fun EventDetailSheet(
     modifier: Modifier = Modifier,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val tz = band.instance.effectiveStart.zone
-    val fmt = DateTimeFormatter.ofPattern("EEE MMM d  HH:mm", Locale.getDefault())
-    val endFmt = DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         modifier = modifier.testTag(TestTagEventDetailSheet),
     ) {
-        Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 24.dp)) {
+        EventDetailContent(
+            band = band,
+            onEdit = onEdit,
+            attachments = attachments,
+            calendarName = calendarName,
+        )
+    }
+}
+
+/**
+ * Phase R.2 — pane-mode renderer for the same content the modal sheet
+ * shows on Compact. The same field layout / strings / test tags apply;
+ * only the chrome differs (no sheet handle, no drag dismiss).
+ */
+@Composable
+fun EventDetailContent(
+    band: DayBand,
+    onEdit: () -> Unit = {},
+    attachments: List<AttachmentRef> = emptyList(),
+    calendarName: String? = null,
+    modifier: Modifier = Modifier,
+) {
+    val tz = band.instance.effectiveStart.zone
+    val fmt = DateTimeFormatter.ofPattern("EEE MMM d  HH:mm", Locale.getDefault())
+    val endFmt = DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
+    Column(
+        modifier = modifier
+            .padding(horizontal = 20.dp)
+            .padding(bottom = 24.dp)
+            .testTag(TestTagEventDetailPane),
+    ) {
             // Title
             Text(
                 text = (band.instance.emoji?.let { "$it  " } ?: "") + band.instance.title,
@@ -182,7 +210,6 @@ fun EventDetailSheet(
                 Spacer(modifier = Modifier.size(6.dp))
                 Text(stringResource(R.string.event_detail_edit))
             }
-        }
     }
 }
 

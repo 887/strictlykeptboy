@@ -31,11 +31,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.git.auth.SecretsStore
+import com.eight87.strictlykeptboy.ui.adaptive.LocalWindowWidthSizeClass
+import com.eight87.strictlykeptboy.ui.adaptive.ProvideWindowSizeClass
+import com.eight87.strictlykeptboy.ui.adaptive.WindowWidthSizeClass
 import com.eight87.strictlykeptboy.ui.repos.ReposPane
 import com.eight87.strictlykeptboy.ui.repos.ReposViewState
 import com.eight87.strictlykeptboy.ui.schedule.SchedulePane
 import com.eight87.strictlykeptboy.ui.schedule.ScheduleViewState
-import com.eight87.strictlykeptboy.ui.import_export.ImportExportScreen
+import com.eight87.strictlykeptboy.ui.settings.SettingsPane
 import com.eight87.strictlykeptboy.ui.import_export.ImportExportViewState
 import com.eight87.strictlykeptboy.ui.tasks.TaskQuickAddRequest
 import com.eight87.strictlykeptboy.ui.tasks.TasksPane
@@ -51,9 +54,10 @@ const val TestTagAppScaffold = "AppScaffold"
 /**
  * Phase F.1 — top-level app scaffold.
  *
- * Per D.15 and UI-A: NavigationSuiteScaffold pinned to NavigationRail at
- * every width class — collapsed rail on phones too. The rail visual rhyme
- * matches tonearmboy's main library tabs.
+ * Per D.15 and UI-A: NavigationSuiteScaffold pinned to NavigationRail on
+ * phone (D.15 — "rail-collapsed-on-phone-too"); on Medium/Expanded width
+ * classes we open it to the full wide rail (Phase R.1 — tablets get the
+ * label-text rail rather than the icon-only collapsed strip).
  *
  * Five destinations per the F.1 brief. Only Schedule has real content this
  * phase; the rest are stubbed placeholder screens.
@@ -88,13 +92,62 @@ fun AppScaffold(
     onPickImportFile: (com.eight87.strictlykeptboy.git.RepoConfig) -> Unit = {},
     onPickExportFile: (com.eight87.strictlykeptboy.git.RepoConfig) -> Unit = {},
 ) {
+    ProvideWindowSizeClass(modifier = modifier) { widthClass ->
+        AppScaffoldContent(
+            widthClass = widthClass,
+            activeRepoNameFlow = activeRepoNameFlow,
+            scheduleState = scheduleState,
+            onPersistTab = onPersistTab,
+            tasksState = tasksState,
+            onWriteTask = onWriteTask,
+            reposState = reposState,
+            secretsStore = secretsStore,
+            togetherViewModel = togetherViewModel,
+            onSyncClick = onSyncClick,
+            neutralMode = neutralMode,
+            onWizardScaffold = onWizardScaffold,
+            onWizardFinish = onWizardFinish,
+            importExportState = importExportState,
+            onPickImportFile = onPickImportFile,
+            onPickExportFile = onPickExportFile,
+        )
+    }
+}
+
+@Composable
+private fun AppScaffoldContent(
+    widthClass: WindowWidthSizeClass,
+    activeRepoNameFlow: StateFlow<String>,
+    scheduleState: ScheduleViewState,
+    onPersistTab: (ScheduleViewTab) -> Unit,
+    tasksState: TasksViewState,
+    onWriteTask: (TaskQuickAddRequest) -> Unit,
+    reposState: ReposViewState?,
+    secretsStore: SecretsStore?,
+    togetherViewModel: TogetherViewModel?,
+    onSyncClick: () -> Unit,
+    neutralMode: Boolean,
+    onWizardScaffold: suspend (WizardDraft) -> Result<Unit>,
+    onWizardFinish: () -> Unit,
+    importExportState: ImportExportViewState?,
+    onPickImportFile: (com.eight87.strictlykeptboy.git.RepoConfig) -> Unit,
+    onPickExportFile: (com.eight87.strictlykeptboy.git.RepoConfig) -> Unit,
+) {
     var selected by rememberSaveable { mutableStateOf(TopDestination.Schedule) }
     val activeRepoName by activeRepoNameFlow.collectAsState()
 
+    // D.15 — keep the rail variant on every form factor. On Compact stay
+    // with the collapsed (icon-only) rail; on Medium/Expanded open to the
+    // wide-expanded rail so the labels are visible alongside icons.
+    val layoutType = when (widthClass) {
+        WindowWidthSizeClass.Compact -> NavigationSuiteType.NavigationRail
+        WindowWidthSizeClass.Medium,
+        WindowWidthSizeClass.Expanded -> NavigationSuiteType.WideNavigationRailExpanded
+    }
+
     NavigationSuiteScaffold(
-        modifier = modifier.testTag(TestTagAppScaffold),
-        // D.15 — force the rail variant on every form factor (phone too).
-        layoutType = NavigationSuiteType.NavigationRail,
+        modifier = Modifier.testTag(TestTagAppScaffold),
+        layoutType = layoutType,
         navigationSuiteItems = {
             TopDestination.entries.forEach { dest ->
                 item(
@@ -143,15 +196,11 @@ fun AppScaffold(
                 onScaffold = onWizardScaffold,
                 neutralMode = neutralMode,
             )
-            TopDestination.Settings -> if (importExportState != null) {
-                ImportExportScreen(
-                    state = importExportState,
-                    onPickImportFile = onPickImportFile,
-                    onPickExportFile = onPickExportFile,
-                )
-            } else {
-                PlaceholderScreen(stringResource(R.string.scaffold_dest_settings))
-            }
+            TopDestination.Settings -> SettingsPane(
+                importExportState = importExportState,
+                onPickImportFile = onPickImportFile,
+                onPickExportFile = onPickExportFile,
+            )
         }
     }
 }
@@ -168,3 +217,8 @@ private fun PlaceholderScreen(name: String) {
         }
     }
 }
+
+// LocalWindowWidthSizeClass is imported above for downstream composables
+// reading the ambient breakpoint without round-tripping through callers.
+@Suppress("unused")
+private val widthClassMarker: Any = LocalWindowWidthSizeClass

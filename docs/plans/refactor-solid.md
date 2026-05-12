@@ -255,6 +255,29 @@ When Phase W release engineering lands: enable Licensee, allow SPDX list `[Apach
 
 ---
 
+## Audit pass `Phase R (tablet + master-detail)` — R.1..R.5 shipped 2026-05-12
+
+Files added: `ui/adaptive/WindowSizeClass.kt` (+72), `ui/adaptive/AdaptiveSpacing.kt` (+55), `ui/adaptive/MasterDetailLayout.kt` (+63), `ui/settings/SettingsPane.kt` (+210). Files touched: `ui/scaffold/AppScaffold.kt` (rewrite — ProvideWindowSizeClass wrap + width-class-driven rail variant + SettingsPane wiring), `ui/schedule/SchedulePane.kt` (rewrite — two-pane branch), `ui/schedule/EventDetailSheet.kt` (extract `EventDetailContent` for pane-mode reuse), `ui/tasks/TasksPane.kt` (rewrite — two-pane branch), `ui/tasks/TaskDetailSheet.kt` (extract `TaskDetailContent`), `res/values/strings.xml` (+13 strings). Tests added (18): `WindowSizeClassDetectionTest` 4, `TouchTargetScalingTest` 6, `ScheduleMasterDetailTest` 3, `TasksMasterDetailTest` 3, `SettingsMasterDetailTest` 2. Suite 270 → 288.
+
+1. ✅ R.X.1 narrow data interface — `MasterDetailLayout(master, detail)` takes two `() -> Unit` slots, not a god-state. `SettingsPane(importExportState, onPickImportFile, onPickExportFile)` is the same three-param port that the previous direct call took (no widening). `LocalWindowWidthSizeClass` exposes a single value, not a god-config bag.
+2. ✅ R.X.2 sealed types — **two new sealed hierarchies**: `WindowWidthSizeClass` (Compact / Medium / Expanded) replaces the alternative `enum WidthClass` + `when (it)` chain; `SettingsCategory` (six objects + lazy `all` list) replaces a `String`-tagged dispatch. Both compile to exhaustive `when` and gain a new case by adding a sealed-class entry, not by editing branches.
+3. ✅ R.X.3 composition root — no new concrete-class wiring; `AppGraph` did not change. The width-class detection is a Compose primitive (BoxWithConstraints) and lives at the composable layer.
+4. ✅ R.X.4 — every new file under split threshold. `SettingsPane.kt` 210 LOC, `SchedulePane.kt` 175 LOC (up from 99), `TasksPane.kt` 195 LOC (up from 150), `AppScaffold.kt` 211 LOC. All well under 500.
+5. ✅ R.X.5 — no NotImplementedError on the new public surface. Settings categories other than Repos / About show a placeholder; Repos delegates to the real `ImportExportScreen` from Phase P.
+6. ✅ R.X.6 import direction — `ui/adaptive/` imports only `androidx.compose.*` + `theme/LocalDensityScale` (lower); `ui/settings/` imports `ui/adaptive/` + `ui/import_export/` (siblings or own-layer); `ui/scaffold/` imports `ui/adaptive/`, `ui/settings/`, `ui/schedule/`, `ui/tasks/`, `ui/repos/`, `ui/together/`, `ui/import_export/` (siblings — scaffold is the top of the UI tree). No reverse-direction imports.
+7. ✅ R.X.7 ISP in Compose — `MasterDetailLayout` takes only the two render slots + width-class; `EventDetailContent(band, onEdit, attachments, calendarName)` is a four-param surface, no god-state. `SettingsCategoryList(selected, onSelect)` is two params.
+8. ✅ R.X.8 — 18 new tests on the new public surfaces (`WindowWidthSizeClass.fromWidth`, `AdaptiveSpacing.{multiplier, minInteractiveSize}`, two-pane gate on Schedule / Tasks / Settings). Suite 270 → 288.
+9. ✅ R.X.9 AVD smoke — `wm size 1600x2400 + wm density 240` simulates tablet: `:app:assembleDebug` + install + launch → wide expanded rail with labels, schedule master pane + vertical divider + "Select an event to see details" empty detail pane (screencap `/tmp/r-tablet-schedule.png`). `wm size reset + wm density reset` restores phone form factor: standard NavigationRail with icon-plus-label items, single-pane schedule, sheet-on-tap behaviour preserved (screencap `/tmp/r-phone-schedule.png`). No `AndroidRuntime:E` in `adb logcat -d -t 200` for either form factor.
+
+**Findings backlog from this pass:**
+
+- **F31 — Sealed-`object` class-init race under Robolectric.** `SettingsCategory.Companion.all` originally read as `listOf(General, Identity, Mode, Notifications, Repos, About)` at companion init. Under Robolectric the inner `object`s appeared `null` during the eager evaluation (JVM class-init ordering — companion fields construct before the sibling subclasses finish `<clinit>`). Resolved by wrapping in `by lazy { ... }`. **Action:** prefer `by lazy { listOf(...) }` for every sealed-object enumeration list going forward; the eager form looks identical but breaks at runtime under Robolectric class-loading. **Priority:** low (cookbook fix). **Status:** tracked.
+- **F32 — `material3-adaptive` proper not yet pulled in.** We hand-rolled `MasterDetailLayout` as a `Row { master | divider | detail }` because the alpha18 BoM ships only `material3-adaptive-navigation-suite`, not `material3-adaptive` (which would give us `NavigableListDetailPaneScaffold`). When the BoM bumps to a release that includes the full adaptive slice (post-1.5.0-stable), evaluate migrating `MasterDetailLayout` to `NavigableListDetailPaneScaffold` for back-stack-aware pane navigation and predictive-back support. **Priority:** low. **Status:** tracked.
+- **F33 — Settings categories are placeholders.** Phase R.4 ships the master-detail *shell* for settings; the actual category surfaces (General, Identity, Mode, Notifications) are still placeholder text per the brief ("Phase S settings polish"). Repos category delegates to the existing ImportExportScreen so Phase P functionality is preserved; About is a single line of text. **Priority:** scheduled (Phase S). **Status:** tracked.
+- **F34 — Tablet detail-auto-focus is now-card-only.** Schedule's two-pane detail auto-focuses the currently-active event (now-card resolver query). When no event is "now" the detail pane shows the empty state. A future improvement might surface "next-up" or "most recently viewed"; deferred until live-data lands. **Priority:** low. **Status:** tracked.
+
+---
+
 ## How this doc evolves
 
 - Each phase completion adds findings (or a "no findings" line) under "Audit pass YYYY-MM-DD".
