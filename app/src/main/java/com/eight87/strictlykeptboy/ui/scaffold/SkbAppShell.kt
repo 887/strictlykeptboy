@@ -9,6 +9,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -320,9 +325,16 @@ private fun ShellTopBar(
     onIdentityClick: () -> Unit,
     onRepoSwitcherClick: () -> Unit,
 ) {
+    // enableEdgeToEdge() is on in MainActivity — content draws under the
+    // status bar by default. Push the top-bar Surface down past the system
+    // status + display-cutout inset so the repo chip + destination buttons
+    // get the breathing room tonearmboy gets for free via its Scaffold.
     Surface(
         color = MaterialTheme.colorScheme.surface,
-        modifier = Modifier.fillMaxWidth().testTag(TestTagShellTopBar),
+        modifier = Modifier
+            .fillMaxWidth()
+            .windowInsetsPadding(WindowInsets.statusBars.union(WindowInsets.displayCutout))
+            .testTag(TestTagShellTopBar),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
