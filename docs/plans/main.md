@@ -283,7 +283,7 @@ _Shipped Phase P (.ics import + export, v1 scope) in commit `d800c84`: hand-roll
 
 ---
 
-## Phase Q — Android Auto — Q.1..Q.3 shipped in commit `<pending>`
+## Phase Q — Android Auto — Q.1..Q.3 shipped in commit `bf709f0`
 
 Deep-dive: [`ui-spec.md`](ui-spec.md) phase UI-S (corrected from UI-N).
 

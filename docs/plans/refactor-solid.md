@@ -211,7 +211,7 @@ R.X.1..R.X.9 self-check:
 
 ---
 
-## Audit pass `Phase Q (Android Auto)` — Q.1..Q.3 shipped in commit `<pending>`
+## Audit pass `Phase Q (Android Auto)` — Q.1..Q.3 shipped in commit `bf709f0`
 
 Files touched: `composition/AppGraph.kt` (new; +223 LOC), `auto/SkbCarAppService.kt` (new; +50), `auto/TodayEventSource.kt` (new; +42), `auto/TodayScreen.kt` (new; +71), `auto/NextUpScreen.kt` (new; +115), `MainActivity.kt` (rewrite; 417 → 327 LOC), manifest + `res/xml/automotive_app_desc.xml` + `auto_*` strings, `libs.versions.toml` + `app/build.gradle.kts` (`androidx.car.app:app:1.7.0`). Tests: `TodayScreenTest` (2), `NextUpScreenTest` (2), `CarAppRuntimeTest` (3). Suite 263 → 270.
 
