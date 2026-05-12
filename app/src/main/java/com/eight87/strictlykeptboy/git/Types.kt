@@ -1,5 +1,6 @@
 package com.eight87.strictlykeptboy.git
 
+import kotlinx.serialization.Serializable
 import org.eclipse.jgit.lib.ObjectId
 
 /**
@@ -9,6 +10,7 @@ import org.eclipse.jgit.lib.ObjectId
  * to JGit (`origin`, `mirror-1`, …). Policy lives in [RemoteBinding] fields,
  * NOT in the name (per D.74).
  */
+@Serializable
 @JvmInline
 value class RemoteName(val value: String) {
     init {
@@ -44,6 +46,7 @@ enum class AuthMethod { Ssh, OAuthGitHub, OAuthForgejo, ManualPat, None }
  * One configured remote on a repo. A repo may have zero, one, or many.
  * Per Phase ZZ.A.1 / D.74.
  */
+@Serializable
 data class RemoteBinding(
     val name: RemoteName,
     val url: String,
@@ -55,6 +58,7 @@ data class RemoteBinding(
     val displayName: String? = null,
 )
 
+@Serializable
 data class AuthorIdentity(val name: String, val email: String)
 
 data class GitStatus(
