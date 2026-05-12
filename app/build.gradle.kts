@@ -42,6 +42,12 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -88,9 +94,32 @@ dependencies {
   androidTestImplementation(libs.androidx.compose.ui.test.junit4)
   debugImplementation(libs.androidx.compose.ui.test.manifest)
 
+  // Phase B — Git layer + transport
+  implementation(libs.jgit.core) {
+    // No ssh-agent on Android; we generate keys per-remote.
+    exclude(group = "org.eclipse.jgit", module = "org.eclipse.jgit.ssh.apache.agent")
+    // Bring our own slf4j binding (slf4j-android → logcat).
+    exclude(group = "org.slf4j", module = "slf4j-api")
+  }
+  implementation(libs.jgit.ssh.apache) {
+    exclude(group = "org.eclipse.jgit", module = "org.eclipse.jgit.ssh.apache.agent")
+    exclude(group = "org.slf4j", module = "slf4j-api")
+  }
+  implementation(libs.sshd.osgi)
+  implementation(libs.bouncycastle.prov)
+  implementation(libs.bouncycastle.pkix)
+  implementation(libs.okhttp)
+  implementation(libs.androidx.security.crypto)
+  implementation(libs.androidx.work.runtime.ktx)
+  implementation(libs.slf4j.android)
+  implementation(libs.kotlinx.serialization.json)
+
   // Local tests
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)
+  testImplementation(libs.robolectric)
+  testImplementation(libs.androidx.test.core)
+  testImplementation(libs.androidx.test.ext.junit)
 
   // Instrumented tests
   androidTestImplementation(libs.androidx.test.core)

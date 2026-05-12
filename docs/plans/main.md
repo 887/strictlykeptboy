@@ -53,10 +53,10 @@ _Shipped in commit (next push). Scaffolded via `android create` empty-activity t
 
 ## Phase B — Git layer foundations
 
-Deep-dive: [`sync-engine.md`](sync-engine.md) phases SE-A through SE-F.
+Deep-dive: [`sync-engine.md`](sync-engine.md) phases SE-A through SE-F. B.1+B.2 shipped — see commit at integration time.
 
-- [ ] **B.1** Vendor JGit 6.x + apache-sshd-osgi; verify clean import on Android (JGit has a few JVM-only fallbacks; document workarounds in `sync-engine.md`)
-- [ ] **B.2** Implement `GitRepo` abstraction: open / init / clone / fetch / pull (rebase) / push / commit / status / diff-since. Includes `GitRepo.initLocalOnly(rootDir, authorIdentity)` for no-origin repos (per Phase ZZ.A / D.74). Fetch / pullRebase / push accept a `remote: RemoteName? = primaryRemote` parameter; no-remotes case returns `NoRemotes` result variants without throwing.
+- [x] **B.1** Vendor JGit 6.x + apache-sshd-osgi; verify clean import on Android (JGit has a few JVM-only fallbacks; document workarounds in `sync-engine.md`)
+- [x] **B.2** Implement `GitRepo` abstraction: open / init / clone / fetch / pull (rebase) / push / commit / status / diff-since. Includes `GitRepo.initLocalOnly(rootDir, authorIdentity)` for no-origin repos (per Phase ZZ.A / D.74). Fetch / pullRebase / push accept a `remote: RemoteName? = primaryRemote` parameter; no-remotes case returns `NoRemotes` result variants without throwing.
 - [ ] **B.3** Implement `RepoStore` — list of configured repos in `EncryptedSharedPreferences`. `RepoConfig` carries `remotes: List<RemoteBinding>` (may be empty) and `primaryRemote: RemoteName?` per Phase ZZ.A.
 - [ ] **B.4** SSH keypair generation + EncryptedSharedPreferences storage; export public key to clipboard / share-sheet. Per Phase ZZ.C, keys are keyed by `(repoId, remoteName)` — adding a second SSH remote generates a fresh keypair by default with opt-in reuse.
 - [ ] **B.5** OAuth Device Flow for GitHub (token in EncryptedSharedPreferences, refresh on 401). Per-remote token binding per Phase ZZ.C.
