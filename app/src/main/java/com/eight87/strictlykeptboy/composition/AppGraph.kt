@@ -35,6 +35,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
@@ -160,6 +161,29 @@ class AppGraph(private val appContext: Context) {
                 SharingStarted.Eagerly,
                 repoStore.state.value.map { TogetherRepoOption(it.repoId, it.displayName) },
             )
+    }
+
+    /**
+     * D.88 / F48 — IconKind for the ACTIVE repo. Drives the top-bar leading
+     * slot (`IdentityAvatar`) so the avatar reflects the chosen species /
+     * photo / emoji of whichever repo is currently active. Switching active
+     * repo updates this flow downstream.
+     *
+     * Resolution order: `iconKind` is derived from the RepoConfig's
+     * `iconSpecies` (preferred — drives `Sticker(species)`), else from
+     * `iconEmoji` (drives `Emoji(glyph)`), else falls back to
+     * `AutoInitials` of the display name with a hash-derived seed colour.
+     */
+    @Suppress("OPT_IN_USAGE")
+    val activeRepoIconKind: StateFlow<com.eight87.strictlykeptboy.ui.theming.RepoIconKind> by lazy {
+        combine(activeRepoName, repoStore.state) { name, list ->
+            val cfg = list.firstOrNull { it.displayName == name } ?: list.firstOrNull()
+            cfg?.toIconKind() ?: com.eight87.strictlykeptboy.ui.theming.RepoIconKind.Sticker("bat")
+        }.stateIn(
+            GlobalScope,
+            SharingStarted.Eagerly,
+            com.eight87.strictlykeptboy.ui.theming.RepoIconKind.Sticker("bat"),
+        )
     }
 
     /** Phase N — busy-source. Empty until the Room indexer bridge lands. */

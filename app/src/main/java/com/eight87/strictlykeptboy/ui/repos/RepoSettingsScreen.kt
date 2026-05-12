@@ -142,6 +142,13 @@ fun RepoSettingsScreen(
                             is RepoIconKind.Emoji -> kind.glyph
                             is RepoIconKind.Photo -> "photo:${kind.uri}"
                             is RepoIconKind.AutoInitials -> null
+                            // Sticker variants are sourced from the wizard's
+                            // species choice (D.88 / F48) — picking a sticker
+                            // in this screen clears the legacy `iconEmoji` so
+                            // the toIconKind() resolver picks `iconSpecies`
+                            // first. iconSpecies update lives at the repo-
+                            // creation site (wizard) for now.
+                            is RepoIconKind.Sticker -> null
                         },
                     )
                 },

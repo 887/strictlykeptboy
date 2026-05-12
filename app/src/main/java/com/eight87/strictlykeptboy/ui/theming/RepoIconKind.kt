@@ -52,6 +52,16 @@ sealed interface RepoIconKind {
      * be 1-2 visible characters.
      */
     data class AutoInitials(val initials: String, val seedColor: Color) : RepoIconKind
+
+    /**
+     * Species sticker — per D.88, the per-repo identity is rendered as a
+     * species-graphic chosen during the wizard (Phase K.3). Until Phase WW
+     * ships the full sticker bitmap pipeline, `species == "bat"` falls back
+     * to `R.drawable.about_bat`; any other species falls back to
+     * [AutoInitials] using the species name's first letter + a hash-derived
+     * seed colour. When WW lands the resolver returns the real pack bitmap.
+     */
+    data class Sticker(val species: String) : RepoIconKind
 }
 
 /**
@@ -127,6 +137,7 @@ fun RepoIcon(
                 fontSize = (sizeDp.value * 0.40f).sp,
             )
             is RepoIconKind.Photo -> PhotoBadge(kind.uri, sizeDp)
+            is RepoIconKind.Sticker -> StickerBadge(kind.species, sizeDp)
         }
     }
 }
@@ -136,6 +147,42 @@ private fun badgeBackground(kind: RepoIconKind): Color = when (kind) {
     is RepoIconKind.AutoInitials -> kind.seedColor
     is RepoIconKind.Emoji -> MaterialTheme.colorScheme.surfaceContainerHighest
     is RepoIconKind.Photo -> MaterialTheme.colorScheme.surfaceContainerHighest
+    // Sticker variants use the species-derived seed colour so the
+    // initials-fallback for non-bat species reads consistent with the
+    // standalone AutoInitials variant. Bat keeps the M3E surface tint
+    // (matches the pre-D.88 IdentityAvatar look the user called "cute").
+    is RepoIconKind.Sticker -> when (kind.species.lowercase()) {
+        "bat" -> MaterialTheme.colorScheme.surfaceContainerHighest
+        else -> seedColorFromName(kind.species)
+    }
+}
+
+/**
+ * Render a species sticker. Until Phase WW ships the bitmap pipeline:
+ * `bat` → `R.drawable.about_bat` (the scene mascot art); other species →
+ * single-letter monogram on the species seed colour. When WW lands this
+ * composable resolves the per-species bitmap from the active pack.
+ */
+@Composable
+private fun StickerBadge(species: String, sizeDp: Dp) {
+    when (species.lowercase()) {
+        "bat" -> Image(
+            painter = androidx.compose.ui.res.painterResource(
+                com.eight87.strictlykeptboy.R.drawable.about_bat,
+            ),
+            contentDescription = null,
+            alignment = Alignment.Center,
+            // ContentScale.Fit preserves the bat scene's framing — the head
+            // + calendar-sign reads clearly at 28dp. Crop would zoom past
+            // the recognisable bat face (user-noted: "cute bat" matters).
+        )
+        else -> Text(
+            text = species.first().uppercaseChar().toString(),
+            color = Color.White,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = (sizeDp.value * 0.40f).sp,
+        )
+    }
 }
 
 /**

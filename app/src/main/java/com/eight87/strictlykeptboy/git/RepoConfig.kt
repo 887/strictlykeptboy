@@ -1,5 +1,8 @@
 package com.eight87.strictlykeptboy.git
 
+import com.eight87.strictlykeptboy.ui.theming.RepoIconKind
+import com.eight87.strictlykeptboy.ui.theming.initialsFromName
+import com.eight87.strictlykeptboy.ui.theming.seedColorFromName
 import kotlinx.serialization.Serializable
 
 /**
@@ -29,6 +32,14 @@ data class RepoConfig(
     val defaultTodolistId: String? = null,
     val colorSeed: Int? = null,
     val iconEmoji: String? = null,
+    /**
+     * Phase K.3 / D.88 — species the user chose in the wizard for this repo.
+     * Drives the per-repo top-bar avatar via `RepoIconKind.Sticker(species)`
+     * (see UI rendering in `IdentityAvatar` + `RepoIcon`). Null for repos
+     * created before D.88 wiring or where the user opted into Photo/Emoji/
+     * AutoInitials icons via Settings → Repos.
+     */
+    val iconSpecies: String? = null,
     val lastSyncedAt: Long? = null,
     val commitsAhead: Int = 0,
     val commitsBehind: Int = 0,
@@ -55,5 +66,21 @@ data class RepoConfig(
                 "primaryRemote $primaryRemote is not in remotes"
             }
         }
+    }
+
+    /**
+     * D.88 / F48 — resolve this repo's avatar to a [RepoIconKind] for the
+     * top-bar leading slot + repo-list rows. Order of preference:
+     * `iconSpecies` (Phase K-wizard or T.2 picker) → `Sticker(species)`;
+     * `iconEmoji` → `Emoji`; else `AutoInitials` derived from
+     * `displayName` with a hash-stable seed colour.
+     */
+    fun toIconKind(): RepoIconKind = when {
+        iconSpecies != null -> RepoIconKind.Sticker(iconSpecies.lowercase())
+        iconEmoji != null -> RepoIconKind.Emoji(iconEmoji)
+        else -> RepoIconKind.AutoInitials(
+            initials = initialsFromName(displayName),
+            seedColor = seedColorFromName(displayName),
+        )
     }
 }

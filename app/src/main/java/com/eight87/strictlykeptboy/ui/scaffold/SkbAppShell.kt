@@ -81,6 +81,7 @@ import com.eight87.strictlykeptboy.ui.together.TogetherPane
 import com.eight87.strictlykeptboy.ui.together.TogetherViewModel
 import com.eight87.strictlykeptboy.ui.wizard.WizardDraft
 import com.eight87.strictlykeptboy.ui.wizard.WizardNavHost
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -171,6 +172,7 @@ fun SkbAppShell(
     onPickImportFile: (com.eight87.strictlykeptboy.git.RepoConfig) -> Unit = {},
     onPickExportFile: (com.eight87.strictlykeptboy.git.RepoConfig) -> Unit = {},
     settingsAccess: SettingsAccess = SettingsAccess(),
+    activeIconKindFlow: StateFlow<com.eight87.strictlykeptboy.ui.theming.RepoIconKind>? = null,
 ) {
     ProvideWindowSizeClass(modifier = modifier) { _ ->
         SkbAppShellContent(
@@ -190,6 +192,7 @@ fun SkbAppShell(
             onPickImportFile = onPickImportFile,
             onPickExportFile = onPickExportFile,
             settingsAccess = settingsAccess,
+            activeIconKindFlow = activeIconKindFlow,
         )
     }
 }
@@ -212,9 +215,15 @@ private fun SkbAppShellContent(
     onPickImportFile: (com.eight87.strictlykeptboy.git.RepoConfig) -> Unit,
     onPickExportFile: (com.eight87.strictlykeptboy.git.RepoConfig) -> Unit,
     settingsAccess: SettingsAccess,
+    activeIconKindFlow: StateFlow<com.eight87.strictlykeptboy.ui.theming.RepoIconKind>?,
 ) {
     var selected by rememberSaveable { mutableStateOf(TopDestination.Schedule) }
     val activeRepoName by activeRepoNameFlow.collectAsState()
+    // D.88 / F48 — top-bar avatar reflects the active repo's iconKind. Defaults
+    // to Sticker("bat") if the caller hasn't wired the flow (e.g. tests, previews).
+    val activeIconKind by (activeIconKindFlow
+        ?: MutableStateFlow(com.eight87.strictlykeptboy.ui.theming.RepoIconKind.Sticker("bat") as com.eight87.strictlykeptboy.ui.theming.RepoIconKind))
+        .collectAsState()
 
     // Tasks owns its tab here so the rail (which lives in the shell) can
     // drive it. ISP: only the tab + setter are hoisted; quick-add /
@@ -260,6 +269,7 @@ private fun SkbAppShellContent(
         Column(modifier = Modifier.fillMaxSize()) {
             ShellTopBar(
                 activeRepoName = activeRepoName,
+                activeIconKind = activeIconKind,
                 selectedDest = selected,
                 onSelectDest = { selected = it },
                 onSyncClick = onSyncClick,
@@ -321,6 +331,7 @@ private fun SkbAppShellContent(
 @Composable
 private fun ShellTopBar(
     activeRepoName: String,
+    activeIconKind: com.eight87.strictlykeptboy.ui.theming.RepoIconKind,
     selectedDest: TopDestination,
     onSelectDest: (TopDestination) -> Unit,
     onSyncClick: () -> Unit,
@@ -343,12 +354,11 @@ private fun ShellTopBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            // Far-left: bat avatar IS the repo switcher. User observed the
-            // bat + folder were doing the same job visually. The bat carries
-            // the active-repo context (one bat per repo if user customises
-            // identity.toml later); tap opens the repo-switcher sheet.
-            // Identity preferences live in Settings → Identity (S.8b), not here.
-            IdentityAvatar(onClick = onRepoSwitcherClick)
+            // Far-left: per-D.88, the avatar IS the active repo's identity.
+            // [activeIconKind] determines the rendering — Sticker(species),
+            // Photo(uri), Emoji(glyph), or AutoInitials. Tap routes to the
+            // repo-switcher (the avatar is the active-repo affordance).
+            IdentityAvatar(onClick = onRepoSwitcherClick, iconKind = activeIconKind)
             // Destination buttons fill the rest of the row.
             val destScroll = rememberScrollState()
             Row(

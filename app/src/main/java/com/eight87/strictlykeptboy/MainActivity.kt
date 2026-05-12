@@ -193,6 +193,7 @@ class MainActivity : ComponentActivity() {
                     }
                     SkbAppShell(
                         activeRepoNameFlow = graph.activeRepoName,
+                        activeIconKindFlow = graph.activeRepoIconKind,
                         scheduleState = scheduleState,
                         onPersistTab = graph.viewModePrefs::set,
                         reposState = graph.reposState,
@@ -276,6 +277,12 @@ class MainActivity : ComponentActivity() {
                                             com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Tiger -> "🐯"
                                             com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Wolf -> "🐺"
                                             com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.ChooseYourOwn -> null
+                                        },
+                                        // Per D.88 / F48 — the species drives the per-repo avatar.
+                                        // `Sticker(<species>)` falls back to about_bat for bat and
+                                        // to AutoInitials for others until Phase WW lands.
+                                        iconSpecies = draft.species.name.takeIf {
+                                            draft.species != com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.ChooseYourOwn
                                         },
                                     ),
                                 )

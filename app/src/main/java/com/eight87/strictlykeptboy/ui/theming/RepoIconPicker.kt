@@ -68,6 +68,7 @@ fun RepoIconPicker(
                         is RepoIconKind.Emoji -> stringResource(R.string.repo_icon_kind_emoji)
                         is RepoIconKind.AutoInitials -> stringResource(R.string.repo_icon_kind_initials)
                         is RepoIconKind.Photo -> stringResource(R.string.repo_icon_kind_photo)
+                        is RepoIconKind.Sticker -> current.species.replaceFirstChar { it.uppercase() }
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
