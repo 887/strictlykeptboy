@@ -274,7 +274,10 @@ private fun SkbAppShellContent(
                 onSelectDest = { selected = it },
                 onSyncClick = onSyncClick,
                 onIdentityClick = { /* UI-L — stubbed */ },
-                onRepoSwitcherClick = { /* UI-K — stubbed */ },
+                // D.88: bat avatar IS the repo affordance. Tap navigates to
+                // the Repos destination (which the top-bar button-row hides,
+                // since this avatar covers it).
+                onRepoSwitcherClick = { selected = TopDestination.Repos },
             )
             Row(modifier = Modifier.fillMaxSize()) {
                 if (railItems.isNotEmpty()) {
@@ -368,7 +371,12 @@ private fun ShellTopBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End),
             ) {
-                TopDestination.entries.forEach { dest ->
+                // Repos is hidden from this row per D.88 — the bat avatar
+                // (leading slot) is the active-repo affordance and also
+                // navigates here on tap. Surfacing both creates the
+                // "two icons doing the same thing" redundancy the user
+                // called out.
+                TopDestination.entries.filter { it != TopDestination.Repos }.forEach { dest ->
                     DestinationButton(
                         dest = dest,
                         selected = dest == selectedDest,
