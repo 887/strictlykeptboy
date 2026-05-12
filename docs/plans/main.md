@@ -166,7 +166,7 @@ later polish round.
 
 Deep-dive: [`ui-spec.md`](ui-spec.md) phases UI-K through UI-L.
 
-Round 1 shipped — `ui/repos/` package with `ReposPane` host, `RepoSwitcherDropdown`, `AddRepoNavHost` (multi-screen flow), `RepoSettingsScreen`, `IdentitiesScreen`, plus `ReposViewState` holder wired into `AppScaffold` + `MainActivity`. 15 new Compose tests; 163 total tests passing. Multi-identity DM-J editor is a thin v1 surface — full editor deferred.
+Round 1 shipped in commit `3fbfb78` — `ui/repos/` package with `ReposPane` host, `RepoSwitcherDropdown`, `AddRepoNavHost` (multi-screen flow), `RepoSettingsScreen`, `IdentitiesScreen`, plus `ReposViewState` holder wired into `AppScaffold` + `MainActivity`. 15 new Compose tests; 163 total tests passing. Multi-identity DM-J editor is a thin v1 surface — full editor deferred.
 
 - [x] **I.1** Repo switcher (top-bar) — filterable list with circular icons + display names + sync status badges. No-origin repos render a small house "local" badge instead of sync/error per Phase ZZ.G.
 - [x] **I.2** Add-repo flow — top-level branch selector "Create local-only" vs "Connect to a remote" per Phase ZZ.G. Local-only path skips provider/URL/auth and goes straight to identity + default-calendar selection. Remote path: provider (GitHub/Forgejo), URL, auth method, identity, default calendar; supports adding additional remotes via "+ add another remote".
