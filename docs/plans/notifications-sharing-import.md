@@ -2485,6 +2485,17 @@ See [`draft-household-travel-vacation.md`](draft-household-travel-vacation.md) H
 - [ ] **NS-Z.4** Stacking rule: when N reminders fire within a 60-second window, collapse into a single `NotificationCompat.InboxStyle` notification with N expansion lines. Channel hierarchy = highest-importance among the constituents. Tap-anywhere expands; per-line quick-actions preserved.
 - [ ] **NS-Z.5** Privacy on collapse: if ANY constituent event is `private = true`, the collapsed preview shows "N reminders" with no titles. Expanded view honors per-event privacy independently.
 
+### Wear OS notification bridge + sticker rich-content (locked here, no Wear app)
+
+Android forwards phone notifications to a paired Wear OS watch automatically — no Wear OS module needed (user explicit: no full Wear app). Notification *rich content* (large icon, full-bleed Wear background) renders on the wrist using two standard `NotificationCompat` APIs. The activity-specific sticker (resolved per Phase WW from `(activity_id, species)`) is the bitmap.
+
+- [ ] **NS-Z.9** `EventReminderScheduler` (NS-C) calls `WW-StickerResolver.resolve(activity_id, species)` → `Bitmap` at notification-build time. Resolver fallback chain (per WW): activity-specific → category-generic → species-idle → `R.drawable.about_bat`. Lookup is cached LRU (~40 entries) per WW's caching contract.
+- [ ] **NS-Z.10** Phone-side: pass the bitmap to `NotificationCompat.Builder.setLargeIcon(bitmap)`. Renders as the right-edge icon in the system shade + as the avatar on the lockscreen preview. Privacy contract: if `event.private = true` (K-2), DO NOT call `setLargeIcon` — generic bat-shaped silhouette only.
+- [ ] **NS-Z.11** Wear-side: `NotificationCompat.WearableExtender().setBackground(bitmap).extend(builder)` paints the sticker as the full-bleed background of the Wear notification card. Same privacy gate as NS-Z.10. The user sees the *good-boy-brushes-teeth* sticker filling the watch when the brush-teeth reminder fires.
+- [ ] **NS-Z.12** Sub-beat sticker swap on the wrist: when a sub-beat boundary fires (per HV-N event-with-subbeats), re-post the notification with the new sub-beat sticker. Wear bridge updates in place. Snoozing the sub-beat freezes the current sticker.
+- [ ] **NS-Z.13** Test: synth event with `activity_id = "brush-teeth"` + sub-beats; assert `setLargeIcon` + `WearableExtender.setBackground` both called with the right bitmap key at each sub-beat; assert private-flag suppresses both surfaces.
+- [ ] **NS-Z.14** Locked: NO custom Wear OS watch face (that's a separate app module + Wear OS dependencies the user has explicitly said no to). NO standalone Wear OS app. Just rich notifications via the standard bridge. Future "complication on watch face" support is deferred to a v2 Wear-companion phase if/when the user asks for it.
+
 ### Briefing surfaces (D.81)
 
 - [ ] **NS-Z.6** System `cal-briefings` calendar scaffolded by default at wizard time; user disable at Settings → Notifications → "Show briefings". Two recurring events: `morning-briefing` (default 07:00 daily) and `evening-briefing` (default 21:00 daily). Both `FREQ=DAILY`.
