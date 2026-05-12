@@ -409,6 +409,22 @@ private fun ShellTopBar(
                     )
                 }
             SyncButton(onClick = onSyncClick)
+            // Settings gear — moved up here from the rail bottom per user
+            // direction 2026-05-13. Sits between sync and the bat avatar.
+            androidx.compose.material3.IconButton(
+                onClick = { onSelectDest(TopDestination.Settings) },
+                modifier = Modifier.testTag("ShellTopBarSettings"),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Settings,
+                    contentDescription = stringResource(R.string.dest_settings),
+                    tint = if (selectedDest == TopDestination.Settings) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                )
+            }
             // Far-right: bat/accounts avatar. Per user direction 2026-05-13:
             // put the bat back up top on the very right (was at rail bottom).
             // Tapping it navigates to Repos (D.88: bat IS the active-repo
@@ -537,23 +553,9 @@ private fun RailColumn(
                     RailTabItem(item = item)
                 }
             }
-            // BOTTOM: settings gear only — the active-repo avatar moved back
-            // to the top-bar far-right slot per user direction 2026-05-13.
-            Spacer(Modifier.height(8.dp))
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clickable(onClick = onSettingsTap)
-                    .testTag("ShellRailSettings"),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Settings,
-                    contentDescription = stringResource(R.string.dest_settings),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(22.dp),
-                )
-            }
+            // Rail bottom intentionally empty per user direction 2026-05-13 —
+            // settings gear moved up to the top-bar action row, bat avatar
+            // already at top-right.
             Spacer(Modifier.height(12.dp))
         }
     }
