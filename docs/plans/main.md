@@ -722,6 +722,8 @@ Peer to **Phase Y** (bidirectional CalDAV ↔ git), but the overlay **never** to
 
 Android AppWidget that shows a large-numerals count to any event the user picks ("X days until …"). Neutral surface; works equally well for a trip, a wedding, a partner's visit, a release date. SFW-coded at every surface (title comes from the underlying event, which is user-controlled — see the wizard's surface-phrasing decisions SP-1..SP-5 in `templates-demo-wizard.md`).
 
+**Sibling widget:** the *now widget* (current-activity glance) lives at Phase EEE — same widget infrastructure, different content mode. VV pins a future event and counts down; EEE shows what you're doing right now. Both share the Phase WW sticker resolver + NS-Z Wear bridge so the same artwork renders consistently across phone widget, lockscreen widget, and watch notification.
+
 - [ ] **VV.1** Surface: `AppWidgetProvider` + a configure-activity to pick the target. Two picker modes: **(a)** specific event by `event_id`; **(b)** "next upcoming event in calendar X" — re-resolves each midnight tick.
 - [ ] **VV.2** Optional event-frontmatter flag `pin_to_widget = true` (additive; resolver-ignored). Picker mode (a) defaults to the most-recently-pinned event, with all events still browsable.
 - [ ] **VV.3** Layout (Material3 Expressive, glanceable): big numerals (days), small label below ("until Sir's visit" / "until Berlin trip" / etc.), optional subtitle line. Lockscreen preview shows numerals only (subtitle hidden — privacy default).
@@ -888,6 +890,32 @@ Source draft: [`draft-household-travel-vacation.md`](draft-household-travel-vaca
 
 - [ ] **S.8b** Identity section — Settings → Identity surface per HV-R.3 / DDD.9. Same fields as K.5a (praise / pronouns / honorific / tone / emoji density), "Reset to wizard defaults" button, live-preview panel rendering now-card + template title + briefing salutation + dom-Claude response with currently-pending values. In `strictly-kept` mode the saving commit goes through the review-feed.
 - [ ] **S.11** Mode section — Settings → Mode surface per HV-Q.1 / DDD.1 / DDD.12: mode pill + transition affordance + 24h cooling-off confirmation flow (D.86); dom-persona picker (DDD.14); dom cadence selector (realtime/end-of-day/weekly).
+
+---
+
+## Phase EEE — Now widget + lockscreen widget
+
+Sibling to Phase VV (countdown widget). VV pins a *future event* and counts down to it; EEE shows what you're scheduled to be doing *right now* — same widget infrastructure, different content mode. Same sticker artwork that rides the Wear notification bridge (NS-Z.9..NS-Z.14) renders on both widget surfaces, so the user can glance at phone, lockscreen, or wrist and see the same cute current-activity sticker + title + remaining time. Deep-dive `ui-spec.md` UI-WW (new) + cross-references to UI-LL (sticker resolver, Phase WW).
+
+- [ ] **EEE.1** `NowWidgetProvider` extends `AppWidgetProvider` under `widget/now/`. Mirrors VV's `CountdownWidgetProvider` pattern (same Glance backend, same updater service). Distinct widget id `now-widget`.
+- [ ] **EEE.2** Live data source: query the resolver for the active event at `Instant.now()` — same call path as `Renderer.render(today, ViewMode.Day, repoSnapshot)`, narrowed to the band whose `effectiveStart ≤ now < effectiveEnd`. Returns `ActiveEvent(MaterializedInstance, remainingMinutes)` or `NoActiveEvent`.
+- [ ] **EEE.3** Glance layouts in three sizes mirroring VV's matrix:
+  - **2x1** — sticker (left) + activity title (right, one line). Tap → open.
+  - **4x2** — sticker + title + remaining-time chip + small "next: <next-event>" subtitle.
+  - **4x4** — sticker (large, centered top) + title + remaining + next-3-upcoming list with mini-stickers per row.
+- [ ] **EEE.4** Sticker rendering: pulls `Bitmap` from the Phase WW sticker resolver via `WW-StickerResolver.resolve(activity_id, species)` — same path as NS-Z.9. Fallback chain: activity-specific → category-generic → species-idle → `R.drawable.about_bat`. LRU-cached.
+- [ ] **EEE.5** Refresh strategy: `AlarmManager.setRepeating` per-minute tick while a widget is placed (lightweight — just re-evaluates `now` against the cached schedule). Plus event-boundary triggers via the existing `EventReminderScheduler` (Phase M / NS-C) fan-out (post-event-end → re-render now-widget to show next event). Sub-beat boundaries also re-render so the sticker swaps on the wrist AND on the widget at the same instant.
+- [ ] **EEE.6** Tap behavior: deep-link to the active event's detail screen via Phase MM URL handler (`strictlykeptboy://event/<global-id>`). Tap when `NoActiveEvent` → open Schedule pane on today.
+- [ ] **EEE.7** **Lockscreen widget surface** (Android 14+ / API 34+, broader rollout API 35+):
+  - Manifest entry `<receiver>` with `android.appwidget.provider` meta-data declaring `widgetCategory="keyguard|home_screen"` (per AOSP lockscreen-widget API).
+  - Glance layout reuses the EEE.3 2x1 + 4x2 layouts (the 4x4 is home-only — too big for lockscreen).
+  - Lockscreen widget configure-activity skipped (uses the user's primary calendar/repo by default; configurable from the home-widget settings sheet).
+- [ ] **EEE.8** **Privacy contract** (K-2): if the active event has `private = true`, the widget renders the generic bat-silhouette sticker + the title "scheduled event" + the remaining-time chip — NO activity sticker, NO real title. On the lockscreen widget this is enforced harder: ANY event of a `private_by_default = true` calendar (per HV-R / DDD identity preferences) renders generic regardless of per-event flag.
+- [ ] **EEE.9** Empty state: when `NoActiveEvent`, widget shows the bat-mascot sticker + the locale string `widget_now_empty_good_boy` ("good boy can rest ;3" with `neutral_title` fallback). Pulls the praise term + tone register from `identity.toml` (per HV-R).
+- [ ] **EEE.10** Sub-beat awareness: when the active event has sub-beats (per Phase XX / HV-A.brush-teeth), the widget re-renders on each sub-beat boundary with the new sub-beat sticker + label. Sub-beat name shown as a subtitle on the 4x2 + 4x4 layouts.
+- [ ] **EEE.11** Configure-activity for the home-widget variant: pick which calendar(s) source the active-event query, sticker-pack override per species (defers to repo-level identity.toml if not overridden), 2x1 / 4x2 / 4x4 size preview, optional "show remaining-time as exact-minutes vs. coarse-bucket" toggle.
+- [ ] **EEE.12** Render-snapshot tests at: cold start (no active event → empty state), event-active mid-block (sticker + title + remaining), sub-beat-mid-event (sub-beat sticker + label), private-event (generic), lockscreen variant under private + non-private events, transitions on event-end + sub-beat-boundary.
+- [ ] **EEE.13** AVD smoke: drop the now-widget on the homescreen via `adb shell appwidget` + observe the sticker + title; transition through an event boundary and assert re-render; lock the device and confirm the lockscreen widget honors the privacy contract.
 
 ---
 

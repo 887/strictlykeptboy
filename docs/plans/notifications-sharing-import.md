@@ -2495,6 +2495,7 @@ Android forwards phone notifications to a paired Wear OS watch automatically —
 - [ ] **NS-Z.12** Sub-beat sticker swap on the wrist: when a sub-beat boundary fires (per HV-N event-with-subbeats), re-post the notification with the new sub-beat sticker. Wear bridge updates in place. Snoozing the sub-beat freezes the current sticker.
 - [ ] **NS-Z.13** Test: synth event with `activity_id = "brush-teeth"` + sub-beats; assert `setLargeIcon` + `WearableExtender.setBackground` both called with the right bitmap key at each sub-beat; assert private-flag suppresses both surfaces.
 - [ ] **NS-Z.14** Locked: NO custom Wear OS watch face (that's a separate app module + Wear OS dependencies the user has explicitly said no to). NO standalone Wear OS app. Just rich notifications via the standard bridge. Future "complication on watch face" support is deferred to a v2 Wear-companion phase if/when the user asks for it.
+- [ ] **NS-Z.15** Same sticker bitmap that rides the Wear bridge ALSO renders on the **homescreen now-widget** + **lockscreen widget** per Phase EEE (sibling to Phase VV countdown widget). The sticker resolver is the same `WW-StickerResolver.resolve(activity_id, species)` call site; the Wear notification, homescreen widget, and lockscreen widget MUST stay byte-equivalent (same bitmap, same fallback chain, same LRU). Sub-beat boundary fires re-render all three surfaces at the same instant. Privacy contract (K-2 private = generic silhouette) is enforced identically across all three surfaces.
 
 ### Briefing surfaces (D.81)
 
