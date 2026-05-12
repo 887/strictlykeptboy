@@ -307,7 +307,7 @@ Deep-dive: [`ui-spec.md`](ui-spec.md) phase UI-R.
 
 ---
 
-## Phase S — settings polish — shipped in Phase S commit
+## Phase S — settings polish — shipped in commit `953e21d`
 
 - [x] **S.1** Repos section — `ReposCategory` deep-link tile + import/export.
 - [x] **S.2** Identities section — placeholder tile that deep-links to S.8b.
