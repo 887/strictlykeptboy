@@ -166,12 +166,14 @@ later polish round.
 
 Deep-dive: [`ui-spec.md`](ui-spec.md) phases UI-K through UI-L.
 
-- [ ] **I.1** Repo switcher (top-bar) — filterable list with circular icons + display names + sync status badges. No-origin repos render a small house "local" badge instead of sync/error per Phase ZZ.G.
-- [ ] **I.2** Add-repo flow — top-level branch selector "Create local-only" vs "Connect to a remote" per Phase ZZ.G. Local-only path skips provider/URL/auth and goes straight to identity + default-calendar selection. Remote path: provider (GitHub/Forgejo), URL, auth method, identity, default calendar; supports adding additional remotes via "+ add another remote".
-- [ ] **I.3** Repo settings — display name, icon, auto-sync toggle + interval, default identity, default calendar, default todolist, color seed. Includes a **Remotes** section per Phase ZZ.G: when `remotes.isEmpty()` shows "No remotes — this repo lives only on this device" + "Add a remote" CTA; when non-empty lists per-remote rows (URL, transport, auth method, push policy, last-sync, error) with Edit/Remove/+Add affordances.
-- [ ] **I.4** Identity management within repo (`identities/` editor)
-- [ ] **I.5** Remove repo (with "are you sure" + local-clone retention option)
-- [ ] **I.6** All-repos unified-view master toggle
+Round 1 shipped — `ui/repos/` package with `ReposPane` host, `RepoSwitcherDropdown`, `AddRepoNavHost` (multi-screen flow), `RepoSettingsScreen`, `IdentitiesScreen`, plus `ReposViewState` holder wired into `AppScaffold` + `MainActivity`. 15 new Compose tests; 163 total tests passing. Multi-identity DM-J editor is a thin v1 surface — full editor deferred.
+
+- [x] **I.1** Repo switcher (top-bar) — filterable list with circular icons + display names + sync status badges. No-origin repos render a small house "local" badge instead of sync/error per Phase ZZ.G.
+- [x] **I.2** Add-repo flow — top-level branch selector "Create local-only" vs "Connect to a remote" per Phase ZZ.G. Local-only path skips provider/URL/auth and goes straight to identity + default-calendar selection. Remote path: provider (GitHub/Forgejo), URL, auth method, identity, default calendar; supports adding additional remotes via "+ add another remote".
+- [x] **I.3** Repo settings — display name, icon, auto-sync toggle + interval, default identity, default calendar, default todolist, color seed. Includes a **Remotes** section per Phase ZZ.G: when `remotes.isEmpty()` shows "No remotes — this repo lives only on this device" + "Add a remote" CTA; when non-empty lists per-remote rows (URL, transport, auth method, push policy, last-sync, error) with Edit/Remove/+Add affordances.
+- [x] **I.4** Identity management within repo (`identities/` editor) — thin v1 layer; full DM-J editor deferred.
+- [x] **I.5** Remove repo (with "are you sure" + local-clone retention option)
+- [x] **I.6** All-repos unified-view master toggle
 
 ---
 

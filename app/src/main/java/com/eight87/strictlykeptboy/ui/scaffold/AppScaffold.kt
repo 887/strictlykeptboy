@@ -27,6 +27,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import com.eight87.strictlykeptboy.git.auth.SecretsStore
+import com.eight87.strictlykeptboy.ui.repos.ReposPane
+import com.eight87.strictlykeptboy.ui.repos.ReposViewState
 import com.eight87.strictlykeptboy.ui.schedule.SchedulePane
 import com.eight87.strictlykeptboy.ui.schedule.ScheduleViewState
 import com.eight87.strictlykeptboy.ui.tasks.TaskQuickAddRequest
@@ -64,6 +67,8 @@ fun AppScaffold(
     onPersistTab: (ScheduleViewTab) -> Unit = {},
     tasksState: TasksViewState = remember { TasksViewState() },
     onWriteTask: (TaskQuickAddRequest) -> Unit = {},
+    reposState: ReposViewState? = null,
+    secretsStore: SecretsStore? = null,
 ) {
     var selected by rememberSaveable { mutableStateOf(TopDestination.Schedule) }
     val activeRepoName by activeRepoNameFlow.collectAsState()
@@ -100,7 +105,11 @@ fun AppScaffold(
                 state = tasksState,
                 onWriteTask = onWriteTask,
             )
-            TopDestination.Repos -> PlaceholderScreen("Repos")
+            TopDestination.Repos -> if (reposState != null) {
+                ReposPane(state = reposState, secretsStore = secretsStore)
+            } else {
+                PlaceholderScreen("Repos")
+            }
             TopDestination.Wizard -> PlaceholderScreen("Wizard")
             TopDestination.Settings -> PlaceholderScreen("Settings")
         }
