@@ -29,11 +29,20 @@ import com.eight87.strictlykeptboy.ui.repos.ReposViewState
 import com.eight87.strictlykeptboy.ui.scaffold.AppScaffold
 import com.eight87.strictlykeptboy.ui.schedule.ScheduleViewModePrefs
 import com.eight87.strictlykeptboy.ui.schedule.ScheduleViewState
+import com.eight87.strictlykeptboy.ui.together.BusySource
+import com.eight87.strictlykeptboy.ui.together.CommonTimeFinderPort
+import com.eight87.strictlykeptboy.ui.together.TogetherRepoOption
+import com.eight87.strictlykeptboy.ui.together.TogetherViewModel
+import com.eight87.strictlykeptboy.resolver.CommonTimeFinder
 import com.eight87.strictlykeptboy.ui.wizard.AgeGatePrefs
 import com.eight87.strictlykeptboy.ui.wizard.AgeGateScreen
 import com.eight87.strictlykeptboy.ui.wizard.NeutralModePrefs
 import com.eight87.strictlykeptboy.ui.wizard.WizardScaffolder
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.GlobalScope
 
 class MainActivity : ComponentActivity() {
 
@@ -98,6 +107,20 @@ class MainActivity : ComponentActivity() {
             ),
         )
 
+        // Phase N — Together pane wiring. The composition root owns
+        // concrete BusySource + finder per R.X.3. v1 ships with an
+        // empty BusySource because the full RepoStore → Room indexer
+        // bridge for live calendar data lands in Round 2 (Phase F→G
+        // integration). The UI is fully usable; result list shows the
+        // empty-state until the bridge ships.
+        @Suppress("OPT_IN_USAGE")
+        val togetherRepoOptions = repoStore.state
+            .map { list -> list.map { TogetherRepoOption(it.repoId, it.displayName) } }
+            .stateIn(GlobalScope, SharingStarted.Eagerly, repoStore.state.value.map { TogetherRepoOption(it.repoId, it.displayName) })
+        val emptyBusySource = BusySource { _, _, _, _ -> emptyMap() }
+        val finderImpl = CommonTimeFinder()
+        val finderPort = CommonTimeFinderPort { q -> finderImpl.find(q) }
+
         setContent {
             val appearance by appearancePrefs.state.collectAsState()
             // Re-evaluate age-gate on each composition; flip on accept.
@@ -125,12 +148,21 @@ class MainActivity : ComponentActivity() {
                             initialTab = viewModePrefs.selected.value,
                         )
                     }
+                    val togetherVm = remember(scope) {
+                        TogetherViewModel(
+                            scope = scope,
+                            repoOptionsFlow = togetherRepoOptions,
+                            busySource = emptyBusySource,
+                            finder = finderPort,
+                        )
+                    }
                     AppScaffold(
                         activeRepoNameFlow = activeRepoName,
                         scheduleState = scheduleState,
                         onPersistTab = viewModePrefs::set,
                         reposState = reposState,
                         secretsStore = secretsStore,
+                        togetherViewModel = togetherVm,
                         onSyncClick = {
                             if (repoStore.list().any { it.remotes.isNotEmpty() }) {
                                 SyncService.startSyncAll(this@MainActivity)

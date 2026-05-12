@@ -273,4 +273,38 @@
     <string name="settings_notif_channel_enabled">Enabled</string>
     <string name="settings_notif_channel_silent">Silent (no sound)</string>
     <string name="settings_notif_open_system">Open system notification settings</string>
+
+    <!-- Phase N — Together (common-time finder) -->
+    <string name="together_nav_label">Together</string>
+    <string name="scaffold_dest_together">Together</string>
+    <string name="cd_dest_together">Together</string>
+    <string name="together_title">Find common time</string>
+    <string name="together_section_repos">Repos</string>
+    <string name="together_section_calendars">Calendars</string>
+    <string name="together_section_date_range">Date range</string>
+    <string name="together_section_duration">Duration</string>
+    <string name="together_section_days">Days</string>
+    <string name="together_section_time">Time of day</string>
+    <string name="together_field_start_date">Start</string>
+    <string name="together_field_end_date">End</string>
+    <string name="together_field_duration_minutes">%1$d min</string>
+    <string name="together_field_time_from">From</string>
+    <string name="together_field_time_to">To</string>
+    <string name="together_submit">Find slots</string>
+    <string name="together_running">Finding common time…</string>
+    <string name="together_results_header">%1$d slot(s) found</string>
+    <string name="together_result_duration_hm">%1$dh %2$dm</string>
+    <string name="together_result_duration_m">%1$dm</string>
+    <string name="together_result_create_event">Create event</string>
+    <string name="together_result_create_event_toast">would create event in this slot</string>
+    <string name="together_empty_no_repos">add a repo first — Together needs at least one calendar source</string>
+    <string name="together_empty_no_overlap">no overlap — try widening the window?</string>
+    <string name="together_empty_neutral">No common-time slots match the filters.</string>
+    <string name="together_dow_mon">M</string>
+    <string name="together_dow_tue">T</string>
+    <string name="together_dow_wed">W</string>
+    <string name="together_dow_thu">T</string>
+    <string name="together_dow_fri">F</string>
+    <string name="together_dow_sat">S</string>
+    <string name="together_dow_sun">S</string>
 </resources>

@@ -167,6 +167,29 @@ R.X.1..R.X.9 self-check:
 - **F16 — Deferred from Phase M (tracked here for NS-Z follow-up):** boot re-arm `RECEIVE_BOOT_COMPLETED` receiver, AlarmHorizonExtender nightly worker, D.79 per-category cadence defaults, D.81 cal-briefings auto-generated bodies, D.82 post_event_checkin opt-in flow, D.80 off-schedule warning prefix, NS-A.10..14 logical notification groups + group-level mute, NS-D.13 `setPublicVersion` redacted-body retrofit for non-private events. **Priority:** scheduled. **Status:** tracked.
 - **F17 — `notif/NotificationsSettingsScreen` not yet wired into the Settings rail.** The Compose surface exists and is testable in isolation; the rail Settings destination is still the placeholder per Phase S. When Phase S lands, drop `NotificationsSettingsScreen(prefs)` into the Notifications section (S.4). **Priority:** low — surface is reachable from system-level notification settings via the deep-link button. **Status:** tracked.
 
+### Findings emitted by Phase N (Together / common-time finder)
+
+**Audit pass 2026-05-12** (N.1 + N.2 shipped; N.3 v1-stubbed).
+
+R.X.1..R.X.9 self-check:
+
+1. ✅ R.X.1 narrow data interfaces — `TogetherViewModel` takes 4 narrow inputs (`CoroutineScope`, `StateFlow<List<TogetherRepoOption>>`, `BusySource`, `CommonTimeFinderPort`); never sees `RepoStore`/`CacheDatabase`. Composables receive only what they render (`TogetherInputForm` takes options + state + callbacks; `TogetherResultList` takes slots + tap callback).
+2. ✅ R.X.2 sealed types for branching — `TogetherResultState` is a sealed interface (`Idle` / `Running` / `Results(slots)` / `Empty`). The pane branches via exhaustive `when`.
+3. ✅ R.X.3 composition root — `MainActivity` is the sole place that constructs `CommonTimeFinder` (concrete) and adapts it to `CommonTimeFinderPort`, plus the empty `BusySource` stub. The `ui/together/` package never touches `RepoStore` or `CacheDatabase` directly.
+4. ✅ R.X.4 no god-files — largest new file is `TogetherInputForm.kt` (~165 LOC), `TogetherPane.kt` ~95, `TogetherViewModel.kt` ~85, `TogetherTypes.kt` ~75, `TogetherResultList.kt` ~85, `TogetherEmptyState.kt` ~50. Each has one cohesive responsibility.
+5. ✅ R.X.5 no new `NotImplementedError`.
+6. ✅ R.X.6 import direction — `ui/together/` imports from `resolver/` (allowed: ui is outermost) and `git/` only via `RepoConfig` in MainActivity wiring, not from inside the `together/` package. No `resolver/` → `ui/` imports.
+7. ✅ R.X.7 ISP in Compose — the form's leaf chips receive `(selected, onClick, label)` only; the result card receives `(slot, onTap)`.
+8. ✅ R.X.8 test discipline — 7 new tests added (`TogetherInputFormTest` 2, `TogetherViewModelTest` 3, `TogetherResultListTest` 1, `TogetherEmptyStateTest` 1). Suite total moved 215 → 222.
+9. ✅ R.X.9 AVD smoke — installed on `emulator-5554`. Together rail item renders, input form renders, repo chip select + Find slots produces "10 slot(s) found" cards with date / time-range / duration / Create-event button. No AndroidRuntime:E in `adb logcat -d -t 200`. Screencaps at `/tmp/n-together-input.png` and `/tmp/n-together-results.png`.
+
+**Findings backlog from this pass:**
+
+- **F18 — Empty production `BusySource`.** The composition root currently wires `BusySource { _, _, _, _ -> emptyMap() }` because the RepoStore → Room indexer → renderer bridge for live calendar data is still stubbed in `MainActivity` (an empty `RepoSnapshot` + empty `Renderer.Sources`). The UI is fully usable end-to-end and the finder runs against real `CommonTimeFinder.find(...)`, but the busy set is always empty so every candidate window becomes a free slot. **Action:** wire a real `BusySource` once the schedule data bridge lands (post-Round-1 / RV-F caching follow-up). **Priority:** medium — gates honest finder results on the device. **Status:** tracked.
+- **F19 — Per-repo calendar sub-filter unbuilt.** N.1 mentions a per-repo calendar sub-filter; current build picks ALL active calendars in the selected repos. The form skips the calendar layer entirely because RV-E/`CommonTimeFinder.Query` already operates at the busy-set level — the caller (BusySource impl) chooses which calendars contribute. When F18 closes, surface the calendar sub-pickers in the form. **Priority:** low. **Status:** tracked.
+- **F20 — Slot-tap stub.** N.3 ships as a Toast "would create event" stub per the brief; the full editor sheet (target repo + calendar picker + start/end editor) lives in I-K-EE. **Priority:** scheduled. **Status:** tracked (mirrors F3 deferred-edit-flow stance).
+- **F21 — `MainActivity` LOC creeping.** With the Together wiring `MainActivity.kt` is now ~210 LOC (up from 174). Under the 250-LOC `AppGraph` promotion trigger per F2 but moving toward it. **Action:** keep an eye on it; promote on next composition-root add. **Priority:** low. **Status:** tracked.
+
 ---
 
 ## Standing work-streams

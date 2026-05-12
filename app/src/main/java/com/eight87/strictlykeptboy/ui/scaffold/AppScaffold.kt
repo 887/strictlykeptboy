@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -37,6 +38,8 @@ import com.eight87.strictlykeptboy.ui.schedule.ScheduleViewState
 import com.eight87.strictlykeptboy.ui.tasks.TaskQuickAddRequest
 import com.eight87.strictlykeptboy.ui.tasks.TasksPane
 import com.eight87.strictlykeptboy.ui.tasks.TasksViewState
+import com.eight87.strictlykeptboy.ui.together.TogetherPane
+import com.eight87.strictlykeptboy.ui.together.TogetherViewModel
 import com.eight87.strictlykeptboy.ui.wizard.WizardDraft
 import com.eight87.strictlykeptboy.ui.wizard.WizardNavHost
 import kotlinx.coroutines.flow.StateFlow
@@ -56,6 +59,7 @@ const val TestTagAppScaffold = "AppScaffold"
 enum class TopDestination(val label: String, val icon: ImageVector) {
     Schedule("Schedule", Icons.Filled.CalendarMonth),
     Tasks("Tasks", Icons.Filled.CheckCircle),
+    Together("Together", Icons.Filled.Groups),
     Repos("Repos", Icons.Filled.Folder),
     Wizard("Wizard", Icons.Filled.AutoAwesome),
     Settings("Settings", Icons.Filled.Settings),
@@ -73,6 +77,7 @@ fun AppScaffold(
     onWriteTask: (TaskQuickAddRequest) -> Unit = {},
     reposState: ReposViewState? = null,
     secretsStore: SecretsStore? = null,
+    togetherViewModel: TogetherViewModel? = null,
     onSyncClick: () -> Unit = {},
     neutralMode: Boolean = false,
     onWizardScaffold: suspend (WizardDraft) -> Result<Unit> = { Result.success(Unit) },
@@ -114,6 +119,11 @@ fun AppScaffold(
                 state = tasksState,
                 onWriteTask = onWriteTask,
             )
+            TopDestination.Together -> if (togetherViewModel != null) {
+                TogetherPane(vm = togetherViewModel, neutralMode = neutralMode)
+            } else {
+                PlaceholderScreen(stringResource(R.string.scaffold_dest_together))
+            }
             TopDestination.Repos -> if (reposState != null) {
                 ReposPane(state = reposState, secretsStore = secretsStore)
             } else {
