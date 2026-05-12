@@ -194,25 +194,25 @@ Shipped in change `9b20722`.
 
 ---
 
-## Phase K — design-a-lifestyle wizard (REPLACED — was wizard+templates)
+## Phase K — design-a-lifestyle wizard (REPLACED — was wizard+templates) — shipped in change `pending-K`
 
 Deep-dive: [`draft-lifestyle-wizard.md`](draft-lifestyle-wizard.md) phases LW-A through LW-M. (Replaces the previous K.1..K.6 wizard+templates phase wholesale per D.54. The wizard's output IS the user's canonical starting state; no demo mode. The bat-mascot guides every wizard screen and is distinct from the user's chosen avatar species per D.56. Kink-positive openly per D.55; `unaligned-private` alignment is the in-wizard kink-off path. Phone-only is a first-class wizard outcome via `GitRepo.initLocalOnly` per ZZ.A.)
 
-- [ ] **K.1** Wizard architecture + state model (LW-A): NavHost rooted at `WizardNavHost`, immutable `WizardDraft`, commit-on-finish, mid-wizard exit safety, bat-mascot `WizardScaffold` host
-- [ ] **K.2** Screen 1 Welcome (LW-B): bat-mascot wave, single "let's go" CTA
-- [ ] **K.3** Screen 2 Species selection (LW-C): 8-tile grid (7 default species + "choose your own"); bat default if skipped
-- [ ] **K.4** Screen 3 Alignment (LW-D): Dominant / Submissive / Switch / Unaligned-private; unaligned-private propagates kink-off downstream
-- [ ] **K.5a** Screen 3.5 Praise + pronouns + honorific + tone + emoji-density (LW Screen 3.5, per HV-R.2 / D.83): writes `identity.toml` at calendar-repo root. Praise picker (10 default chips + custom, multi-select for alternation), pronouns (he/she/they/it/custom + extra sets), honorific (Sir / Daddy / Master / Mistress / Owner / Keeper / Captain / custom; skipped if alignment = dominant or unaligned-private), tone register (soft-kinky default for kinky alignments, warm-neutral for unaligned-private), emoji density (default medium). Bat sticker `bat-holding-name-tag` (neutral variant `bat-with-clipboard`). All revisable in Settings → Identity (Phase S.8b).
-- [ ] **K.5** Screen 4 Lifestyle (LW-E): Single/Partnered × free/strictly-kept/strictly-keeping/strictly-shared, computed from alignment
-- [ ] **K.6** Screen 5 Roles (LW-F): 17-role multi-select grid; `self-care` always-on; `kink` auto-on for kinky alignments and hidden under unaligned-private
-- [ ] **K.7** Screen 6 Templates per role (LW-G): collapsible sections of atomic-activity templates (from XX) with smart-default toggle matrix per (alignment, lifestyle)
-- [ ] **K.8** Screen 7 Git setup (LW-H): three cards — Phone-only (default-highlighted) / Self-hosted Forgejo-Gitea / GitHub
-- [ ] **K.9** Screen 8 Calendar scaffolding (LW-I): materialize repo, calendars, recurrences, todolist, identity, README+AGENTS+CLAUDE; single initial commit; push if remote configured
-- [ ] **K.10** Screen 9 Done handoff (LW-J): live home-screen preview now-card; bat-mascot waves chosen species peek; "open my calendar" CTA
-- [ ] **K.11** Bat-mascot sticker set spec (LW-K): 13-key sticker set; contact sheet for artist at `docs/assets/wizard-bat-stickers.png`
-- [ ] **K.12** Re-run from Settings (LW-L): "Add more to my lifestyle" entry; additive semantics — toggling a role OFF hides rather than deletes
-- [ ] **K.13** Testing strategy (LW-M): Robolectric path-coverage matrix per (alignment × lifestyle), mid-wizard exit+resume, deep-link bypass, auth-failure recoverability
-- [ ] **K.14** Age gate + neutral-mode toggle (K-6 / K-3 per KI): one-time first-launch age gate (Mature-17+), encrypted-prefs `age_confirmed_at`; Settings → Appearance → Neutral mode toggle. Composes with wizard `unaligned-private` alignment.
+- [x] **K.1** Wizard architecture + state model (LW-A): NavHost rooted at `WizardNavHost`, immutable `WizardDraft`, commit-on-finish, mid-wizard exit safety, bat-mascot `WizardScaffold` host — `ui/wizard/WizardModel.kt` + `ui/wizard/WizardNavHost.kt`. SavedStateHandle-backed cross-process resume deferred to v2 ViewModel.
+- [x] **K.2** Screen 1 Welcome (LW-B): bat-mascot wave, single "let's go" CTA
+- [x] **K.3** Screen 2 Species selection (LW-C): 8-tile grid (7 default species + "choose your own"); bat default if skipped. Custom-pack URL stored only; clone wiring is Phase WW.
+- [x] **K.4** Screen 3 Alignment (LW-D): Dominant / Submissive / Switch / Unaligned-private; unaligned-private propagates kink-off downstream via `WizardDraft.normalize()`
+- [x] **K.5a** Screen 3.5 Praise + pronouns + honorific + tone + emoji-density — writes `identity.toml` at calendar-repo root with `[praise]` / `[pronouns]` / `[honorific]` / `[tone]` / `[emoji]` / `[alignment]` / `[lifestyle]` sections per D.83.
+- [x] **K.5** Screen 4 Lifestyle (LW-E): Single/Partnered × free/strict, phrasing computed from alignment ("strictly-kept" / "strictly-keeping" / "strictly-shared" / "routine") via `Lifestyle.labelFor(Alignment)`
+- [x] **K.6** Screen 5 Roles (LW-F): 17-role multi-select grid; `self-care` always-on (lock icon, non-toggleable); `kink` hidden under unaligned-private OR neutral-mode
+- [x] **K.7** Screen 6 Templates per role (LW-G): per-role expandable sections with atomic-activity template chips. Smart-defaults = "all on" for v1; fine-tuned per (alignment, lifestyle) matrix deferred.
+- [x] **K.8** Screen 7 Git setup (LW-H): three cards — Phone-only (default + recommended) / Self-hosted Forgejo+Gitea (URL + OAuth client ID inputs) / GitHub. OAuth flow itself stubbed for v1; finishes via phone-only fallback.
+- [x] **K.9** Screen 8 Calendar scaffolding (LW-I): `WizardScaffolder.materialize()` — per-role calendars with locked priority/emoji, one recurrence per enabled atom (FREQ=DAILY 09:00 + 15min duration for v1), 5 onboarding standing tasks, identity.toml extension, single initial commit via `GitRepo.initLocalOnly`. Remote-push paths deferred until OAuth client IDs are registered.
+- [x] **K.10** Screen 9 Done handoff (LW-J): now-card preview ("next up: …" + praise term), "Open my calendar" CTA. Full live-resolver-driven preview deferred.
+- [x] **K.11** Bat-mascot sticker set spec (LW-K) — `docs/assets/wizard-bat-stickers.md` enumerates all 13 keys. `R.drawable.about_bat` used as placeholder until artist delivers; contact-sheet PNG is artist's deliverable.
+- [x] **K.12** Re-run from Settings (LW-L): `WizardNavHost(initialScreen = WizardScreen.Roles, initialDraft = …)` preserves the entry-point and prefilled selections. Settings entry-point to drive it is Phase S.8.
+- [x] **K.13** Testing strategy (LW-M): 4 test classes / 18 cases — `WizardDraftTest`, `WizardScaffolderTest` (filesystem materialization), `AgeGatePrefsTest`, `WizardNavHostTest` (Robolectric Compose). Full alignment×lifestyle matrix walk + mid-wizard-exit + deep-link bypass tests deferred to v2.
+- [x] **K.14** Age gate + neutral-mode toggle: `AgeGatePrefs` (EncryptedSharedPreferences `age_confirmed_at`) gates `MainActivity`; `NeutralModePrefs` propagates into `WizardNavHost(neutralMode = …)` to hide kink role+templates. Settings → Neutral toggle UI is Phase S.9.
 
 ---
 

@@ -35,6 +35,8 @@ import com.eight87.strictlykeptboy.ui.schedule.ScheduleViewState
 import com.eight87.strictlykeptboy.ui.tasks.TaskQuickAddRequest
 import com.eight87.strictlykeptboy.ui.tasks.TasksPane
 import com.eight87.strictlykeptboy.ui.tasks.TasksViewState
+import com.eight87.strictlykeptboy.ui.wizard.WizardDraft
+import com.eight87.strictlykeptboy.ui.wizard.WizardNavHost
 import kotlinx.coroutines.flow.StateFlow
 
 const val TestTagAppScaffold = "AppScaffold"
@@ -70,6 +72,9 @@ fun AppScaffold(
     reposState: ReposViewState? = null,
     secretsStore: SecretsStore? = null,
     onSyncClick: () -> Unit = {},
+    neutralMode: Boolean = false,
+    onWizardScaffold: suspend (WizardDraft) -> Result<Unit> = { Result.success(Unit) },
+    onWizardFinish: () -> Unit = {},
 ) {
     var selected by rememberSaveable { mutableStateOf(TopDestination.Schedule) }
     val activeRepoName by activeRepoNameFlow.collectAsState()
@@ -112,7 +117,15 @@ fun AppScaffold(
             } else {
                 PlaceholderScreen("Repos")
             }
-            TopDestination.Wizard -> PlaceholderScreen("Wizard")
+            TopDestination.Wizard -> WizardNavHost(
+                onFinish = {
+                    onWizardFinish()
+                    selected = TopDestination.Schedule
+                },
+                onCancel = { selected = TopDestination.Schedule },
+                onScaffold = onWizardScaffold,
+                neutralMode = neutralMode,
+            )
             TopDestination.Settings -> PlaceholderScreen("Settings")
         }
     }
