@@ -295,7 +295,7 @@ Deep-dive: [`ui-spec.md`](ui-spec.md) phase UI-S (corrected from UI-N).
 
 ---
 
-## Phase R — tablet + master-detail — R.1..R.5 shipped pending commit
+## Phase R — tablet + master-detail — R.1..R.5 shipped in commit `9527901`
 
 Deep-dive: [`ui-spec.md`](ui-spec.md) phase UI-R.
 
