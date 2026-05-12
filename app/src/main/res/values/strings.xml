@@ -333,4 +333,18 @@
     <!-- Phase O.4 — foreign-event chip -->
     <string name="foreign_event_chip_from">from %1$s</string>
     <string name="foreign_event_open_in_source">Open in source app</string>
+
+    <!-- Phase P — import / export -->
+    <string name="import_export_title">Import / export</string>
+    <string name="import_export_subtitle">iCal (.ics) — per-repo import + export. Pick a repo to import into, or export its calendars to .ics.</string>
+    <string name="import_export_empty">No repos yet. Add a repo from the Repos rail first.</string>
+    <string name="import_action">Import .ics</string>
+    <string name="export_action">Export .ics</string>
+    <string name="import_preview_title">Import preview</string>
+    <string name="import_preview_counts">%1$d events, %2$d recurrence rules, %3$d exceptions</string>
+    <string name="import_preview_warnings">%1$d warnings (skipped malformed entries)</string>
+    <string name="import_preview_confirm">Import</string>
+    <string name="import_preview_cancel">Cancel</string>
+    <string name="import_done">Imported %1$d entries</string>
+    <string name="export_done">Export saved</string>
 </resources>

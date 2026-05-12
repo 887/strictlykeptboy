@@ -1,11 +1,13 @@
 package com.eight87.strictlykeptboy
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -50,6 +52,48 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
 
     private var deepLinkHandler: ((Intent) -> Unit)? = null
+    private var pendingImportRepo: RepoConfig? = null
+    private var pendingExportRepo: RepoConfig? = null
+    private var pendingExportContent: String? = null
+    private var onParsed: ((com.eight87.strictlykeptboy.port.ics.IcsParseReport) -> Unit)? = null
+
+    private val openIcsLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        val repo = pendingImportRepo ?: return@registerForActivityResult
+        if (uri == null) return@registerForActivityResult
+        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching {
+                val text = contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
+                    ?: return@runCatching
+                val calendarId = repo.defaultCalendarId
+                    ?: com.eight87.strictlykeptboy.git.Uuid7.generate().toString()
+                val report = com.eight87.strictlykeptboy.port.ics.IcsParser.parse(
+                    text = text,
+                    calendarId = calendarId,
+                    author = repo.authorIdentity.email,
+                )
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    onParsed?.invoke(report)
+                }
+            }
+        }
+    }
+
+    private val createIcsLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("text/calendar")
+    ) { uri: Uri? ->
+        val content = pendingExportContent ?: return@registerForActivityResult
+        if (uri == null) return@registerForActivityResult
+        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching {
+                contentResolver.openOutputStream(uri)?.use { it.write(content.toByteArray(Charsets.UTF_8)) }
+            }
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                Toast.makeText(this@MainActivity, getString(R.string.export_done), Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
@@ -144,6 +188,41 @@ class MainActivity : ComponentActivity() {
         val finderImpl = CommonTimeFinder()
         val finderPort = CommonTimeFinderPort { q -> finderImpl.find(q) }
 
+        // Phase P — import/export view state. Confirm callback runs the
+        // writer + commit on Dispatchers.IO. R.X.3: composition root only.
+        val importExportState = com.eight87.strictlykeptboy.ui.import_export.ImportExportViewState(
+            repos = repoStore.state,
+            onConfirmedImport = { report ->
+                val repo = pendingImportRepo ?: return@ImportExportViewState
+                kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                    runCatching {
+                        val rootDir = File(repo.rootDir)
+                        val all = (report.events + report.rules + report.exceptions)
+                            .map { it as com.eight87.strictlykeptboy.store.TypedEntity }
+                        com.eight87.strictlykeptboy.store.EntityWriter.writeBatch(rootDir, all)
+                        val gitRepo = com.eight87.strictlykeptboy.git.GitRepoRegistry.get(repo.repoId)
+                            ?: com.eight87.strictlykeptboy.git.GitRepo.open(
+                                rootDir = rootDir,
+                                repoId = repo.repoId,
+                                remotes = repo.remotes,
+                                primaryRemote = repo.primaryRemote,
+                                authorIdentity = repo.authorIdentity,
+                                defaultBranch = repo.defaultBranch,
+                            ).also(com.eight87.strictlykeptboy.git.GitRepoRegistry::put)
+                        gitRepo.commitAll("import: ${report.totalEntities} entities from .ics")
+                    }
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        Toast.makeText(
+                            this@MainActivity,
+                            getString(R.string.import_done, report.totalEntities),
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    }
+                }
+            },
+        )
+        onParsed = { report -> importExportState.showPreview(report) }
+
         setContent {
             val appearance by appearancePrefs.state.collectAsState()
             // Re-evaluate age-gate on each composition; flip on accept.
@@ -186,6 +265,20 @@ class MainActivity : ComponentActivity() {
                         reposState = reposState,
                         secretsStore = secretsStore,
                         togetherViewModel = togetherVm,
+                        importExportState = importExportState,
+                        onPickImportFile = { repo ->
+                            pendingImportRepo = repo
+                            openIcsLauncher.launch(arrayOf("text/calendar", "text/*", "*/*"))
+                        },
+                        onPickExportFile = { repo ->
+                            pendingExportRepo = repo
+                            scope.launch {
+                                runCatching {
+                                    pendingExportContent = buildExportContent(repo)
+                                    createIcsLauncher.launch("${repo.displayName.ifBlank { "calendar" }}.ics")
+                                }
+                            }
+                        },
                         onSyncClick = {
                             if (repoStore.list().any { it.remotes.isNotEmpty() }) {
                                 SyncService.startSyncAll(this@MainActivity)
@@ -304,4 +397,21 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    /**
+     * Phase P.4 — assemble an .ics serialisation by scanning the repo's
+     * working tree, narrowing to event-shaped entities, and handing the
+     * triple to [com.eight87.strictlykeptboy.port.ics.IcsExporter].
+     */
+    private suspend fun buildExportContent(repo: RepoConfig): String =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val results = com.eight87.strictlykeptboy.store.RepoScanner.scanAll(File(repo.rootDir))
+            val entities = results
+                .filterIsInstance<com.eight87.strictlykeptboy.store.ParseResult.Success>()
+                .map { it.entity }
+            val events = entities.filterIsInstance<com.eight87.strictlykeptboy.store.Event>()
+            val rules = entities.filterIsInstance<com.eight87.strictlykeptboy.store.RecurrenceRule>()
+            val exceptions = entities.filterIsInstance<com.eight87.strictlykeptboy.store.Exception>()
+            com.eight87.strictlykeptboy.port.ics.IcsExporter.export(events, rules, exceptions)
+        }
 }

@@ -190,6 +190,25 @@ R.X.1..R.X.9 self-check:
 - **F20 — Slot-tap stub.** N.3 ships as a Toast "would create event" stub per the brief; the full editor sheet (target repo + calendar picker + start/end editor) lives in I-K-EE. **Priority:** scheduled. **Status:** tracked (mirrors F3 deferred-edit-flow stance).
 - **F21 — `MainActivity` LOC creeping.** With the Together wiring `MainActivity.kt` is now ~210 LOC (up from 174). Under the 250-LOC `AppGraph` promotion trigger per F2 but moving toward it. **Action:** keep an eye on it; promote on next composition-root add. **Priority:** low. **Status:** tracked.
 
+### Audit pass 2026-05-12 (Phase P — import / export)
+
+1. ✅ R.X.1 narrow data interface — `ImportExportViewState(repos, onConfirmedImport)` is a 2-param port, not the whole RepoStore. The screen takes `(state, onPickImportFile, onPickExportFile)` only.
+2. ✅ R.X.2 sealed types — n/a; no branching that wanted sealedness on the import/export surface.
+3. ✅ R.X.3 composition root — SAF launchers + EntityWriter + `GitRepo.commitAll` all wired in `MainActivity`. The `port/ics/` modules are pure functions over data.
+4. ✅ R.X.4 — `IcsParser.kt` ~250 LOC, `IcsExporter.kt` ~135 LOC, well under split threshold.
+5. ✅ R.X.5 — no NotImplementedError on the new public surface.
+6. ✅ R.X.6 import direction — `port/ics/` → `store/` + `git/Uuid7` (allowed; port wraps lower layers); `ui/import_export/` → `port/ics/` + `git/RepoConfig`. No reverse-direction imports.
+7. ✅ R.X.7 ISP in Compose — `ImportPreviewSheet` takes `(preview, onConfirm, onCancel)`. `RepoRow` takes `(repo, onImport, onExport)`. No god-state.
+8. ✅ R.X.8 — 19 new tests (`IcsParserTest` 6, `IcsExporterTest` 5, `MalformedIcsTest` 4, `ImportWizardTest` 3, `ExportWizardTest` 1). Suite moved 244 → 263.
+9. ✅ R.X.9 AVD smoke — installed on `emulator-5554`, pushed `/sdcard/Download/sample.ics`, parse-preview = "2 events, 0 rules, 0 exceptions", confirm imported + committed, export wrote `/sdcard/Download/my calendar.ics`. No `AndroidRuntime:E` in logcat. Screencaps `/tmp/p-launch.png`, `/tmp/p-settings.png`, `/tmp/p-saf.png`, `/tmp/p-saf3.png` (preview), `/tmp/p-after-import.png`, `/tmp/p-export.png`.
+
+**Findings backlog from this pass:**
+
+- **F22 — `MainActivity` LOC now ~310.** With the SAF launchers + `buildExportContent` helper it crossed the 250-LOC `AppGraph` promotion threshold (F2 / F21). **Action:** promote a `composition/AppGraph.kt` that owns scheduler + SAF launcher wiring as the next round-2 task. **Priority:** medium. **Status:** tracked.
+- **F23 — VTIMEZONE dropped on import.** Per the locked decision, v1 treats every non-`Z` DTSTART as a naive LocalDateTime in the rule's `tzId` (defaulted to `"UTC"`). Round-trip with non-UTC sources is approximate; real-world `.ics` (Google / Apple) round-trips fine because they emit UTC `Z`. **Action:** revisit if a user reports timezone drift; consider an ical4j upgrade then. **Priority:** low. **Status:** tracked.
+- **F24 — UID dedup on re-import deferred.** P.2 ticked because v1 surfaces UIDs via `external_uid` and the wizard always targets a fresh calendar. A future "import-into-existing-calendar" workflow needs to scan the target calendar's events for matching `external_uid` and skip / merge. **Priority:** medium when P.3 (CSV) lands. **Status:** tracked.
+- **F25 — Settings rail now hosts ImportExportScreen.** The Settings placeholder is repurposed as the Phase P import/export entry-point. When Phase S settings polish lands, Settings needs a real nav structure with Import/Export as one section among many. **Priority:** ships with Phase S. **Status:** tracked.
+
 ---
 
 ## Standing work-streams

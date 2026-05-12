@@ -35,6 +35,8 @@ import com.eight87.strictlykeptboy.ui.repos.ReposPane
 import com.eight87.strictlykeptboy.ui.repos.ReposViewState
 import com.eight87.strictlykeptboy.ui.schedule.SchedulePane
 import com.eight87.strictlykeptboy.ui.schedule.ScheduleViewState
+import com.eight87.strictlykeptboy.ui.import_export.ImportExportScreen
+import com.eight87.strictlykeptboy.ui.import_export.ImportExportViewState
 import com.eight87.strictlykeptboy.ui.tasks.TaskQuickAddRequest
 import com.eight87.strictlykeptboy.ui.tasks.TasksPane
 import com.eight87.strictlykeptboy.ui.tasks.TasksViewState
@@ -82,6 +84,9 @@ fun AppScaffold(
     neutralMode: Boolean = false,
     onWizardScaffold: suspend (WizardDraft) -> Result<Unit> = { Result.success(Unit) },
     onWizardFinish: () -> Unit = {},
+    importExportState: ImportExportViewState? = null,
+    onPickImportFile: (com.eight87.strictlykeptboy.git.RepoConfig) -> Unit = {},
+    onPickExportFile: (com.eight87.strictlykeptboy.git.RepoConfig) -> Unit = {},
 ) {
     var selected by rememberSaveable { mutableStateOf(TopDestination.Schedule) }
     val activeRepoName by activeRepoNameFlow.collectAsState()
@@ -138,7 +143,15 @@ fun AppScaffold(
                 onScaffold = onWizardScaffold,
                 neutralMode = neutralMode,
             )
-            TopDestination.Settings -> PlaceholderScreen(stringResource(R.string.scaffold_dest_settings))
+            TopDestination.Settings -> if (importExportState != null) {
+                ImportExportScreen(
+                    state = importExportState,
+                    onPickImportFile = onPickImportFile,
+                    onPickExportFile = onPickExportFile,
+                )
+            } else {
+                PlaceholderScreen(stringResource(R.string.scaffold_dest_settings))
+            }
         }
     }
 }
