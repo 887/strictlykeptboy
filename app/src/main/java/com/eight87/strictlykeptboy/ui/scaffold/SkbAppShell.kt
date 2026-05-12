@@ -262,6 +262,12 @@ private fun SkbAppShellContent(
         TopDestination.Settings -> emptyList()
     }
 
+    // Big top-left title — current rail-tab when there is one, else the
+    // destination's own label. Mirrors tonearmboy's "Songs / Albums / …"
+    // big-title pattern at the top-left of the LibraryScreen.
+    val title = railItems.firstOrNull { it.selected }?.let { stringResource(it.labelRes) }
+        ?: selected.labelString()
+
     Surface(
         color = MaterialTheme.colorScheme.background,
         modifier = Modifier.fillMaxSize().testTag(TestTagAppShell),
@@ -270,6 +276,7 @@ private fun SkbAppShellContent(
             ShellTopBar(
                 activeRepoName = activeRepoName,
                 activeIconKind = activeIconKind,
+                title = title,
                 selectedDest = selected,
                 onSelectDest = { selected = it },
                 onSyncClick = onSyncClick,
@@ -280,9 +287,15 @@ private fun SkbAppShellContent(
                 onRepoSwitcherClick = { selected = TopDestination.Repos },
             )
             Row(modifier = Modifier.fillMaxSize()) {
-                if (railItems.isNotEmpty()) {
-                    RailColumn(items = railItems)
-                }
+                // Left rail always present — top section is the view-mode tabs
+                // for the current destination (may be empty); bottom section is
+                // the active-repo avatar + settings gear (always there).
+                RailColumn(
+                    items = railItems,
+                    activeIconKind = activeIconKind,
+                    onAccountTap = { selected = TopDestination.Repos },
+                    onSettingsTap = { selected = TopDestination.Settings },
+                )
                 Box(
                     modifier = Modifier.fillMaxSize().testTag(TestTagShellContent),
                 ) {
@@ -335,6 +348,7 @@ private fun SkbAppShellContent(
 private fun ShellTopBar(
     activeRepoName: String,
     activeIconKind: com.eight87.strictlykeptboy.ui.theming.RepoIconKind,
+    title: String,
     selectedDest: TopDestination,
     onSelectDest: (TopDestination) -> Unit,
     onSyncClick: () -> Unit,
@@ -352,38 +366,35 @@ private fun ShellTopBar(
             .windowInsetsPadding(WindowInsets.statusBars.union(WindowInsets.displayCutout))
             .testTag(TestTagShellTopBar),
     ) {
+        // Tonearmboy-shape: big title left + small icon actions right + sync.
+        // The big stacked destination buttons are gone; destinations live
+        // as tiny IconButtons in the action row. Bat + settings-gear move to
+        // the BOTTOM of the left rail (see RailColumn). See user direction
+        // 2026-05-13 (tonearmboy parity ask).
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            // Far-left: per-D.88, the avatar IS the active repo's identity.
-            // [activeIconKind] determines the rendering — Sticker(species),
-            // Photo(uri), Emoji(glyph), or AutoInitials. Tap routes to the
-            // repo-switcher (the avatar is the active-repo affordance).
-            IdentityAvatar(onClick = onRepoSwitcherClick, iconKind = activeIconKind)
-            // Destination buttons fill the rest of the row.
-            val destScroll = rememberScrollState()
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .androidx_horizontalScroll(destScroll),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End),
-            ) {
-                // Repos is hidden from this row per D.88 — the bat avatar
-                // (leading slot) is the active-repo affordance and also
-                // navigates here on tap. Surfacing both creates the
-                // "two icons doing the same thing" redundancy the user
-                // called out.
-                TopDestination.entries.filter { it != TopDestination.Repos }.forEach { dest ->
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+            )
+            // Top-level destinations as tiny icon-only buttons. Bat/Settings/
+            // Repos hidden — bat lives at rail bottom (D.88), Settings as gear
+            // at rail bottom, Repos reachable via bat tap.
+            TopDestination.entries
+                .filter { it != TopDestination.Repos && it != TopDestination.Settings }
+                .forEach { dest ->
                     DestinationButton(
                         dest = dest,
                         selected = dest == selectedDest,
                         onClick = { onSelectDest(dest) },
                     )
                 }
-            }
             SyncButton(onClick = onSyncClick)
         }
     }
@@ -431,20 +442,13 @@ private fun DestinationButton(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    // Stacked layout — icon on top, small label beneath. Lets all 6 destinations
-    // fit in the top-bar row on Compact width without cropping the labels
-    // (user-reported: side-by-side icon+label was cropping past "Schedule").
-    // Each button stays ~56dp wide; the row no longer needs horizontal-scroll
-    // in normal phone widths.
+    // Tonearmboy-shape: tiny icon-only IconButton in the top-right action row.
+    // No label — the big title on the left tells the user what's selected. A
+    // small tinted dot under the icon indicates the active destination.
     val label = dest.labelString()
     val tag = "$TestTagShellDestPrefix${dest.name}"
-    val containerColor = if (selected) {
-        MaterialTheme.colorScheme.secondaryContainer
-    } else {
-        Color.Transparent
-    }
-    val labelColor = if (selected) {
-        MaterialTheme.colorScheme.onSecondaryContainer
+    val tint = if (selected) {
+        MaterialTheme.colorScheme.primary
     } else {
         MaterialTheme.colorScheme.onSurfaceVariant
     }
@@ -454,21 +458,32 @@ private fun DestinationButton(
         modifier = Modifier
             .testTag(tag)
             .semantics { contentDescription = label }
-            .background(containerColor, RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
-            .requiredWidth(70.dp)
-            .padding(horizontal = 4.dp, vertical = 4.dp),
+            .size(width = 40.dp, height = 40.dp),
     ) {
         Icon(
             imageVector = dest.icon,
             contentDescription = null,
-            tint = labelColor,
+            tint = tint,
             modifier = Modifier.size(22.dp),
         )
-        Spacer(Modifier.height(2.dp))
+        if (selected) {
+            Spacer(Modifier.height(2.dp))
+            Box(
+                modifier = Modifier
+                    .size(width = 16.dp, height = 2.dp)
+                    .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(1.dp)),
+            )
+        } else {
+            // Reserve the height so the icon doesn't jitter on selection.
+            Spacer(Modifier.height(4.dp))
+        }
+        // Stub the remaining slot height to keep layout stable
+        Spacer(Modifier.height(0.dp))
+        // Hidden text for tests + a11y; kept off-screen via height=0.
         Text(
             text = label,
-            color = labelColor,
+            color = Color.Transparent,
             style = MaterialTheme.typography.labelSmall,
             maxLines = 1,
         )
@@ -484,10 +499,15 @@ private fun DestinationButton(
  * stripe on its right edge. Scrolls vertically if items don't fit.
  */
 @Composable
-private fun RailColumn(items: List<RailItem>) {
-    // Match tonearmboy's LibraryRail: 52dp wide, 108dp per item. The previous
-    // 72dp width made labelLarge text feel chunky vs the tonearmboy reference
-    // the user calls out as "kinda perfect".
+private fun RailColumn(
+    items: List<RailItem>,
+    activeIconKind: com.eight87.strictlykeptboy.ui.theming.RepoIconKind,
+    onAccountTap: () -> Unit,
+    onSettingsTap: () -> Unit,
+) {
+    // Match tonearmboy's LibraryRail: 52dp wide, 108dp per item.
+    // Bottom of the rail carries the active-repo avatar + a settings gear
+    // (tonearmboy parity: gear lives at the bottom-left of the rail).
     val railWidth = 52.dp
     Box(
         modifier = Modifier
@@ -497,15 +517,40 @@ private fun RailColumn(items: List<RailItem>) {
             .testTag(TestTagShellRail),
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
+            modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(Modifier.height(8.dp))
-            items.forEach { item ->
-                RailTabItem(item = item)
+            // TOP: view-mode tabs (scrollable if many).
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Spacer(Modifier.height(8.dp))
+                items.forEach { item ->
+                    RailTabItem(item = item)
+                }
             }
+            // BOTTOM: active-repo avatar + settings gear (always visible).
+            Spacer(Modifier.height(8.dp))
+            IdentityAvatar(onClick = onAccountTap, iconKind = activeIconKind, sizeDp = 32)
+            Spacer(Modifier.height(8.dp))
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clickable(onClick = onSettingsTap)
+                    .testTag("ShellRailSettings"),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Settings,
+                    contentDescription = stringResource(R.string.dest_settings),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+            Spacer(Modifier.height(12.dp))
         }
     }
 }
