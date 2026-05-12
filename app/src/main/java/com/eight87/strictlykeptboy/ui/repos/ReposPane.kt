@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -57,6 +58,7 @@ fun ReposPane(
     secretsStore: SecretsStore? = null,
     modifier: Modifier = Modifier,
     onOpenTogether: () -> Unit = {},
+    onOpenWizard: () -> Unit = {},
 ) {
     var mode by remember { mutableStateOf<Mode>(Mode.List) }
     val repos by state.repos.collectAsState()
@@ -83,6 +85,7 @@ fun ReposPane(
                 onAddRepo = { mode = Mode.Add },
                 onOpenSettings = { repoId -> mode = Mode.Settings(repoId) },
                 onOpenTogether = onOpenTogether,
+                onOpenWizard = onOpenWizard,
             )
             Mode.Add -> AddRepoNavHost(
                 onCancel = { mode = Mode.List },
@@ -214,6 +217,7 @@ private fun ReposList(
     onAddRepo: () -> Unit,
     onOpenSettings: (String) -> Unit,
     onOpenTogether: () -> Unit,
+    onOpenWizard: () -> Unit,
 ) {
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -238,6 +242,19 @@ private fun ReposList(
                 androidx.compose.material3.Icon(
                     imageVector = Icons.Filled.Groups,
                     contentDescription = "Find a time together",
+                )
+            }
+            // "+ new account" → launches the lifestyle wizard to set up a new
+            // account/repo. Moved here from the top-bar per user direction
+            // 2026-05-13 (Wizard only really needed on first launch + when
+            // configuring a new account).
+            androidx.compose.material3.IconButton(
+                onClick = onOpenWizard,
+                modifier = Modifier.testTag("ReposNewAccount"),
+            ) {
+                androidx.compose.material3.Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = "Set up a new account",
                 )
             }
         }

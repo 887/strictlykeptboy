@@ -322,6 +322,7 @@ private fun SkbAppShellContent(
                                 state = reposState,
                                 secretsStore = secretsStore,
                                 onOpenTogether = { selected = TopDestination.Together },
+                                onOpenWizard = { selected = TopDestination.Wizard },
                             )
                         } else {
                             PlaceholderScreen(stringResource(R.string.scaffold_dest_repos))
@@ -397,7 +398,8 @@ private fun ShellTopBar(
                 .filter {
                     it != TopDestination.Repos &&
                         it != TopDestination.Settings &&
-                        it != TopDestination.Together
+                        it != TopDestination.Together &&
+                        it != TopDestination.Wizard
                 }
                 .forEach { dest ->
                     DestinationButton(
