@@ -412,8 +412,14 @@ private fun ShellTopBar(
             // Far-right: bat/accounts avatar. Per user direction 2026-05-13:
             // put the bat back up top on the very right (was at rail bottom).
             // Tapping it navigates to Repos (D.88: bat IS the active-repo
-            // affordance).
-            IdentityAvatar(onClick = onRepoSwitcherClick, iconKind = activeIconKind)
+            // affordance). Sized 40dp to match the IconButton hit-targets in
+            // this row — previously 28dp default which read smaller than the
+            // other action icons.
+            IdentityAvatar(
+                onClick = onRepoSwitcherClick,
+                iconKind = activeIconKind,
+                sizeDp = 40,
+            )
         }
     }
 }
