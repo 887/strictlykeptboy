@@ -64,6 +64,19 @@ android {
     packaging {
       resources {
         excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        // JGit ships OSGi metadata in every module — Android doesn't run an
+        // OSGi container so the duplicates are harmless. Pick first wins.
+        pickFirsts += "OSGI-INF/l10n/plugin.properties"
+        pickFirsts += "OSGI-INF/l10n/plugin.properties.MF"
+        pickFirsts += "plugin.properties"
+        pickFirsts += "about.html"
+        // jgit ships duplicate notice/license files across its modules.
+        excludes += "/META-INF/NOTICE*"
+        excludes += "/META-INF/LICENSE*"
+        excludes += "/META-INF/DEPENDENCIES"
+        excludes += "/META-INF/INDEX.LIST"
+        excludes += "/META-INF/*.kotlin_module"
+        excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
       }
     }
 }
@@ -111,8 +124,18 @@ dependencies {
   implementation(libs.jgit.ssh.apache) {
     exclude(group = "org.eclipse.jgit", module = "org.eclipse.jgit.ssh.apache.agent")
     exclude(group = "org.slf4j", module = "slf4j-api")
+    // sshd-osgi is an umbrella that re-bundles sshd-core/common — keeping
+    // both produces dex duplicate-class errors. sshd-cli pulls Spring transitively
+    // (jcl-over-slf4j vs spring-jcl commons-logging dup). Both are useless on
+    // Android (no CLI surface, no OSGi container) — strip them.
+    exclude(group = "org.apache.sshd", module = "sshd-osgi")
+    exclude(group = "org.apache.sshd", module = "sshd-cli")
+    exclude(group = "org.apache.sshd", module = "sshd-putty")
+    exclude(group = "org.apache.sshd", module = "sshd-mina")
+    exclude(group = "org.apache.sshd", module = "sshd-netty")
+    exclude(group = "org.springframework", module = "spring-jcl")
+    exclude(group = "org.springframework.integration", module = "spring-integration-core")
   }
-  implementation(libs.sshd.osgi)
   implementation(libs.bouncycastle.prov)
   implementation(libs.bouncycastle.pkix)
   implementation(libs.okhttp)
