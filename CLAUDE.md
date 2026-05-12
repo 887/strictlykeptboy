@@ -208,17 +208,35 @@ The user follows Paul Graham's *Keep Your Identity Small* for their personal wri
 
 ## Release workflow
 
-Same pattern as tonearmboy. The user vibes from their phone with the Claude app, says "ship a new build of strictlykeptboy", Claude runs the local build, user pulls via [Obtainium](https://github.com/ImranR98/Obtainium).
+Same pattern as tonearmboy / shutterboy. The user vibes from their phone with the Claude app, says "ship a new build of strictlykeptboy", Claude runs the local build, user pulls via [Obtainium](https://github.com/ImranR98/Obtainium) on their phone — auto-detects the new GitHub Release.
 
-Canonical commands (TBD until Phase W lands):
+**Local build is the primary path. Zero CI minutes by default.**
+
+Canonical commands (live now via `scripts/build-release-apk.sh`):
 
 ```bash
+# Full one-shot: build + push to GH Releases + install on connected device
 scripts/build-release-apk.sh --gh-release --install
+
+# Just publish to GH Releases (Obtainium pulls from there)
 scripts/build-release-apk.sh --gh-release
+
+# Local APK only, no upload, no install
 scripts/build-release-apk.sh
 ```
 
-Local build is the primary path. Zero CI minutes by default.
+What `--gh-release` does:
+
+1. Builds `release/strictlykeptboy-<version>-<sha7>.apk` (debug-signed by default; set `STRICTLYKEPTBOY_RELEASE_KEYSTORE` + `STRICTLYKEPTBOY_RELEASE_KEY_ALIAS` + `STRICTLYKEPTBOY_RELEASE_KEY_PASSWORD` env vars for production signing).
+2. Generates release notes from `git log <prev-tag>..HEAD` plus a "Verify build" table containing the commit hash and APK SHA-256.
+3. Creates the GitHub Release `v<version>-<sha7>` with the APK attached.
+4. Pushes the local annotated tag to `origin`.
+
+The `.github/workflows/release.yml` fallback is **tag-only and self-disabling**: it triggers when a `v*` tag is pushed, then queries the matching release; if an APK is already attached (which is true after the local script ran), it exits 0 without rebuilding. Saves CI minutes by default; only runs when a tag shows up without a matching APK (e.g. tag pushed from the GitHub web UI). For a CI-signed release, set the repo secrets `RELEASE_KEYSTORE_BASE64`, `RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD`.
+
+When a phase asks for a release, the happy path is `--gh-release --install` against the connected AVD / wifi-adb phone.
+
+`scripts/start-avd.sh` boots the headless `medium_phone` AVD and (optionally) attaches scrcpy for mirroring; `--no-mirror` for headless-only, `--kill` to stop.
 
 ## Open-source licenses
 
