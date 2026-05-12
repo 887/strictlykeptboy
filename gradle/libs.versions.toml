@@ -34,6 +34,9 @@ room = "2.7.1"
 androidxSqlite = "2.5.0"
 ksp = "2.2.21-2.0.5"
 
+# Phase E — resolver (RFC5545 RRULE expansion per D.5).
+libRecur = "0.17.1"
+
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidxActivity" }
@@ -75,6 +78,9 @@ androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 androidx-room-testing = { module = "androidx.room:room-testing", version.ref = "room" }
 androidx-sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "androidxSqlite" }
+
+# Phase E — resolver
+lib-recur = { module = "org.dmfs:lib-recur", version.ref = "libRecur" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }

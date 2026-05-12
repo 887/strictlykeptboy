@@ -95,16 +95,16 @@ Deep-dive: [`data-model.md`](data-model.md) phases DM-A through DM-G.
 
 ---
 
-## Phase E — resolver
+## Phase E — resolver (shipped in commit follow-up to `6bbf011`)
 
 Deep-dive: [`resolver.md`](resolver.md) phases RV-A through RV-F.
 
-- [ ] **E.1** Active-set evaluator: given `(date, time)`, return active calendars/todolists across all configured repos.
-- [ ] **E.2** Recurrence materializer: given an RRULE + a date range, emit instances. Apply exceptions.
-- [ ] **E.3** Overlay layer: layer events from N calendars; resolve priority for collision; compute visual band layout.
-- [ ] **E.4** Render pipeline: `(date-range, view-mode)` → `RenderedSchedule` (Compose-ready structure).
-- [ ] **E.5** Common-time finder.
-- [ ] **E.6** Cache layer: memoize render outputs keyed on `(repo-set-snapshot, view-params)`.
+- [x] **E.1** Active-set evaluator: given `(date, time)`, return active calendars/todolists across all configured repos. Includes supersedence + override re-include (RV-O / HV-E).
+- [x] **E.2** Recurrence materializer: given an RRULE + a date range, emit instances. Apply exceptions (cancel / move / override / note) via dmfs lib-recur 0.17.1.
+- [x] **E.3** Overlay layer: layer events from N calendars; resolve priority for collision (per-overlay `priority` per D.20, `priorityOverride` per-event); compute visual band layout via interval-graph lane assignment. Bands carry RV-N inversion state + RV-O supersedence tag.
+- [x] **E.4** Render pipeline: `(date-range, view-mode)` → `RenderedSchedule` (Compose-ready structure). Includes RV-P off-schedule detection.
+- [x] **E.5** Common-time finder: sweep-line subtraction across N participants, ranked by length / proximity-to-ideal / earliest.
+- [x] **E.6** Cache layer: LRU 20-entry memoization keyed on `(snapshot.contentHash, viewMode, range)`; contentHash = SHA-256 over `(repoId, lastIndexedHeadSha)` tuples.
 
 ---
 

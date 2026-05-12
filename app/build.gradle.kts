@@ -133,6 +133,9 @@ dependencies {
   testImplementation(libs.androidx.sqlite.bundled)
   testRuntimeOnly("androidx.sqlite:sqlite-bundled-jvm:2.5.0")
 
+  // Phase E — resolver (RRULE expansion per D.5)
+  implementation(libs.lib.recur)
+
   // Local tests
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)
