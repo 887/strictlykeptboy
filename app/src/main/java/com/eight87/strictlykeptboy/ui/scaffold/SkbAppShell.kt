@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
@@ -380,23 +382,47 @@ private fun DestinationButton(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
+    // Stacked layout — icon on top, small label beneath. Lets all 6 destinations
+    // fit in the top-bar row on Compact width without cropping the labels
+    // (user-reported: side-by-side icon+label was cropping past "Schedule").
+    // Each button stays ~56dp wide; the row no longer needs horizontal-scroll
+    // in normal phone widths.
     val label = dest.labelString()
     val tag = "$TestTagShellDestPrefix${dest.name}"
-    val mod = Modifier
-        .testTag(tag)
-        .semantics { contentDescription = label }
-    if (selected) {
-        FilledTonalButton(onClick = onClick, modifier = mod) {
-            Icon(imageVector = dest.icon, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(6.dp))
-            Text(label)
-        }
+    val containerColor = if (selected) {
+        MaterialTheme.colorScheme.secondaryContainer
     } else {
-        OutlinedButton(onClick = onClick, modifier = mod) {
-            Icon(imageVector = dest.icon, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(6.dp))
-            Text(label)
-        }
+        Color.Transparent
+    }
+    val labelColor = if (selected) {
+        MaterialTheme.colorScheme.onSecondaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier
+            .testTag(tag)
+            .semantics { contentDescription = label }
+            .background(containerColor, RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .requiredWidth(56.dp)
+            .padding(horizontal = 4.dp, vertical = 4.dp),
+    ) {
+        Icon(
+            imageVector = dest.icon,
+            contentDescription = null,
+            tint = labelColor,
+            modifier = Modifier.size(22.dp),
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = label,
+            color = labelColor,
+            style = MaterialTheme.typography.labelSmall,
+            maxLines = 1,
+        )
     }
 }
 
@@ -410,7 +436,10 @@ private fun DestinationButton(
  */
 @Composable
 private fun RailColumn(items: List<RailItem>) {
-    val railWidth = 72.dp
+    // Match tonearmboy's LibraryRail: 52dp wide, 108dp per item. The previous
+    // 72dp width made labelLarge text feel chunky vs the tonearmboy reference
+    // the user calls out as "kinda perfect".
+    val railWidth = 52.dp
     Box(
         modifier = Modifier
             .fillMaxHeight()
@@ -445,7 +474,7 @@ private fun RailTabItem(item: RailItem) {
 
     Box(
         modifier = Modifier
-            .size(width = 72.dp, height = 108.dp)
+            .size(width = 52.dp, height = 108.dp)
             .clickable(onClick = item.onClick)
             .testTag(tag)
             .semantics { contentDescription = label },
@@ -457,7 +486,9 @@ private fun RailTabItem(item: RailItem) {
             color = labelColor,
             fontWeight = if (item.selected) FontWeight.Bold else FontWeight.Normal,
             maxLines = 1,
-            modifier = Modifier.rotate(-90f),
+            modifier = Modifier
+                .wrapContentSize(unbounded = true)
+                .rotate(-90f),
         )
         if (item.selected) {
             Box(
