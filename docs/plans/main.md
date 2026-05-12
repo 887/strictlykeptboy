@@ -138,13 +138,18 @@ Deep-dive: [`ui-spec.md`](ui-spec.md) phases UI-D through UI-G.
 
 Deep-dive: [`ui-spec.md`](ui-spec.md) phases UI-H through UI-J.
 
-- [ ] **H.1** Combined view (all active lists, priority-ordered)
-- [ ] **H.2** Today view (today's dated tasks + spawned + pinned standing)
-- [ ] **H.3** Per-list view (filter to one list)
-- [ ] **H.4** Shopping mode (big checkboxes, simple layout)
-- [ ] **H.5** Standing view (no-deadline only)
-- [ ] **H.6** Task detail sheet (notes, attachments, author chip, edit)
-- [ ] **H.7** Quick-add FAB with calendar/todolist target picker
+Round 1 shipped in commit `phase-H` — `ui/tasks/` package with stateless
+views consuming a UI-layer `TaskItem` model. DAO→VM glue + swipe gestures
+(UI-J.8/.9) + "Hide done" toggle (UI-J.10) deferred to Phase G→H glue +
+later polish round.
+
+- [x] **H.1** Combined view (all active lists, priority-ordered)
+- [x] **H.2** Today view (today's dated tasks + spawned + pinned standing)
+- [x] **H.3** Per-list view (filter to one list)
+- [x] **H.4** Shopping mode (big checkboxes, simple layout)
+- [x] **H.5** Standing view (no-deadline only)
+- [x] **H.6** Task detail sheet (notes, attachments, author chip, edit)
+- [x] **H.7** Quick-add FAB with calendar/todolist target picker
 
 ---
 

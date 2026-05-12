@@ -8,12 +8,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.lifecycle.lifecycleScope
 import com.eight87.strictlykeptboy.resolver.RepoSnapshot
 import com.eight87.strictlykeptboy.resolver.Renderer
 import com.eight87.strictlykeptboy.theme.AppearancePrefs
 import com.eight87.strictlykeptboy.theme.StrictlyKeptBoyTheme
 import com.eight87.strictlykeptboy.ui.scaffold.AppScaffold
+import com.eight87.strictlykeptboy.ui.schedule.ScheduleViewModePrefs
 import com.eight87.strictlykeptboy.ui.schedule.ScheduleViewState
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -24,6 +24,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         val appearancePrefs = AppearancePrefs.open(this)
+        val viewModePrefs = ScheduleViewModePrefs.open(this)
 
         // Phase F stub: RepoStore + DAO wiring lands in Phase F→G integration.
         // For now we feed an empty snapshot + empty sources so SchedulePane
@@ -53,11 +54,13 @@ class MainActivity : ComponentActivity() {
                         scope = scope,
                         snapshotFlow = snapshot,
                         sourcesFlow = sources,
+                        initialTab = viewModePrefs.selected.value,
                     )
                 }
                 AppScaffold(
                     activeRepoNameFlow = activeRepoName,
                     scheduleState = scheduleState,
+                    onPersistTab = viewModePrefs::set,
                 )
             }
         }

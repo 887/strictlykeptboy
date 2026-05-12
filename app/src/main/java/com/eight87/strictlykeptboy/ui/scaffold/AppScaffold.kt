@@ -29,6 +29,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.ui.schedule.SchedulePane
 import com.eight87.strictlykeptboy.ui.schedule.ScheduleViewState
+import com.eight87.strictlykeptboy.ui.tasks.TaskQuickAddRequest
+import com.eight87.strictlykeptboy.ui.tasks.TasksPane
+import com.eight87.strictlykeptboy.ui.tasks.TasksViewState
 import kotlinx.coroutines.flow.StateFlow
 
 const val TestTagAppScaffold = "AppScaffold"
@@ -58,6 +61,9 @@ fun AppScaffold(
     activeRepoNameFlow: StateFlow<String>,
     scheduleState: ScheduleViewState,
     modifier: Modifier = Modifier,
+    onPersistTab: (ScheduleViewTab) -> Unit = {},
+    tasksState: TasksViewState = remember { TasksViewState() },
+    onWriteTask: (TaskQuickAddRequest) -> Unit = {},
 ) {
     var selected by rememberSaveable { mutableStateOf(TopDestination.Schedule) }
     val activeRepoName by activeRepoNameFlow.collectAsState()
@@ -87,8 +93,13 @@ fun AppScaffold(
             TopDestination.Schedule -> SchedulePane(
                 activeRepoName = activeRepoName,
                 state = scheduleState,
+                onPersistTab = onPersistTab,
             )
-            TopDestination.Tasks -> PlaceholderScreen("Tasks")
+            TopDestination.Tasks -> TasksPane(
+                activeRepoName = activeRepoName,
+                state = tasksState,
+                onWriteTask = onWriteTask,
+            )
             TopDestination.Repos -> PlaceholderScreen("Repos")
             TopDestination.Wizard -> PlaceholderScreen("Wizard")
             TopDestination.Settings -> PlaceholderScreen("Settings")
