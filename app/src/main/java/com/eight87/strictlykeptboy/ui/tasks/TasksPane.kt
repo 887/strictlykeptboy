@@ -5,9 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -21,13 +19,11 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
-import com.eight87.strictlykeptboy.ui.a11y.labelString
 import com.eight87.strictlykeptboy.ui.adaptive.LocalWindowWidthSizeClass
 import com.eight87.strictlykeptboy.ui.adaptive.MasterDetailLayout
 import com.eight87.strictlykeptboy.ui.adaptive.isTwoPane
 
 const val TestTagTasksPane = "TasksPane"
-const val TestTagTaskViewTab = "TaskViewTab"
 const val TestTagTasksDetailEmpty = "TasksDetailEmpty"
 
 /**
@@ -47,9 +43,19 @@ fun TasksPane(
     state: TasksViewState,
     onWriteTask: (TaskQuickAddRequest) -> Unit = {},
     modifier: Modifier = Modifier,
+    selectedTab: TaskViewTab? = null,
+    onSelectTab: (TaskViewTab) -> Unit = {},
 ) {
     val widthClass = LocalWindowWidthSizeClass.current
-    var selectedTab by remember { mutableStateOf(TaskViewTab.Combined) }
+    // Nav-swap polish: when the shell owns the rail it hoists `selectedTab`
+    // here; existing callers (and tests) that don't pass it keep the
+    // legacy in-pane state holder so the pane stays standalone-friendly.
+    var internalSelectedTab by remember { mutableStateOf(TaskViewTab.Combined) }
+    val effectiveSelectedTab = selectedTab ?: internalSelectedTab
+    val updateTab: (TaskViewTab) -> Unit = { t ->
+        if (selectedTab == null) internalSelectedTab = t
+        onSelectTab(t)
+    }
     var selectedListId by remember { mutableStateOf<String?>(null) }
     var openTask by remember { mutableStateOf<TaskItem?>(null) }
     var quickAddOpen by remember { mutableStateOf(false) }
@@ -58,37 +64,29 @@ fun TasksPane(
 
     // Shopping mode: when a selected list is tagged shopping, auto-route
     // the shopping view per H.4.
-    val effectiveTab = remember(selectedTab, selectedListId, uiState.todolists) {
-        if (selectedTab == TaskViewTab.PerList && selectedListId != null) {
+    val effectiveTab = remember(effectiveSelectedTab, selectedListId, uiState.todolists) {
+        if (effectiveSelectedTab == TaskViewTab.PerList && selectedListId != null) {
             val tl = uiState.todolists.firstOrNull { it.id == selectedListId }
-            if (tl?.mode == TodolistMode.Shopping) TaskViewTab.Shopping else selectedTab
-        } else selectedTab
+            if (tl?.mode == TodolistMode.Shopping) TaskViewTab.Shopping else effectiveSelectedTab
+        } else effectiveSelectedTab
     }
 
     val master: @Composable () -> Unit = {
         Box(modifier = Modifier.fillMaxSize().testTag(TestTagTasksPane)) {
             Column(modifier = Modifier.fillMaxSize()) {
+                // Nav-swap polish: the in-pane SecondaryTabRow has moved to
+                // the global left rail (driven by SkbAppShell). We still
+                // render the active-repo label so the pane is identifiable
+                // when the rail is the only chrome above the list — and
+                // when the pane is rendered standalone from a test.
                 Surface(color = MaterialTheme.colorScheme.surface) {
-                    Column {
-                        Text(
-                            text = activeRepoName,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(start = 16.dp, top = 8.dp),
-                        )
-                        SecondaryTabRow(selectedTabIndex = selectedTab.ordinal) {
-                            TaskViewTab.entries.forEach { tab ->
-                                Tab(
-                                    selected = tab == selectedTab,
-                                    onClick = { selectedTab = tab },
-                                    modifier = Modifier.testTag("$TestTagTaskViewTab-${tab.name}"),
-                                    text = { Text(tab.labelString()) },
-                                )
-                            }
-                        }
-                    }
+                    Text(
+                        text = activeRepoName,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp),
+                    )
                 }
-
                 when (effectiveTab) {
                     TaskViewTab.Combined -> TaskCombinedView(
                         tasks = uiState.tasks,

@@ -23,7 +23,7 @@ import com.eight87.strictlykeptboy.git.RepoStore
 import com.eight87.strictlykeptboy.sync.SyncService
 import java.io.File
 import com.eight87.strictlykeptboy.theme.StrictlyKeptBoyTheme
-import com.eight87.strictlykeptboy.ui.scaffold.AppScaffold
+import com.eight87.strictlykeptboy.ui.scaffold.SkbAppShell
 import com.eight87.strictlykeptboy.ui.schedule.ScheduleViewState
 import com.eight87.strictlykeptboy.ui.together.TogetherViewModel
 import com.eight87.strictlykeptboy.ui.wizard.AgeGateScreen
@@ -94,11 +94,18 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        com.eight87.strictlykeptboy.perf.PerfTraceRecorder.begin(
+            com.eight87.strictlykeptboy.perf.PerfTraceRecorder.Section.MainActivityOnCreate,
+        )
+        try {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
         // Phase Q (R.X.3 / F22) — composition root extracted.
-        val graph = AppGraph(applicationContext)
+        // Phase V.1 — trace AppGraph construction for cold-start budget.
+        val graph = com.eight87.strictlykeptboy.perf.PerfTraceRecorder.trace(
+            com.eight87.strictlykeptboy.perf.PerfTraceRecorder.Section.AppGraphInit,
+        ) { AppGraph(applicationContext) }
         graph.parkRuntimes()
         graph.installSyncEventBridge()
 
@@ -184,7 +191,7 @@ class MainActivity : ComponentActivity() {
                             finder = graph.finderPort,
                         )
                     }
-                    AppScaffold(
+                    SkbAppShell(
                         activeRepoNameFlow = graph.activeRepoName,
                         scheduleState = scheduleState,
                         onPersistTab = graph.viewModePrefs::set,
@@ -270,6 +277,9 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             }
+        }
+        } finally {
+            com.eight87.strictlykeptboy.perf.PerfTraceRecorder.end()
         }
     }
 

@@ -296,6 +296,29 @@ Self-check (per R.X.1..R.X.9):
 - **F37 — Templates registry is currently a stub list.** `SettingsAccess.templateIds` is a hard-coded 4-entry list in `MainActivity`; the real `templates/atomic-*.toml` registry indexer lands when the bundled templates resource is wired (Phase T-adjacent). Apply callback is wired up but no-ops until the template apply path exists. **Priority:** scheduled. **Status:** tracked.
 - **F34 — Tablet detail-auto-focus is now-card-only.** Schedule's two-pane detail auto-focuses the currently-active event (now-card resolver query). When no event is "now" the detail pane shows the empty state. A future improvement might surface "next-up" or "most recently viewed"; deferred until live-data lands. **Priority:** low. **Status:** tracked.
 
+### Findings emitted by Phase V (performance pass)
+
+**Audit pass 2026-05-13** (Phase V shipped — see `docs/perf-baseline-2026-05.md`).
+
+R.X.1..R.X.9 self-check:
+
+1. ✅ R.X.1 narrow data interfaces — `PerfTraceRecorder` exposes only `begin(Section)` / `end()` / `trace { }`; call sites do not import `android.os.Trace` directly. Benchmark tests reuse the existing narrow `Renderer.Sources` / `CommonTimeFinder.Query` shapes.
+2. ✅ R.X.2 Sealed types — `PerfTraceRecorder.Section` is an `enum class` (closed set; finite phases of the cold-start trace). Not promoted to `sealed` because no per-case data is carried.
+3. ✅ R.X.3 Composition root — `MainActivity` and `SkbApp.onCreate` are the only places that emit `PerfTraceRecorder.begin/end` for the lifecycle sections; `SchedulePane` emits the first-frame section via a `LaunchedEffect` keyed on the ViewModel-scoped state (idempotent per state-instance).
+4. ✅ R.X.4 No god-files — `PerfTraceRecorder.kt` is ~40 LOC; benchmark tests average ~70 LOC each.
+5. ✅ R.X.5 Liskov — every `Section` variant routes to the same `Trace.beginSection` path; no thrown-from-subtype behaviour.
+6. ✅ R.X.6 Import direction — `perf/` is a leaf package; depends only on `android.os.Trace`. No upward imports.
+7. ✅ R.X.7 ISP in Compose — `SchedulePane`'s trace `LaunchedEffect` does not introduce any new parameter; it takes the `state` already in scope.
+8. ✅ R.X.8 Test discipline — `PerfTraceRecorderTest`, `ColdStartBudgetTest`, `SyncSmallRepoBenchmarkTest`, `MonthRenderBenchmarkTest`, `CommonTimeFinderBenchmarkTest`, `GitRepoRegistryBoundedTest` added; 351 tests pass.
+9. ✅ R.X.9 AVD smoke — 3× `am start -W` cold-start measurements captured; `dumpsys meminfo` PSS+RSS captured; no `AndroidRuntime:E` in `adb logcat -d -t 200`. Perf-report rendered to `/tmp/v-perf-report.png`.
+
+**Findings backlog from this pass:**
+
+- **F41 — Resident memory ≈ 178 MB PSS on AVD (over the < 150 MB V.5 budget).** JGit (Apache MINA SSHD + BouncyCastle) + Compose + Room load eagerly at app start. Three concrete levers: (a) narrow `proguard-rules.pro` from blanket `-keep class org.eclipse.jgit.**` to a Gradle baseline-profile-derived allowlist (deferred to Phase W.6 release engineering); (b) lazy-init `SyncScheduler.startPeriodicTicks()` to post-first-frame via `lifecycleScope.launch` so the first Composition isn't gated on networking-stack class-load; (c) move `BouncyCastleProvider` insertion from `SkbApp.onCreate` to first-auth-use (SshBinding configure path). **Priority:** scheduled (do (b) + (c) in Phase W; (a) is Phase W.6 anyway). **Status:** tracked.
+- **F42 — AVD cold-start TotalTime ≈ 1.5–1.7 s vs. < 600 ms target.** Robolectric path measures `AppGraph` ctor + plain-prefs lazies at ≈ 28 ms, so the surplus is first-frame Compose + Skia under swiftshader, not Kotlin work. Re-measure on user's real device when wifi-adb pairing lands; only optimize if real-device also misses 600 ms. **Priority:** observe-only until real-device data. **Status:** tracked.
+- **F43 — `GitRepoRegistry` was unbounded.** Fixed in this phase (bounded at 50 entries via `LinkedHashMap.removeEldestEntry`, access-order). Documenting here for the audit trail — no further action. **Status:** closed.
+- **F44 — `ColdStartBudgetTest` skips encrypted-prefs lazies under Robolectric.** `RepoStore`, `SecretsStore`, and `AgeGatePrefs` use `EncryptedSharedPreferences` which requires AndroidKeyStore — unavailable in the Robolectric shadow. The test therefore measures the plain-prefs path only. Full-path cold-start measurement happens via `am start -W` on the AVD/device side (captured in `docs/perf-baseline-2026-05.md`). **Status:** by design, no action.
+
 ### Findings emitted by Phase U (accessibility + i18n scaffolding)
 
 **Audit pass 2026-05-13** (Phase U shipped).

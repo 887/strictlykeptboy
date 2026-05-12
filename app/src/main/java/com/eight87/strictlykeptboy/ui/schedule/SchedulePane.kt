@@ -24,7 +24,6 @@ import com.eight87.strictlykeptboy.ui.adaptive.MasterDetailLayout
 import com.eight87.strictlykeptboy.ui.adaptive.WindowWidthSizeClass
 import com.eight87.strictlykeptboy.ui.adaptive.isTwoPane
 import com.eight87.strictlykeptboy.ui.scaffold.ScheduleViewTab
-import com.eight87.strictlykeptboy.ui.scaffold.SkbTopBar
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.temporal.TemporalAdjusters
@@ -48,6 +47,15 @@ fun SchedulePane(
     onPersistTab: (ScheduleViewTab) -> Unit = {},
     onSyncClick: () -> Unit = {},
 ) {
+    // Phase V.1 — mark first composition for the cold-start trace. Runs
+    // exactly once per ViewModel-scoped state, immediately after the
+    // composable enters the composition.
+    androidx.compose.runtime.LaunchedEffect(state) {
+        com.eight87.strictlykeptboy.perf.PerfTraceRecorder.begin(
+            com.eight87.strictlykeptboy.perf.PerfTraceRecorder.Section.SchedulePaneFirstRender,
+        )
+        com.eight87.strictlykeptboy.perf.PerfTraceRecorder.end()
+    }
     val widthClass = LocalWindowWidthSizeClass.current
     val rendered by state.rendered.collectAsState()
 
@@ -119,17 +127,15 @@ private fun ScheduleMasterContent(
     val rendered by state.rendered.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
-        SkbTopBar(
-            activeRepoName = activeRepoName,
-            selectedViewTab = selectedTab,
-            onSelectViewTab = {
-                state.setSelectedTab(it)
-                onPersistTab(it)
-            },
-            onRepoSwitcherClick = { /* UI-K — stubbed for Phase F */ },
-            onSyncClick = onSyncClick,
-            onIdentityClick = { /* UI-L — stubbed */ },
-        )
+        // Nav-swap polish: the per-pane view-mode rail + cross-content top
+        // bar are now owned by [com.eight87.strictlykeptboy.ui.scaffold.SkbAppShell].
+        // SchedulePane renders only the active view-mode content; the
+        // shell drives `selectedTab` via [ScheduleViewState]. `activeRepoName`
+        // / `onSyncClick` / `onPersistTab` continue to be hosted at the
+        // shell level (top-bar repo chip + sync button), so the
+        // parameters here are now structural pass-throughs only.
+        @Suppress("UNUSED_VARIABLE") val _repo = activeRepoName
+        @Suppress("UNUSED_VARIABLE") val _sync = onSyncClick
         when (selectedTab) {
             ScheduleViewTab.Day -> ScheduleDayView(
                 date = date,

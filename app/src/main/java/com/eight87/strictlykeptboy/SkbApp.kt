@@ -18,6 +18,9 @@ import java.security.Security
  */
 class SkbApp : Application() {
     override fun onCreate() {
+        com.eight87.strictlykeptboy.perf.PerfTraceRecorder.begin(
+            com.eight87.strictlykeptboy.perf.PerfTraceRecorder.Section.AppOnCreate,
+        )
         // Order matters — see KDoc above.
         System.setProperty("java.io.tmpdir", cacheDir.absolutePath)
 
@@ -31,5 +34,6 @@ class SkbApp : Application() {
         // Phase M.1 — register all six notification channels at app start.
         // Idempotent: the OS dedupes by id, so we re-run on every cold start.
         NotificationChannels.registerAll(this)
+        com.eight87.strictlykeptboy.perf.PerfTraceRecorder.end()
     }
 }

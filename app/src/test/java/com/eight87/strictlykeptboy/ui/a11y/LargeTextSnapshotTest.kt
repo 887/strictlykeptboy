@@ -5,10 +5,18 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.Density
+import com.eight87.strictlykeptboy.resolver.Renderer
+import com.eight87.strictlykeptboy.resolver.RepoSnapshot
 import com.eight87.strictlykeptboy.theme.StrictlyKeptBoyTheme
 import com.eight87.strictlykeptboy.ui.scaffold.ScheduleViewTab
-import com.eight87.strictlykeptboy.ui.scaffold.SkbTopBar
-import com.eight87.strictlykeptboy.ui.scaffold.TestTagTopBar
+import com.eight87.strictlykeptboy.ui.scaffold.SkbAppShell
+import com.eight87.strictlykeptboy.ui.scaffold.TestTagAppShell
+import com.eight87.strictlykeptboy.ui.scaffold.TestTagShellRailItemPrefix
+import com.eight87.strictlykeptboy.ui.scaffold.TestTagShellTopBar
+import com.eight87.strictlykeptboy.ui.schedule.ScheduleViewState
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -18,58 +26,54 @@ import org.robolectric.annotation.Config
 /**
  * Phase U.3 — large-text smoke test.
  *
- * Renders representative panes at 200% font scale. Robolectric does not
- * report real-device clipping; it does, however, surface composition-time
- * exceptions thrown by Compose layout (overflow, infinite measure, etc.)
- * — so this guards against the regressive class of "throws at 2.0 scale"
- * bugs. Real visual clipping verification lives in the AVD smoke loop.
+ * Renders the [SkbAppShell] (top bar + left rail + Schedule content) at
+ * 200% font scale. Robolectric does not report real-device clipping, but
+ * it does surface composition-time exceptions thrown by Compose layout —
+ * so this guards against the "throws at 2.0 scale" regression class.
+ * Real visual verification lives in the AVD smoke loop.
+ *
+ * Rewritten for the nav-swap polish: the top bar is now part of
+ * [SkbAppShell] (formerly [com.eight87.strictlykeptboy.ui.scaffold.SkbTopBar],
+ * which has been deleted) and per-pane view-mode tabs live in the left
+ * rail rather than a horizontal strip.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class LargeTextSnapshotTest {
     @get:Rule val composeRule = createComposeRule()
 
-    @Test fun top_bar_renders_at_200_font_scale() {
+    private fun setShellAtFontScale(scale: Float) {
+        val repoName = MutableStateFlow("very-long-repo-name-that-might-overflow")
+        val snapshot = MutableStateFlow(RepoSnapshot(emptyList(), emptyList(), emptyList()))
+        val sources = MutableStateFlow(
+            Renderer.Sources(emptyList(), emptyList(), emptyMap(), emptyList(), emptyList()),
+        )
         composeRule.setContent {
-            // Forcibly inject a 2.0 fontScale Density on top of the Robolectric
-            // configuration to cover both pathways (resources + composition local).
             val base = LocalDensity.current
-            val scaled = Density(density = base.density, fontScale = 2.0f)
+            val scaled = Density(density = base.density, fontScale = scale)
             CompositionLocalProvider(LocalDensity provides scaled) {
                 StrictlyKeptBoyTheme {
-                    SkbTopBar(
-                        activeRepoName = "very-long-repo-name-that-might-overflow",
-                        selectedViewTab = ScheduleViewTab.Day,
-                        onSelectViewTab = {},
-                        onRepoSwitcherClick = {},
-                        onSyncClick = {},
-                        onIdentityClick = {},
+                    val state = ScheduleViewState(
+                        scope = CoroutineScope(Dispatchers.Unconfined),
+                        snapshotFlow = snapshot,
+                        sourcesFlow = sources,
                     )
+                    SkbAppShell(activeRepoNameFlow = repoName, scheduleState = state)
                 }
             }
         }
-        composeRule.onNodeWithTag(TestTagTopBar).assertExists()
     }
 
-    @Test fun every_view_tab_renders_at_200_font_scale() {
-        composeRule.setContent {
-            val base = LocalDensity.current
-            val scaled = Density(density = base.density, fontScale = 2.0f)
-            CompositionLocalProvider(LocalDensity provides scaled) {
-                StrictlyKeptBoyTheme {
-                    SkbTopBar(
-                        activeRepoName = "r",
-                        selectedViewTab = ScheduleViewTab.Week,
-                        onSelectViewTab = {},
-                        onRepoSwitcherClick = {},
-                        onSyncClick = {},
-                        onIdentityClick = {},
-                    )
-                }
-            }
-        }
+    @Test fun shell_renders_at_200_font_scale() {
+        setShellAtFontScale(2.0f)
+        composeRule.onNodeWithTag(TestTagAppShell).assertExists()
+        composeRule.onNodeWithTag(TestTagShellTopBar).assertExists()
+    }
+
+    @Test fun every_schedule_view_tab_renders_at_200_font_scale() {
+        setShellAtFontScale(2.0f)
         ScheduleViewTab.entries.forEach {
-            composeRule.onNodeWithTag("ViewTab-${it.name}").assertExists()
+            composeRule.onNodeWithTag("$TestTagShellRailItemPrefix${it.name}").assertExists()
         }
     }
 
@@ -81,16 +85,6 @@ class LargeTextSnapshotTest {
             val scaled = Density(density = base.density, fontScale = 2.0f)
             CompositionLocalProvider(LocalDensity provides scaled) {
                 observed = LocalDensity.current.fontScale
-                StrictlyKeptBoyTheme {
-                    SkbTopBar(
-                        activeRepoName = "r",
-                        selectedViewTab = ScheduleViewTab.Day,
-                        onSelectViewTab = {},
-                        onRepoSwitcherClick = {},
-                        onSyncClick = {},
-                        onIdentityClick = {},
-                    )
-                }
             }
         }
         check(observed >= 1.99f) { "expected fontScale 2.0, got $observed" }

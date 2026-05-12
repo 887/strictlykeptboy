@@ -4,6 +4,8 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import com.eight87.strictlykeptboy.resolver.Renderer
+import com.eight87.strictlykeptboy.resolver.RepoSnapshot
 import com.eight87.strictlykeptboy.theme.StrictlyKeptBoyTheme
 import com.eight87.strictlykeptboy.ui.components.RepoSwitcherChip
 import com.eight87.strictlykeptboy.ui.components.SyncButton
@@ -11,7 +13,12 @@ import com.eight87.strictlykeptboy.ui.components.SyncButtonState
 import com.eight87.strictlykeptboy.ui.components.TestTagRepoSwitcher
 import com.eight87.strictlykeptboy.ui.components.TestTagSyncButton
 import com.eight87.strictlykeptboy.ui.scaffold.ScheduleViewTab
-import com.eight87.strictlykeptboy.ui.scaffold.SkbTopBar
+import com.eight87.strictlykeptboy.ui.scaffold.SkbAppShell
+import com.eight87.strictlykeptboy.ui.scaffold.TestTagShellRailItemPrefix
+import com.eight87.strictlykeptboy.ui.schedule.ScheduleViewState
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -20,9 +27,14 @@ import org.robolectric.annotation.Config
 
 /**
  * Phase U.1 — verifies TalkBack content-descriptions are set on the
- * core interactive surfaces. This is a smoke test against a representative
- * sample (top-bar chrome), not exhaustive coverage; full real-device
- * TalkBack verification is covered by the manual AVD smoke at end-of-phase.
+ * core interactive surfaces. Smoke test against a representative
+ * sample, not exhaustive coverage; full real-device TalkBack verification
+ * is covered by the manual AVD smoke at end-of-phase.
+ *
+ * Nav-swap polish rewrite: the SkbTopBar component has been folded into
+ * [SkbAppShell]; the per-pane view-mode tabs now live in the left
+ * vertical rail under the [TestTagShellRailItemPrefix] testTag namespace
+ * (one tag per rail entry).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -36,7 +48,6 @@ class TalkBackLabelTest {
             }
         }
         composeRule.onNodeWithTag(TestTagSyncButton).assertExists()
-        // The cd_sync string ("Sync") is attached to the Icon child.
         composeRule.onNodeWithContentDescription("Sync").assertExists()
     }
 
@@ -72,23 +83,24 @@ class TalkBackLabelTest {
         }
     }
 
-    @Test fun top_bar_view_tabs_render_with_labels() {
+    @Test fun shell_left_rail_view_tabs_render_with_labels() {
+        val repoName = MutableStateFlow("r")
+        val snapshot = MutableStateFlow(RepoSnapshot(emptyList(), emptyList(), emptyList()))
+        val sources = MutableStateFlow(
+            Renderer.Sources(emptyList(), emptyList(), emptyMap(), emptyList(), emptyList()),
+        )
         composeRule.setContent {
             StrictlyKeptBoyTheme {
-                SkbTopBar(
-                    activeRepoName = "r",
-                    selectedViewTab = ScheduleViewTab.Day,
-                    onSelectViewTab = {},
-                    onRepoSwitcherClick = {},
-                    onSyncClick = {},
-                    onIdentityClick = {},
+                val state = ScheduleViewState(
+                    scope = CoroutineScope(Dispatchers.Unconfined),
+                    snapshotFlow = snapshot,
+                    sourcesFlow = sources,
                 )
+                SkbAppShell(activeRepoNameFlow = repoName, scheduleState = state)
             }
         }
-        // Every tab in the strip is present.
         ScheduleViewTab.entries.forEach {
-            composeRule.onNodeWithTag("ViewTab-${it.name}").assertExists()
+            composeRule.onNodeWithTag("$TestTagShellRailItemPrefix${it.name}").assertExists()
         }
     }
-
 }
