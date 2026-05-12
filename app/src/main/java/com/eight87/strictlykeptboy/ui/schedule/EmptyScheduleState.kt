@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
@@ -34,9 +35,9 @@ fun EmptyScheduleState(
     praiseTerm: String = "good boy",
 ) {
     val message = if (neutralOnly) {
-        "Nothing scheduled today."
+        stringResource(R.string.schedule_empty_neutral)
     } else {
-        "nothing scheduled — $praiseTerm can rest ;3"
+        stringResource(R.string.schedule_empty_primary, praiseTerm)
     }
 
     Column(
@@ -46,7 +47,7 @@ fun EmptyScheduleState(
     ) {
         Image(
             painter = painterResource(R.drawable.about_bat),
-            contentDescription = "Bat mascot",
+            contentDescription = stringResource(R.string.cd_bat_mascot),
             modifier = Modifier.size(160.dp).testTag(TestTagEmptyBat),
         )
         Text(

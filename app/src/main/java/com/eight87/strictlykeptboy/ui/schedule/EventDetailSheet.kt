@@ -35,8 +35,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.resolver.CompletionState
 import com.eight87.strictlykeptboy.resolver.DayBand
 import java.time.format.DateTimeFormatter
@@ -143,7 +145,7 @@ fun EventDetailSheet(
             // Attachments (HV-M)
             if (attachments.isNotEmpty()) {
                 Text(
-                    text = "Attachments",
+                    text = stringResource(R.string.event_detail_attachments),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -164,7 +166,7 @@ fun EventDetailSheet(
                     ) {}
                     Spacer(modifier = Modifier.size(8.dp))
                     Text(
-                        text = "Author: ${author.id}",
+                        text = stringResource(R.string.event_detail_author, author.id),
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.testTag(TestTagEventDetailAuthor),
                     )
@@ -178,7 +180,7 @@ fun EventDetailSheet(
             ) {
                 Icon(Icons.Filled.Edit, contentDescription = null)
                 Spacer(modifier = Modifier.size(6.dp))
-                Text("Edit")
+                Text(stringResource(R.string.event_detail_edit))
             }
         }
     }
@@ -187,13 +189,13 @@ fun EventDetailSheet(
 @Composable
 private fun CompletionBadge(state: CompletionState) {
     val (label, color) = when (state) {
-        CompletionState.Scheduled -> "Scheduled" to MaterialTheme.colorScheme.surfaceContainer
-        CompletionState.InProgress -> "In progress" to MaterialTheme.colorScheme.primaryContainer
-        CompletionState.CompletedBySchedule -> "Completed" to MaterialTheme.colorScheme.secondaryContainer
-        CompletionState.Skipped -> "Skipped" to MaterialTheme.colorScheme.surfaceContainer
-        CompletionState.PartiallyDone -> "Partially done" to MaterialTheme.colorScheme.tertiaryContainer
-        CompletionState.CompletedEarly -> "Completed early" to MaterialTheme.colorScheme.secondaryContainer
-        CompletionState.CompletedLate -> "Completed late" to MaterialTheme.colorScheme.tertiaryContainer
+        CompletionState.Scheduled -> stringResource(R.string.event_detail_state_scheduled) to MaterialTheme.colorScheme.surfaceContainer
+        CompletionState.InProgress -> stringResource(R.string.event_detail_state_in_progress) to MaterialTheme.colorScheme.primaryContainer
+        CompletionState.CompletedBySchedule -> stringResource(R.string.event_detail_state_completed) to MaterialTheme.colorScheme.secondaryContainer
+        CompletionState.Skipped -> stringResource(R.string.event_detail_state_skipped) to MaterialTheme.colorScheme.surfaceContainer
+        CompletionState.PartiallyDone -> stringResource(R.string.event_detail_state_partially_done) to MaterialTheme.colorScheme.tertiaryContainer
+        CompletionState.CompletedEarly -> stringResource(R.string.event_detail_state_completed_early) to MaterialTheme.colorScheme.secondaryContainer
+        CompletionState.CompletedLate -> stringResource(R.string.event_detail_state_completed_late) to MaterialTheme.colorScheme.tertiaryContainer
     }
     Spacer(modifier = Modifier.height(6.dp))
     AssistChip(

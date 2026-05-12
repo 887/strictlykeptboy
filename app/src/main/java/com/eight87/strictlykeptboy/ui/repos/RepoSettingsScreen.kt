@@ -36,7 +36,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.git.AuthMethod
 import com.eight87.strictlykeptboy.git.PushPolicy
 import com.eight87.strictlykeptboy.git.RemoteBinding
@@ -93,44 +95,49 @@ fun RepoSettingsScreen(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
-                Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                Icon(Icons.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
             }
             Text(repo.displayName, style = MaterialTheme.typography.headlineSmall)
         }
 
         // Display
-        SettingsSection("Display") {
+        SettingsSection(stringResource(R.string.repo_settings_section_display)) {
             OutlinedTextField(
                 value = draft.displayName,
                 onValueChange = { draft = draft.copy(displayName = it) },
-                label = { Text("Display name") },
+                label = { Text(stringResource(R.string.repo_settings_display_name)) },
                 modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
                 value = draft.iconEmoji.orEmpty(),
                 onValueChange = { draft = draft.copy(iconEmoji = it.ifBlank { null }) },
-                label = { Text("Icon emoji") },
+                label = { Text(stringResource(R.string.repo_settings_icon_emoji)) },
                 modifier = Modifier.fillMaxWidth(),
             )
         }
 
         // Sync
-        SettingsSection("Sync") {
+        SettingsSection(stringResource(R.string.repo_settings_section_sync)) {
             ToggleRow(
-                label = "Auto-sync",
+                label = stringResource(R.string.repo_settings_auto_sync),
                 checked = draft.autoSyncEnabled,
                 onChange = { draft = draft.copy(autoSyncEnabled = it) },
                 tag = TestTagRepoSettingsAutoSync,
             )
             Text(
-                "Sync interval: ${draft.syncIntervalMinutes}m",
+                stringResource(R.string.repo_settings_sync_interval, draft.syncIntervalMinutes),
                 style = MaterialTheme.typography.bodyMedium,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf(5, 15, 30, 60, 240, -1).forEach { mins ->
                     AssistChip(
                         onClick = { draft = draft.copy(syncIntervalMinutes = mins) },
-                        label = { Text(if (mins == -1) "Manual" else "${mins}m") },
+                        label = {
+                            Text(
+                                if (mins == -1) stringResource(R.string.repo_settings_sync_manual)
+                                else stringResource(R.string.repo_settings_sync_minutes, mins),
+                            )
+                        },
                         colors = if (draft.syncIntervalMinutes == mins)
                             AssistChipDefaults.assistChipColors(
                                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
@@ -139,7 +146,7 @@ fun RepoSettingsScreen(
                 }
             }
             ToggleRow(
-                label = "Wi-Fi only",
+                label = stringResource(R.string.repo_settings_wifi_only),
                 checked = draft.wifiOnly,
                 onChange = { draft = draft.copy(wifiOnly = it) },
                 tag = TestTagRepoSettingsWifiOnly,
@@ -147,13 +154,13 @@ fun RepoSettingsScreen(
         }
 
         // Identity
-        SettingsSection("Identity") {
+        SettingsSection(stringResource(R.string.repo_settings_section_identity)) {
             OutlinedTextField(
                 value = draft.authorIdentity.name,
                 onValueChange = {
                     draft = draft.copy(authorIdentity = draft.authorIdentity.copy(name = it))
                 },
-                label = { Text("Author name") },
+                label = { Text(stringResource(R.string.repo_settings_author_name)) },
                 modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
@@ -161,42 +168,42 @@ fun RepoSettingsScreen(
                 onValueChange = {
                     draft = draft.copy(authorIdentity = draft.authorIdentity.copy(email = it))
                 },
-                label = { Text("Author email") },
+                label = { Text(stringResource(R.string.repo_settings_author_email)) },
                 modifier = Modifier.fillMaxWidth(),
             )
             TextButton(
                 onClick = onOpenIdentities,
                 modifier = Modifier.testTag(TestTagRepoSettingsIdentities),
-            ) { Text("Manage identities…") }
+            ) { Text(stringResource(R.string.repo_settings_manage_identities)) }
         }
 
         // Defaults
-        SettingsSection("Defaults") {
+        SettingsSection(stringResource(R.string.repo_settings_section_defaults)) {
             OutlinedTextField(
                 value = draft.defaultCalendarId.orEmpty(),
                 onValueChange = { draft = draft.copy(defaultCalendarId = it.ifBlank { null }) },
-                label = { Text("Default calendar id") },
+                label = { Text(stringResource(R.string.repo_settings_default_calendar_id)) },
                 modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
                 value = draft.defaultTodolistId.orEmpty(),
                 onValueChange = { draft = draft.copy(defaultTodolistId = it.ifBlank { null }) },
-                label = { Text("Default todolist id") },
+                label = { Text(stringResource(R.string.repo_settings_default_todolist_id)) },
                 modifier = Modifier.fillMaxWidth(),
             )
         }
 
         // Remotes (per ZZ.G)
-        SettingsSection("Remotes", modifier = Modifier.testTag(TestTagRepoSettingsRemotes)) {
+        SettingsSection(stringResource(R.string.repo_settings_section_remotes), modifier = Modifier.testTag(TestTagRepoSettingsRemotes)) {
             if (repo.remotes.isEmpty()) {
                 Text(
-                    "No remotes — this repo lives only on this device",
+                    stringResource(R.string.repo_settings_no_remotes),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Button(
                     onClick = onAddRemote,
                     modifier = Modifier.testTag(TestTagRepoSettingsNoRemotesCta),
-                ) { Text("Add a remote") }
+                ) { Text(stringResource(R.string.repo_settings_add_remote)) }
             } else {
                 repo.remotes.forEach { binding ->
                     RemoteRow(
@@ -210,21 +217,23 @@ fun RepoSettingsScreen(
                 TextButton(
                     onClick = onAddRemote,
                     modifier = Modifier.testTag(TestTagRepoSettingsAddRemote),
-                ) { Text("+ Add another remote") }
+                ) { Text(stringResource(R.string.repo_settings_add_another_remote)) }
             }
         }
 
         // Identity preferences (HV-R) — surface-only, simple preview.
-        SettingsSection("Identity preferences") {
+        SettingsSection(stringResource(R.string.repo_settings_section_identity_prefs)) {
             Text(
-                "Praise term, pronouns, tone register live in identity.toml — " +
-                    "use the wizard to revisit.",
+                stringResource(R.string.repo_settings_identity_prefs_blurb),
                 style = MaterialTheme.typography.bodyMedium,
             )
             Card {
+                val friend = stringResource(R.string.repo_settings_identity_prefs_hi_friend_default)
                 Text(
-                    text = "Hi ${draft.authorIdentity.name.ifBlank { "friend" }} — " +
-                        "ready to keep your day kept?",
+                    text = stringResource(
+                        R.string.repo_settings_identity_prefs_hi,
+                        draft.authorIdentity.name.ifBlank { friend },
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(12.dp),
                 )
@@ -241,17 +250,17 @@ fun RepoSettingsScreen(
             modifier = Modifier.testTag(TestTagRepoSettingsRemoveRepo),
         ) {
             Icon(Icons.Filled.Delete, contentDescription = null)
-            Text("Remove repo", modifier = Modifier.padding(start = 8.dp))
+            Text(stringResource(R.string.repo_settings_remove_repo), modifier = Modifier.padding(start = 8.dp))
         }
     }
 
     if (showRemoveDialog) {
         AlertDialog(
             onDismissRequest = { showRemoveDialog = false },
-            title = { Text("Remove this repo from the app?") },
+            title = { Text(stringResource(R.string.repo_settings_remove_dialog_title)) },
             text = {
                 Column {
-                    Text("The repo will be removed from your repo list.")
+                    Text(stringResource(R.string.repo_settings_remove_dialog_body))
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(top = 8.dp),
@@ -261,7 +270,7 @@ fun RepoSettingsScreen(
                             onCheckedChange = { deleteLocalClone = it },
                             modifier = Modifier.testTag(TestTagRepoSettingsConfirmDeleteLocal),
                         )
-                        Text("Also delete the local clone")
+                        Text(stringResource(R.string.repo_settings_remove_dialog_delete_local))
                     }
                 }
             },
@@ -272,10 +281,10 @@ fun RepoSettingsScreen(
                         onRemoveRepo(deleteLocalClone)
                     },
                     modifier = Modifier.testTag(TestTagRepoSettingsConfirmRemove),
-                ) { Text("Remove") }
+                ) { Text(stringResource(R.string.repo_settings_remove_confirm)) }
             },
             dismissButton = {
-                TextButton(onClick = { showRemoveDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showRemoveDialog = false }) { Text(stringResource(R.string.dialog_cancel)) }
             },
         )
     }
@@ -330,7 +339,7 @@ private fun RemoteRow(
                 Box(modifier = Modifier.weight(1f))
                 if (isPrimary) {
                     Text(
-                        "primary",
+                        stringResource(R.string.repo_settings_remote_primary),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary,
                     )
@@ -338,23 +347,31 @@ private fun RemoteRow(
             }
             Text(binding.url, style = MaterialTheme.typography.bodySmall)
             Text(
-                "${binding.transport} · ${binding.authMethod} · ${binding.pushPolicy}",
+                stringResource(
+                    R.string.repo_settings_remote_meta,
+                    binding.transport.toString(),
+                    binding.authMethod.toString(),
+                    binding.pushPolicy.toString(),
+                ),
                 style = MaterialTheme.typography.bodySmall,
             )
+            val syncedSummary = lastSyncedAt?.let {
+                stringResource(R.string.repo_settings_last_synced_epoch, it)
+            } ?: stringResource(R.string.repo_settings_last_synced_never)
             Text(
-                "Last synced: ${lastSyncedAt?.let { "epoch=$it" } ?: "never"}",
+                stringResource(R.string.repo_settings_last_synced, syncedSummary),
                 style = MaterialTheme.typography.bodySmall,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 if (!isPrimary) {
-                    TextButton(onClick = onSetPrimary) { Text("Set primary") }
+                    TextButton(onClick = onSetPrimary) { Text(stringResource(R.string.repo_settings_set_primary)) }
                 }
                 TextButton(
                     onClick = onRemove,
                     modifier = Modifier.testTag(
                         "$TestTagRepoSettingsRemoveRemote-${binding.name.value}",
                     ),
-                ) { Text("Remove") }
+                ) { Text(stringResource(R.string.repo_settings_remove)) }
             }
         }
     }

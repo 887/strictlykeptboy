@@ -26,7 +26,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.git.auth.SecretsStore
 import com.eight87.strictlykeptboy.ui.repos.ReposPane
 import com.eight87.strictlykeptboy.ui.repos.ReposViewState
@@ -115,7 +117,7 @@ fun AppScaffold(
             TopDestination.Repos -> if (reposState != null) {
                 ReposPane(state = reposState, secretsStore = secretsStore)
             } else {
-                PlaceholderScreen("Repos")
+                PlaceholderScreen(stringResource(R.string.scaffold_dest_repos))
             }
             TopDestination.Wizard -> WizardNavHost(
                 onFinish = {
@@ -126,7 +128,7 @@ fun AppScaffold(
                 onScaffold = onWizardScaffold,
                 neutralMode = neutralMode,
             )
-            TopDestination.Settings -> PlaceholderScreen("Settings")
+            TopDestination.Settings -> PlaceholderScreen(stringResource(R.string.scaffold_dest_settings))
         }
     }
 }
@@ -139,7 +141,7 @@ private fun PlaceholderScreen(name: String) {
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(name, style = MaterialTheme.typography.headlineMedium)
-            Text("coming soon", style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(R.string.scaffold_placeholder_coming_soon), style = MaterialTheme.typography.bodyMedium)
         }
     }
 }

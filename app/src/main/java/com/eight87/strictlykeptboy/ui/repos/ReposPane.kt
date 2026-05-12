@@ -21,7 +21,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.git.AuthorIdentity
 import com.eight87.strictlykeptboy.git.RepoConfig
 import com.eight87.strictlykeptboy.git.RepoStore
@@ -173,17 +175,17 @@ private fun ReposList(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("Repositories", style = MaterialTheme.typography.headlineSmall)
+        Text(stringResource(R.string.repos_title), style = MaterialTheme.typography.headlineSmall)
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("Show all repos in unified view", style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.repos_unified_toggle_title), style = MaterialTheme.typography.titleSmall)
                 Text(
-                    if (unified) "All configured repos render together"
-                    else "Only the active repo's data renders",
+                    if (unified) stringResource(R.string.repos_unified_on)
+                    else stringResource(R.string.repos_unified_off),
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
@@ -204,9 +206,9 @@ private fun ReposList(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text("No repositories yet")
+                Text(stringResource(R.string.repos_empty_title))
                 Text(
-                    "Tap + Add repo below to create your first.",
+                    stringResource(R.string.repos_empty_hint),
                     style = MaterialTheme.typography.bodySmall,
                 )
             }

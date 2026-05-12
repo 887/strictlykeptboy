@@ -12,7 +12,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.eight87.strictlykeptboy.R
 
 const val TestTagCombinedView = "CombinedView"
 const val TestTagCompletedDivider = "CompletedDivider"
@@ -28,8 +30,8 @@ fun TaskCombinedView(
     val sorted = tasks.sortedForCombined()
     if (sorted.isEmpty()) {
         EmptyTasksState(
-            primaryMessage = "no tasks anywhere — good boy ;3",
-            neutralMessage = "No tasks.",
+            primaryMessage = stringResource(R.string.tasks_empty_combined_primary),
+            neutralMessage = stringResource(R.string.tasks_empty_combined_neutral),
             modifier = modifier.testTag(TestTagCombinedView),
         )
         return
@@ -54,7 +56,7 @@ fun TaskCombinedView(
                     color = MaterialTheme.colorScheme.outlineVariant,
                 )
                 Text(
-                    text = "Completed",
+                    text = stringResource(R.string.tasks_combined_completed_section),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),

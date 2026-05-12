@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
 
@@ -49,17 +50,17 @@ fun AgeGateScreen(
     ) {
         Icon(
             painter = painterResource(R.drawable.about_bat),
-            contentDescription = "bat mascot",
+            contentDescription = stringResource(R.string.cd_age_gate_mascot),
             modifier = Modifier.size(96.dp),
         )
         Spacer(Modifier.height(16.dp))
         Text(
-            "Mature content — 17+",
+            stringResource(R.string.age_gate_title),
             style = MaterialTheme.typography.headlineSmall,
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            "This app contains references to adult lifestyle dynamics. You must be 17 or older to continue.",
+            stringResource(R.string.age_gate_body),
             style = MaterialTheme.typography.bodyMedium,
         )
         Spacer(Modifier.height(24.dp))
@@ -67,11 +68,11 @@ fun AgeGateScreen(
             TextButton(
                 onClick = onDecline,
                 modifier = Modifier.testTag(TestTagAgeGateDecline),
-            ) { Text("Decline (exit)") }
+            ) { Text(stringResource(R.string.age_gate_decline)) }
             Button(
                 onClick = onAccept,
                 modifier = Modifier.testTag(TestTagAgeGateAccept),
-            ) { Text("I am 17 or older") }
+            ) { Text(stringResource(R.string.age_gate_accept)) }
         }
     }
 }

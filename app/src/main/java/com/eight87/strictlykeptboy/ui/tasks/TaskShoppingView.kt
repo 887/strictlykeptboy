@@ -17,9 +17,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.eight87.strictlykeptboy.R
 
 const val TestTagShoppingView = "ShoppingView"
 const val TestTagShoppingRow = "ShoppingRow"
@@ -35,8 +37,8 @@ fun TaskShoppingView(
     val sorted = tasks.sortedForShopping()
     if (sorted.isEmpty()) {
         EmptyTasksState(
-            primaryMessage = "shopping list empty — good boy ;3",
-            neutralMessage = "Shopping list empty.",
+            primaryMessage = stringResource(R.string.tasks_empty_shopping_primary),
+            neutralMessage = stringResource(R.string.tasks_empty_shopping_neutral),
             modifier = modifier.testTag(TestTagShoppingView),
         )
         return

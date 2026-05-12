@@ -1,3 +1,239 @@
 <resources>
     <string name="app_name">strictlykeptboy</string>
+
+    <!-- Schedule rail -->
+    <string name="schedule_empty_neutral">Nothing scheduled today.</string>
+    <string name="schedule_empty_primary">nothing scheduled — %1$s can rest ;3</string>
+    <string name="cd_bat_mascot">Bat mascot</string>
+    <string name="cd_identity_avatar">Identity</string>
+    <string name="cd_repo_switcher_active">Switch repo, active: %1$s</string>
+
+    <!-- Sync button content descriptions -->
+    <string name="cd_sync">Sync</string>
+    <string name="cd_syncing">Syncing</string>
+    <string name="cd_sync_error">Sync error</string>
+    <string name="cd_sync_complete">Sync complete</string>
+
+    <!-- Event detail -->
+    <string name="event_detail_attachments">Attachments</string>
+    <string name="event_detail_edit">Edit</string>
+    <string name="event_detail_author">Author: %1$s</string>
+    <string name="event_detail_state_scheduled">Scheduled</string>
+    <string name="event_detail_state_in_progress">In progress</string>
+    <string name="event_detail_state_completed">Completed</string>
+    <string name="event_detail_state_skipped">Skipped</string>
+    <string name="event_detail_state_partially_done">Partially done</string>
+    <string name="event_detail_state_completed_early">Completed early</string>
+    <string name="event_detail_state_completed_late">Completed late</string>
+
+    <!-- Task detail -->
+    <string name="task_detail_done">done</string>
+    <string name="task_detail_overdue">overdue</string>
+    <string name="task_detail_due">Due: %1$s</string>
+    <string name="task_detail_completed_at">Completed: %1$s</string>
+    <string name="task_detail_priority">Priority: %1$d</string>
+    <string name="task_detail_attachments">Attachments</string>
+    <string name="task_detail_edit">  Edit</string>
+
+    <!-- Tasks pane / quick add -->
+    <string name="tasks_quick_add_title">what needs doing?</string>
+    <string name="tasks_quick_add_target_label">Target</string>
+    <string name="tasks_quick_add_submit">Add</string>
+    <string name="tasks_quick_add_today_event">Today as event</string>
+    <string name="tasks_quick_add_tomorrow_event">Tomorrow as event</string>
+    <string name="cd_tasks_quick_add">Quick add</string>
+    <string name="tasks_empty_list_primary">nothing in this list — good boy ;3</string>
+    <string name="tasks_empty_list_neutral">No tasks in this list.</string>
+    <string name="tasks_empty_combined_primary">no tasks anywhere — good boy ;3</string>
+    <string name="tasks_empty_combined_neutral">No tasks.</string>
+    <string name="tasks_empty_today_primary">nothing on your plate today — good boy ;3</string>
+    <string name="tasks_empty_today_neutral">No tasks for today.</string>
+    <string name="tasks_empty_shopping_primary">shopping list empty — good boy ;3</string>
+    <string name="tasks_empty_shopping_neutral">Shopping list empty.</string>
+    <string name="tasks_empty_standing_primary">no standing tasks — good boy ;3</string>
+    <string name="tasks_empty_standing_neutral">No standing tasks.</string>
+    <string name="tasks_combined_completed_section">Completed</string>
+    <string name="tasks_today_section_today">Today</string>
+    <string name="tasks_today_section_from_events">From today\'s events</string>
+    <string name="tasks_today_section_pinned">Pinned</string>
+    <string name="tasks_standing_unpin">Unpin from today</string>
+    <string name="tasks_standing_pin">Pin to today</string>
+
+    <!-- App scaffold -->
+    <string name="scaffold_placeholder_coming_soon">coming soon</string>
+    <string name="scaffold_dest_repos">Repos</string>
+    <string name="scaffold_dest_settings">Settings</string>
+
+    <!-- Repos pane -->
+    <string name="repos_title">Repositories</string>
+    <string name="repos_unified_toggle_title">Show all repos in unified view</string>
+    <string name="repos_unified_on">All configured repos render together</string>
+    <string name="repos_unified_off">Only the active repo\'s data renders</string>
+    <string name="repos_empty_title">No repositories yet</string>
+    <string name="repos_empty_hint">Tap + Add repo below to create your first.</string>
+
+    <!-- Repo switcher dropdown -->
+    <string name="repo_switcher_add">Add repo</string>
+    <string name="cd_repo_switcher_add">Add repo</string>
+    <string name="repo_switcher_local_only">Local-only</string>
+    <string name="cd_repo_switcher_settings_for">Settings for %1$s</string>
+    <string name="cd_repo_switcher_synced">Synced</string>
+    <string name="cd_repo_switcher_sync_error">Sync error</string>
+    <string name="cd_repo_switcher_local_only_repo">Local-only repo</string>
+
+    <!-- Repo settings -->
+    <string name="repo_settings_section_display">Display</string>
+    <string name="repo_settings_section_sync">Sync</string>
+    <string name="repo_settings_section_identity">Identity</string>
+    <string name="repo_settings_section_defaults">Defaults</string>
+    <string name="repo_settings_section_remotes">Remotes</string>
+    <string name="repo_settings_section_identity_prefs">Identity preferences</string>
+    <string name="repo_settings_display_name">Display name</string>
+    <string name="repo_settings_icon_emoji">Icon emoji</string>
+    <string name="repo_settings_auto_sync">Auto-sync</string>
+    <string name="repo_settings_sync_interval">Sync interval: %1$dm</string>
+    <string name="repo_settings_sync_manual">Manual</string>
+    <string name="repo_settings_sync_minutes">%1$dm</string>
+    <string name="repo_settings_wifi_only">Wi-Fi only</string>
+    <string name="repo_settings_author_name">Author name</string>
+    <string name="repo_settings_author_email">Author email</string>
+    <string name="repo_settings_manage_identities">Manage identities…</string>
+    <string name="repo_settings_default_calendar_id">Default calendar id</string>
+    <string name="repo_settings_default_todolist_id">Default todolist id</string>
+    <string name="repo_settings_no_remotes">No remotes — this repo lives only on this device</string>
+    <string name="repo_settings_add_remote">Add a remote</string>
+    <string name="repo_settings_add_another_remote">+ Add another remote</string>
+    <string name="repo_settings_identity_prefs_blurb">Praise term, pronouns, tone register live in identity.toml — use the wizard to revisit.</string>
+    <string name="repo_settings_identity_prefs_hi">Hi %1$s — ready to keep your day kept?</string>
+    <string name="repo_settings_identity_prefs_hi_friend_default">friend</string>
+    <string name="repo_settings_remove_repo">Remove repo</string>
+    <string name="repo_settings_remove_dialog_title">Remove this repo from the app?</string>
+    <string name="repo_settings_remove_dialog_body">The repo will be removed from your repo list.</string>
+    <string name="repo_settings_remove_dialog_delete_local">Also delete the local clone</string>
+    <string name="repo_settings_remove_confirm">Remove</string>
+    <string name="dialog_cancel">Cancel</string>
+    <string name="cd_back">Back</string>
+    <string name="repo_settings_remote_primary">primary</string>
+    <string name="repo_settings_remote_meta">%1$s · %2$s · %3$s</string>
+    <string name="repo_settings_last_synced">Last synced: %1$s</string>
+    <string name="repo_settings_last_synced_epoch">epoch=%1$d</string>
+    <string name="repo_settings_last_synced_never">never</string>
+    <string name="repo_settings_set_primary">Set primary</string>
+    <string name="repo_settings_remove">Remove</string>
+
+    <!-- Identities screen -->
+    <string name="identities_title">Identities</string>
+    <string name="identities_partial_note">Multi-identity editing is partial in this version — the active identity always commits new entries.</string>
+    <string name="identities_signing">Signing</string>
+    <string name="identities_active">(active)</string>
+    <string name="identities_set_active">Set active</string>
+    <string name="identities_remove">Remove</string>
+    <string name="identities_add_section">Add identity</string>
+    <string name="identities_name">Name</string>
+    <string name="identities_email">Email</string>
+    <string name="identities_add_button">Add</string>
+
+    <!-- Add-repo flow -->
+    <string name="add_repo_title">Add repo</string>
+    <string name="add_repo_branch_prompt">How would you like to start?</string>
+    <string name="add_repo_local_title">Create local-only</string>
+    <string name="add_repo_local_blurb">Phone-only repo. No sync, no remote — recommended for first-time users.</string>
+    <string name="add_repo_remote_title">Connect to a remote</string>
+    <string name="add_repo_remote_blurb">Clone or push to GitHub, Forgejo, GitLab, or another git host.</string>
+    <string name="add_repo_local_form_title">Local-only repo</string>
+    <string name="add_repo_field_display_name">Display name</string>
+    <string name="add_repo_field_your_name">Your name</string>
+    <string name="add_repo_field_your_email">Your email</string>
+    <string name="add_repo_field_initial_calendar">Initial calendar name</string>
+    <string name="add_repo_field_repo_url">Repo URL</string>
+    <string name="add_repo_pick_provider">Pick your provider</string>
+    <string name="add_repo_instance_url">Instance URL</string>
+    <string name="add_repo_auth_prompt">How should we authenticate?</string>
+    <string name="add_repo_auth_oauth">Sign in with browser (OAuth Device Flow)</string>
+    <string name="add_repo_auth_pat">Use a Personal Access Token (PAT)</string>
+    <string name="add_repo_auth_ssh">SSH key (deferred)</string>
+    <string name="add_repo_oauth_next_hint">OAuth flow will run when you tap Next.</string>
+    <string name="add_repo_oauth_starting">Starting…</string>
+    <string name="add_repo_oauth_requesting_code">Requesting code…</string>
+    <string name="add_repo_oauth_open_url">Open %1$s</string>
+    <string name="add_repo_oauth_enter_code">Enter code: %1$s</string>
+    <string name="add_repo_oauth_waiting">Waiting for browser approval…</string>
+    <string name="add_repo_oauth_signed_in">Signed in.</string>
+    <string name="add_repo_oauth_failed">OAuth failed: %1$s</string>
+    <string name="add_repo_form_title">Repo + identity</string>
+    <string name="add_repo_pat_username">PAT username</string>
+    <string name="add_repo_pat_token">PAT token</string>
+    <string name="add_repo_done_title">Repo added.</string>
+    <string name="add_repo_add_another">+ Add another remote</string>
+    <string name="add_repo_done_close">Done</string>
+    <string name="add_repo_step_back">Back</string>
+    <string name="add_repo_step_next">Next</string>
+    <string name="add_repo_step_finish">Finish</string>
+
+    <!-- Age gate -->
+    <string name="age_gate_title">Mature content — 17+</string>
+    <string name="age_gate_body">This app contains references to adult lifestyle dynamics. You must be 17 or older to continue.</string>
+    <string name="age_gate_decline">Decline (exit)</string>
+    <string name="age_gate_accept">I am 17 or older</string>
+    <string name="cd_age_gate_mascot">bat mascot</string>
+
+    <!-- Wizard -->
+    <string name="wizard_discard_dialog_title">Discard wizard progress?</string>
+    <string name="wizard_discard_dialog_body">Nothing has been written to disk yet — leaving now drops everything you\'ve chosen.</string>
+    <string name="wizard_discard_confirm">Discard</string>
+    <string name="wizard_discard_keep_going">Keep going</string>
+    <string name="wizard_back">Back</string>
+    <string name="wizard_skip">Skip</string>
+    <string name="wizard_continue">Continue</string>
+    <string name="wizard_try_again">Try again</string>
+    <string name="wizard_cancel">Cancel</string>
+    <string name="wizard_step_of">Step %1$d of %2$d</string>
+    <string name="cd_wizard_mascot">bat mascot — %1$s</string>
+    <string name="wizard_welcome_title">let\'s design your lifestyle</string>
+    <string name="wizard_welcome_blurb">by the end you\'ll have a living calendar, not an empty app.</string>
+    <string name="wizard_welcome_cta">let\'s go</string>
+    <string name="wizard_welcome_footnote">you can change any of this later in Settings → Add more to my lifestyle.</string>
+    <string name="wizard_species_prompt">Pick your avatar species</string>
+    <string name="wizard_species_custom_pack_url">Custom sticker-pack URL (GitHub)</string>
+    <string name="wizard_alignment_prompt">How would you like the rules to work?</string>
+    <string name="wizard_identity_prompt">How should the app speak to you?</string>
+    <string name="wizard_identity_praise_label">Praise terms (pick any — alternated):</string>
+    <string name="wizard_identity_pronouns_label">Pronouns:</string>
+    <string name="wizard_identity_honorific_label">Honorific:</string>
+    <string name="wizard_identity_tone_label">Tone register:</string>
+    <string name="wizard_identity_emoji_label">Emoji density:</string>
+    <string name="wizard_identity_preview_label">Preview</string>
+    <string name="wizard_identity_preview_line">%1$syou did it — %2$s.%3$s</string>
+    <string name="wizard_identity_praise_default">good boy</string>
+    <string name="wizard_lifestyle_prompt">What\'s your day shaped like?</string>
+    <string name="wizard_roles_prompt">What\'s typical for you?</string>
+    <string name="wizard_roles_hint">pick 3–8 that feel typical (you can add more later)</string>
+    <string name="wizard_roles_selfcare_locked">self-care is always on</string>
+    <string name="cd_wizard_roles_always_on">always-on</string>
+    <string name="wizard_templates_prompt">Which activities should I set up?</string>
+    <string name="wizard_templates_role_label">%1$s %2$s</string>
+    <string name="wizard_git_prompt">How should we store your data?</string>
+    <string name="wizard_git_phone_title">Keep it on this phone (recommended)</string>
+    <string name="wizard_git_phone_blurb">git-backed locally — full history, hand-editable, future-proof. You can add a remote later.</string>
+    <string name="wizard_git_forgejo_title">Your own Forgejo / Gitea</string>
+    <string name="wizard_git_forgejo_blurb">if you run a Forgejo or Gitea server, plug it in here.</string>
+    <string name="wizard_git_forgejo_instance_url">Instance URL</string>
+    <string name="wizard_git_forgejo_oauth_client_id">OAuth client ID</string>
+    <string name="wizard_git_forgejo_oauth_note">Note: OAuth flow stubbed for v1; the wizard falls back to phone-only on finish.</string>
+    <string name="wizard_git_github_title">Sign in with GitHub</string>
+    <string name="wizard_git_github_blurb">private repo on github.com — works fine, share with a partner later.</string>
+    <string name="wizard_git_github_oauth_note">Note: OAuth flow stubbed for v1; the wizard falls back to phone-only on finish.</string>
+    <string name="wizard_git_calendar_repo_name">Calendar repo name</string>
+    <string name="wizard_scaffold_idle">Getting things ready…</string>
+    <string name="wizard_scaffold_running">Building your calendar…</string>
+    <string name="wizard_scaffold_done">All set.</string>
+    <string name="wizard_scaffold_failed">Something went sideways.</string>
+    <string name="wizard_scaffold_unknown_error">Unknown error</string>
+    <string name="wizard_done_title">your lifestyle is live.</string>
+    <string name="wizard_done_blurb">%1$s takes it from here ;3</string>
+    <string name="wizard_done_now_card_label">now-card preview</string>
+    <string name="wizard_done_next_up">next up: %1$s</string>
+    <string name="wizard_done_praise_line">— %1$s</string>
+    <string name="wizard_done_open">Open my calendar</string>
+    <string name="wizard_done_fallback_now_card_title">brush teeth</string>
 </resources>

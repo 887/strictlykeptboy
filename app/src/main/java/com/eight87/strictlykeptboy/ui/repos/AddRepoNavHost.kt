@@ -28,7 +28,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.git.AuthMethod
 import com.eight87.strictlykeptboy.git.AuthorIdentity
 import com.eight87.strictlykeptboy.git.RemoteBinding
@@ -180,7 +182,7 @@ fun AddRepoNavHost(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(
-            text = "Add repo",
+            text = stringResource(R.string.add_repo_title),
             style = MaterialTheme.typography.headlineSmall,
         )
 
@@ -277,7 +279,7 @@ fun AddRepoNavHost(
             TextButton(
                 onClick = onCancel,
                 modifier = Modifier.testTag(TestTagAddRepoCancel),
-            ) { Text("Cancel") }
+            ) { Text(stringResource(R.string.dialog_cancel)) }
         }
     }
 }
@@ -285,7 +287,7 @@ fun AddRepoNavHost(
 @Composable
 private fun BranchStep(onLocal: () -> Unit, onRemote: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("How would you like to start?", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.add_repo_branch_prompt), style = MaterialTheme.typography.titleMedium)
         Card(
             onClick = onLocal,
             modifier = Modifier
@@ -296,9 +298,9 @@ private fun BranchStep(onLocal: () -> Unit, onRemote: () -> Unit) {
             ),
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Create local-only", style = MaterialTheme.typography.titleLarge)
+                Text(stringResource(R.string.add_repo_local_title), style = MaterialTheme.typography.titleLarge)
                 Text(
-                    "Phone-only repo. No sync, no remote — recommended for first-time users.",
+                    stringResource(R.string.add_repo_local_blurb),
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
@@ -310,9 +312,9 @@ private fun BranchStep(onLocal: () -> Unit, onRemote: () -> Unit) {
                 .testTag(TestTagAddRepoBranchRemote),
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Connect to a remote", style = MaterialTheme.typography.titleLarge)
+                Text(stringResource(R.string.add_repo_remote_title), style = MaterialTheme.typography.titleLarge)
                 Text(
-                    "Clone or push to GitHub, Forgejo, GitLab, or another git host.",
+                    stringResource(R.string.add_repo_remote_blurb),
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
@@ -333,28 +335,28 @@ private fun LocalStep(
         modifier = Modifier.testTag(TestTagAddRepoLocalForm),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("Local-only repo", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.add_repo_local_form_title), style = MaterialTheme.typography.titleMedium)
         OutlinedTextField(
             value = displayName, onValueChange = onDisplayName,
-            label = { Text("Display name") },
+            label = { Text(stringResource(R.string.add_repo_field_display_name)) },
             modifier = Modifier.fillMaxWidth().testTag(TestTagAddRepoDisplayField),
         )
         OutlinedTextField(
             value = identityName, onValueChange = onIdentityName,
-            label = { Text("Your name") },
+            label = { Text(stringResource(R.string.add_repo_field_your_name)) },
             modifier = Modifier.fillMaxWidth().testTag(TestTagAddRepoNameField),
         )
         OutlinedTextField(
             value = identityEmail, onValueChange = onIdentityEmail,
-            label = { Text("Your email") },
+            label = { Text(stringResource(R.string.add_repo_field_your_email)) },
             modifier = Modifier.fillMaxWidth().testTag(TestTagAddRepoEmailField),
         )
         OutlinedTextField(
             value = calendarName, onValueChange = onCalendarName,
-            label = { Text("Initial calendar name") },
+            label = { Text(stringResource(R.string.add_repo_field_initial_calendar)) },
             modifier = Modifier.fillMaxWidth(),
         )
-        StepButtons(onBack = onBack, onNext = onFinish, nextLabel = "Finish")
+        StepButtons(onBack = onBack, onNext = onFinish, nextLabel = stringResource(R.string.add_repo_step_finish))
     }
 }
 
@@ -369,7 +371,7 @@ private fun RemoteProviderStep(
         modifier = Modifier.testTag(TestTagAddRepoRemoteProvider),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text("Pick your provider", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.add_repo_pick_provider), style = MaterialTheme.typography.titleMedium)
         AddRepoProvider.entries.forEach { p ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(selected = provider == p, onClick = { onProvider(p) })
@@ -379,11 +381,11 @@ private fun RemoteProviderStep(
         if (provider == AddRepoProvider.Forgejo || provider == AddRepoProvider.GitLab) {
             OutlinedTextField(
                 value = instanceUrl, onValueChange = onInstanceUrl,
-                label = { Text("Instance URL") },
+                label = { Text(stringResource(R.string.add_repo_instance_url)) },
                 modifier = Modifier.fillMaxWidth(),
             )
         }
-        StepButtons(onBack = onBack, onNext = onNext, nextLabel = "Next")
+        StepButtons(onBack = onBack, onNext = onNext, nextLabel = stringResource(R.string.add_repo_step_next))
     }
 }
 
@@ -409,14 +411,14 @@ private fun RemoteAuthStep(
         modifier = Modifier.testTag(TestTagAddRepoRemoteAuth),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text("How should we authenticate?", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.add_repo_auth_prompt), style = MaterialTheme.typography.titleMedium)
         Row(verticalAlignment = Alignment.CenterVertically) {
             RadioButton(
                 selected = auth == AddRepoAuth.OAuthDevice,
                 onClick = { onAuth(AddRepoAuth.OAuthDevice) },
                 modifier = Modifier.testTag(TestTagAddRepoAuthOAuth),
             )
-            Text("Sign in with browser (OAuth Device Flow)")
+            Text(stringResource(R.string.add_repo_auth_oauth))
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             RadioButton(
@@ -424,7 +426,7 @@ private fun RemoteAuthStep(
                 onClick = { onAuth(AddRepoAuth.ManualPat) },
                 modifier = Modifier.testTag(TestTagAddRepoAuthPat),
             )
-            Text("Use a Personal Access Token (PAT)")
+            Text(stringResource(R.string.add_repo_auth_pat))
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             RadioButton(
@@ -432,7 +434,7 @@ private fun RemoteAuthStep(
                 onClick = { onAuth(AddRepoAuth.Ssh) },
                 modifier = Modifier.testTag(TestTagAddRepoAuthSsh),
             )
-            Text("SSH key (deferred)")
+            Text(stringResource(R.string.add_repo_auth_ssh))
         }
 
         if (auth == AddRepoAuth.OAuthDevice) {
@@ -443,7 +445,7 @@ private fun RemoteAuthStep(
                 onTokenObtained = onTokenObtained,
             )
         }
-        StepButtons(onBack = onBack, onNext = onNext, nextLabel = "Next")
+        StepButtons(onBack = onBack, onNext = onNext, nextLabel = stringResource(R.string.add_repo_step_next))
     }
 }
 
@@ -470,8 +472,8 @@ private fun OAuthDeviceFlowProgress(
     ) {
         when (val s = state) {
             null -> Text(
-                if (factory == null) "OAuth flow will run when you tap Next."
-                else "Starting…",
+                if (factory == null) stringResource(R.string.add_repo_oauth_next_hint)
+                else stringResource(R.string.add_repo_oauth_starting),
                 style = MaterialTheme.typography.bodySmall,
             )
             DeviceFlowState.RequestingCode -> Row(
@@ -479,16 +481,16 @@ private fun OAuthDeviceFlowProgress(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 CircularProgressIndicator(modifier = Modifier.height(16.dp).padding(end = 4.dp))
-                Text("Requesting code…")
+                Text(stringResource(R.string.add_repo_oauth_requesting_code))
             }
             is DeviceFlowState.ShowingCode -> {
-                Text("Open ${s.verificationUri}", style = MaterialTheme.typography.bodyMedium)
-                Text("Enter code: ${s.userCode}", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.add_repo_oauth_open_url, s.verificationUri), style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.add_repo_oauth_enter_code, s.userCode), style = MaterialTheme.typography.titleMedium)
             }
-            is DeviceFlowState.Polling -> Text("Waiting for browser approval…")
-            is DeviceFlowState.Success -> Text("Signed in.")
+            is DeviceFlowState.Polling -> Text(stringResource(R.string.add_repo_oauth_waiting))
+            is DeviceFlowState.Success -> Text(stringResource(R.string.add_repo_oauth_signed_in))
             is DeviceFlowState.Failed -> Text(
-                "OAuth failed: ${s.reason::class.simpleName}",
+                stringResource(R.string.add_repo_oauth_failed, s.reason::class.simpleName ?: "Unknown"),
                 color = MaterialTheme.colorScheme.error,
             )
         }
@@ -512,45 +514,45 @@ private fun RemoteFormStep(
         modifier = Modifier.testTag(TestTagAddRepoRemoteForm),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text("Repo + identity", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.add_repo_form_title), style = MaterialTheme.typography.titleMedium)
         OutlinedTextField(
             value = repoUrl, onValueChange = onRepoUrl,
-            label = { Text("Repo URL") },
+            label = { Text(stringResource(R.string.add_repo_field_repo_url)) },
             modifier = Modifier.fillMaxWidth().testTag(TestTagAddRepoUrlField),
         )
         OutlinedTextField(
             value = displayName, onValueChange = onDisplayName,
-            label = { Text("Display name") },
+            label = { Text(stringResource(R.string.add_repo_field_display_name)) },
             modifier = Modifier.fillMaxWidth().testTag(TestTagAddRepoDisplayField),
         )
         OutlinedTextField(
             value = identityName, onValueChange = onIdentityName,
-            label = { Text("Your name") },
+            label = { Text(stringResource(R.string.add_repo_field_your_name)) },
             modifier = Modifier.fillMaxWidth().testTag(TestTagAddRepoNameField),
         )
         OutlinedTextField(
             value = identityEmail, onValueChange = onIdentityEmail,
-            label = { Text("Your email") },
+            label = { Text(stringResource(R.string.add_repo_field_your_email)) },
             modifier = Modifier.fillMaxWidth().testTag(TestTagAddRepoEmailField),
         )
         OutlinedTextField(
             value = calendarName, onValueChange = onCalendarName,
-            label = { Text("Initial calendar name") },
+            label = { Text(stringResource(R.string.add_repo_field_initial_calendar)) },
             modifier = Modifier.fillMaxWidth(),
         )
         if (auth == AddRepoAuth.ManualPat) {
             OutlinedTextField(
                 value = patUsername, onValueChange = onPatUsername,
-                label = { Text("PAT username") },
+                label = { Text(stringResource(R.string.add_repo_pat_username)) },
                 modifier = Modifier.fillMaxWidth().testTag(TestTagAddRepoUsernameField),
             )
             OutlinedTextField(
                 value = patToken, onValueChange = onPatToken,
-                label = { Text("PAT token") },
+                label = { Text(stringResource(R.string.add_repo_pat_token)) },
                 modifier = Modifier.fillMaxWidth().testTag(TestTagAddRepoPatField),
             )
         }
-        StepButtons(onBack = onBack, onNext = onFinish, nextLabel = "Finish")
+        StepButtons(onBack = onBack, onNext = onFinish, nextLabel = stringResource(R.string.add_repo_step_finish))
     }
 }
 
@@ -561,15 +563,15 @@ private fun DoneStep(onAddAnother: () -> Unit, onClose: () -> Unit) {
         modifier = Modifier.testTag(TestTagAddRepoDone),
     ) {
         Text(
-            "Repo added.",
+            stringResource(R.string.add_repo_done_title),
             style = MaterialTheme.typography.titleLarge,
             modifier = Modifier.testTag(TestTagAddRepoFinish),
         )
         TextButton(
             onClick = onAddAnother,
             modifier = Modifier.testTag(TestTagAddRepoAddAnother),
-        ) { Text("+ Add another remote") }
-        Button(onClick = onClose) { Text("Done") }
+        ) { Text(stringResource(R.string.add_repo_add_another)) }
+        Button(onClick = onClose) { Text(stringResource(R.string.add_repo_done_close)) }
     }
 }
 
@@ -585,7 +587,7 @@ private fun StepButtons(onBack: () -> Unit, onNext: () -> Unit, nextLabel: Strin
         TextButton(
             onClick = onBack,
             modifier = Modifier.testTag(TestTagAddRepoBack),
-        ) { Text("Back") }
+        ) { Text(stringResource(R.string.add_repo_step_back)) }
         Button(
             onClick = onNext,
             modifier = Modifier.testTag(TestTagAddRepoNext),

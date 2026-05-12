@@ -26,7 +26,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.git.AuthorIdentity
 import com.eight87.strictlykeptboy.git.RepoConfig
 
@@ -61,14 +63,13 @@ fun IdentitiesScreen(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
-                Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                Icon(Icons.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
             }
-            Text("Identities", style = MaterialTheme.typography.headlineSmall)
+            Text(stringResource(R.string.identities_title), style = MaterialTheme.typography.headlineSmall)
         }
 
         Text(
-            "Multi-identity editing is partial in this version — the active " +
-                "identity always commits new entries.",
+            stringResource(R.string.identities_partial_note),
             style = MaterialTheme.typography.bodySmall,
         )
 
@@ -83,7 +84,7 @@ fun IdentitiesScreen(
                     Text(entry.identity.name, style = MaterialTheme.typography.titleSmall)
                     Text(entry.identity.email, style = MaterialTheme.typography.bodySmall)
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Signing", modifier = Modifier.weight(1f))
+                        Text(stringResource(R.string.identities_signing), modifier = Modifier.weight(1f))
                         Switch(
                             checked = entry.signing,
                             onCheckedChange = { v ->
@@ -97,10 +98,10 @@ fun IdentitiesScreen(
                                 for (i in identities.indices) {
                                     identities[i] = identities[i].copy(active = i == idx)
                                 }
-                            }) { Text("Set active") }
+                            }) { Text(stringResource(R.string.identities_set_active)) }
                         } else {
                             Text(
-                                "(active)",
+                                stringResource(R.string.identities_active),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -111,22 +112,22 @@ fun IdentitiesScreen(
                                 if (identities.none { it.active } && identities.isNotEmpty()) {
                                     identities[0] = identities[0].copy(active = true)
                                 }
-                            }) { Text("Remove") }
+                            }) { Text(stringResource(R.string.identities_remove)) }
                         }
                     }
                 }
             }
         }
 
-        Text("Add identity", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.identities_add_section), style = MaterialTheme.typography.titleMedium)
         OutlinedTextField(
             value = newName, onValueChange = { newName = it },
-            label = { Text("Name") },
+            label = { Text(stringResource(R.string.identities_name)) },
             modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(
             value = newEmail, onValueChange = { newEmail = it },
-            label = { Text("Email") },
+            label = { Text(stringResource(R.string.identities_email)) },
             modifier = Modifier.fillMaxWidth(),
         )
         Button(
@@ -140,7 +141,7 @@ fun IdentitiesScreen(
                 }
             },
             modifier = Modifier.testTag(TestTagIdentitiesAdd),
-        ) { Text("Add") }
+        ) { Text(stringResource(R.string.identities_add_button)) }
     }
 }
 

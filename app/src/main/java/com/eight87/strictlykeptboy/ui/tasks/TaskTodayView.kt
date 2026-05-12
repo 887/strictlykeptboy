@@ -11,7 +11,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.eight87.strictlykeptboy.R
 import java.time.LocalDate
 
 const val TestTagTodayView = "TodayView"
@@ -29,8 +31,8 @@ fun TaskTodayView(
     val forToday = tasks.forToday(today)
     if (forToday.isEmpty()) {
         EmptyTasksState(
-            primaryMessage = "nothing on your plate today — good boy ;3",
-            neutralMessage = "No tasks for today.",
+            primaryMessage = stringResource(R.string.tasks_empty_today_primary),
+            neutralMessage = stringResource(R.string.tasks_empty_today_neutral),
             modifier = modifier.testTag(TestTagTodayView),
         )
         return
@@ -43,24 +45,27 @@ fun TaskTodayView(
     val pinned = forToday.filter { it.standing && it.pinnedForToday }
         .sortedWith(compareByDescending<TaskItem> { it.priority }.thenBy { it.title.lowercase() })
 
+    val labelToday = stringResource(R.string.tasks_today_section_today)
+    val labelFromEvents = stringResource(R.string.tasks_today_section_from_events)
+    val labelPinned = stringResource(R.string.tasks_today_section_pinned)
     LazyColumn(
         modifier = modifier.fillMaxSize().testTag(TestTagTodayView),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         if (dated.isNotEmpty()) {
-            sectionHeader("Today")
+            sectionHeader(labelToday)
             items(dated, key = { it.id }) { task ->
                 TaskRow(item = task, onToggleDone = { onToggleDone(task) }, onClick = { onOpen(task) })
             }
         }
         if (fromEvents.isNotEmpty()) {
-            sectionHeader("From today's events")
+            sectionHeader(labelFromEvents)
             items(fromEvents, key = { it.id }) { task ->
                 TaskRow(item = task, onToggleDone = { onToggleDone(task) }, onClick = { onOpen(task) })
             }
         }
         if (pinned.isNotEmpty()) {
-            sectionHeader("Pinned")
+            sectionHeader(labelPinned)
             items(pinned, key = { it.id }) { task ->
                 TaskRow(item = task, onToggleDone = { onToggleDone(task) }, onClick = { onOpen(task) })
             }

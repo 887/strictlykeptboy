@@ -42,6 +42,7 @@ import androidx.compose.ui.Alignment as ComposeAlign
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
@@ -133,13 +134,13 @@ fun WizardNavHost(
                 TextButton(onClick = {
                     showDiscard = false
                     onCancel()
-                }) { Text("Discard") }
+                }) { Text(stringResource(R.string.wizard_discard_confirm)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDiscard = false }) { Text("Keep going") }
+                TextButton(onClick = { showDiscard = false }) { Text(stringResource(R.string.wizard_discard_keep_going)) }
             },
-            title = { Text("Discard wizard progress?") },
-            text = { Text("Nothing has been written to disk yet — leaving now drops everything you've chosen.") },
+            title = { Text(stringResource(R.string.wizard_discard_dialog_title)) },
+            text = { Text(stringResource(R.string.wizard_discard_dialog_body)) },
         )
     }
 
@@ -200,7 +201,6 @@ fun WizardNavHost(
                             } else {
                                 scaffoldProgress = ScaffoldProgress.Failed
                                 scaffoldError = result.exceptionOrNull()?.message
-                                    ?: "Unknown error"
                             }
                         }
                     }
@@ -218,17 +218,17 @@ fun WizardNavHost(
                 TextButton(
                     onClick = ::goBack,
                     modifier = Modifier.testTag(TestTagWizardBack),
-                ) { Text("Back") }
+                ) { Text(stringResource(R.string.wizard_back)) }
                 if (current == WizardScreen.Species || current == WizardScreen.Templates) {
                     TextButton(
                         onClick = ::goNext,
                         modifier = Modifier.testTag(TestTagWizardSkip),
-                    ) { Text("Skip") }
+                    ) { Text(stringResource(R.string.wizard_skip)) }
                 }
                 Button(
                     onClick = ::goNext,
                     modifier = Modifier.testTag(TestTagWizardNext),
-                ) { Text("Continue") }
+                ) { Text(stringResource(R.string.wizard_continue)) }
             }
         } else if (current == WizardScreen.Scaffold && scaffoldProgress == ScaffoldProgress.Failed) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -236,8 +236,8 @@ fun WizardNavHost(
                     // Reset and retry by re-entering the scaffold screen.
                     scaffoldProgress = ScaffoldProgress.Idle
                     scaffoldError = null
-                }) { Text("Try again") }
-                TextButton(onClick = onCancel) { Text("Cancel") }
+                }) { Text(stringResource(R.string.wizard_try_again)) }
+                TextButton(onClick = onCancel) { Text(stringResource(R.string.wizard_cancel)) }
             }
         }
     }
@@ -254,7 +254,7 @@ private fun ProgressRow(currentIndex: Int, total: Int) {
             modifier = Modifier.fillMaxWidth().height(4.dp),
         )
         Text(
-            text = "Step ${currentIndex + 1} of $total",
+            text = stringResource(R.string.wizard_step_of, currentIndex + 1, total),
             style = MaterialTheme.typography.labelSmall,
         )
     }
@@ -269,7 +269,7 @@ private fun BatMascotSticker(screen: WizardScreen) {
         Column(horizontalAlignment = ComposeAlign.CenterHorizontally) {
             Icon(
                 painter = painterResource(R.drawable.about_bat),
-                contentDescription = "bat mascot — ${screen.stickerKey}",
+                contentDescription = stringResource(R.string.cd_wizard_mascot, screen.stickerKey),
                 modifier = Modifier.size(96.dp),
             )
             Text(
@@ -291,19 +291,19 @@ private fun WelcomeScreen(onGo: () -> Unit) {
         horizontalAlignment = ComposeAlign.CenterHorizontally,
     ) {
         Text(
-            "let's design your lifestyle",
+            stringResource(R.string.wizard_welcome_title),
             style = MaterialTheme.typography.headlineMedium,
         )
         Text(
-            "by the end you'll have a living calendar, not an empty app.",
+            stringResource(R.string.wizard_welcome_blurb),
             style = MaterialTheme.typography.bodyMedium,
         )
         Button(
             onClick = onGo,
             modifier = Modifier.testTag(TestTagWizardNext),
-        ) { Text("let's go") }
+        ) { Text(stringResource(R.string.wizard_welcome_cta)) }
         Text(
-            "you can change any of this later in Settings → Add more to my lifestyle.",
+            stringResource(R.string.wizard_welcome_footnote),
             style = MaterialTheme.typography.labelSmall,
         )
     }
@@ -317,7 +317,7 @@ private fun SpeciesScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
         modifier = Modifier.fillMaxWidth().testTag(TestTagWizardSpecies),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text("Pick your avatar species", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.wizard_species_prompt), style = MaterialTheme.typography.titleMedium)
         // Use a single-column flow on phones; 2-col grid is acceptable but
         // simpler to use a Column of clickable cards for v1.
         LazyVerticalGrid(
@@ -352,7 +352,7 @@ private fun SpeciesScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
             OutlinedTextField(
                 value = draft.customPackUrl,
                 onValueChange = { onUpdate(draft.copy(customPackUrl = it)) },
-                label = { Text("Custom sticker-pack URL (GitHub)") },
+                label = { Text(stringResource(R.string.wizard_species_custom_pack_url)) },
                 modifier = Modifier.fillMaxWidth().testTag("Wizard-Species-PackUrl"),
             )
         }
@@ -367,7 +367,7 @@ private fun AlignmentScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit)
         modifier = Modifier.fillMaxWidth().testTag(TestTagWizardAlignment),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text("How would you like the rules to work?", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.wizard_alignment_prompt), style = MaterialTheme.typography.titleMedium)
         for (a in Alignment.entries) {
             val selected = draft.alignment == a
             Card(
@@ -397,10 +397,10 @@ private fun IdentityScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) 
         modifier = Modifier.fillMaxWidth().testTag(TestTagWizardIdentity),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("How should the app speak to you?", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.wizard_identity_prompt), style = MaterialTheme.typography.titleMedium)
 
         // Praise chips (multi-select).
-        Text("Praise terms (pick any — alternated):", style = MaterialTheme.typography.bodyMedium)
+        Text(stringResource(R.string.wizard_identity_praise_label), style = MaterialTheme.typography.bodyMedium)
         WrappingChipRow {
             PraiseRegistry.defaults.forEach { term ->
                 val on = term in draft.praiseTerms
@@ -417,7 +417,7 @@ private fun IdentityScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) 
         }
 
         // Pronouns radio.
-        Text("Pronouns:", style = MaterialTheme.typography.bodyMedium)
+        Text(stringResource(R.string.wizard_identity_pronouns_label), style = MaterialTheme.typography.bodyMedium)
         for (p in PronounSet.defaults) {
             Row(verticalAlignment = ComposeAlign.CenterVertically) {
                 RadioButton(
@@ -430,7 +430,7 @@ private fun IdentityScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) 
         }
 
         if (showHonorific) {
-            Text("Honorific:", style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(R.string.wizard_identity_honorific_label), style = MaterialTheme.typography.bodyMedium)
             WrappingChipRow {
                 Honorific.entries.forEach { h ->
                     FilterChip(
@@ -443,7 +443,7 @@ private fun IdentityScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) 
             }
         }
 
-        Text("Tone register:", style = MaterialTheme.typography.bodyMedium)
+        Text(stringResource(R.string.wizard_identity_tone_label), style = MaterialTheme.typography.bodyMedium)
         WrappingChipRow {
             ToneRegister.entries.forEach { t ->
                 FilterChip(
@@ -455,7 +455,7 @@ private fun IdentityScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) 
             }
         }
 
-        Text("Emoji density:", style = MaterialTheme.typography.bodyMedium)
+        Text(stringResource(R.string.wizard_identity_emoji_label), style = MaterialTheme.typography.bodyMedium)
         WrappingChipRow {
             EmojiDensity.entries.forEach { e ->
                 FilterChip(
@@ -473,9 +473,10 @@ private fun IdentityScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) 
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text("Preview", style = MaterialTheme.typography.labelMedium)
+                Text(stringResource(R.string.wizard_identity_preview_label), style = MaterialTheme.typography.labelMedium)
                 val honoraryPrefix = if (draft.honorific != Honorific.None) "${draft.honorific.label}, " else ""
-                val praise = draft.praiseTerms.firstOrNull() ?: "good boy"
+                val praiseDefault = stringResource(R.string.wizard_identity_praise_default)
+                val praise = draft.praiseTerms.firstOrNull() ?: praiseDefault
                 val emoji = when (draft.emojiDensity) {
                     EmojiDensity.Off -> ""
                     EmojiDensity.Light -> " ✓"
@@ -483,7 +484,7 @@ private fun IdentityScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) 
                     EmojiDensity.Heavy -> " ✓ ;3 ✨"
                 }
                 Text(
-                    "${honoraryPrefix}you did it — $praise.$emoji",
+                    stringResource(R.string.wizard_identity_preview_line, honoraryPrefix, praise, emoji),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Medium,
                 )
@@ -501,7 +502,7 @@ private fun LifestyleScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit)
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
-            "What's your day shaped like?",
+            stringResource(R.string.wizard_lifestyle_prompt),
             style = MaterialTheme.typography.titleMedium,
         )
 
@@ -549,16 +550,16 @@ private fun RolesScreen(
         modifier = Modifier.fillMaxWidth().testTag(TestTagWizardRoles),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text("What's typical for you?", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.wizard_roles_prompt), style = MaterialTheme.typography.titleMedium)
         Text(
-            "pick 3–8 that feel typical (you can add more later)",
+            stringResource(R.string.wizard_roles_hint),
             style = MaterialTheme.typography.bodySmall,
         )
         // Pinned self-care chip.
         Row(verticalAlignment = ComposeAlign.CenterVertically) {
-            Icon(Icons.Filled.Lock, contentDescription = "always-on")
+            Icon(Icons.Filled.Lock, contentDescription = stringResource(R.string.cd_wizard_roles_always_on))
             Spacer(Modifier.size(4.dp))
-            Text("self-care is always on")
+            Text(stringResource(R.string.wizard_roles_selfcare_locked))
         }
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
@@ -605,7 +606,7 @@ private fun TemplatesScreen(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
-            "Which activities should I set up?",
+            stringResource(R.string.wizard_templates_prompt),
             style = MaterialTheme.typography.titleMedium,
         )
         val orderedRoles = RoleId.entries.filter { it in draft.roles }
@@ -618,7 +619,7 @@ private fun TemplatesScreen(
             Card(modifier = Modifier.fillMaxWidth().testTag("Wizard-TemplateGroup-${role.id}")) {
                 Column(modifier = Modifier.padding(8.dp)) {
                     Text(
-                        "${role.emoji} ${role.label}",
+                        stringResource(R.string.wizard_templates_role_label, role.emoji, role.label),
                         style = MaterialTheme.typography.titleSmall,
                     )
                     WrappingChipRow {
@@ -654,7 +655,7 @@ private fun GitScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
         modifier = Modifier.fillMaxWidth().testTag(TestTagWizardGit),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("How should we store your data?", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.wizard_git_prompt), style = MaterialTheme.typography.titleMedium)
 
         // Phone-only (default, recommended)
         Card(
@@ -665,9 +666,9 @@ private fun GitScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
             modifier = Modifier.fillMaxWidth().testTag("Wizard-Git-PhoneOnly"),
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text("Keep it on this phone (recommended)", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.wizard_git_phone_title), style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "git-backed locally — full history, hand-editable, future-proof. You can add a remote later.",
+                    stringResource(R.string.wizard_git_phone_blurb),
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
@@ -685,9 +686,9 @@ private fun GitScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
             modifier = Modifier.fillMaxWidth().testTag("Wizard-Git-Forgejo"),
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text("Your own Forgejo / Gitea", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.wizard_git_forgejo_title), style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "if you run a Forgejo or Gitea server, plug it in here.",
+                    stringResource(R.string.wizard_git_forgejo_blurb),
                     style = MaterialTheme.typography.bodySmall,
                 )
                 if (selfHosted != null) {
@@ -696,7 +697,7 @@ private fun GitScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
                         onValueChange = {
                             onUpdate(draft.copy(gitChoice = selfHosted.copy(instanceUrl = it)))
                         },
-                        label = { Text("Instance URL") },
+                        label = { Text(stringResource(R.string.wizard_git_forgejo_instance_url)) },
                         modifier = Modifier.fillMaxWidth().testTag("Wizard-Git-Forgejo-Url"),
                     )
                     OutlinedTextField(
@@ -704,11 +705,11 @@ private fun GitScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
                         onValueChange = {
                             onUpdate(draft.copy(gitChoice = selfHosted.copy(oauthClientId = it)))
                         },
-                        label = { Text("OAuth client ID") },
+                        label = { Text(stringResource(R.string.wizard_git_forgejo_oauth_client_id)) },
                         modifier = Modifier.fillMaxWidth().testTag("Wizard-Git-Forgejo-Client"),
                     )
                     Text(
-                        "Note: OAuth flow stubbed for v1; the wizard falls back to phone-only on finish.",
+                        stringResource(R.string.wizard_git_forgejo_oauth_note),
                         style = MaterialTheme.typography.labelSmall,
                     )
                 }
@@ -724,14 +725,14 @@ private fun GitScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
             modifier = Modifier.fillMaxWidth().testTag("Wizard-Git-GitHub"),
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text("Sign in with GitHub", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.wizard_git_github_title), style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "private repo on github.com — works fine, share with a partner later.",
+                    stringResource(R.string.wizard_git_github_blurb),
                     style = MaterialTheme.typography.bodySmall,
                 )
                 if (draft.gitChoice is GitChoice.GitHub) {
                     Text(
-                        "Note: OAuth flow stubbed for v1; the wizard falls back to phone-only on finish.",
+                        stringResource(R.string.wizard_git_github_oauth_note),
                         style = MaterialTheme.typography.labelSmall,
                     )
                 }
@@ -741,7 +742,7 @@ private fun GitScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
         OutlinedTextField(
             value = draft.displayName,
             onValueChange = { onUpdate(draft.copy(displayName = it)) },
-            label = { Text("Calendar repo name") },
+            label = { Text(stringResource(R.string.wizard_git_calendar_repo_name)) },
             modifier = Modifier.fillMaxWidth().testTag("Wizard-Git-Name"),
         )
     }
@@ -758,18 +759,19 @@ private fun ScaffoldScreen(progress: ScaffoldProgress, error: String?) {
     ) {
         Text(
             when (progress) {
-                ScaffoldProgress.Idle -> "Getting things ready…"
-                ScaffoldProgress.Running -> "Building your calendar…"
-                ScaffoldProgress.Done -> "All set."
-                ScaffoldProgress.Failed -> "Something went sideways."
+                ScaffoldProgress.Idle -> stringResource(R.string.wizard_scaffold_idle)
+                ScaffoldProgress.Running -> stringResource(R.string.wizard_scaffold_running)
+                ScaffoldProgress.Done -> stringResource(R.string.wizard_scaffold_done)
+                ScaffoldProgress.Failed -> stringResource(R.string.wizard_scaffold_failed)
             },
             style = MaterialTheme.typography.titleMedium,
         )
         if (progress == ScaffoldProgress.Running || progress == ScaffoldProgress.Idle) {
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
         }
-        if (error != null) {
-            Text(error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+        val displayError = error ?: if (progress == ScaffoldProgress.Failed) stringResource(R.string.wizard_scaffold_unknown_error) else null
+        if (displayError != null) {
+            Text(displayError, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
         }
     }
 }
@@ -783,38 +785,40 @@ private fun DoneScreen(draft: WizardDraft, onOpen: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
         horizontalAlignment = ComposeAlign.CenterHorizontally,
     ) {
-        Text("your lifestyle is live.", style = MaterialTheme.typography.headlineSmall)
+        Text(stringResource(R.string.wizard_done_title), style = MaterialTheme.typography.headlineSmall)
         Text(
-            "${draft.species.label} takes it from here ;3",
+            stringResource(R.string.wizard_done_blurb, draft.species.label),
             style = MaterialTheme.typography.bodyMedium,
         )
         // Live-ish preview
+        val fallbackNowCard = stringResource(R.string.wizard_done_fallback_now_card_title)
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text("now-card preview", style = MaterialTheme.typography.labelMedium)
+                Text(stringResource(R.string.wizard_done_now_card_label), style = MaterialTheme.typography.labelMedium)
                 Text(
-                    "next up: ${chooseFirstNowCardTitle(draft)}",
+                    stringResource(R.string.wizard_done_next_up, chooseFirstNowCardTitle(draft, fallbackNowCard)),
                     style = MaterialTheme.typography.titleMedium,
                 )
-                val praise = draft.praiseTerms.firstOrNull() ?: "good boy"
-                Text("— $praise", style = MaterialTheme.typography.bodySmall)
+                val praiseDefault = stringResource(R.string.wizard_identity_praise_default)
+                val praise = draft.praiseTerms.firstOrNull() ?: praiseDefault
+                Text(stringResource(R.string.wizard_done_praise_line, praise), style = MaterialTheme.typography.bodySmall)
             }
         }
         Button(
             onClick = onOpen,
             modifier = Modifier.testTag("Wizard-Done-Open"),
-        ) { Text("Open my calendar") }
+        ) { Text(stringResource(R.string.wizard_done_open)) }
     }
 }
 
-private fun chooseFirstNowCardTitle(draft: WizardDraft): String {
+private fun chooseFirstNowCardTitle(draft: WizardDraft, fallback: String): String {
     // Prefer a self-care or workout atom; falls back to first role/template.
     val ordered = listOf(RoleId.SelfCare, RoleId.Workout, RoleId.Work).filter { it in draft.roles }
     for (role in ordered) {
         val tmpls = TemplateRegistry.templatesFor(role)
         if (tmpls.isNotEmpty()) return tmpls.first().label
     }
-    return "brush teeth"
+    return fallback
 }
 
 // --- Small helpers -------------------------------------------------------------

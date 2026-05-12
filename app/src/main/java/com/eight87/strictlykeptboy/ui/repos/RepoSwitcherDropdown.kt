@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -34,6 +35,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.height
+import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.git.RepoConfig
 
 const val TestTagRepoSwitcherDropdown = "RepoSwitcherDropdown"
@@ -84,9 +86,9 @@ fun RepoSwitcherDropdown(
                     .testTag(TestTagRepoSwitcherAdd)
                     .padding(horizontal = 16.dp),
             ) {
-                Icon(Icons.Filled.Add, contentDescription = "Add repo")
+                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.cd_repo_switcher_add))
                 Text(
-                    text = "Add repo",
+                    text = stringResource(R.string.repo_switcher_add),
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.padding(start = 12.dp),
                 )
@@ -123,7 +125,7 @@ private fun RepoRow(
             )
             if (repo.remotes.isEmpty()) {
                 Text(
-                    text = "Local-only",
+                    text = stringResource(R.string.repo_switcher_local_only),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -134,7 +136,7 @@ private fun RepoRow(
             onClick = onSettings,
             modifier = Modifier.testTag("$TestTagRepoSwitcherSettings-${repo.repoId}"),
         ) {
-            Icon(Icons.Filled.Settings, contentDescription = "Settings for ${repo.displayName}")
+            Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.cd_repo_switcher_settings_for, repo.displayName))
         }
     }
 }
@@ -163,7 +165,7 @@ private fun StatusBadge(status: SyncStatus, isLocalOnly: Boolean) {
     if (isLocalOnly) {
         Icon(
             imageVector = Icons.Filled.Home,
-            contentDescription = "Local-only repo",
+            contentDescription = stringResource(R.string.cd_repo_switcher_local_only_repo),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier
                 .size(18.dp)
@@ -174,7 +176,7 @@ private fun StatusBadge(status: SyncStatus, isLocalOnly: Boolean) {
     when (status) {
         SyncStatus.Synced -> Icon(
             Icons.Filled.CheckCircle,
-            contentDescription = "Synced",
+            contentDescription = stringResource(R.string.cd_repo_switcher_synced),
             tint = Color(0xFF2E7D32),
             modifier = Modifier.size(18.dp),
         )
@@ -184,13 +186,13 @@ private fun StatusBadge(status: SyncStatus, isLocalOnly: Boolean) {
         )
         SyncStatus.Error -> Icon(
             Icons.Filled.Error,
-            contentDescription = "Sync error",
+            contentDescription = stringResource(R.string.cd_repo_switcher_sync_error),
             tint = MaterialTheme.colorScheme.error,
             modifier = Modifier.size(18.dp),
         )
         SyncStatus.LocalOnly -> Icon(
             Icons.Filled.Home,
-            contentDescription = "Local-only repo",
+            contentDescription = stringResource(R.string.cd_repo_switcher_local_only_repo),
             modifier = Modifier
                 .size(18.dp)
                 .testTag(TestTagRepoSwitcherHouseGlyph),

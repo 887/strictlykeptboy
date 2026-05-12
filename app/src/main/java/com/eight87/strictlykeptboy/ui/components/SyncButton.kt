@@ -22,8 +22,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.background
+import com.eight87.strictlykeptboy.R
 
 const val TestTagSyncButton = "SyncButton"
 const val TestTagSyncErrorDot = "SyncErrorDot"
@@ -49,7 +51,7 @@ fun SyncButton(
             when (state) {
                 SyncButtonState.Idle -> Icon(
                     imageVector = Icons.Filled.Sync,
-                    contentDescription = "Sync",
+                    contentDescription = stringResource(R.string.cd_sync),
                 )
                 SyncButtonState.Syncing -> {
                     val rot by rememberInfiniteTransition(label = "sync-spin")
@@ -64,12 +66,12 @@ fun SyncButton(
                         )
                     Icon(
                         imageVector = Icons.Filled.Sync,
-                        contentDescription = "Syncing",
+                        contentDescription = stringResource(R.string.cd_syncing),
                         modifier = Modifier.rotate(rot),
                     )
                 }
                 SyncButtonState.Error -> {
-                    Icon(imageVector = Icons.Filled.Sync, contentDescription = "Sync error")
+                    Icon(imageVector = Icons.Filled.Sync, contentDescription = stringResource(R.string.cd_sync_error))
                     Box(
                         modifier = Modifier
                             .size(10.dp)
@@ -79,7 +81,7 @@ fun SyncButton(
                 }
                 SyncButtonState.Success -> Icon(
                     imageVector = Icons.Filled.Check,
-                    contentDescription = "Sync complete",
+                    contentDescription = stringResource(R.string.cd_sync_complete),
                     tint = Color(0xFF2E7D32),
                     modifier = Modifier.testTag(TestTagSyncSuccessCheck),
                 )

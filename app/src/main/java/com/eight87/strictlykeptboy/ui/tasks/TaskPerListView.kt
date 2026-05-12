@@ -15,7 +15,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.eight87.strictlykeptboy.R
 
 const val TestTagPerListView = "PerListView"
 const val TestTagListFilterChip = "ListFilterChip"
@@ -58,8 +60,8 @@ fun TaskPerListView(
         val sorted = filtered.sortedForCombined()
         if (sorted.isEmpty()) {
             EmptyTasksState(
-                primaryMessage = "nothing in this list — good boy ;3",
-                neutralMessage = "No tasks in this list.",
+                primaryMessage = stringResource(R.string.tasks_empty_list_primary),
+                neutralMessage = stringResource(R.string.tasks_empty_list_neutral),
             )
             return
         }

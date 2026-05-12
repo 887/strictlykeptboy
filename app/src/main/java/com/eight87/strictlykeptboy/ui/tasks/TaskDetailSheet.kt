@@ -34,7 +34,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.eight87.strictlykeptboy.R
 
 const val TestTagDetailSheet = "TaskDetailSheet"
 const val TestTagDetailTitle = "TaskDetailTitle"
@@ -74,9 +76,9 @@ fun TaskDetailSheet(
                 )
                 // completion-state badge
                 if (task.done) {
-                    Badge { Text("done") }
+                    Badge { Text(stringResource(R.string.task_detail_done)) }
                 } else if (task.isOverdue) {
-                    Badge(containerColor = MaterialTheme.colorScheme.error) { Text("overdue") }
+                    Badge(containerColor = MaterialTheme.colorScheme.error) { Text(stringResource(R.string.task_detail_overdue)) }
                 }
             }
 
@@ -108,21 +110,21 @@ fun TaskDetailSheet(
 
             if (task.due != null) {
                 Text(
-                    text = "Due: ${task.due}",
+                    text = stringResource(R.string.task_detail_due, task.due.toString()),
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(top = 12.dp),
                 )
             }
             if (task.doneAt != null) {
                 Text(
-                    text = "Completed: ${task.doneAt}",
+                    text = stringResource(R.string.task_detail_completed_at, task.doneAt.toString()),
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(top = 4.dp),
                 )
             }
             if (task.priority > 0) {
                 Text(
-                    text = "Priority: ${task.priority}",
+                    text = stringResource(R.string.task_detail_priority, task.priority),
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(top = 4.dp),
                 )
@@ -169,7 +171,7 @@ fun TaskDetailSheet(
 
             if (task.attachments.isNotEmpty()) {
                 Column(modifier = Modifier.padding(top = 12.dp)) {
-                    Text("Attachments", style = MaterialTheme.typography.titleSmall)
+                    Text(stringResource(R.string.task_detail_attachments), style = MaterialTheme.typography.titleSmall)
                     task.attachments.forEachIndexed { idx, att ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -197,7 +199,7 @@ fun TaskDetailSheet(
                     modifier = Modifier.testTag(TestTagDetailEdit),
                 ) {
                     Icon(Icons.Filled.Edit, contentDescription = null)
-                    Text("  Edit")
+                    Text(stringResource(R.string.task_detail_edit))
                 }
             }
         }

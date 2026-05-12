@@ -16,10 +16,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.eight87.strictlykeptboy.R
 
 const val TestTagRepoSwitcher = "RepoSwitcherChip"
 
@@ -30,6 +32,7 @@ fun RepoSwitcherChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val cd = stringResource(R.string.cd_repo_switcher_active, activeRepoName)
     Surface(
         onClick = onClick,
         shape = MaterialTheme.shapes.large,
@@ -38,7 +41,7 @@ fun RepoSwitcherChip(
             .height(40.dp)
             .widthIn(min = 96.dp)
             .testTag(TestTagRepoSwitcher)
-            .semantics { contentDescription = "Switch repo, active: $activeRepoName" },
+            .semantics { contentDescription = cd },
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,

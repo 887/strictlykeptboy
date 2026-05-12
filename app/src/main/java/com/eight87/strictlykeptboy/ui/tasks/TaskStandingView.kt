@@ -17,7 +17,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.eight87.strictlykeptboy.R
 
 const val TestTagStandingView = "StandingView"
 const val TestTagPinMenu = "PinMenu"
@@ -36,8 +38,8 @@ fun TaskStandingView(
     val sorted = tasks.sortedForStanding()
     if (sorted.isEmpty()) {
         EmptyTasksState(
-            primaryMessage = "no standing tasks — good boy ;3",
-            neutralMessage = "No standing tasks.",
+            primaryMessage = stringResource(R.string.tasks_empty_standing_primary),
+            neutralMessage = stringResource(R.string.tasks_empty_standing_neutral),
             modifier = modifier.testTag(TestTagStandingView),
         )
         return
@@ -87,7 +89,7 @@ private fun StandingTaskRowWithMenu(
             modifier = Modifier.testTag("$TestTagPinMenu-${item.id}"),
         ) {
             DropdownMenuItem(
-                text = { Text(if (item.pinnedForToday) "Unpin from today" else "Pin to today") },
+                text = { Text(if (item.pinnedForToday) stringResource(R.string.tasks_standing_unpin) else stringResource(R.string.tasks_standing_pin)) },
                 onClick = {
                     menuOpen = false
                     onPin()
