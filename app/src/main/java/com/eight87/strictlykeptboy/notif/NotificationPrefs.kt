@@ -77,6 +77,26 @@ class NotificationPrefs internal constructor(private val prefs: SharedPreference
         _state.value = loadAll()
     }
 
+    // --- Phase S.4 — master briefings + per-template-category lead times -----
+
+    fun isBriefingsEnabled(): Boolean = prefs.getBoolean(KEY_BRIEFINGS_MASTER, true)
+
+    fun setBriefingsEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_BRIEFINGS_MASTER, enabled).apply()
+        _state.value = loadAll()
+    }
+
+    fun categoryLeadTimes(category: String): String? =
+        prefs.getString("category.$category.leadtimes", null)
+
+    fun setCategoryLeadTimes(category: String, value: String?) {
+        val editor = prefs.edit()
+        val k = "category.$category.leadtimes"
+        if (value.isNullOrBlank()) editor.remove(k) else editor.putString(k, value)
+        editor.apply()
+        _state.value = loadAll()
+    }
+
     private fun channelKey(channelId: String, suffix: String) = "channel.$channelId.$suffix"
     private fun calKey(repoId: String, calendarId: String, suffix: String) =
         "cal.$repoId.$calendarId.$suffix"
@@ -86,6 +106,7 @@ class NotificationPrefs internal constructor(private val prefs: SharedPreference
 
     companion object {
         private const val PREFS_FILE = "notification_prefs_v1"
+        private const val KEY_BRIEFINGS_MASTER = "briefings.master.enabled"
 
         fun open(context: Context): NotificationPrefs {
             val prefs = context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE)

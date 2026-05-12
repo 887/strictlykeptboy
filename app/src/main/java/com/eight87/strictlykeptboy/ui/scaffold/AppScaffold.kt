@@ -38,6 +38,7 @@ import com.eight87.strictlykeptboy.ui.repos.ReposPane
 import com.eight87.strictlykeptboy.ui.repos.ReposViewState
 import com.eight87.strictlykeptboy.ui.schedule.SchedulePane
 import com.eight87.strictlykeptboy.ui.schedule.ScheduleViewState
+import com.eight87.strictlykeptboy.ui.settings.SettingsAccess
 import com.eight87.strictlykeptboy.ui.settings.SettingsPane
 import com.eight87.strictlykeptboy.ui.import_export.ImportExportViewState
 import com.eight87.strictlykeptboy.ui.tasks.TaskQuickAddRequest
@@ -91,6 +92,7 @@ fun AppScaffold(
     importExportState: ImportExportViewState? = null,
     onPickImportFile: (com.eight87.strictlykeptboy.git.RepoConfig) -> Unit = {},
     onPickExportFile: (com.eight87.strictlykeptboy.git.RepoConfig) -> Unit = {},
+    settingsAccess: SettingsAccess = SettingsAccess(),
 ) {
     ProvideWindowSizeClass(modifier = modifier) { widthClass ->
         AppScaffoldContent(
@@ -110,6 +112,7 @@ fun AppScaffold(
             importExportState = importExportState,
             onPickImportFile = onPickImportFile,
             onPickExportFile = onPickExportFile,
+            settingsAccess = settingsAccess,
         )
     }
 }
@@ -132,6 +135,7 @@ private fun AppScaffoldContent(
     importExportState: ImportExportViewState?,
     onPickImportFile: (com.eight87.strictlykeptboy.git.RepoConfig) -> Unit,
     onPickExportFile: (com.eight87.strictlykeptboy.git.RepoConfig) -> Unit,
+    settingsAccess: SettingsAccess = SettingsAccess(),
 ) {
     var selected by rememberSaveable { mutableStateOf(TopDestination.Schedule) }
     val activeRepoName by activeRepoNameFlow.collectAsState()
@@ -200,6 +204,7 @@ private fun AppScaffoldContent(
                 importExportState = importExportState,
                 onPickImportFile = onPickImportFile,
                 onPickExportFile = onPickExportFile,
+                access = settingsAccess,
             )
         }
     }

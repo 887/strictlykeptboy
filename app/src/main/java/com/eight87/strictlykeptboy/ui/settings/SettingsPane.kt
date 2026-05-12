@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -30,11 +31,25 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.git.RepoConfig
+import com.eight87.strictlykeptboy.notif.NotificationPrefs
+import com.eight87.strictlykeptboy.sync.SyncStatusStore
+import com.eight87.strictlykeptboy.theme.AppearancePrefs
 import com.eight87.strictlykeptboy.ui.adaptive.LocalWindowWidthSizeClass
 import com.eight87.strictlykeptboy.ui.adaptive.MasterDetailLayout
 import com.eight87.strictlykeptboy.ui.adaptive.isTwoPane
-import com.eight87.strictlykeptboy.ui.import_export.ImportExportScreen
 import com.eight87.strictlykeptboy.ui.import_export.ImportExportViewState
+import com.eight87.strictlykeptboy.ui.settings.categories.AboutCategory
+import com.eight87.strictlykeptboy.ui.settings.categories.AppearanceCategory
+import com.eight87.strictlykeptboy.ui.settings.categories.CalendarsCategory
+import com.eight87.strictlykeptboy.ui.settings.categories.IdentitiesCategory
+import com.eight87.strictlykeptboy.ui.settings.categories.IdentityCategory
+import com.eight87.strictlykeptboy.ui.settings.categories.LifestyleCategory
+import com.eight87.strictlykeptboy.ui.settings.categories.ModeCategory
+import com.eight87.strictlykeptboy.ui.settings.categories.NotificationsCategory
+import com.eight87.strictlykeptboy.ui.settings.categories.ReposCategory
+import com.eight87.strictlykeptboy.ui.settings.categories.TemplatesCategory
+import com.eight87.strictlykeptboy.ui.settings.categories.TodolistsCategory
+import com.eight87.strictlykeptboy.ui.wizard.NeutralModePrefs
 
 const val TestTagSettingsPane = "SettingsPane"
 const val TestTagSettingsCategoryList = "SettingsCategoryList"
@@ -43,41 +58,65 @@ const val TestTagSettingsContent = "SettingsContent"
 const val TestTagSettingsBack = "SettingsBack"
 
 /**
- * Phase R.4 — settings shell.
+ * Phase R.4 — settings shell. Phase S — categories filled with real
+ * content under [com.eight87.strictlykeptboy.ui.settings.categories].
  *
- * Sealed hierarchy (R.X.2) of categories — each variant knows its own
- * label string + how to render its content. New categories ship by
- * adding a sealed-class case, not by extending a `when (it)` chain.
- *
- * - Compact: list of categories; tapping a category swaps to its
- *   content (single-pane stack semantics).
- * - Medium / Expanded: list on left, content on right
- *   ([MasterDetailLayout]); default selection = Repos so the Import/
- *   Export flow that lived at the Settings root pre-Phase-R is still
- *   the first thing the user sees.
+ * The sealed [SettingsCategory] hierarchy (R.X.2) lists the eleven Phase
+ * S surfaces. Adding a category = adding a sealed-class case, not
+ * extending a `when (it)` chain.
  */
 sealed class SettingsCategory(val labelRes: Int, val testTag: String) {
-    object General : SettingsCategory(R.string.settings_category_general, "General")
-    object Identity : SettingsCategory(R.string.settings_category_identity, "Identity")
-    object Mode : SettingsCategory(R.string.settings_category_mode, "Mode")
-    object Notifications : SettingsCategory(R.string.settings_category_notifications, "Notifications")
     object Repos : SettingsCategory(R.string.settings_category_repos, "Repos")
+    object Identities : SettingsCategory(R.string.settings_category_identity, "Identities")
+    object Sync : SettingsCategory(R.string.settings_category_sync, "Sync")
+    object Notifications : SettingsCategory(R.string.settings_category_notifications, "Notifications")
+    object Calendars : SettingsCategory(R.string.settings_category_calendars, "Calendars")
+    object Todolists : SettingsCategory(R.string.settings_category_todolists, "Todolists")
+    object Templates : SettingsCategory(R.string.settings_category_templates, "Templates")
+    object Lifestyle : SettingsCategory(R.string.settings_category_lifestyle, "Lifestyle")
+    object Identity : SettingsCategory(R.string.settings_identity_title, "Identity")
+    object Appearance : SettingsCategory(R.string.settings_category_appearance, "Appearance")
     object About : SettingsCategory(R.string.settings_category_about, "About")
+    object Mode : SettingsCategory(R.string.settings_category_mode, "Mode")
 
     companion object {
-        // Initialised lazily — listing the objects at top-level here
-        // ran into a JVM class-init ordering glitch under Robolectric
-        // where the sealed `object` singletons read as `null` while the
-        // companion's `val all` field was being constructed. The lazy
-        // delegate defers the resolution until first access, by which
-        // point every `object` has been initialised.
         val all: List<SettingsCategory> by lazy {
-            listOf(General, Identity, Mode, Notifications, Repos, About)
+            listOf(
+                Repos, Identities, Sync, Notifications, Calendars, Todolists,
+                Templates, Lifestyle, Identity, Appearance, About, Mode,
+            )
         }
 
         fun fromTag(tag: String): SettingsCategory? = all.firstOrNull { it.testTag == tag }
     }
 }
+
+/**
+ * R.X.1 / R.X.7 — narrow bag of prefs handed to [SettingsPane].
+ *
+ * Every field is nullable: composables that don't get their handle fall
+ * back to a `placeholder` content surface, which keeps the existing
+ * call sites (and the master-detail test) working without forcing
+ * everyone to construct a full graph.
+ */
+data class SettingsAccess(
+    val syncPrefs: SyncSettingsPrefs? = null,
+    val statusStore: SyncStatusStore? = null,
+    val notificationPrefs: NotificationPrefs? = null,
+    val calendarVisibility: CalendarVisibilityPrefs? = null,
+    val todolistVisibility: CalendarVisibilityPrefs? = null,
+    val templateIds: List<String> = emptyList(),
+    val identityPrefs: IdentityPrefs? = null,
+    val appearancePrefs: AppearancePrefs? = null,
+    val neutralPrefs: NeutralModePrefs? = null,
+    val modePrefs: ModePrefs? = null,
+    val onOpenWizardAtRoles: () -> Unit = {},
+    val onApplyTemplate: (String) -> Unit = {},
+    val onSaveCustomTemplateUrl: (String) -> Unit = {},
+    val onOpenLicenses: () -> Unit = {},
+    val onOpenRepoLink: () -> Unit = {},
+    val onOpenReposList: () -> Unit = {},
+)
 
 @Composable
 fun SettingsPane(
@@ -85,14 +124,10 @@ fun SettingsPane(
     modifier: Modifier = Modifier,
     onPickImportFile: (RepoConfig) -> Unit = {},
     onPickExportFile: (RepoConfig) -> Unit = {},
+    access: SettingsAccess = SettingsAccess(),
 ) {
     val widthClass = LocalWindowWidthSizeClass.current
-    // `rememberSaveable` survives recomposition + config-change so the
-    // category selection persists across rotations. Store by tag string
-    // (Saver-friendly) and resolve back to the sealed-type instance.
-    var selectedTag by rememberSaveable {
-        mutableStateOf(SettingsCategory.Repos.testTag)
-    }
+    var selectedTag by rememberSaveable { mutableStateOf(SettingsCategory.Repos.testTag) }
     val selected = remember(selectedTag) {
         SettingsCategory.fromTag(selectedTag) ?: SettingsCategory.Repos
     }
@@ -114,6 +149,11 @@ fun SettingsPane(
             importExportState = importExportState,
             onPickImportFile = onPickImportFile,
             onPickExportFile = onPickExportFile,
+            access = access,
+            onJumpToIdentity = {
+                selectedTag = SettingsCategory.Identity.testTag
+                compactPushed = true
+            },
         )
     }
 
@@ -147,7 +187,7 @@ fun SettingsPane(
                             )
                         }
                     }
-                    Box(modifier = Modifier.fillMaxSize()) { content() }
+                    Box(modifier = Modifier.weight(1f).fillMaxWidth()) { content() }
                 }
             } else {
                 categoryList()
@@ -178,7 +218,7 @@ private fun SettingsCategoryList(
                 headlineContent = { Text(stringResource(cat.labelRes)) },
                 modifier = Modifier
                     .testTag("$TestTagSettingsCategoryPrefix${cat.testTag}")
-                    .clickableForCategory(onClick = { onSelect(cat) }),
+                    .clickable { onSelect(cat) },
                 colors = if (selectedNow) {
                     ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
                 } else {
@@ -195,20 +235,60 @@ private fun SettingsCategoryContent(
     importExportState: ImportExportViewState?,
     onPickImportFile: (RepoConfig) -> Unit,
     onPickExportFile: (RepoConfig) -> Unit,
+    access: SettingsAccess,
+    onJumpToIdentity: () -> Unit,
 ) {
     Box(modifier = Modifier.fillMaxSize().testTag(TestTagSettingsContent)) {
         when (category) {
-            SettingsCategory.Repos -> if (importExportState != null) {
-                ImportExportScreen(
-                    state = importExportState,
-                    onPickImportFile = onPickImportFile,
-                    onPickExportFile = onPickExportFile,
+            SettingsCategory.Repos -> ReposCategory(
+                importExportState = importExportState,
+                onPickImportFile = onPickImportFile,
+                onPickExportFile = onPickExportFile,
+                onOpenReposList = access.onOpenReposList,
+            )
+            SettingsCategory.Identities -> IdentitiesCategory(onOpenIdentity = onJumpToIdentity)
+            SettingsCategory.Sync -> access.syncPrefs?.let { p ->
+                com.eight87.strictlykeptboy.ui.settings.categories.SyncCategory(
+                    prefs = p,
+                    statusStore = access.statusStore,
                 )
-            } else {
-                CategoryPlaceholder(stringResource(category.labelRes))
+            } ?: CategoryPlaceholder(stringResource(category.labelRes))
+            SettingsCategory.Notifications -> access.notificationPrefs?.let { p ->
+                NotificationsCategory(prefs = p)
+            } ?: CategoryPlaceholder(stringResource(category.labelRes))
+            SettingsCategory.Calendars -> access.calendarVisibility?.let { p ->
+                CalendarsCategory(prefs = p)
+            } ?: CategoryPlaceholder(stringResource(category.labelRes))
+            SettingsCategory.Todolists -> access.todolistVisibility?.let { p ->
+                TodolistsCategory(prefs = p)
+            } ?: CategoryPlaceholder(stringResource(category.labelRes))
+            SettingsCategory.Templates -> TemplatesCategory(
+                templateIds = access.templateIds,
+                onApply = access.onApplyTemplate,
+                onSaveCustomUrl = access.onSaveCustomTemplateUrl,
+            )
+            SettingsCategory.Lifestyle -> LifestyleCategory(
+                onOpenWizardAtRoles = access.onOpenWizardAtRoles,
+            )
+            SettingsCategory.Identity -> access.identityPrefs?.let { p ->
+                IdentityCategory(prefs = p)
+            } ?: CategoryPlaceholder(stringResource(category.labelRes))
+            SettingsCategory.Appearance -> {
+                val ap = access.appearancePrefs
+                val np = access.neutralPrefs
+                if (ap != null && np != null) {
+                    AppearanceCategory(prefs = ap, neutral = np)
+                } else {
+                    CategoryPlaceholder(stringResource(category.labelRes))
+                }
             }
-            SettingsCategory.About -> AboutContent()
-            else -> CategoryPlaceholder(stringResource(category.labelRes))
+            SettingsCategory.About -> AboutCategory(
+                onOpenLicenses = access.onOpenLicenses,
+                onOpenRepo = access.onOpenRepoLink,
+            )
+            SettingsCategory.Mode -> access.modePrefs?.let { p ->
+                ModeCategory(prefs = p)
+            } ?: CategoryPlaceholder(stringResource(category.labelRes))
         }
     }
 }
@@ -228,16 +308,3 @@ private fun CategoryPlaceholder(label: String) {
         )
     }
 }
-
-@Composable
-private fun AboutContent() {
-    Column(modifier = Modifier.fillMaxSize().padding(24.dp)) {
-        Text(
-            stringResource(R.string.settings_about_app_name),
-            style = MaterialTheme.typography.headlineMedium,
-        )
-    }
-}
-
-private fun Modifier.clickableForCategory(onClick: () -> Unit): Modifier =
-    this.clickable(onClick = onClick)

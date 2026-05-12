@@ -15,9 +15,15 @@ import com.eight87.strictlykeptboy.resolver.RepoSnapshot
 import com.eight87.strictlykeptboy.sync.SyncRuntime
 import com.eight87.strictlykeptboy.sync.SyncScheduler
 import com.eight87.strictlykeptboy.sync.SyncStatusStore
+import com.eight87.strictlykeptboy.notif.NotificationPrefs
 import com.eight87.strictlykeptboy.theme.AppearancePrefs
 import com.eight87.strictlykeptboy.ui.repos.ReposViewState
 import com.eight87.strictlykeptboy.ui.schedule.ScheduleViewModePrefs
+import com.eight87.strictlykeptboy.ui.settings.CalendarVisibilityPrefs
+import com.eight87.strictlykeptboy.ui.settings.IdentityPrefs
+import com.eight87.strictlykeptboy.ui.settings.ListKind
+import com.eight87.strictlykeptboy.ui.settings.ModePrefs
+import com.eight87.strictlykeptboy.ui.settings.SyncSettingsPrefs
 import com.eight87.strictlykeptboy.ui.together.BusySource
 import com.eight87.strictlykeptboy.ui.together.CommonTimeFinderPort
 import com.eight87.strictlykeptboy.ui.together.TogetherRepoOption
@@ -78,6 +84,28 @@ class AppGraph(private val appContext: Context) {
 
     /** Phase J — sync status (Idle / Running / Error / Conflicted). */
     val statusStore: SyncStatusStore by lazy { SyncStatusStore.open(appContext) }
+
+    /** Phase S.3 — global sync settings. */
+    val syncSettingsPrefs: SyncSettingsPrefs by lazy { SyncSettingsPrefs.open(appContext) }
+
+    /** Phase S.4 — notification prefs (per-channel + briefings master + per-category lead times). */
+    val notificationPrefs: NotificationPrefs by lazy { NotificationPrefs.open(appContext) }
+
+    /** Phase S.5 — calendar visibility + priority. */
+    val calendarVisibility: CalendarVisibilityPrefs by lazy {
+        CalendarVisibilityPrefs.open(appContext, ListKind.Calendars)
+    }
+
+    /** Phase S.6 — todolist visibility + priority. */
+    val todolistVisibility: CalendarVisibilityPrefs by lazy {
+        CalendarVisibilityPrefs.open(appContext, ListKind.Todolists)
+    }
+
+    /** Phase S.8b — Identity (HV-R.3 / DDD.9). */
+    val identityPrefs: IdentityPrefs by lazy { IdentityPrefs.open(appContext) }
+
+    /** Phase S.11 — Mode (HV-Q.1 / DDD.1 / D.86). */
+    val modePrefs: ModePrefs by lazy { ModePrefs.open(appContext) }
 
     /** Phase J — per-process sync scheduler. */
     val scheduler: SyncScheduler by lazy {

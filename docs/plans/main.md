@@ -307,18 +307,18 @@ Deep-dive: [`ui-spec.md`](ui-spec.md) phase UI-R.
 
 ---
 
-## Phase S — settings polish
+## Phase S — settings polish — shipped in Phase S commit
 
-- [ ] **S.1** Repos section
-- [ ] **S.2** Identities section
-- [ ] **S.3** Sync section (intervals, push strategy, retry, conflict prefs)
-- [ ] **S.4** Notifications section (channels, groups, defaults)
-- [ ] **S.5** Calendars section (master toggles, priority editor, active-windows editor)
-- [ ] **S.6** Todolists section (same shape as Calendars)
-- [ ] **S.7** Templates section (browse + apply + custom template repo URL)
-- [ ] **S.8** Lifestyle section — "Add more to my lifestyle" entry-point per Phase K.12 (LW-L). (Replaces the retired Demo section per D.54.)
-- [ ] **S.9** Appearance section (theme, density, font, dynamic color override)
-- [ ] **S.10** About section (build info, license screen, mascot, repo link)
+- [x] **S.1** Repos section — `ReposCategory` deep-link tile + import/export.
+- [x] **S.2** Identities section — placeholder tile that deep-links to S.8b.
+- [x] **S.3** Sync section (intervals, push strategy, retry, conflict prefs) — `SyncSettingsPrefs` + `SyncCategory`.
+- [x] **S.4** Notifications section (channels, groups, defaults) — master briefings toggle + per-category lead-times + inlined Phase M per-channel surface.
+- [x] **S.5** Calendars section (master toggles, priority editor, active-windows editor) — `CalendarVisibilityPrefs(Calendars)` + `CalendarsCategory`.
+- [x] **S.6** Todolists section (same shape as Calendars) — `CalendarVisibilityPrefs(Todolists)` + `TodolistsCategory`.
+- [x] **S.7** Templates section (browse + apply + custom template repo URL) — `TemplatesCategory` with template-id list + apply / save-url callbacks (clone wiring deferred to Phase WW).
+- [x] **S.8** Lifestyle section — "Add more to my lifestyle" entry-point per Phase K.12 (LW-L). (Replaces the retired Demo section per D.54.) — `LifestyleCategory`.
+- [x] **S.9** Appearance section (theme, density, font, dynamic color override) — `AppearanceCategory` wraps existing `AppearancePrefs` + `NeutralModePrefs`.
+- [x] **S.10** About section (build info, license screen, mascot, repo link) — `AboutCategory` with `BuildConfig.GIT_SHA`+`BUILD_DATE` + 5-tap easter egg + Licenses placeholder + repo link.
 
 ---
 
@@ -888,8 +888,8 @@ Source draft: [`draft-household-travel-vacation.md`](draft-household-travel-vaca
 
 (Inline addendum to Phase S above — sub-steps S.8b + S.11 land at the same nav-level as the existing S.1–S.10.)
 
-- [ ] **S.8b** Identity section — Settings → Identity surface per HV-R.3 / DDD.9. Same fields as K.5a (praise / pronouns / honorific / tone / emoji density), "Reset to wizard defaults" button, live-preview panel rendering now-card + template title + briefing salutation + dom-Claude response with currently-pending values. In `strictly-kept` mode the saving commit goes through the review-feed.
-- [ ] **S.11** Mode section — Settings → Mode surface per HV-Q.1 / DDD.1 / DDD.12: mode pill + transition affordance + 24h cooling-off confirmation flow (D.86); dom-persona picker (DDD.14); dom cadence selector (realtime/end-of-day/weekly).
+- [x] **S.8b** Identity section — Settings → Identity surface per HV-R.3 / DDD.9. Same fields as K.5a (praise / pronouns / honorific / tone / emoji density), "Reset to wizard defaults" button, live-preview panel rendering now-card + template title + briefing salutation with currently-pending values. `IdentityPrefs` + `IdentityCategory`. The `reviews/<sha>` write-back hook lives at the Phase YY review-feed writer.
+- [x] **S.11** Mode section — Settings → Mode surface per HV-Q.1 / DDD.1 / DDD.12: mode pill + transition affordance + 24h cooling-off typed-confirmation flow (D.86, phrase: "yes I want to leave"); dom-persona picker (DDD.14, 6 builtins + custom slot); dom cadence selector (realtime/end-of-day/weekly). `ModePrefs` + `ModeCategory`.
 
 ---
 

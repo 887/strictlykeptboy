@@ -78,6 +78,136 @@
     <string name="settings_categories_title">Settings</string>
     <string name="settings_back_to_categories">Back</string>
 
+    <!-- Phase S — settings polish: extended category labels + content. -->
+    <string name="settings_category_sync">Sync</string>
+    <string name="settings_category_calendars">Calendars</string>
+    <string name="settings_category_todolists">Todolists</string>
+    <string name="settings_category_templates">Templates</string>
+    <string name="settings_category_lifestyle">Lifestyle</string>
+    <string name="settings_category_appearance">Appearance</string>
+
+    <!-- S.1 Repos navigation tile -->
+    <string name="settings_repos_intro">Manage repos, identities and import/export. Tap a repo to open its settings.</string>
+    <string name="settings_repos_open_full">Open repo list</string>
+
+    <!-- S.2 Identities (per-repo, placeholder until signed commits) -->
+    <string name="settings_identities_intro">Per-repo identity comes from identity.toml in each repo.</string>
+    <string name="settings_identities_open_identity">Edit identity</string>
+    <string name="settings_identities_signed_commits_blurb">Signed commits land in Phase GG.</string>
+
+    <!-- S.3 Sync -->
+    <string name="settings_sync_default_interval">Default sync interval</string>
+    <string name="settings_sync_interval_manual">Manual</string>
+    <string name="settings_sync_interval_5m">5 minutes</string>
+    <string name="settings_sync_interval_15m">15 minutes</string>
+    <string name="settings_sync_interval_30m">30 minutes</string>
+    <string name="settings_sync_interval_60m">1 hour</string>
+    <string name="settings_sync_interval_240m">4 hours</string>
+    <string name="settings_sync_wifi_only">Wi-Fi only</string>
+    <string name="settings_sync_push_policy">Push policy</string>
+    <string name="settings_sync_push_immediate">Push every commit</string>
+    <string name="settings_sync_push_lazy">Push periodically</string>
+    <string name="settings_sync_push_manual">Manual push only</string>
+    <string name="settings_sync_conflict_policy">Conflicts</string>
+    <string name="settings_sync_conflict_auto">Auto-rebase</string>
+    <string name="settings_sync_conflict_manual">Manual only</string>
+    <string name="settings_sync_backoff_header">Retry backoff</string>
+    <string name="settings_sync_backoff_idle">No active backoff</string>
+    <string name="settings_sync_backoff_active">%1$d repos with retry pending</string>
+
+    <!-- S.4 Notifications -->
+    <string name="settings_notif_briefings_master">Show daily briefings</string>
+    <string name="settings_notif_briefings_blurb">System cal-briefings calendar (D.81).</string>
+    <string name="settings_notif_lead_section">Default lead times</string>
+    <string name="settings_notif_lead_medical">Medical</string>
+    <string name="settings_notif_lead_flight">Flight</string>
+    <string name="settings_notif_lead_household">Household</string>
+    <string name="settings_notif_lead_general">General</string>
+
+    <!-- S.5 / S.6 Calendars + Todolists -->
+    <string name="settings_lists_visibility_title">Visibility</string>
+    <string name="settings_lists_priority_title">Priority (drag to reorder for overlay precedence)</string>
+    <string name="settings_lists_active_windows">Active windows (date scoping)</string>
+    <string name="settings_lists_empty">No %1$s yet. Add one in the Wizard.</string>
+    <string name="settings_lists_move_up">Move up</string>
+    <string name="settings_lists_move_down">Move down</string>
+    <string name="settings_lists_calendars_word">calendars</string>
+    <string name="settings_lists_todolists_word">todolists</string>
+
+    <!-- S.7 Templates -->
+    <string name="settings_templates_registry">Atomic-template registry</string>
+    <string name="settings_templates_apply">Apply to a calendar</string>
+    <string name="settings_templates_custom_url">Custom template repo URL</string>
+    <string name="settings_templates_custom_url_blurb">Paste a GitHub URL. Clone wiring lands in Phase WW (sticker pack).</string>
+    <string name="settings_templates_paste_hint">https://github.com/your/templates</string>
+    <string name="settings_templates_save">Save URL</string>
+
+    <!-- S.8 Lifestyle -->
+    <string name="settings_lifestyle_title">Lifestyle</string>
+    <string name="settings_lifestyle_blurb">Add more roles, contexts, or rituals to your lifestyle (re-enters the wizard at Roles).</string>
+    <string name="settings_lifestyle_open_wizard">Add more to my lifestyle</string>
+
+    <!-- S.8b Identity -->
+    <string name="settings_identity_title">Identity</string>
+    <string name="settings_identity_praise">Praise term</string>
+    <string name="settings_identity_alt_terms">Alt praise terms (comma separated)</string>
+    <string name="settings_identity_pronouns">Pronouns</string>
+    <string name="settings_identity_pronouns_extra">Extra pronoun sets (comma separated)</string>
+    <string name="settings_identity_honorific">Honorific</string>
+    <string name="settings_identity_tone">Tone register</string>
+    <string name="settings_identity_emoji">Emoji density</string>
+    <string name="settings_identity_tone_soft">Soft</string>
+    <string name="settings_identity_tone_neutral">Neutral</string>
+    <string name="settings_identity_tone_formal">Formal</string>
+    <string name="settings_identity_tone_stern">Stern</string>
+    <string name="settings_identity_tone_playful">Playful</string>
+    <string name="settings_identity_emoji_none">None</string>
+    <string name="settings_identity_emoji_sparse">Sparse</string>
+    <string name="settings_identity_emoji_standard">Standard</string>
+    <string name="settings_identity_emoji_lush">Lush</string>
+    <string name="settings_identity_reset">Reset to wizard defaults</string>
+    <string name="settings_identity_preview_title">Live preview</string>
+    <string name="settings_identity_preview_card">Now: review the day, %1$s.</string>
+    <string name="settings_identity_preview_template">Template title — for my %1$s</string>
+    <string name="settings_identity_preview_briefing">Morning %1$s%2$s — here is what is on the schedule today.</string>
+
+    <!-- S.9 Appearance -->
+    <string name="settings_appearance_theme">Theme</string>
+    <string name="settings_appearance_theme_auto">Auto (follow system)</string>
+    <string name="settings_appearance_theme_light">Light</string>
+    <string name="settings_appearance_theme_dark">Dark</string>
+    <string name="settings_appearance_dynamic">Dynamic color (Android 12+)</string>
+    <string name="settings_appearance_density">Density</string>
+    <string name="settings_appearance_density_compact">Compact</string>
+    <string name="settings_appearance_density_comfortable">Comfortable</string>
+    <string name="settings_appearance_density_spacious">Spacious</string>
+    <string name="settings_appearance_font_scale">Font scale: %1$s</string>
+    <string name="settings_appearance_neutral_mode">Neutral mode</string>
+    <string name="settings_appearance_neutral_mode_blurb">Hide kink role+templates (K-3 / KI).</string>
+
+    <!-- S.10 About -->
+    <string name="settings_about_build_sha">Build commit: %1$s</string>
+    <string name="settings_about_build_date">Built: %1$s</string>
+    <string name="settings_about_licenses">Licenses (Phase W)</string>
+    <string name="settings_about_repo_link">Source on GitHub</string>
+    <string name="settings_about_version_tap">strictlykeptboy v%1$s</string>
+
+    <!-- S.11 Mode -->
+    <string name="settings_mode_pill_free">Mode: free</string>
+    <string name="settings_mode_pill_strictly_kept">Mode: strictly-kept</string>
+    <string name="settings_mode_switch_to_free">Switch to free</string>
+    <string name="settings_mode_switch_to_strictly_kept">Switch to strictly-kept</string>
+    <string name="settings_mode_persona_section">Dom persona</string>
+    <string name="settings_mode_cadence_section">Dom cadence</string>
+    <string name="settings_mode_cadence_realtime">Realtime</string>
+    <string name="settings_mode_cadence_eod">End of day</string>
+    <string name="settings_mode_cadence_weekly">Weekly</string>
+    <string name="settings_mode_confirm_title">Leaving strictly-kept</string>
+    <string name="settings_mode_confirm_body">24h cooling-off confirmation. Type the phrase below to confirm. The dom cannot block this.</string>
+    <string name="settings_mode_confirm_hint">Type: yes I want to leave</string>
+    <string name="settings_mode_confirm_action">Confirm switch to free</string>
+    <string name="settings_mode_confirm_cancel">Cancel</string>
+
     <!-- Repos pane -->
     <string name="repos_title">Repositories</string>
     <string name="repos_unified_toggle_title">Show all repos in unified view</string>

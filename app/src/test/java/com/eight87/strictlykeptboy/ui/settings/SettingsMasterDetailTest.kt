@@ -1,6 +1,10 @@
 package com.eight87.strictlykeptboy.ui.settings
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -26,7 +30,9 @@ class SettingsMasterDetailTest {
         composeRule.setContent {
             StrictlyKeptBoyTheme {
                 CompositionLocalProvider(LocalWindowWidthSizeClass provides widthClass) {
-                    SettingsPane(importExportState = null)
+                    Box(Modifier.size(width = 800.dp, height = 1600.dp)) {
+                        SettingsPane(importExportState = null)
+                    }
                 }
             }
         }
@@ -37,8 +43,8 @@ class SettingsMasterDetailTest {
         composeRule.onNodeWithTag(TestTagSettingsPane).assertExists()
         composeRule.onNodeWithTag(TestTagSettingsCategoryList).assertExists()
         composeRule.onNodeWithTag(TestTagMasterDetailRow).assertDoesNotExist()
-        // Tap the General category — content swaps in (single-pane push).
-        composeRule.onNodeWithTag("${TestTagSettingsCategoryPrefix}General").performClick()
+        // Tap the Repos category — content swaps in (single-pane push).
+        composeRule.onNodeWithTag("${TestTagSettingsCategoryPrefix}Repos").performClick()
         composeRule.onNodeWithTag(TestTagSettingsContent).assertExists()
         composeRule.onNodeWithTag(TestTagSettingsBack).assertExists()
     }

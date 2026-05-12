@@ -211,6 +211,29 @@ class MainActivity : ComponentActivity() {
                             }
                         },
                         neutralMode = graph.neutralModePrefs.isEnabled(),
+                        settingsAccess = com.eight87.strictlykeptboy.ui.settings.SettingsAccess(
+                            syncPrefs = graph.syncSettingsPrefs,
+                            statusStore = graph.statusStore,
+                            notificationPrefs = graph.notificationPrefs,
+                            calendarVisibility = graph.calendarVisibility,
+                            todolistVisibility = graph.todolistVisibility,
+                            identityPrefs = graph.identityPrefs,
+                            appearancePrefs = graph.appearancePrefs,
+                            neutralPrefs = graph.neutralModePrefs,
+                            modePrefs = graph.modePrefs,
+                            templateIds = listOf(
+                                "atomic-medical",
+                                "atomic-flight",
+                                "atomic-household",
+                                "atomic-leisure",
+                            ),
+                            onOpenRepoLink = {
+                                val url = "https://github.com/887/strictlykeptboy"
+                                runCatching {
+                                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                                }
+                            },
+                        ),
                         onWizardScaffold = { draft ->
                             runCatching {
                                 val outcome = WizardScaffolder.materialize(
