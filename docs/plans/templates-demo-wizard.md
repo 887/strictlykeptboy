@@ -1,6 +1,33 @@
 # strictlykeptboy — templates, demo content, wizard
 
-## Status: 🚧 IN-PLANNING
+## Status: 🚧 PARTIALLY SUPERSEDED — see [`draft-lifestyle-wizard.md`](draft-lifestyle-wizard.md) (now Phase K) and [`draft-kink-positive-identity.md`](draft-kink-positive-identity.md) (D.55–D.62)
+
+**Round 4 integration notes (see `decisions.md` Round 4):**
+
+- **TW-C / TW-D / TW-G / TW-H are RETIRED** — superseded by Phase K
+  (lifestyle wizard) in `main.md` and the LW-A..LW-M phases in
+  `draft-lifestyle-wizard.md`. Demo mode is gone; the wizard's
+  output IS the user's canonical starting state per D.54.
+- **TW-A / TW-B / TW-E survive** as content/rationale references.
+  `template_origin` + `template_slot` frontmatter conventions
+  carry forward (Phase K LW-L re-run-from-Settings depends on
+  them). TW-B template content is reorganized in Phase XX (atomic
+  activities) as the new authoritative template set indexed by
+  role.
+- **TW-F retires** (replaced by integration notes inside
+  `draft-lifestyle-wizard.md`).
+- **SP-1..SP-9 surface-phrasing register is RETRACTED/REPLACED in
+  Round 4.** SP-3, SP-4, SP-8, SP-9 fully retracted/replaced with
+  direct kink phrasing per D.55 / K-1. SP-1, SP-2, SP-5 kept with
+  revised justification (no longer SFW-deniability framing — they
+  remain because they're good defaults for the audience). SP-6,
+  SP-7 untouched (architectural). The surface-phrasing register is
+  now kink-positive direct; the neutral-mode toggle (D.58 / K-3)
+  preserves a peer-equal SFW path.
+- **VV.12 SFW phrasing guarantee** (formerly cross-referenced from
+  SP-9) is replaced by verbatim user-content rendering + the per-
+  event `private = true` flag per D.57 / K-2. See `main.md` VV.12
+  and VV.13.
 
 This document specifies (1) every starter **template** the app emits
 into a user repo, (2) the two **demo repos** (`demo-sub` + `demo-dom`)
@@ -38,22 +65,46 @@ It assumes:
   display-named **"Sir"**. The repo identity ID is `sir`. Rationale:
   one-syllable, neutral-readable as a respectful address, common in
   e.g. mil-adjacent / formal contexts; recruiter-safe; charged in the
-  context but plausibly deniable.
+  context but plausibly deniable. *(**Replaced KI-A.1 / D.55** — same
+  default, different justification: it's the default because it fits
+  the lifestyle, not because it's plausibly deniable. Users pick any
+  name — "Master", "Owner", "Daddy", "Mistress", "Goddess", "Coach",
+  or a regular name — with no euphemism nudging from the UI.)*
 - **Decision SP-2:** Sub identity in demo is **"Bat"** (mascot).
   Identity ID `bat`. Rationale: mascot fit; reads as a nickname.
-- **Decision SP-3:** Recurring couple-events are titled
+  *(**Kept KI-A.2** — mascot tie-in stands; no SFW justification
+  needed. Users pick any sub name — "boy", "pet", "kitten", "pup",
+  "slave", "toy" — directly from the wizard with no euphemism.)*
+- ~~**Decision SP-3:** Recurring couple-events are titled
   **"Check-in"**, **"Weekly review"**, **"Date night"**, **"Monthly
   call"**. No "Master", "Owner", "Boy", "Sub" in titles or calendar
   names. The `master-scheduled` calendar is displayed as **"Co-schedule
   (with Sir)"** in the sub's repo and **"Co-schedule (with Bat)"** in
-  the Dom's repo.
-- **Decision SP-4:** `kinky-chores` titles use grooming/health/posture
+  the Dom's repo.~~ *(**RETRACTED KI-A.3 / D.55** — wizard now offers
+  direct kink-coded titles as defaults when the user picks a D/s-coded
+  alignment: "Inspection", "Cage check", "Protocol review", "Collar
+  maintenance", "Service report", etc., alongside the neutral
+  variants. Calendar can be named "Sir's schedule for boy", "Master's
+  protocols", or anything the user picks. No locked SFW-readable
+  title list. Neutral-mode toggle re-suggests the neutral variants
+  as defaults; user-authored titles already in the repo are never
+  rewritten.)*
+- ~~**Decision SP-4:** `kinky-chores` titles use grooming/health/posture
   language only. Bodies may say "report compliance via the daily
-  check-in", "Sir prefers …", etc.
+  check-in", "Sir prefers …", etc.~~ *(**RETRACTED KI-A.4 / D.55** —
+  titles can be candid too. "Edge denial log", "Cage check Mon/Wed/
+  Fri", "Posture drill 18:00", "Service kneel before bed", "Protocol
+  violation tracker" — all valid title-surface content. Body remains
+  free-form Markdown as always.)*
 - **Decision SP-5:** When a single sub-side template applies and no
   Dom is configured, `sub-scheduled` references "your partner" in
   prose (no Dom-identity ID needed); when Dom is also configured,
   references resolve to the configured identity display name.
+  *(**Replaced KI-A.5 / D.55** — defaults to "your Dom" by default
+  (most common case for the template); user can change to "your
+  partner", "your Owner", "your Master", "your Mistress", "your
+  Daddy", etc. in the template-apply screen. Neutral-mode users get
+  "your partner" as the default.)*
 
 **Tradeoffs resolved inline:**
 
@@ -366,7 +417,8 @@ should re-anchor `dtstart` to the start of their next cycle.
 | `rec.work-shift.late`  | Late shift  | `FREQ=DAILY;INTERVAL=8;COUNT=200` (start day 16–19 of cycle equivalent) | `2026-05-20T14:00` | 8h |
 | `rec.work-shift.night` | Night shift | `FREQ=DAILY;INTERVAL=8;COUNT=200` | `2026-06-05T22:00` | 8h |
 
-**Decision SP-6:** because RFC5545 doesn't natively express "4-on /
+**Decision SP-6:** *(**Kept KI-A.6** — architectural, carries forward
+unchanged.)* because RFC5545 doesn't natively express "4-on /
 4-off across 3 rotating shifts", the composer ships three concurrent
 DAILY-INTERVAL=8 rules (one per shift, offset). Body of each rule
 explains the offset and tells the user "edit `dtstart` to match your
@@ -677,7 +729,7 @@ but typically toggled together.
 (the Dom's), it creates the calendar there. When it applies in the
 *user's* repo (the sub's), it creates a *companion read-only-overlay*
 calendar that points at the partner's repo for source data. **Decision
-SP-7:** in v1, both sides simply create the calendar as a regular
+SP-7** *(**Kept KI-A.7** — architectural, carries forward unchanged.)***:** in v1, both sides simply create the calendar as a regular
 calendar in the *applying* repo. Cross-repo overlay (sub seeing Sir's
 calendar in their own repo) is achieved through D.9's all-repos
 overlay view, not by writing the overlay calendar twice.
@@ -940,7 +992,19 @@ next check-in. Honest > tidy.
 
 ---
 
-## Phase TW-C — demo content (paired repos)
+## ~~Phase TW-C — demo content (paired repos)~~ — RETIRED
+
+~~Phase TW-C — demo content (paired repos)~~
+
+**RETIRED** — superseded by Phase K (lifestyle wizard) per D.54;
+demo mode + `demo-sub` / `demo-dom` repo seeds retire. The wizard
+materializes a living calendar on first launch instead. Content
+below preserved for historical/rationale reference only. See
+[`draft-lifestyle-wizard.md`](draft-lifestyle-wizard.md).
+
+<!-- retired by LW; see draft-lifestyle-wizard.md -->
+
+### Original section continues below for reference
 
 The demo path spins up **two coupled local-only Git repos** so the user
 can explore the multi-repo + read-only-overlay feature without setting
@@ -987,9 +1051,24 @@ event ships with `pin_to_widget = true` so the demo's first-run "Add
 widget?" prompt has a ready target. Title is SFW-readable; the
 countdown widget reads "42 days until Sir's visit" without further
 copy. Same SFW guarantee as VV.12.
+*(**Replaced KI-A.9 / D.55, D.57** — seed kept; the SFW guarantee on
+widget copy is RETRACTED (see KI-B / `main.md` VV.12 replacement).
+The widget renders whatever the user authored verbatim. Lockscreen-
+discreet behavior comes from the per-event `private = true` flag
+(D.57 / VV.13), not from content-register filtering. In kink-default
+wizard mode, the seed may instead be "Sir's inspection visit",
+"Collar ceremony", etc.)* This entire SP-9 anchor is moot under Phase
+K wizard / D.54 anyway — demo mode retires and the wizard
+materializes the user's actual lifestyle on first launch, not seed
+events.
 
 ¹ The sub's repo also has `master-scheduled` partially applied —
-**Decision SP-8:** when the demo composer runs `sub-scheduled` in a
+**Decision SP-8:** *(**Replaced KI-A.8 / D.55** — calendar name +
+seeded titles now kink-coded by default ("Sir's schedule for Bat",
+"Inspection", "Cage check", "Service report"). The neutral-mode
+demo path uses the older "Co-schedule" / "Check-in" wording. This
+entire SP-8 anchor is moot under D.54 — demo mode retires; see
+Phase K wizard.)* when the demo composer runs `sub-scheduled` in a
 repo that has *no* `master-scheduled`, it also lays down a *thin*
 `Co-schedule (with Sir)` calendar with just the four named one-offs
 above + the recurring "Date night" + "Weekly review" + "Monthly call"
@@ -1285,7 +1364,22 @@ reservations: pencil in two for the weekend, leave weeknights open.
 
 ---
 
-## Phase TW-D — wizard flow
+## ~~Phase TW-D — wizard flow~~ — RETIRED
+
+**RETIRED** — superseded by Phase K (lifestyle wizard, LW-A..LW-M
+in [`draft-lifestyle-wizard.md`](draft-lifestyle-wizard.md)) per
+D.54. The new wizard is kink-positive openly per D.55 / K-1; no
+SP-1..SP-9 SFW euphemism layer in the wizard itself (those
+concerns apply only to lockscreen/widget/Play-Store surfaces, with
+the per-event `private = true` flag per D.57 driving lockscreen
+discretion). Content below preserved for historical/rationale
+reference only.
+
+<!-- retired by LW; see draft-lifestyle-wizard.md -->
+
+### Original section continues below for reference
+
+## Phase TW-D (retired) — wizard flow
 
 Phase prefix: TW-D. Each screen below maps to a Compose `Screen`
 composable under
@@ -1563,7 +1657,17 @@ Same screen as W3, but:
 
 ---
 
-## Phase TW-G — demo specifics (referenced by main Phase L)
+## ~~Phase TW-G — demo specifics (referenced by main Phase L)~~ — RETIRED
+
+**RETIRED** — Phase L (demo content) is retired per D.54; demo
+mode is gone. The wizard's scaffold output IS the user's first-run
+data. Content below preserved for reference only.
+
+<!-- retired by LW; see draft-lifestyle-wizard.md -->
+
+### Original section continues below for reference
+
+## Phase TW-G (retired) — demo specifics
 
 - [ ] **TW-G.1** Demo bootstrap is a one-shot operation gated by an
       app-prefs flag `demo_initialized`. Re-running the demo path in
@@ -1590,7 +1694,17 @@ Same screen as W3, but:
 
 ---
 
-## Phase TW-H — open verification
+## ~~Phase TW-H — open verification~~ — RETIRED
+
+**RETIRED** per D.54 (demo verification scope moot — Phase K
+wizard testing strategy LW-M.1..LW-M.9 replaces it). Content
+preserved for reference.
+
+<!-- retired by LW; see draft-lifestyle-wizard.md -->
+
+### Original section continues below for reference
+
+## Phase TW-H (retired) — open verification
 
 - [ ] **TW-H.1** Read-back: confirm all 14 templates have content
       sections, an example file, and slot tables. (Verified at write
@@ -1630,3 +1744,65 @@ Same screen as W3, but:
 | T-3 | `applied-templates.toml` lives in repo (with app-prefs cache mirror) | Survives reinstall + multi-device |
 | T-4 | Demo repos are real local Git repos with `mode = "demo"` flag | UI realism without push side-effects |
 | T-5 | Idempotency keyed on recorded UUID, not display name | Survives user-renames |
+
+**Round 4 retraction-status (see top of this file):**
+
+| ID | Status | Reference |
+|---|---|---|
+| SP-1 | Replaced (same default, different rationale) | KI-A.1 / D.55 |
+| SP-2 | Kept | KI-A.2 / D.55 |
+| SP-3 | RETRACTED | KI-A.3 / D.55 |
+| SP-4 | RETRACTED | KI-A.4 / D.55 |
+| SP-5 | Replaced (default = "your Dom" w/ override) | KI-A.5 / D.55 |
+| SP-6 | Kept (architectural) | KI-A.6 |
+| SP-7 | Kept (architectural) | KI-A.7 |
+| SP-8 | Replaced (kink-coded defaults) — moot under D.54 | KI-A.8 / D.55 / D.54 |
+| SP-9 | Replaced (SFW guarantee retracted) — moot under D.54 | KI-A.9 / KI-B / D.57 / D.54 |
+
+---
+
+## Phase TW-I — atomic activity templates (Round 4 addition)
+
+See [`draft-atomic-activities.md`](draft-atomic-activities.md)
+phases AT-D / AT-E / AT-F for the authoritative content. Three new
+template files ship at scaffold time per Phase K (lifestyle
+wizard) and Phase XX (atomic activities, inverted habits):
+
+- `templates/atomic-self-care.toml` — `neutral_safe = true`. Brush-
+  teeth (with 7 sub-beats totalling 200s in the 5-min envelope),
+  shower, shave-face, shave-pubes (`tags = ["intimate-care"]`
+  neutral hygiene, NOT `kink`), hair, skincare, deodorant, nail-
+  care, ear-clean. See AT-D.
+- `templates/atomic-kink-self-care.toml` — `neutral_safe = false`,
+  every entry `tags = ["kink"]`. Cage-check (3×/day default),
+  plug-check (2×/day default), posture-check (hourly-waking),
+  collar-check, edge-and-stop, kegels (with 3 sub-beats), pubes-
+  grooming, body-grooming. See AT-E.
+- `templates/atomic-workout.toml` — `neutral_safe = true`. Pushups,
+  situps, squats, pull-ups, planks (hold-seconds instead of reps),
+  burpees. Sub-beat = one per set; phone buzzes between sets. See
+  AT-F.
+
+**Wizard composition rule (Phase K LW-G):** the smart-default
+toggle matrix per `(alignment, lifestyle)` pre-toggles the
+relevant atomic-activity entries per role. Neutral-mode (D.58 /
+K-3) hides every `neutral_safe = false` template and skips
+entries tagged `kink` from any template that would otherwise
+apply.
+
+**Default-routine scaffolding (AT-G.2):** when the relevant role
+toggle is on, scaffold `routine-morning`, `routine-bed`,
+`routine-workout` calendars with `routine = true`,
+`active_toggle = false`, pre-populated with atomic events from
+the selected templates. Materialize-on-demand via Phase XX.8
+("Start X routine" quick-start) keeps these from double-rendering.
+
+**Sub-beat sticker IDs:** the brush-teeth 6-quadrant sub-beat
+sequence + the workout-pushup down/up animated pair must exist in
+every default avatar pack per Phase WW.1 (AV-G.4) build-time
+validator.
+
+**Wizard "Pick your species" step + per-event sticker override
+demo:** the new species-pick step lands inside Phase K Screen 2
+(LW-C, was originally proposed in AV integration notes). Bat
+preselected by default per D.64.

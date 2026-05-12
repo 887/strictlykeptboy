@@ -56,12 +56,12 @@ _Shipped in commit (next push). Scaffolded via `android create` empty-activity t
 Deep-dive: [`sync-engine.md`](sync-engine.md) phases SE-A through SE-F.
 
 - [ ] **B.1** Vendor JGit 6.x + apache-sshd-osgi; verify clean import on Android (JGit has a few JVM-only fallbacks; document workarounds in `sync-engine.md`)
-- [ ] **B.2** Implement `GitRepo` abstraction: open / init / clone / fetch / pull (rebase) / push / commit / status / diff-since
-- [ ] **B.3** Implement `RepoStore` — list of configured repos in `EncryptedSharedPreferences`
-- [ ] **B.4** SSH keypair generation + EncryptedSharedPreferences storage; export public key to clipboard / share-sheet
-- [ ] **B.5** OAuth Device Flow for GitHub (token in EncryptedSharedPreferences, refresh on 401)
-- [ ] **B.6** OAuth Device Flow for Forgejo (same shape, different endpoints)
-- [ ] **B.7** Manual PAT entry path
+- [ ] **B.2** Implement `GitRepo` abstraction: open / init / clone / fetch / pull (rebase) / push / commit / status / diff-since. Includes `GitRepo.initLocalOnly(rootDir, authorIdentity)` for no-origin repos (per Phase ZZ.A / D.74). Fetch / pullRebase / push accept a `remote: RemoteName? = primaryRemote` parameter; no-remotes case returns `NoRemotes` result variants without throwing.
+- [ ] **B.3** Implement `RepoStore` — list of configured repos in `EncryptedSharedPreferences`. `RepoConfig` carries `remotes: List<RemoteBinding>` (may be empty) and `primaryRemote: RemoteName?` per Phase ZZ.A.
+- [ ] **B.4** SSH keypair generation + EncryptedSharedPreferences storage; export public key to clipboard / share-sheet. Per Phase ZZ.C, keys are keyed by `(repoId, remoteName)` — adding a second SSH remote generates a fresh keypair by default with opt-in reuse.
+- [ ] **B.5** OAuth Device Flow for GitHub (token in EncryptedSharedPreferences, refresh on 401). Per-remote token binding per Phase ZZ.C.
+- [ ] **B.6** OAuth Device Flow for Forgejo (same shape, different endpoints). Per-remote token binding per Phase ZZ.C.
+- [ ] **B.7** Manual PAT entry path. Per-remote per Phase ZZ.C.
 - [ ] **B.8** Network state monitor (`ConnectivityManager` callbacks) feeding the sync queue
 - [ ] **B.9** Unit tests with Robolectric against a temp `git init --bare` filesystem repo (sidesteps network)
 
@@ -150,9 +150,9 @@ Deep-dive: [`ui-spec.md`](ui-spec.md) phases UI-H through UI-J.
 
 Deep-dive: [`ui-spec.md`](ui-spec.md) phases UI-K through UI-L.
 
-- [ ] **I.1** Repo switcher (top-bar) — filterable list with circular icons + display names + sync status badges
-- [ ] **I.2** Add-repo flow — provider (GitHub/Forgejo), URL, auth method, identity, default calendar
-- [ ] **I.3** Repo settings — display name, icon, auto-sync toggle + interval, default identity, default calendar, default todolist, color seed
+- [ ] **I.1** Repo switcher (top-bar) — filterable list with circular icons + display names + sync status badges. No-origin repos render a small house "local" badge instead of sync/error per Phase ZZ.G.
+- [ ] **I.2** Add-repo flow — top-level branch selector "Create local-only" vs "Connect to a remote" per Phase ZZ.G. Local-only path skips provider/URL/auth and goes straight to identity + default-calendar selection. Remote path: provider (GitHub/Forgejo), URL, auth method, identity, default calendar; supports adding additional remotes via "+ add another remote".
+- [ ] **I.3** Repo settings — display name, icon, auto-sync toggle + interval, default identity, default calendar, default todolist, color seed. Includes a **Remotes** section per Phase ZZ.G: when `remotes.isEmpty()` shows "No remotes — this repo lives only on this device" + "Add a remote" CTA; when non-empty lists per-remote rows (URL, transport, auth method, push policy, last-sync, error) with Edit/Remove/+Add affordances.
 - [ ] **I.4** Identity management within repo (`identities/` editor)
 - [ ] **I.5** Remove repo (with "are you sure" + local-clone retention option)
 - [ ] **I.6** All-repos unified-view master toggle
@@ -163,38 +163,48 @@ Deep-dive: [`ui-spec.md`](ui-spec.md) phases UI-K through UI-L.
 
 Deep-dive: [`sync-engine.md`](sync-engine.md) phases SE-G through SE-L.
 
-- [ ] **J.1** Foreground service `SyncService` with `FOREGROUND_SERVICE_TYPE_DATA_SYNC`
-- [ ] **J.2** Sync scheduler — per-repo interval + on-app-foreground + on-connectivity-restored
-- [ ] **J.3** Manual sync button → triggers sync-all-flagged
-- [ ] **J.4** Sync status persisted per-repo: `last_synced_at`, `commits_ahead`, `commits_behind`, `last_error`
-- [ ] **J.5** Conflict detection + 3-way diff UI for conflicted files
-- [ ] **J.6** Conflict resolution UI: structured-field editor for TOML frontmatter, text editor for body, keep-mine / keep-theirs / merge buttons
-- [ ] **J.7** Read-only repo handling — push refused → queue, show banner
+- [ ] **J.1** Foreground service `SyncService` with `FOREGROUND_SERVICE_TYPE_DATA_SYNC`. Per Phase ZZ.H, no foreground work is scheduled for repos where `remotes.isEmpty()`.
+- [ ] **J.2** Sync scheduler — per-repo interval + on-app-foreground + on-connectivity-restored. Per Phase ZZ.D, scheduler iterates every fetch-enabled remote per repo and collects per-remote results.
+- [ ] **J.3** Manual sync button → triggers sync-all-flagged. Hidden in simplified mode when active repo is no-origin per Phase ZZ.G.
+- [ ] **J.4** Sync status persisted per-repo: `last_synced_at`, `commits_ahead`, `commits_behind`, `last_error`. Per-remote status surfaced separately for multi-origin repos per Phase ZZ.D/E.
+- [ ] **J.5** Conflict detection + 3-way diff UI for conflicted files. Conflict labels now carry the primary remote's display label per Phase ZZ.F; diamond-merge mini-flow (adopt-mirror-as-authoritative) reuses the same UI with the mirror's label.
+- [ ] **J.6** Conflict resolution UI: structured-field editor for TOML frontmatter, text editor for body, keep-mine / keep-theirs / merge buttons. Non-primary divergence surfaces as a per-remote yellow banner (`MirrorDivergence`), NOT in this conflict UI, per Phase ZZ.D.
+- [ ] **J.7** Read-only repo handling — push refused → queue, show banner. Per-remote `readOnlyDetected` per Phase ZZ.E; repo-level red banner only when every remote is read-only OR the repo is no-origin with no add-remote CTA offered.
 - [ ] **J.8** Sync result toasts + last-sync time in top bar
 
 ---
 
-## Phase K — wizard + templates
+## Phase K — design-a-lifestyle wizard (REPLACED — was wizard+templates)
 
-Deep-dive: [`templates-demo-wizard.md`](templates-demo-wizard.md) phases TW-A through TW-F.
+Deep-dive: [`draft-lifestyle-wizard.md`](draft-lifestyle-wizard.md) phases LW-A through LW-M. (Replaces the previous K.1..K.6 wizard+templates phase wholesale per D.54. The wizard's output IS the user's canonical starting state; no demo mode. The bat-mascot guides every wizard screen and is distinct from the user's chosen avatar species per D.56. Kink-positive openly per D.55; `unaligned-private` alignment is the in-wizard kink-off path. Phone-only is a first-class wizard outcome via `GitRepo.initLocalOnly` per ZZ.A.)
 
-- [ ] **K.1** First-run wizard screens (welcome, path picker, role toggles, repo picker, auth, scaffold, finish)
-- [ ] **K.2** Template registry + composer (role toggle ↔ template set composition)
-- [ ] **K.3** Repo scaffolder: generate calendars, todolists, identities, AGENTS.md, CLAUDE.md, README.md, .strictlykeptboy/
-- [ ] **K.4** Initial commit + push
-- [ ] **K.5** Re-apply template later (Settings → Templates → apply)
-- [ ] **K.6** Custom template repo source (configurable URL)
+- [ ] **K.1** Wizard architecture + state model (LW-A): NavHost rooted at `WizardNavHost`, immutable `WizardDraft`, commit-on-finish, mid-wizard exit safety, bat-mascot `WizardScaffold` host
+- [ ] **K.2** Screen 1 Welcome (LW-B): bat-mascot wave, single "let's go" CTA
+- [ ] **K.3** Screen 2 Species selection (LW-C): 8-tile grid (7 default species + "choose your own"); bat default if skipped
+- [ ] **K.4** Screen 3 Alignment (LW-D): Dominant / Submissive / Switch / Unaligned-private; unaligned-private propagates kink-off downstream
+- [ ] **K.5** Screen 4 Lifestyle (LW-E): Single/Partnered × free/strictly-kept/strictly-keeping/strictly-shared, computed from alignment
+- [ ] **K.6** Screen 5 Roles (LW-F): 17-role multi-select grid; `self-care` always-on; `kink` auto-on for kinky alignments and hidden under unaligned-private
+- [ ] **K.7** Screen 6 Templates per role (LW-G): collapsible sections of atomic-activity templates (from XX) with smart-default toggle matrix per (alignment, lifestyle)
+- [ ] **K.8** Screen 7 Git setup (LW-H): three cards — Phone-only (default-highlighted) / Self-hosted Forgejo-Gitea / GitHub
+- [ ] **K.9** Screen 8 Calendar scaffolding (LW-I): materialize repo, calendars, recurrences, todolist, identity, README+AGENTS+CLAUDE; single initial commit; push if remote configured
+- [ ] **K.10** Screen 9 Done handoff (LW-J): live home-screen preview now-card; bat-mascot waves chosen species peek; "open my calendar" CTA
+- [ ] **K.11** Bat-mascot sticker set spec (LW-K): 13-key sticker set; contact sheet for artist at `docs/assets/wizard-bat-stickers.png`
+- [ ] **K.12** Re-run from Settings (LW-L): "Add more to my lifestyle" entry; additive semantics — toggling a role OFF hides rather than deletes
+- [ ] **K.13** Testing strategy (LW-M): Robolectric path-coverage matrix per (alignment × lifestyle), mid-wizard exit+resume, deep-link bypass, auth-failure recoverability
+- [ ] **K.14** Age gate + neutral-mode toggle (K-6 / K-3 per KI): one-time first-launch age gate (Mature-17+), encrypted-prefs `age_confirmed_at`; Settings → Appearance → Neutral mode toggle. Composes with wizard `unaligned-private` alignment.
 
 ---
 
-## Phase L — demo content
+## ~~Phase L — demo content~~ (RETIRED)
 
-Deep-dive: [`templates-demo-wizard.md`](templates-demo-wizard.md) phases TW-G through TW-H.
+~~Deep-dive: [`templates-demo-wizard.md`](templates-demo-wizard.md) phases TW-G through TW-H.~~
 
-- [ ] **L.1** `demo-sub` repo seed — full SFW-kinky-coded sub schedule + tasks
-- [ ] **L.2** `demo-dom` repo seed — Dom's calendar with check-in events that overlay
-- [ ] **L.3** Demo mode flag: spins up local clones (no remote push) with both repos preloaded
-- [ ] **L.4** "Exit demo mode" path: option to keep demo data as a real local repo or discard
+**RETIRED** — superseded by Phase K (lifestyle wizard); demo content concept retired in favor of materialized starting state per D.54. See [`draft-lifestyle-wizard.md`](draft-lifestyle-wizard.md). The wizard's scaffold output IS the user's canonical first-run data, not seed/sample/demo data. `demo-sub` / `demo-dom` repo seeds are not shipped.
+
+- [ ] ~~**L.1** `demo-sub` repo seed — full SFW-kinky-coded sub schedule + tasks~~
+- [ ] ~~**L.2** `demo-dom` repo seed — Dom's calendar with check-in events that overlay~~
+- [ ] ~~**L.3** Demo mode flag: spins up local clones (no remote push) with both repos preloaded~~
+- [ ] ~~**L.4** "Exit demo mode" path: option to keep demo data as a real local repo or discard~~
 
 ---
 
@@ -276,7 +286,7 @@ Deep-dive: [`ui-spec.md`](ui-spec.md) phase UI-O.
 - [ ] **S.5** Calendars section (master toggles, priority editor, active-windows editor)
 - [ ] **S.6** Todolists section (same shape as Calendars)
 - [ ] **S.7** Templates section (browse + apply + custom template repo URL)
-- [ ] **S.8** Demo section (toggle demo data)
+- [ ] **S.8** Lifestyle section — "Add more to my lifestyle" entry-point per Phase K.12 (LW-L). (Replaces the retired Demo section per D.54.)
 - [ ] **S.9** Appearance section (theme, density, font, dynamic color override)
 - [ ] **S.10** About section (build info, license screen, mascot, repo link)
 
@@ -285,7 +295,7 @@ Deep-dive: [`ui-spec.md`](ui-spec.md) phase UI-O.
 ## Phase T — theming + personalization
 
 - [x] **T.1** Launcher icon + mascot art shipped — bat-with-calendar adaptive launcher (`mipmap-*/ic_launcher.webp` + `drawable-*/ic_launcher_foreground.webp`, dark background `#0A0806`); secret about-page mascot scene at `drawable-nodpi/about_bat.webp`. Shipped in change `7afb686+`.
-- [ ] **T.2** Repo icon system: emoji-in-SVG-wrapper, photo, auto-initials
+- [ ] **T.2** Repo icon system: emoji-in-SVG-wrapper, photo, auto-initials. Default repo icon defaults to the user's chosen avatar species (per Phase K.3 / Phase WW) unless explicitly overridden.
 - [ ] **T.3** Calendar/todolist icon + color picker
 - [ ] **T.4** Event emoji prefix UI
 - [ ] **T.5** Dynamic color override per repo (color seed)
@@ -319,8 +329,8 @@ Deep-dive: [`ui-spec.md`](ui-spec.md) phase UI-O.
 - [ ] **W.1** Signing config + release keystore (user-supplied, gitignored)
 - [ ] **W.2** GitHub Actions release workflow → APK with `strictlykeptboy-<version>-<sha7>.apk` naming (mirror tonearmboy)
 - [ ] **W.3** Obtainium-compatible release notes + SHA-256 table
-- [ ] **W.4** Play Store listing copy (hinting-not-blatant; aimed at "calendar + timeboxing for professionals and people who like structured schedules")
-- [ ] **W.5** Play Store screenshots set (SFW-themed mascot, polished schedule views, no kinky demo content)
+- [ ] **W.4** Play Store listing copy (Mature 17+ Lifestyle category per D.59 / K-4). Leads with unique value prop — git-backed, atomic, AI-native, multi-repo, common-time finder; lifestyle / D/s positioning mentioned in paragraph 2-3, not lead-with.
+- [ ] **W.5** Play Store screenshots set (per D.59 / K-4): show both neutral-mode AND kink-mode versions as peer examples (4 of each); polished schedule views with the user-controlled wizard scaffold output.
 - [ ] **W.6** ProGuard/R8 keep rules for JGit + lib-recur + ktoml + reflection-using libs
 - [ ] **W.7** Privacy policy page
 - [ ] **W.8** First release `v0.1.0`
@@ -574,9 +584,9 @@ Deep-dive: [`shared-schedules.md`](shared-schedules.md) phases SH-A, SH-B.
 
 Deep-dives: [`shared-schedules.md`](shared-schedules.md) SH-C, [`data-model.md`](data-model.md) DM-Q.
 
-- [ ] **NN.1** Schema definition + ktoml round-trip
-- [ ] **NN.2** Reader: scan `.strictlykeptboy/references.toml` on repo open
-- [ ] **NN.3** Writer: append/remove entries via `skb ref add|remove`
+- [ ] **NN.1** Schema definition + ktoml round-trip. Supports multi-origin per Phase ZZ.B: `remotes = ["url1", "url2"]` array form alongside the singular `url = "..."` (read as one-element list, backwards-compat). Per Phase YY.H, references may carry an optional `write_back_target = "<repo-fingerprint>"` field to opt-in to receiving feedback files.
+- [ ] **NN.2** Reader: scan `.strictlykeptboy/references.toml` on repo open. Reader handles both `url = "..."` singular and `remotes = [...]` array forms per Phase ZZ.B.
+- [ ] **NN.3** Writer: append/remove entries via `skb ref add|remove`. Writer emits the multi-remote array form when more than one remote is configured per Phase ZZ.B.
 - [ ] **NN.4** Auto-dedup against already-configured repos (by source-repo-id, D.51)
 - [ ] **NN.5** "Offer to add referenced repos" sheet UI (per-reference toggle)
 - [ ] **NN.6** Validation: refuse circular reference loops, refuse self-reference
@@ -599,18 +609,18 @@ Deep-dives: [`shared-schedules.md`](shared-schedules.md) SH-D, [`data-model.md`]
 Deep-dives: [`shared-schedules.md`](shared-schedules.md) SH-E, [`ui-spec.md`](ui-spec.md) UI-FF.
 
 - [ ] **PP.1** Mode state in app prefs (`simplified` | `full`)
-- [ ] **PP.2** Hidden surfaces: repo management, identities, templates, advanced sync, multi-view tabs, Together tab
+- [ ] **PP.2** Hidden surfaces: repo management, identities, templates, advanced sync, multi-view tabs, Together tab. When the active repo is no-origin (per Phase ZZ.G), ALL remote/sync UI is hidden including the sync button in the top bar; the sync-status badge becomes a permanent "local" badge.
 - [ ] **PP.3** Visible surfaces: Schedule (single view), Tasks (combined), sync button, comment composer, settings (minimal)
 - [ ] **PP.4** "Switch to full mode" entry point in settings (one-tap-reversible)
 - [ ] **PP.5** Mode-label picker (Simplified / Focused / Received Schedules / Good Boy / Good Girl / Good Pet / Kept / Other)
-- [ ] **PP.6** Auto-entry: simplified by default when only read-only repos configured AND no own repo
+- [ ] **PP.6** Auto-entry: simplified by default when only read-only repos OR only no-origin repos are configured AND the user has no own remote repo (per Phase ZZ.G).
 - [ ] **PP.7** Play Store screenshots use "Simplified" label exclusively
 
 ## Phase QQ — First-launch deep-link bootstrap
 
 Deep-dives: [`shared-schedules.md`](shared-schedules.md) SH-F, [`ui-spec.md`](ui-spec.md) UI-GG.
 
-- [ ] **QQ.1** Detect "launched via deep-link AND no repos configured" condition
+- [ ] **QQ.1** Detect "launched via deep-link AND no repos configured" condition. First-launch routing (per Phase K LW-A.4): if launched via `strictlykeptboy://add?...` deep-link and no repos configured → this QQ bootstrap. Otherwise if no repos configured → Phase K wizard. When launched WITHOUT a deep-link AND no repos AND user picks local-only on the 2-option splash, route to local-only scaffolder via `GitRepo.initLocalOnly` per Phase ZZ.G.
 - [ ] **QQ.2** Skip wizard; go straight to "Add gifted repo" screen with URL prefilled
 - [ ] **QQ.3** Auth flow: try `#token=` fragment first, then OAuth, then PAT prompt
 - [ ] **QQ.4** Clone progress UI with animated mascot
@@ -693,7 +703,72 @@ Android AppWidget that shows a large-numerals count to any event the user picks 
 - [ ] **VV.9** Past-due styling: emphasized color from the M3E `error-container` role when count ≤ 0; subtle, never alarm-screaming.
 - [ ] **VV.10** Demo seed (consumed by Phase L): `demo-sub` ships with one pinned event — "Sir's visit" on 2026-06-21 in `Special Events` — so the wizard's "Add widget" prompt has something to point at on first run.
 - [ ] **VV.11** Test fixtures: time-frozen render previews at +30d / +7d / +1d / 0d / -1d to lock styling at each transition.
-- [ ] **VV.12** SFW phrasing guarantee: widget renders **only** user-authored event titles + locale-formatted day count. No editorial copy, no decorative text, nothing the app generates that could surface non-SFW phrasing on a lockscreen preview.
+- [ ] **VV.12** User-authored event titles surface on the widget verbatim. The widget never adds editorial copy, decorative text, or app-generated phrasing — what the user typed is what shows. Lockscreen-discreet behavior is driven by the per-event `private = true` flag (see VV.13 / D.57 / K-2): when true, the widget shows '—' instead of the title and the notification body is suppressed. This privacy mechanism works identically for any event the user marks private and is not tied to content register. (Replaces the prior SFW-phrasing guarantee per KI-B / D.55+K-1.)
+- [ ] **VV.13** Per-event privacy flag (D.57 / K-2): every event/task/recurrence frontmatter accepts optional `private = true` (default `false`). When true, the widget renders '—' instead of the title and suppresses any subtitle. Lockscreen notification shows only generic "Scheduled event" label; notification body suppressed. Composes with VV.3 (lockscreen-numerals-only) — when both apply, the widget on the lockscreen shows only the numeral count. Per-calendar default supported via `calendar.toml` `default_private = true`; per-event flag wins. In-app rendering is unaffected.
+
+---
+
+## Phase WW — Avatar + sticker presence-indicator system
+
+Deep-dive: [`draft-avatar-stickers.md`](draft-avatar-stickers.md) phases AV-A through AV-I. Locks per D.63..D.69. Avatar = presence indicator, not tamagotchi; no HP/mood/hunger. Optional opt-in count-only streak counter per activity. Kink-positive openly with neutral-mode tag filter. Default species roster: bat, fox, tiger, lion, wolf, bunny, cat — bat is the app default + wizard guide species (but the bat-mascot character per D.56 is distinct from the bat-avatar).
+
+- [ ] **WW.1** Pack format + default bat pack (AV-A + AV-G): WebP @ 512×512, `pack.toml` manifest, `<species>/<activity-id>.webp` layout. Bundled default packs ship in APK assets. Tag taxonomy locked at `neutral`, `kink`, `hygiene`, `workout`, `meal`, `work`, `study`, `posture`, `rest`, `idle`. Build-time validator asserts neutral-set + kink-set + sub-beat IDs present in every default pack.
+- [ ] **WW.2** Resolver + now-card (AV-B + AV-C): `StickerResolver` pure function with 6-rung chain (per-event override → sub-beat → activity-specific → category-generic → species-idle → bat-fallback) per D.66. Neutral-mode filter at activity-specific and category-generic rungs. NowCard component at top of `ScheduleShell` (220 dp phone / 260 dp tablet) hosting sticker zone + title zone + next-up strip + optional streak chip. Tap targets per AV-C.5; recompose on 30s tick foreground / 60s notification-foreground.
+- [ ] **WW.3** Sub-beat support (AV-D): additive optional `[[subbeat]]` array on event frontmatter (`label`, `duration_seconds`, optional `sticker_id`). Sub-beat clock + smooth 200ms cross-fade. CLI `skb event add --subbeat "<label>:<seconds>"`. (Aligned with Phase XX.I sub-beat schema + buzz pattern.)
+- [ ] **WW.4** "Choose your own" species flow (AV-E): clone GitHub repo of stickers to `<app-private>/avatar-packs/<pack-id>/` (pack-id = SHA-256 of normalized clone URL, 16 hex chars). Shallow `--depth=1` clone, validate `pack.toml`, require `activity_id = "idle"`. Auth reuses Phase B credential machinery as a read-only data source. Per D.69, canonical template at `https://github.com/eight87/strictlykeptboy-sticker-pack-template` (overridable in Settings → Advanced).
+- [ ] **WW.5** Customization (AV-F): per-activity sticker override UI; storage in app-private `EncryptedSharedPreferences` keyed `avatar.overrides.<activity_id> → <pack-id>:<sticker-activity-id>` — **NOT** committed to user data repo per D.67 (device aesthetic, not life-data). Per-event override IS committed (additive frontmatter field). Export to JSON in Downloads; import deferred to v1.1.
+- [ ] **WW.6** Rendering pipeline + cache (AV-H): Coil 2.x single shared `ImageLoader`, LRU ~40 stickers (~20MB), preload next-3 events. Animated WebP via `ImageDecoderDecoder`; respect system "Remove animations" → first-frame fallback. Now-card visible-with-sticker budget < 300ms of schedule first-frame.
+- [ ] **WW.7** Snapshot test suite (AV-I): Roborazzi screenshot harness covering cold-start-idle / event-active / sub-beat-mid-event / missing-pack-fallback / bat-fallback / neutral-mode-active / streak-chip-on / TalkBack labels. `FakeClock` injection via DI module (Phase A.8). Pure-JVM resolver unit tests + pack-validator tests + Gradle test for AV-G.5 build-time validator.
+
+---
+
+## Phase XX — Atomic activities, inverted habits, routines
+
+Deep-dive: [`draft-atomic-activities.md`](draft-atomic-activities.md) phases AT-A through AT-K. Locks per D.70. Default state for any past-or-current scheduled event = `completed-by-schedule`; deviation is the explicit action. No guilt loop. Atomic = one entity per activity; routines are calendar overlays, not entities. Sub-beats inline in event TOML, bounded depth. Kink-positive openly with `kink` tag for neutral-mode filtering. Optional count-only streak counter per event-or-rule, no escalation.
+
+- [ ] **XX.1** Deviation file schema (AT-A): new directory `deviations/<calendar-id>/<event-id-or-rule-id>/<yyyy-mm-dd>.md` SEPARATE from `exceptions/` (exceptions = scheduling changed; deviations = scheduling held but reality differed). TOML frontmatter `kind = "skipped" | "partial" | "completed-early" | "completed-late"`, `at`, `author`, optional `note`, optional `subbeats_completed`. No `kind = "completed"` — that's the default-by-schedule state. CLI `skb deviation set --event ... --date ... --kind ...`.
+- [ ] **XX.2** Resolver integration with inverted default (AT-B): `resolveCompletionState(event, now)` in Phase E render pipeline. Algorithm: future → scheduled; in-window no-deviation → in-progress; past no-deviation → `completed-by-schedule`; deviation present → that kind. Exception cancels shadow deviation. Room column `completion_state` with cache invalidation per AT-B.4. Visual treatment per AT-B.5 (never red, never warning glyphs, never blinking).
+- [ ] **XX.3** Notification + buzz pattern (AT-C): `events-atomic` notification channel; `AlarmManager` start + end alarms with `setExactAndAllowWhileIdle`. Title = user-authored verbatim; body empty by default. Actions: `I did it` (no-op — inverted default already wins; does NOT write completion file), `I didn't` → write `skipped` deviation, `Partial` → activity sheet → write `partial`, `Remind in 10/30/60 min`. End-alarm flips Room cache `in-progress → completed-by-schedule`. Permissions: `POST_NOTIFICATIONS`, `SCHEDULE_EXACT_ALARM`. Doze whitelist opt-in only.
+- [ ] **XX.4** Atomic self-care template (AT-D): `templates/atomic-self-care.toml` — brush-teeth (with 7 sub-beats: 6 quadrants + tongue/wrapup totalling 200s in the 5-min envelope), shower, shave-face, shave-pubes (`tags = ["intimate-care"]` neutral hygiene), hair, skincare, deodorant, nail-care, ear-clean. `neutral_safe = true`.
+- [ ] **XX.5** Atomic kink-self-care template (AT-E): `templates/atomic-kink-self-care.toml` with `neutral_safe = false` — cage-check, plug-check, posture-check (hourly-waking), collar-check, edge-and-stop, kegels (with 3 sub-beats), pubes-grooming, body-grooming. All entries `tags = ["kink"]` so neutral-mode filters them out.
+- [ ] **XX.6** Atomic workout template (AT-F): `templates/atomic-workout.toml` — pushups, situps, squats, pull-ups, planks (hold-time instead of reps), burpees. Each entry carries `sets` + `reps` (or `hold_seconds`). Sub-beat = one per set; phone buzzes between sets.
+- [ ] **XX.7** Routines as calendar overlays (AT-G): additive `calendar.toml` fields `routine = true`, `routine_id`, `routine_default_start`, `routine_can_materialize`. Routine calendars default `active_toggle = false` and group at the bottom of the calendar list with a `quick-start` glyph. Wizard scaffolds `routine-morning` / `routine-bed` / `routine-workout` when relevant role-toggles selected.
+- [ ] **XX.8** "Start X routine" quick-start (AT-H): FAB bottom-sheet → routine picker → config sheet (start-time, target calendar, per-item checklist). Materialization walks atomics forward back-to-back from start-time using each entry's `duration_minutes`. Adds frontmatter `materialized_from`, `materialized_source_event`, `materialized_at` for audit/undo. Overlap guard surfaces conflict sheet. Single commit `materialize routine "<name>" at <start-time>`. CLI `skb routine start ...` + `skb routine undo <materialized-at>`.
+- [ ] **XX.9** Sub-beat schema + buzz pattern (AT-I): event-file additive `[[subbeat]]` array per WW.3. Boundary alarms via `setExactAndAllowWhileIdle` at `event.start + sum(prefix)` for each sub-beat. Single vibration, low-priority notification with title = sub-beat label, body = `<i>/<N>`, single action `Skip ahead` → writes `partial` deviation with `subbeats_completed`. Cap 16 sub-beats per event.
+- [ ] **XX.10** Streak counter (AT-J, count-only): per-event-or-rule `streak = consecutive_days_with_no_skip_deviation`. `partial` / `completed-early` / `completed-late` do NOT break the streak; only `skipped` does. Room column `streak_count` recomputed on file change / deviation add-remove / midnight tick. UI: tiny rounded badge, no flame / no trophy / no escalation tier, hidden when `< 2`. Settings → Notifications → "Show streak counts" global toggle (default ON). CLI `skb streak <id>`.
+- [ ] **XX.11** Test fixtures (AT-K): Robolectric tests for inversion state transitions, sub-beat boundary timing, routine materialization (sequential + overlap), streak count, neutral-mode filter on kink template application, end-alarm state-flip. Also includes the Phase M notification subhook `M.7 atomic-events channel + sub-beat boundary alarms wired from Phase XX`.
+
+---
+
+## Phase YY — Cross-repo global-ID feedback
+
+Deep-dive: [`draft-global-id-feedback.md`](draft-global-id-feedback.md) phases FB-A through FB-J. Locks per D.71..D.73. Cross-repo dom→sub feedback (hearts, fire, locked, collar, good-boy), comments, bonus tasks, journal entries — all file-based, committable, pushable, mergeable. Global ID format = `<repo-fingerprint>:<entity-uuid>` where `repo-fingerprint = SHA-256(first-commit's tree SHA)[:16]`. Device-local repo registry with per-direction (asymmetric) isolation. Feedback files live in the **feedbacker's** repo at `feedback/<target-fingerprint>/<target-entity-uuid>/<feedback-uuid>.md`. Opaque-string reaction tokens; sticker packs re-skin.
+
+- [ ] **YY.1** Repo fingerprint derivation + cache (FB-A): `RepoFingerprint.computeOrLoad` reads `.strictlykeptboy/repo-fingerprint` if present, else computes from `git log --reverse --max-count=1 --format=%T` (tree SHA of root commit), SHA-256, 16-hex truncation. Cache file is **gitignored, never committed** (added to scaffold `.gitignore` by Phase K wizard). Stable across rebase/squash of non-root commits; breaks only on root rewrite (rebind UI in FB-A.4 walks `feedback/<old-fp>/` and rewrites paths). CLI `skb repo fingerprint`.
+- [ ] **YY.2** Repo registry (FB-B): `<app-data>/repo-registry.toml` device-local (NEVER synced); auto-registers on every successful repo open. Per-repo `isolate_from` field (asymmetric — each repo controls only what *it* refuses to see). `RepoRegistry.allVisibleTo(viewerFp)` is the single chokepoint for cross-repo lookups (custom lint rule flags reads of `repo-registry.toml` outside `RepoRegistry`). Settings UI per FB-B.4 with explicit directional clarity copy. CLI `skb repo registry list|isolate|unisolate`.
+- [ ] **YY.3** Feedback file schema + writer (FB-C): one file per (author, target, reply_to). Atomic write + auto-commit. Validation refuses ill-formed targets, duplicate reactions, no-op empty feedback, cross-repo replies. Indexer scans `feedback/**` in every registered repo at startup + on git HEAD change → `FeedbackEntry` Room table. AGENTS.md documents the feedback file format + `skb react` / `skb comment` as primary path.
+- [ ] **YY.4** `skb react` / `skb comment` CLI (FB-D): `skb react add --target <global-id> --reactions heart,fire,locked [--body "..."] [--reply-to <feedback-uuid>]`, `skb react remove`, `skb react list`, `skb comment add|list`. Target resolution helpers `--target-event <uuid>` resolve to `<this-repo-fp>:<uuid>`. Exit codes per D.24. `--dry-run` supported.
+- [ ] **YY.5** Cross-repo resolver extension (FB-E): `FeedbackResolver.aggregate(targetGlobalId)` queries `FeedbackEntry` across every repo in `RepoRegistry.allVisibleTo(<viewer-fp>)`. Threading by `reply_to`, linear `created` order within threads. Memoized on `(targetGlobalId, set-of-visible-repo-HEADs)`, invalidated on HEAD change. Feedback drawer UI section in event/task detail sheets with reaction tallies + comment thread + always-present "+ react" affordance. Author chips show **receiving** repo's local label for the source repo (privacy-preserving).
+- [ ] **YY.6** Isolation enforcement + privacy tests (FB-F): aggregation **count masking is forbidden** — isolated sources are structurally invisible, not "N hidden". Notification suppression on isolation. Search/autocomplete masking. Robolectric privacy tests including snapshot-grep-for-fingerprint-strings.
+- [ ] **YY.7** Bonus tasks + sub-logged extras + journal entries (FB-G): `bonus/<task-uuid>.md` at calendar root in a shared repo; `bonus = true` overrides scheduling pressure (never promoted to dated-tasks even with `due`). Completion writes back; degrades gracefully to state-file (`state/<dom-repo-fp>/<task-uuid>.done.toml`) when shared repo unavailable. Deep-link offer `strictlykeptboy://bonus?...` for dom→sub assignment. Journal entries at `journal/<yyyy-mm-dd>.md` (or `<yyyy-mm-dd>-<n>.md`) — UUIDv7 in frontmatter; NOT in schedule overlay; dedicated Journal nav-rail tab (Schedule/Tasks/Journal/Together/Settings). Journal entries reactable/commentable via the same FB-C/D/E machinery.
+- [ ] **YY.8** `references.toml` + share-flow extensions (FB-H): `write_back_target = "<repo-fingerprint>"` field per reference signals "this referenced repo is willing to receive feedback files we write addressed to its entities". UI only shows "+ react" affordance for references with `write_back_target` set. Share-this-repo (Phase RR) checkbox "Allow this share's recipient to leave feedback on my entries" auto-writes the `write_back_target` line into the recipient's `references.toml` on accept. CLI `skb ref set-write-back`.
+- [ ] **YY.9** Test fixtures + Robolectric end-to-end (FB-I): two-repo fixture builder (`fixture-sub` + `fixture-dom`); end-to-end tests for heart-cross-repo, isolation-hides-heart, reply-thread, bonus-task-round-trip (with shared-repo-unavailable variant), journal-reaction, root-rewrite-rebind. Performance budget: aggregating feedback for one event across 5 repos × ~100 files each < 50ms warm.
+- [ ] **YY.10** Documentation + AGENTS.md rewrite (FB-J): AGENTS.md feedback-format documentation as primary path; in-repo README.md privacy note; Settings → About → "How feedback works" link; `cli-tooling.md` full reference.
+
+---
+
+## Phase ZZ — Git layer no-origin + multi-origin extensions
+
+Deep-dive: [`draft-no-origin-multi-origin.md`](draft-no-origin-multi-origin.md) phases MO-A through MO-H. Lock per D.74. Two orthogonal extensions to the Git infrastructure: **no-origin** repos (git-backed with zero remotes, first-class state, not degraded mode) and **multi-origin** sync (N ≥ 2 remotes with fan-out push policy, fan-in fetch+merge semantics, per-remote auth bindings). Touches Phase B / Phase I / Phase J / Phase NN / Phase PP / Phase QQ / Phase K inline (per the integration edits already applied above) plus all of sync-engine.md SE-B/C/D/E/F/I/J/K/L.
+
+- [ ] **ZZ.A** No-origin data model + GitRepo surface (MO-A): `RepoConfig` carries `remotes: List<RemoteBinding>` (may be empty) and `primaryRemote: RemoteName?` (null iff `remotes.isEmpty()`). `RemoteBinding` carries `name`, `url`, `transport`, `authMethod`, `fetchEnabled`, `pushEnabled`, `readOnlyDetected`. `repoId` becomes UUIDv7 persisted at `.strictlykeptboy/repo-id` (one-line) **— LOCKED committed to the repo** for cross-device state-file consistency per Phase OO. `GitRepo.initLocalOnly(rootDir, authorIdentity)` for no-origin construction. Fetch/pullRebase/push accept `remote: RemoteName? = primaryRemote` and return `NoRemotes` variants when `remotes.isEmpty()`. `GitStatus.localOnlyCommits` field. `SecretsStore` re-keyed from `<kind>.<repoId>` to `<kind>.<repoId>.<remoteName>` with one-shot migration (existing keys rewritten with `remoteName = "origin"`).
+- [ ] **ZZ.B** Multi-origin: remote naming + management API (MO-B): **named-by-purpose** with `origin` as conventional primary name (kept for stock-git interop), additional remotes default to `mirror-<n>` with user-editable `displayName`. Policy carried in `RemoteBinding` fields, never semantic on name. `GitRepo.addRemote / removeRemote / renameRemote / listRemotes`; reserved-name guard. Per-remote `fetchRefspec` field (default `+refs/heads/*:refs/remotes/<name>/*`). `references.toml` extended to allow `remotes = ["url1", "url2"]` array alongside backwards-compat `url = "..."` singular (per NN.1).
+- [ ] **ZZ.C** Multi-origin per-remote auth binding (MO-C): `CredentialBinding` resolved by `(repoId, remoteName)` tuple. SSH keypair generation per-remote — adding a second SSH remote generates a new keypair by default with opt-in reuse from another remote. Per-remote auth method UI in add-remote flow / repo settings. `transportConfigCallbackFor(repoId, remoteName)`. Re-auth error surfaces gain remote display label.
+- [ ] **ZZ.D** Multi-origin fetch + reconcile algorithm (MO-D): fetch pass iterates `remotes` where `fetchEnabled`, collecting `Map<RemoteName, FetchResult>` (per-remote network errors don't abort others). **Reconcile policy**: local branch rebased onto `<primaryRemote>/<branch>` ONLY. Non-primary remotes' tips become `MirrorDivergence(remoteName, count)` non-fatal yellow-banner signals when they have commits we don't. Manual diamond-merge UI offers (a) adopt mirror as authoritative, (b) override mirror via force-push (Settings → Advanced gated, typed confirmation). v1 ships (a); (b) gated.
+- [ ] **ZZ.E** Multi-origin push fan-out policy (MO-E): per-remote `pushPolicy: PUSH | PUSH_LAZY | NEVER`. Defaults: first remote added → `PUSH`, additional → `PUSH_LAZY`. Push pass iterates `[primary, then non-primary by add-time]`. Partial failure: if primary succeeds but mirror fails → local commit considered shipped, mirror enters per-remote retry queue (WorkManager exponential backoff per SE-L), `PartialPushDegraded` signal (small dot, not red banner). If primary fails → block subsequent pushes; do NOT push to non-primaries (avoid mirror getting ahead of canonical). Per-remote `readOnlyDetected`; repo-level red banner only when every remote is read-only.
+- [ ] **ZZ.F** Multi-origin conflict UI for N-way diamonds (MO-F): SE-J 3-way diff UI only fires for local-vs-primary conflicts (non-primary divergence stays in the banner UI). Conflict UI "Remote" label carries primary's display label. Diamond-merge mini-flow reuses the same UI with the mirror's label. Force-push affordance lives in repo settings → Remotes → `<remote>` → Advanced with typed-URL confirmation. **No force-push to primary, ever, in v1.**
+- [ ] **ZZ.G** No-origin UI representation + grow-into-remote path (MO-G): per the inline edits at I.2 / I.3 / PP.2 / PP.6 / QQ.1 / K.8 above. Add-repo flow gets a "Create local-only" peer option (not buried under advanced). No-origin repo switcher gets a small house "local" badge. Repo settings Remotes section with first-class no-origin treatment. Add-remote-later path: `git remote add origin <url>` + `git push -u origin main` against the extant local history (no history rewrite). First-launch no-deep-link path: 2-option splash "Start a local calendar (you can sync it later)" vs "Connect to a git remote now". Wizard (Phase K) repo-picker + auth steps become skippable; skipping runs the local-only scaffolder.
+- [ ] **ZZ.H** Cross-cutting: tests, docs, CLI parity (MO-H): `data-model.md` note that on-disk D.3 layout is unchanged (no `origin`-related files on disk; all remote state is in per-device `RepoConfig`). CLI: `skb repo init --local`, `skb remote add|remove|list|set-primary|set-policy`. Invariants: (i) `repo.remotes.isEmpty() ⇒ no foreground SyncService work for that repo`, (ii) `primaryRemote != null ⇔ remotes.isNotEmpty()`, (iii) `repoId stable across remote-set changes`. Robolectric end-to-end: no-origin → add origin → add mirror-1 → push to both → simulate mirror-1 read-only → primary still pushes.
 
 ---
 

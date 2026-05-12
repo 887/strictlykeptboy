@@ -4574,3 +4574,36 @@ Round 3 of this document is "done" (Status: ✅ DONE) when:
 - The Round-3 phase index above has been cross-checked against
   `main.md` Phases MM–TT (no phase referenced here without a parent
   phase in main.md; no orphan main.md phase without UI coverage).
+
+---
+
+## Phase UI-LL — Now-card + avatar sticker presence indicator (Round 4)
+
+**See [`draft-avatar-stickers.md`](draft-avatar-stickers.md) (`main.md` Phase WW) for the authoritative layout spec.** UI-LL owns the Compose scaffolding inside `ScheduleShell`; AV-C is the source of truth for the layout.
+
+- [ ] **UI-LL.1** `NowCard` Compose component lives at the top of `UI-C`'s `ScheduleShell`, above the day timeline. Card height 220 dp phone / 260 dp tablet. Edge insets match the shell's horizontal padding (16 dp phone / 24 dp tablet).
+- [ ] **UI-LL.2** Layout regions per AV-C.2: sticker zone (left, square, 192×192 phone / 240×240 tablet, hosting the resolved sticker via Coil), title zone (right of sticker, top: current task name `headlineSmall` max 2 lines + duration chip below), next-up strip (right of sticker, below title: up to 3 upcoming items each = small emoji + truncated title + relative start).
+- [ ] **UI-LL.3** Refresh strategy: recompose on `(now-tick, active-event-changed, sub-beat-boundary)` flows. 30s foreground tick; 60s notification-foreground-service tick; no background recomposition when app suspended.
+- [ ] **UI-LL.4** Tap behavior: tap sticker zone / title zone → open active event's detail sheet (Phase G.7); tap next-up row → open that event's detail.
+- [ ] **UI-LL.5** Empty state (no event active, next upcoming > 4h out): species-idle sticker + "nothing scheduled — back at <next start time>". No guilt-trip copy.
+- [ ] **UI-LL.6** Streak counter chip (opt-in per activity per D.63): small chip overlay bottom-left of sticker zone, `🔥 12` count-only. No shame copy on break; chip simply resets to `🔥 1` next streak.
+- [ ] **UI-LL.7** Accessibility: sticker `contentDescription` = `"<species> <activity>"` (e.g. "bat sleeping"). Streak chip readable by TalkBack ("12-day streak"). Animated WebP respects system "Remove animations" → first-frame fallback.
+
+## Phase UI-MM — Cross-repo feedback drawer + Journal tab + bonus-task group (Round 4)
+
+**See [`draft-global-id-feedback.md`](draft-global-id-feedback.md) (`main.md` Phase YY) and `decisions.md` D.71..D.73 for the authoritative spec.**
+
+- [ ] **UI-MM.1** Extend UI-W (comments UI) with the cross-repo feedback drawer per FB-E.4–FB-E.6. Below event/task body in detail sheets: a "Feedback" section with reaction tallies (grouped icons + counts + tap-to-expand author list) and a comment thread. Drawer is always present even when empty, with a "+ react" affordance.
+- [ ] **UI-MM.2** Author-chip rendering on cross-repo feedback shows source repo's display name as a small chip (e.g. `from "kept"`). Same-repo feedback omits the chip (just "from <author-identity>"). Per D.72, the chip text is the **receiving** repo's local label for the source repo, never the source repo's self-label.
+- [ ] **UI-MM.3** "+ react" tap opens a reaction picker (sticker-pack-driven per D.62 / D.73) wired to `skb react add` semantics; selecting writes a feedback file in the **viewer's** repo (currently-selected in the top-bar repo switcher), NOT in the source repo of the target entity.
+- [ ] **UI-MM.4** Extend UI-FF (simplified mode chrome) with the Journal tab + bonus-task group in the combined task view per Phase YY.7. Bonus tasks render in a dedicated "Bonus" group at the bottom of the combined view with a distinct bonus-icon prefix, NO schedule-pressure badging (no "OVERDUE" coloring) — `bonus = true` overrides scheduling pressure even when `due` is set.
+- [ ] **UI-MM.5** Extend the Phase F nav-rail spec (F.1) from four entries to five: insert **Journal** between Tasks and Together. So: Schedule / Tasks / Journal / Together / Settings.
+- [ ] **UI-MM.6** In simplified mode (Phase PP), Journal appears as a single "Journal" entry beneath the task list (no separate tab — keeps the simplified surface flat).
+- [ ] **UI-MM.7** Repo settings → Isolation section per FB-B.4: list of every other registered repo with a per-row toggle "Hide [other] from this repo's view". Directional clarity copy: "this hides the OTHER repo FROM this repo. To hide THIS repo from the other, configure it from the other repo's settings."
+
+## Phase UI-NN — Age gate + neutral-mode toggle (Round 4)
+
+**See [`draft-kink-positive-identity.md`](draft-kink-positive-identity.md) (Phase K-3 / K-6 → D.58 / D.61) for the authoritative spec.**
+
+- [ ] **UI-NN.1** First-launch age-gate modal (D.61). Modal copy: "This app contains references to adult lifestyle dynamics. You must be 17 or older to use it." Buttons: "I am 17 or older — continue" / "Exit". Decline → app finishes gracefully. Confirmation stored in encrypted app prefs (`age_confirmed_at = <ISO ts>`); re-shown only on app-data clear.
+- [ ] **UI-NN.2** Settings → Appearance → "Neutral mode" toggle (D.58). Also set by Phase K wizard "unaligned-private" alignment. Toggling re-evaluates downstream surfaces (template picker, sticker resolver kink filter per D.66, reaction-picker filter per D.62) without rewriting user-authored content.

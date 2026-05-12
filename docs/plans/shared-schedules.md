@@ -2340,3 +2340,22 @@ Recommended order if shipping serially:
 
 Each phase is a self-contained piece of work for a
 single subagent or single dev session.
+
+---
+
+## Phase SH-I — Cross-repo feedback (Round 4 extension)
+
+**See [`draft-global-id-feedback.md`](draft-global-id-feedback.md) (`main.md` Phase YY) for the authoritative spec.** Round 4 extends shared-schedules with cross-repo feedback under multi-life isolation per `decisions.md` D.71 / D.72 / D.73.
+
+- [ ] **SH-I.1** Extend SH-C (`references.toml`) with the `write_back_target = "<repo-fingerprint>"` field per reference (FB-H.1). Opt-in: only references with this field set surface the "+ react" UI affordance for entities owned by that fingerprint.
+- [ ] **SH-I.2** Extend SH-D (state files) note: **feedback files are a sibling primitive to state files**. State = receiver's mutations on sender's entities (`state/<source-repo-id>/<entity-id>.<kind>.toml`). Feedback = receiver's reactions on sender's entities (`feedback/<target-fingerprint>/<target-entity-uuid>/<feedback-uuid>.md` in the feedbacker's own repo). Both keyed by their respective IDs (state by URL-id per D.51; feedback by repo-fingerprint per D.71). Independent layers.
+- [ ] **SH-I.3** Extend SH-G (share-this-repo) — "Allow this share's recipient to leave feedback on my entries" checkbox in the share-config sheet (RR.2). When set, the generated share link is paired with a `write_back_target = <this-repo-fingerprint>` line auto-written into the recipient's `references.toml` when they accept (Phase QQ).
+- [ ] **SH-I.4** Symmetric write-back: when both sides share to each other with write-back enabled, both `references.toml` files carry `write_back_target` entries pointing to each other. Feedback flows in both directions.
+- [ ] **SH-I.5** Revoking write-back: edit local `references.toml` to remove the line. UI: Settings → Repos → tap repo → "References" → tap reference → "Allow feedback" toggle. Already-written feedback files persist (we don't reach into history); no new ones surface in the leave-feedback picker.
+- [ ] **SH-I.6** Share-link generation for multi-origin repos (per D.74): share-config sheet (RR.2) gains a "include mirror remotes in the link" toggle (default OFF — privacy). When ON, the generated link carries `?url=A&url=B` per MM.6 (parser already supports this). Receiver can opt into adding all listed remotes or just the first.
+
+## Phase SH-J — Repo registry + fingerprint cache (Round 4 extension)
+
+- [ ] **SH-J.1** Repo registry per D.72: `<app-data>/repo-registry.toml` device-local. Auto-registers on every successful repo open (Phase B, Phase QQ deep-link, Phase SS own-repo mini-wizard).
+- [ ] **SH-J.2** Per-direction (asymmetric) isolation per D.72: each repo controls only what *it* refuses to see. Aggregation count masking forbidden.
+- [ ] **SH-J.3** Fingerprint cache file `.strictlykeptboy/repo-fingerprint` (gitignored per D.71) — auto-derived on repo open if missing.

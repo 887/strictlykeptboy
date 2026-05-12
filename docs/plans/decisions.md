@@ -37,7 +37,7 @@ a recommended resolution, (b) implement the recommended resolution, and
 | Tests, UI | mobile-mcp over ADB, headless AVD `medium_phone` | Same. |
 | App ID | `com.eight87.strictlykeptboy` | Match `com.eight87.<app>` convention. |
 | minSdk / targetSdk | 26 / 36 | Match tonearmboy. |
-| Distribution | GitHub Releases + Obtainium; later Play Store | Same two-track distribution as tonearmboy. Play Store branding stays hinting-not-blatant per user direction. |
+| Distribution | GitHub Releases + Obtainium; later Play Store | Same two-track distribution as tonearmboy. **Play Store branding is openly lifestyle-positive at Mature 17+; see D.59 / K-4.** (The prior "hinting-not-blatant" register is retracted per Round 4.) |
 
 ## D.2 — Source-of-truth model (locked)
 
@@ -1256,3 +1256,309 @@ treat `decisions.md` Round 2 (D.23–D.40) as locked.
 | `resolver.md` | EXTEND | Phases RV-L+ — cross-repo state-file overlay logic, multi-repo priority resolution with modifiers, source-repo-id matching, dedup logic | SA-16 |
 
 Round 3 agents treat D.41–D.52 as locked.
+
+---
+
+# Round 4 — lifestyle wizard, kink-positive identity, avatar/stickers, atomic activities, cross-repo feedback, no-origin/multi-origin git (D.54–D.74)
+
+After Round 3, six parallel drafts (`draft-lifestyle-wizard.md`,
+`draft-kink-positive-identity.md`, `draft-avatar-stickers.md`,
+`draft-atomic-activities.md`, `draft-global-id-feedback.md`,
+`draft-no-origin-multi-origin.md`) were integrated. Round 4 locks
+the following twenty-one decisions. Short-form decision IDs from
+the drafts (K-1..K-7, AV pack format, AT inversion, FB global-ID,
+MO no-origin etc.) are preserved inline as cross-references.
+
+## D.54 — No empty-app start; wizard is mandatory on first launch
+
+Every first-launch path lands the user on a populated repo. The
+wizard's output (Phase K, deep-dive `draft-lifestyle-wizard.md`) is
+the user's canonical starting state, not seed/sample/demo data.
+Phone-only is a first-class wizard outcome (no remote required to
+finish; uses `GitRepo.initLocalOnly` per D.74). Demo mode is
+retired; the old `demo-sub` / `demo-dom` repo seeds are not
+shipped. Phase L (demo content) is RETIRED. Bypass: a first-launch
+deep-link intent (Phase QQ) takes precedence over the wizard
+(gifted-schedule recipients skip the wizard per D.46).
+
+## D.55 — Kink-positive default surface (locks K-1)
+
+The app's default content (templates, sticker tags, alignment
+copy, wizard prose, suggested event titles) is openly
+kink-positive. Justification: the target audience is furries,
+kinksters, and people in D/s relationships; defaulting to neutral
+would underserve them. The wizard alignment screen offers
+**Dominant / Submissive / Switch / Unaligned-private**; the last is
+the in-wizard kink-off entry-point and propagates downstream
+(hides `kink` role, hides kink templates, replaces strictly-X
+phrasing with "routine"). SFW phrasing constraints apply ONLY to
+surfaces that leak outside the app (lockscreen widgets, Play-Store
+screenshots, neutral-mode toggle) — not to in-wizard copy. **User-
+authored content is NEVER censored** across mode transitions.
+Retracts the prior templates-demo-wizard.md SP-3 / SP-4 / SP-8 /
+SP-9 SFW-readable register; SP-1 / SP-2 / SP-5 kept with revised
+justification per KI-A.
+
+## D.56 — Bat-mascot vs avatar-species are distinct characters
+
+The bat-mascot (Claude-the-builder persona) is the wizard guide on
+every wizard screen and on any future guided-onboarding surface.
+The user's avatar species (selected on wizard Screen 2 from {bat,
+fox, tiger, lion, wolf, bunny, cat, or a "choose your own"
+sticker repo}) is a separate character that takes over in-app
+mascot surfaces after the wizard ends. Default avatar (if user
+skips Screen 2) is bat — coincidentally the same species as the
+bat-mascot, but a distinct character.
+
+## D.57 — Per-event privacy flag (locks K-2)
+
+Every event/task/recurrence frontmatter accepts optional
+`private = true` (default `false`). When true: lockscreen
+notification shows generic "Scheduled event" label only (no
+title, no body); countdown/agenda widgets show "—" instead of
+title; notification body suppressed; in-app rendering unaffected.
+Privacy mechanism, NOT SFW mechanism — works identically for
+medical appointments, surprises, and kink-coded events. Per-
+calendar default supported via `calendar.toml`
+`default_private = true`; per-event flag wins.
+
+## D.58 — Neutral-mode toggle scope (locks K-3)
+
+Settings → Appearance → "Neutral mode" toggle (also set by wizard
+"unaligned-private" alignment). When ON: kink-tagged templates
+hidden from picker + wizard role-toggle list (`kink_coded = true`
+in manifest); kink-tagged stickers replaced with neutral
+counterparts in active sticker pack; kink-coded copy in wizard,
+settings, and onboarding replaced with neutral phrasing; alignment
+options reduce to "private organizing" with no dom/sub/switch
+axis. When OFF: kink surface restored. **User-authored content is
+NEVER censored** by either transition — only suggestions and
+chrome change. Existing events titled "Cage check" stay "Cage
+check" when neutral-mode flips on; they just don't get *suggested*
+on next wizard run.
+
+## D.59 — Play Store positioning Mature 17+ Lifestyle (locks K-4)
+
+Content rating **Mature 17+** (covers "moderately suggestive
+themes and references"; avoids the 18+ adults-only bar). Category
+**Lifestyle**. Listing copy leads with unique value prop —
+git-backed, atomic, AI-native, multi-repo, common-time finder;
+lifestyle / D/s positioning mentioned in paragraph 2-3, not lead-
+with. Screenshots show both neutral-mode AND kink-mode versions as
+peer examples (4 of each). First-launch age gate (D.61). IARC
+questionnaire: declare "infrequent/mild references to adult
+themes" + "user-generated content" + no nudity, no explicit
+sexual content, no graphic violence. Established precedent in this
+category: KinkD, FET, Obedience habit tracker, Feeld, Mister — see
+draft-kink-positive-identity.md KI-D for the full precedent list.
+
+## D.60 — Content guidelines for shipped defaults (locks K-5)
+
+What the app CAN ship: kink-coded task names and descriptions
+(text only); kink-coded sticker artwork in SFW-rendered chibi-
+style (collars, harnesses, cages, leashes, paw prints, locks,
+bunny ears, fox tails — depicted as accessory/clothing style
+only); bat-mascot with collar/harness/cage clothing-style
+accessories; reaction emoji set with kink-positive entries (D.62).
+What the app does NOT ship: pornography or explicit imagery;
+nudity (including stylized); graphic depictions of sexual acts;
+anything past Mature 17+ into 18+ adults-only. **User-authored
+content in user-owned repos is unconstrained by this rule** — it
+constrains only what *ships* with the app.
+
+## D.61 — Age verification (locks K-6)
+
+First-launch one-time age gate: modal "This app contains
+references to adult lifestyle dynamics. You must be 17 or older to
+use it." Buttons "I am 17 or older — continue" / "Exit". Decline
+→ app finishes gracefully (returns to launcher). Confirmation
+stored in encrypted app prefs (`age_confirmed_at = <ISO ts>`). NO
+ID upload, NO email verification, NO third-party verification SDK
+— Play Store's IARC rating + the modal constitute the regulatory
+surface. Re-shown only if app data cleared.
+
+## D.62 — Reaction set kink-positivity (locks K-7)
+
+Phase YY (cross-repo feedback / reactions) ships a default
+reaction set including: 🔒 locked, 🐾 paw, 💍 collar (rendered as
+collar variant of the ring), 👍 good-boy/good-girl/good-pet
+(label varies by mode-label), 🦴 bone, 🥄 spoon (aftercare).
+Neutral-mode behavior: these reactions are filtered OUT of the
+reaction picker when neutral-mode is on (user can't pick them);
+BUT reactions received from a non-neutral-mode partner render in
+the user's view with their generic counterpart (🔒 → 🔒,
+🐾 → ✋, 💍collar → 💍ring, good-boy → 👍, etc.). **Visually
+downgrade, never suppress.** Neutral-mode user sees that the
+partner reacted, just with a neutral visual.
+
+## D.63 — Avatar is a presence indicator, not a tamagotchi
+
+Per Phase WW. No HP / mood / hunger. Sticker reflects what the
+user is *scheduled to be doing* right now, rendered cute. Streak
+counter is the only quantified element; count-only, opt-in per
+activity, no shame copy. Renders in the now-card at the top of
+the schedule shell.
+
+## D.64 — Default species roster
+
+Bat, fox, tiger, lion, wolf, bunny, cat. **Bat is the app default +
+wizard guide species** (matches launcher icon and the bat-mascot
+guide character). Tile order: bat first, then alphabetical (bat,
+bunny, cat, fox, lion, tiger, wolf, choose-your-own).
+
+## D.65 — Sticker pack format
+
+WebP @ 512×512 (static or animated; decoder auto-detects).
+`pack.toml` manifest with `schema_version`, `name`, `species`,
+`author`, `license`, `style`, `[[sticker]]` entries each carrying
+`activity_id`, `file`, `tags`, `animated`. Bundled default packs
+under `app/src/main/assets/avatar-packs/<species>/` inside the
+APK; user-supplied packs cloned to `<app-private>/avatar-packs/
+<pack-id>/` where `<pack-id>` = SHA-256(normalized clone URL)
+truncated to 16 hex chars (mirrors D.51 source-repo-id discipline).
+Tag taxonomy locked at `neutral`, `kink`, `hygiene`, `workout`,
+`meal`, `work`, `study`, `posture`, `rest`, `idle` (extensible —
+unknown tags pass through and render unless filtered). Build-time
+validator asserts neutral-set + kink-set + sub-beat IDs present in
+every default pack.
+
+## D.66 — Sticker resolution chain
+
+Top-down, first match wins: (1) per-event override `sticker_id`
+on frontmatter, (2) active sub-beat's `sticker_id`, (3) activity-
+specific sticker in active pack, (4) category-generic sticker
+(`workout-*` → `workout-pushup` etc.), (5) species-idle, (6) bat-
+fallback (guaranteed to exist; validated at build time). Neutral-
+mode filters rungs 3+4 by hiding stickers tagged `kink` (and not
+also `neutral`); falls through to species-idle. Memoized on
+`(activity_id, sub-beat index, pack id, neutral-mode)`.
+
+## D.67 — Device-level sticker overrides are app-private
+
+Per-activity sticker override storage in app-private
+`EncryptedSharedPreferences` keyed
+`avatar.overrides.<activity_id> → <pack-id>:<sticker-activity-id>`.
+**NOT** committed to the user data repo. Rationale: device
+aesthetic, not life-data; would be device-specific noise across
+multi-device users; a partner reading the calendar repo has no
+business with the user's per-device sticker prefs. Documented in
+AGENTS.md template under "what is NOT in this repo". Per-event
+sticker overrides ARE committed (additive frontmatter field —
+that's user-authored content).
+
+## D.68 — Sub-beats: additive optional event-frontmatter array
+
+`[[subbeat]]` array on event files (and on template entries),
+each entry `label`, `duration_seconds`, optional `sticker_id`.
+Events without sub-beats behave exactly as today (additive, fully
+backwards-compatible). Constraint: sum of `duration_seconds`
+SHOULD be ≤ event's `duration_minutes * 60` (validator warns,
+doesn't refuse). Sub-beats run sequentially; if shorter than the
+parent event the cycle loops; if longer it truncates at event end.
+Cap: 16 sub-beats per event.
+
+## D.69 — "Choose your own" species clones a GitHub repo
+
+User-supplied species packs clone a GitHub repo into an app-
+private dir via shallow `--depth=1` clone, validated against
+`pack.toml` schema and a required `activity_id = "idle"` entry.
+Canonical template at
+`https://github.com/eight87/strictlykeptboy-sticker-pack-template`
+(hardcoded as build-time `STICKER_PACK_TEMPLATE_URL`, overridable
+in app settings → Advanced). Auth reuses Phase B credential
+machinery; pack repos are registered as **read-only data sources**
+(refuses push always), separate from calendar-data repos. Multi-
+pack-per-species: most-recently-added wins as active default; user
+can override per-species in Settings.
+
+## D.70 — Inverted habit model + atomic activities
+
+Per Phase XX. **Default state for any past-or-current scheduled
+event = `completed-by-schedule`.** Deviation is the explicit
+action. The user only intervenes when they *didn't* do the thing,
+or did it partially, or did it off-schedule. Rationale: the
+project differentiator vs Finch / Habitica / streak-pet apps. No
+guilt loop. Atomic = one entity per activity. Routines are
+calendar overlays (additive `calendar.toml` fields `routine`,
+`routine_id`, `routine_default_start`, `routine_can_materialize`),
+not entities. Sub-beats inline in event TOML per D.68. Deviation
+files at `deviations/<calendar-id>/<entity-id>/<yyyy-mm-dd>.md`,
+schema `kind ∈ {skipped, partial, completed-early,
+completed-late}`. **Separate from `exceptions/`** — exceptions =
+scheduling-side change, deviations = post-hoc reality report.
+Optional count-only streak counter per event-or-rule; no flames,
+no escalation, no "you broke your streak" modals. No Wear OS;
+`AlarmManager` only.
+
+## D.71 — Global ID format: `<repo-fingerprint>:<entity-uuid>`
+
+Per Phase YY. `repo-fingerprint` = `SHA-256(first-commit's tree
+SHA, hex)` truncated to first 16 hex chars (8 bytes; ~1-in-1.8e19
+collision space). Tree SHA (not commit SHA) — survives author/
+date rebase of root. Stable across rebase of non-root commits,
+across force-pushes preserving the root, across arbitrary squashes
+not touching the root. Breaks only on intentional root rewrite
+(treated as new repo identity; rebind UI in FB-A.4). Cached at
+`.strictlykeptboy/repo-fingerprint` — **gitignored, never
+committed**. Independent of `source_repo_id` (D.51, SHA-256 of
+URL): both coexist; URL-id is the resolver/state-file key,
+fingerprint is the feedback global-ID key.
+
+## D.72 — Device-local repo registry + per-direction isolation
+
+Per Phase YY. `<app-data>/repo-registry.toml` device-local (NEVER
+synced — adding a repo on device A does not propagate to device
+B). Per-repo `isolate_from` field is **per-direction (asymmetric)**:
+each repo controls only what *it* refuses to see; the other side
+needn't even know. `RepoRegistry.allVisibleTo(viewerFp)` is the
+single chokepoint for cross-repo lookups (custom lint rule flags
+external reads). Aggregation **count masking is forbidden** —
+isolated sources are structurally invisible, not "N hidden".
+
+## D.73 — Open-token reaction set + sticker-pack extension
+
+Per Phase YY. Each reaction is a **string token**, not an emoji
+codepoint. Default tokens: neutral (`thumbsup`, `heart`, `fire`,
+`prayer-hands`, `sparkles`, `check`) + kink (`locked`, `collar`,
+`good-boy`, `paw`, `bat`, `smirk`). Plus markdown comment body.
+Schema does NOT enforce a closed set — opaque-string tokens — so
+users can add `kneel`, `praise`, `mine`, etc. via sticker packs
+without an app update. Sticker packs (Phase FF) re-skin tokens to
+renders; renderer falls back to `❓` when a token isn't in the
+active pack. Feedback files live in the **feedbacker's** repo at
+`feedback/<target-fingerprint>/<target-entity-uuid>/<feedback-uuid>.md`.
+One file per (author, target, reply_to); updating rewrites the
+same file; deletion = `git rm` (no tombstones). Replies must live
+in the same repo as their parent feedback. `write_back_target`
+field in `references.toml` gates the "+ react" UI affordance —
+opt-in by the referencing repo's author.
+
+## D.74 — No-origin first-class + multi-origin git layer
+
+Per Phase ZZ. **No-origin repos** (git-backed with zero
+configured remotes) are a first-class state, equal in standing to
+single-origin and multi-origin. `RepoConfig.remotes:
+List<RemoteBinding>` (may be empty); `primaryRemote: RemoteName?`
+(null iff empty). `repoId` = UUIDv7 persisted at
+`.strictlykeptboy/repo-id` **committed to the repo** for cross-
+device state-file consistency per Phase OO. `GitRepo.initLocalOnly`
+constructor. Operations that hard-coded `"origin"` accept a
+`remote: RemoteName? = primaryRemote` parameter and return
+`NoRemotes` variants when `remotes.isEmpty()`. **Remote naming is
+named-by-purpose** with `origin` as conventional primary (kept for
+stock-git interop) and additional remotes as `mirror-<n>` by
+default with user-editable `displayName`. Policy carried in
+`RemoteBinding` fields, never on name. **Reconcile against
+`primaryRemote` only**; non-primary remotes generate
+`MirrorDivergence` signals (yellow banner, non-fatal), not auto-
+merges. Manual diamond-merge ships path (a) adopt-mirror-as-
+authoritative only in v1; path (b) force-push override gated
+behind Settings → Advanced + typed confirmation. **Default push
+policy**: first remote → `PUSH`, additional remotes → `PUSH_LAZY`.
+Partial failure: primary success + mirror failure = local commit
+shipped, mirror enters retry queue. **Force-push to primary is
+prohibited in v1.** Per-remote auth bindings keyed on
+`(repoId, remoteName)` — SSH keys per-remote by default (opt-in
+reuse). `SecretsStore` re-keyed with one-shot migration. CLI:
+`skb repo init --local`, `skb remote add|remove|list|set-primary|
+set-policy`.

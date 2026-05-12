@@ -3396,3 +3396,59 @@ Cross-link back to [`main.md`](main.md) Phase X. Cross-coordinated with
 [`data-model.md`](data-model.md) Phase DM-K (AGENTS.md CLI-first
 rewrite) and [`sync-engine.md`](sync-engine.md) Phase SE-Q+ (signed
 commits, CalDAV, LFS).
+
+---
+
+## Phase CLI-L — Round 4 surface additions
+
+All commands ship with `--json` envelopes per D.24 and `--dry-run` per X.6.
+
+### `skb deviation` (Phase XX / D.70)
+
+- [ ] **CLI-L.1** `skb deviation set --event <id> --date <yyyy-mm-dd> --kind skipped|partial|completed-early|completed-late [--at <iso>] [--note "..."]` — writes a deviation file per DM-M.1. Default `--at = now`.
+- [ ] **CLI-L.2** `skb deviation list --event <id>` — list deviations for an entity. `skb deviation remove --event <id> --date <yyyy-mm-dd>`.
+
+### `skb routine` (Phase XX.8)
+
+- [ ] **CLI-L.3** `skb routine start <routine-id> [--at <iso>] [--target <calendar-id>] [--skip <entry-id> ...]` — materialize a routine's atomic items into the current timebox.
+- [ ] **CLI-L.4** `skb routine undo <materialized-at>` — delete event files with matching `materialized_at` frontmatter; single revert commit.
+
+### `skb streak` (Phase XX.10)
+
+- [ ] **CLI-L.5** `skb streak <event-id-or-rule-id>` — prints integer + last-skip date. Count-only per D.70.
+
+### `skb sticker` (Phase WW / D.65 / D.69)
+
+- [ ] **CLI-L.6** `skb sticker list-packs` — list installed packs with species + style.
+- [ ] **CLI-L.7** `skb sticker set-active <species> <pack-id>` — pick active pack per species.
+- [ ] **CLI-L.8** `skb sticker add-pack <url>` — clone a custom pack (mirrors AV-E headlessly; same validation chain).
+- [ ] **CLI-L.9** `skb sticker validate <pack-dir>` — run AV-A.5 validator against a local pack.
+- [ ] **CLI-L.10** `skb sticker show <activity-id> [--neutral]` — print the resolved sticker file path for an activity.
+
+### `skb react` / `skb comment` / `skb repo fingerprint` / `skb repo registry` / `skb ref set-write-back` (Phase YY / D.71..D.73)
+
+- [ ] **CLI-L.11** `skb react add --target <global-id> --reactions heart,fire,locked [--body "..."] [--reply-to <feedback-uuid>] [--repo X]`. Target resolution helpers: `--target-event <uuid>` resolves to `<this-repo-fp>:<uuid>`; `--target-event <repo-fp>:<uuid>` for cross-repo; same flag shape for `--target-task`, `--target-journal`, `--target-bonus`.
+- [ ] **CLI-L.12** `skb react remove --target <global-id>` — `git rm` the active-identity's feedback file. No-op if absent (exit 0).
+- [ ] **CLI-L.13** `skb react list --target <global-id>` — list all feedback files for the target across all registered visible repos (respects isolation per D.72).
+- [ ] **CLI-L.14** `skb comment add --target <global-id> --body "..."` / `skb comment list --target <global-id>` — shorthand for `skb react` with empty reactions + body. List flattens by thread order.
+- [ ] **CLI-L.15** `skb repo fingerprint [--repo X]` — prints the repo fingerprint per D.71.
+- [ ] **CLI-L.16** `skb repo registry list|isolate|unisolate` — registry CRUD per D.72. `skb repo registry isolate --from <fingerprint> --hide <fingerprint>` for headless agent control.
+- [ ] **CLI-L.17** `skb ref set-write-back <reference-url> --enable|--disable` — toggle the `write_back_target` field in `references.toml` per FB-H.6.
+- [ ] **CLI-L.18** `skb task done --bonus <id>` — completion path for bonus tasks per FB-G.3. Writes `completed_at` to the same file (or to a `state/.../<task-uuid>.done.toml` state file when the shared repo is unavailable per FB-G.4).
+
+### `skb remote` / `skb repo init --local` (Phase ZZ / D.74)
+
+- [ ] **CLI-L.19** `skb repo init --local` — create a no-origin repo via `GitRepo.initLocalOnly`. Identity + default-calendar prompted.
+- [ ] **CLI-L.20** `skb remote add <name> <url> [--auth oauth-github|oauth-forgejo|pat|ssh|none] [--policy push|push-lazy|never]` — add a remote per D.74.
+- [ ] **CLI-L.21** `skb remote remove <name>` / `skb remote list` / `skb remote rename <from> <to>`.
+- [ ] **CLI-L.22** `skb remote set-primary <name>` — designate the primary remote (drives the reconcile rebase target per ZZ.D).
+- [ ] **CLI-L.23** `skb remote set-policy <name> push|push-lazy|never` — per-remote push policy.
+
+### `skb event add --subbeat` / `skb event add --private` (Phase WW.3 / D.57 / D.68)
+
+- [ ] **CLI-L.24** Extend `skb event add` with `--subbeat "<label>:<seconds>"` repeated flag (DM-M.2 sub-beats). `skb event show` renders `subbeats: [...]` in JSON output.
+- [ ] **CLI-L.25** Extend `skb event add` / `skb task add` / `skb recurrence add` with `--private` flag (D.57 / K-2 per-event privacy).
+
+### `skb mode neutral` (Phase K.14 / D.58)
+
+- [ ] **CLI-L.26** `skb mode neutral on|off|toggle` — aliases the neutral-mode setting (parallel to `skb mode simplified|full|toggle` from D.52).

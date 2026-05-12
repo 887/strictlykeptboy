@@ -3391,3 +3391,33 @@ Every phase above is sub-step-checkbox-tickable. As DM-* work lands,
 tick the boxes here and add the jj change ID to the phase header per
 the global plan-file convention. When all DM-* phases are ticked, flip
 the top-of-file status from `🚧 IN-PLANNING` to `✅ DONE`.
+
+---
+
+## Phase DM-M — Deviations + sub-beats + routine fields (Round 4)
+
+**See [`draft-atomic-activities.md`](draft-atomic-activities.md) (`main.md` Phase XX) and `decisions.md` D.68 / D.70 for the authoritative spec.**
+
+- [ ] **DM-M.1** Deviation file schema. Path: `deviations/<calendar-id>/<event-id-or-rule-id>/<yyyy-mm-dd>.md`. **Separate from `exceptions/`** — exceptions = scheduling changed; deviations = post-hoc reality report. TOML frontmatter: `schema_version = 1`, `kind = "skipped" | "partial" | "completed-early" | "completed-late"`, `at = "<ISO datetime>"`, `author = "<person-id>"`, optional `note`, optional `subbeats_completed: list<string>`. Body free-form Markdown. No `kind = "completed"` — that's the inverted-default state and writing it would balloon the repo.
+- [ ] **DM-M.2** Sub-beat schema. Inline `[[subbeat]]` array on event files (and on template entries). Fields: `label: string`, `duration_seconds: int`, optional `sticker_id: string`. Constraint: sum ≤ event duration (validator warns; doesn't refuse — user may want padding). Cap: 16 sub-beats per event.
+- [ ] **DM-M.3** Materialization audit fields (additive optional, resolver ignores): `materialized_from: string`, `materialized_source_event: string`, `materialized_at: string`. For routine quick-start audit + undo (`skb routine undo`).
+- [ ] **DM-M.4** Routine calendar fields (additive optional on `calendar.toml`): `routine: bool = false`, `routine_id: string`, `routine_default_start: string` (HH:MM), `routine_can_materialize: bool`. Resolver treats routine calendars as ordinary calendars; the wizard creates them with `active_toggle = false` by default to avoid double-rendering.
+- [ ] **DM-M.5** Recurrence `active: bool = true` additive field (Phase K LW-L.4 re-run-from-Settings additive hide semantics). Optional; missing = `true`. When `false`, resolver skips the rule's materialization.
+- [ ] **DM-M.6** Calendar `active_toggle: bool = true` additive field. Phase K LW-L.3 toggling-a-role-off sets this to `false` (hide rather than delete).
+- [ ] **DM-M.7** Per-event `private: bool = false` additive frontmatter field (D.57 / K-2). Plus per-calendar `default_private: bool = false` in `calendar.toml` (per-event flag wins).
+
+---
+
+## Phase DM-N — Feedback files + journal + bonus tasks + repo registry (Round 4)
+
+**See [`draft-global-id-feedback.md`](draft-global-id-feedback.md) (`main.md` Phase YY) and `decisions.md` D.71 / D.72 / D.73 for the authoritative spec.**
+
+- [ ] **DM-N.1** Feedback file schema. Path in the **feedbacker's** repo: `feedback/<target-fingerprint>/<target-entity-uuid>/<feedback-uuid>.md`. Frontmatter: `schema_version`, `id` (UUIDv7), `target = "<repo-fingerprint>:<entity-uuid>"`, `target_kind ∈ {event, task, recurrence, exception, journal, bonus, feedback}`, `author`, `author_repo` (this repo's fingerprint), `created`, optional `updated`, `reactions: list<string>` (opaque tokens per D.73), optional `reply_to: <feedback-uuid>`. Body optional Markdown comment. One file per (author, target, reply_to); updating rewrites the same file; deletion = `git rm`.
+- [ ] **DM-N.2** Journal entry schema. Path: `journal/<yyyy-mm-dd>.md` at calendar root (separate top-level tree; NOT in any calendar/todolist). Multiple entries per day via `journal/<yyyy-mm-dd>-<n>.md`. Frontmatter: `id` (UUIDv7), `created`, `author`, free-form body. Indexed and global-ID'd same as everything else.
+- [ ] **DM-N.3** Bonus task variant. Path: `bonus/<task-uuid>.md` at calendar root in a shared repo. Frontmatter mirrors `TaskFile` plus `bonus = true`, `assigned_by = "<person-id>"`, `optional = true`. `bonus = true` overrides scheduling pressure (never promoted to dated-tasks even with `due`). Completion writes `completed_at` + optional `note` to the same file.
+- [ ] **DM-N.4** `references.toml` (DM-Q) extension: `write_back_target = "<repo-fingerprint>"` optional field per reference, gating the "+ react" UI affordance. Plus `remotes = ["url1", "url2"]` array form alongside backwards-compat singular `url = "..."` per D.74.
+- [ ] **DM-N.5** Repo registry file. Path: `<app-data>/repo-registry.toml` — **device-local, NOT in any git repo**. Schema: `[[repo]]` entries with `fingerprint` (16-hex), `local_path`, `display_name`, `last_seen`, `isolate_from: list<string>` (per-direction asymmetric isolation per D.72).
+- [ ] **DM-N.6** Repo fingerprint cache file. Path: `.strictlykeptboy/repo-fingerprint` — gitignored, never committed (added to scaffold `.gitignore` by Phase K wizard). One-line plain text, 16 hex chars. Derivable from any clone; if missing, app re-derives from `git log --reverse --max-count=1 --format=%T` → SHA-256 → 16-hex truncation per D.71.
+- [ ] **DM-N.7** Repo ID file. Path: `.strictlykeptboy/repo-id` — **committed** to the repo per D.74 for cross-device state-file consistency (Phase OO). One-line plain text UUIDv7. Generated at `init`/`clone` time.
+- [ ] **DM-N.8** Sticker pack manifest schema (Phase WW / D.65). Path: `<pack-root>/pack.toml`. Fields: `schema_version`, `name`, `species`, `author`, `license`, `style`, repeating `[[sticker]]` with `activity_id`, `file`, `tags: list<string>` (taxonomy in D.65), `animated: bool` (hint, decoder auto-detects).
+- [ ] **DM-N.9** AGENTS.md content for produced repos: document `feedback/` directory layout, `skb react` / `skb comment` / `skb repo fingerprint` as primary path, deviation file format, and the "what is NOT in this repo" list (device-level sticker overrides per D.67, repo registry per D.72, fingerprint cache per D.71, OAuth tokens per Phase B).

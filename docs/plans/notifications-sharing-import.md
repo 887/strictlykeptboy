@@ -2440,3 +2440,30 @@ for v1.1 or rejected as wrong-fit.*
 
 - **End-to-end encrypted repo contents.** Repo can be private at the
   provider level; that's the v1 data-at-rest story. D.40.
+
+---
+
+## Phase NS-Y — Round 4 additions
+
+**See Round 4 drafts and `decisions.md` D.54..D.74.**
+
+### Per-event privacy flag in notifications (D.57 / K-2)
+
+- [ ] **NS-Y.1** Notification builder reads the event's `private` frontmatter field. When `true`: lockscreen notification shows generic "Scheduled event" label only — no title, no body. Channel name remains visible (necessary for Android notification grouping). Per-calendar default supported via `calendar.toml` `default_private = true`; per-event flag wins.
+- [ ] **NS-Y.2** Notification body is suppressed when `private = true` regardless of channel importance. The body field is replaced with the empty string before the system surfaces the notification to the lockscreen / status bar / Wear paired devices (no Wear OS in scope but the body suppression composes correctly if added later).
+- [ ] **NS-Y.3** Comments / reactions notification channel (Phase YY / D.62 / D.73): the channel uses the same reaction-set rendering as the in-app drawer. Neutral-mode (D.58) renders received kink reactions with their neutral counterparts per K-7 (visually downgrade, never suppress).
+
+### Atomic-events channel (Phase XX.3)
+
+- [ ] **NS-Y.4** New notification channel `events-atomic` separate from the generic `events` channel from Phase M.1. Importance `IMPORTANCE_HIGH` for lockscreen-visible buzz; user can downgrade in system settings.
+- [ ] **NS-Y.5** Start + end alarms via `AlarmManager.setExactAndAllowWhileIdle`. Sub-beat boundary alarms (Phase XX.9) on the same channel. Permissions: `POST_NOTIFICATIONS` (already requested in Phase M); `SCHEDULE_EXACT_ALARM` (Android 12+, request once with clear rationale "we use exact alarms so your schedule doesn't drift on idle").
+- [ ] **NS-Y.6** Action handlers per XX.3 (`I did it` → no-op, `I didn't` → write `skipped` deviation, `Partial` → activity sheet, `Remind in 10/30/60 min` → reschedule alarm).
+
+### CalDAV-mirror multi-origin awareness (D.74)
+
+- [ ] **NS-Y.7** Per-CalDAV-mirror error surfaces gain `remoteName` context when the underlying repo is multi-origin (e.g. "CalDAV pull to `work` calendar in repo `kept@mirror-family` failed").
+
+### Cross-repo feedback notification channel (D.62 / D.73)
+
+- [ ] **NS-Y.8** Notification when a new feedback file arrives in any registered repo whose entities are owned by repos the user owns. Per-direction isolation per D.72: if the writer repo is `isolate_from`'d by the viewer repo, NO notification fires (structurally invisible per FB-F.3).
+- [ ] **NS-Y.9** Bonus-task assignment deep-link `strictlykeptboy://bonus?target=<sub-repo-fp>:<task-uuid>&title=...&due=...&priority=...` (FB-G.5) opens on sub's device with one-tap accept that materializes the task in the sub's chosen todolist.
