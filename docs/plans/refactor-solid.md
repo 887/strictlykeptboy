@@ -341,6 +341,17 @@ R.X.1..R.X.9 self-check:
 - **F39 — `PronounSet.label` and `TemplateRegistry` humanize output are wire-format.** Left out of the `labelRes` sweep on purpose — pronouns ("he/him") are stable identifiers, and the wizard scaffolder writes humanized atom labels ("Brush teeth") into recurrence rule titles persisted to disk. Localising them would break repo round-trip. Documented in `docs/plans/translations.md`. **Status:** by design, no action.
 - **F40 — Per-repo locale override deferred.** The wizard could in principle ship one repo with `locale = "en-GB"` in `identity.toml` and another with `locale = "de-DE"`, switching the UI per active repo. Not implemented — Android's per-app locale API is global; per-repo would need a Compose-level `LocalContext` override on every screen. Not load-bearing today. **Priority:** scheduled. **Status:** tracked.
 
+### Audit pass 2026-05-13 — nav-swap polish (SkbAppShell)
+
+Nav-layout swap: rail and top-bar contents inverted to match the tonearmboy convention (left rail = per-pane view-modes, top bar = cross-content destinations). Deleted `ui/scaffold/AppScaffold.kt` + `ui/scaffold/SkbTopBar.kt`; replaced with `ui/scaffold/SkbAppShell.kt` + `ui/scaffold/ScheduleViewTab.kt`. `SchedulePane` no longer renders its own top bar; `TasksPane` accepts hoisted `selectedTab` / `onSelectTab` so the shell can drive the rail.
+
+R.X self-check: all 9 boxes pass (narrow `RailItem`; sealed-free for now but `TopDestination` is an enum with exhaustive `when`; composition root remains the only concrete wiring; `SkbAppShell.kt` ~430 LOC, within the 500 LOC second-look threshold; no Liskov debt; imports flow downward; rail items are leaf data, no god-state; new `AppShellNavigationSwapTest` + rewritten `LargeTextSnapshotTest` + `TalkBackLabelTest`; AVD smoke captured `/tmp/nav-swap-{schedule,tasks,settings,tablet}.png`). 353 total tests pass.
+
+**Findings backlog from this pass:**
+
+- **F42 — Top-bar destination buttons could go icons-only on Compact.** Six destination buttons with icon+label currently overflow on phone width; the row horizontally scrolls (works, but takes two swipes to reach Settings). Icons-only with a `contentDescription` would let all six fit without scroll. Deferred — current chrome reads correctly and the horizontal-scroll fallback is robust. **Priority:** low (polish). **Status:** tracked.
+- **F43 — `Modifier.androidx_horizontalScroll` shim in `SkbAppShell.kt`.** A 3-line shim re-exports `foundation.horizontalScroll` under an unambiguous name so the destination-row chain stays readable. Tiny SRP nit; not worth promoting to `ui/components/`. **Priority:** none (style). **Status:** documented.
+
 ---
 
 ## How this doc evolves
