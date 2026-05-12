@@ -307,4 +307,30 @@
     <string name="together_dow_fri">F</string>
     <string name="together_dow_sat">S</string>
     <string name="together_dow_sun">S</string>
+
+    <!-- Phase O — sharing + read-only -->
+    <string name="share_this_repo">Share this repo</string>
+    <string name="share_sheet_title">Share</string>
+    <string name="share_dialog_permissions_label">Permissions</string>
+    <string name="share_dialog_expiry_label">Expiry</string>
+    <string name="share_mode_read_only">Read-only</string>
+    <string name="share_mode_read_write">Read-write</string>
+    <string name="share_expiry_none">No expiry</string>
+    <string name="share_expiry_7d">7 days</string>
+    <string name="share_expiry_30d">30 days</string>
+    <string name="share_include_mirror_remotes">Include mirror remotes</string>
+    <string name="share_link_field_label">Share link</string>
+    <string name="share_copy">Copy</string>
+    <string name="share_send">Share via…</string>
+    <string name="share_expired">This share link expired on %1$s</string>
+    <string name="share_invalid">That share link could not be read.</string>
+    <string name="share_received_read_only_badge">shared / read-only</string>
+
+    <!-- Phase O.3 — read-only banner -->
+    <string name="read_only_banner_message">Your changes will sync if write access is restored. Currently in read-only mode.</string>
+    <string name="read_only_treat_as_read_only">Treat as read-only</string>
+
+    <!-- Phase O.4 — foreign-event chip -->
+    <string name="foreign_event_chip_from">from %1$s</string>
+    <string name="foreign_event_open_in_source">Open in source app</string>
 </resources>

@@ -58,6 +58,8 @@ fun ReposPane(
     var mode by remember { mutableStateOf<Mode>(Mode.List) }
     val repos by state.repos.collectAsState()
     val activeRepoId by state.activeRepoId.collectAsState()
+    var showShareSheetForRepo by remember { mutableStateOf<String?>(null) }
+    val context = androidx.compose.ui.platform.LocalContext.current
     val unified by state.unifiedView.collectAsState()
     val scope = rememberCoroutineScope()
 
@@ -142,6 +144,18 @@ fun ReposPane(
                             }
                         },
                         onOpenIdentities = { mode = Mode.Identities(repo.repoId) },
+                        onShareRepo = { showShareSheetForRepo = repo.repoId },
+                        onToggleRemoteReadOnly = { name, value ->
+                            scope.launch {
+                                val current = state.store.get(repo.repoId) ?: return@launch
+                                val updated = current.copy(
+                                    remotes = current.remotes.map { rb ->
+                                        if (rb.name == name) rb.copy(treatAsReadOnly = value) else rb
+                                    },
+                                )
+                                state.store.update(updated)
+                            }
+                        },
                     )
                 }
             }
@@ -155,6 +169,31 @@ fun ReposPane(
                         onBack = { mode = Mode.Settings(repo.repoId) },
                     )
                 }
+            }
+        }
+
+        // Phase O.1 — share bottom sheet host.
+        showShareSheetForRepo?.let { rid ->
+            val shareRepo = repos.firstOrNull { it.repoId == rid }
+            if (shareRepo != null) {
+                com.eight87.strictlykeptboy.ui.share.ShareSheet(
+                    repo = shareRepo,
+                    onDismiss = { showShareSheetForRepo = null },
+                    onCopy = { link ->
+                        val cm = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
+                            as android.content.ClipboardManager
+                        cm.setPrimaryClip(android.content.ClipData.newPlainText("share link", link))
+                    },
+                    onSend = { link ->
+                        val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(android.content.Intent.EXTRA_TEXT, link)
+                        }
+                        context.startActivity(android.content.Intent.createChooser(send, null))
+                    },
+                )
+            } else {
+                showShareSheetForRepo = null
             }
         }
     }

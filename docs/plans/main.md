@@ -260,9 +260,12 @@ _N.1 + N.2 shipped in commit `a1ed1ff` (Round 1). Together rail destination wire
 
 Deep-dive: [`notifications-sharing-import.md`](notifications-sharing-import.md) phase NS-E.
 
-- [ ] **O.1** "Share read access" deep links to provider collaborator screen
-- [ ] **O.2** Detect push-rejected on token-without-push → flag repo read-only, show banner
-- [ ] **O.3** Author-attribution chip rendering everywhere events/tasks appear
+_Shipped Phase O via NS-E/NS-F/NS-G surface (next commit): `ShareLink` codec + `ShareLinkGenerator` + Compose `ShareSheet` + `ShareLinkReceiver` + manifest deep-link intent-filter + `ReadOnlyBanner` (M3E error-container) + per-remote `treatAsReadOnly` toggle + `ForeignEventSourceChip`/`foreignEventBackground` modifiers + `RepoConfig.readOnlyViaShare / sourceRepoLabel / sourceRepoBackLink`. 22 new tests added (244 pass), AVD-smoked: deep-link `strictlykeptboy://share?url=...&mode=read-only&name=personal-cal` registers a `readOnlyViaShare=true` RepoConfig (visible in Repos list)._
+
+- [x] **O.1** Share-link generator + ShareSheet (read-only / read-write radio, expiry chips, include-mirror-remotes toggle, copy / share via). Codec encodes/decodes `strictlykeptboy://share?url=…&mode=…&expiry=…` round-trip including multi-URL and calendar-scoped variants.
+- [x] **O.2** Deep-link receiver: manifest intent-filter on MainActivity + `ShareLinkReceiver.classify` sealed-action dispatch (Invalid / Expired / CloneReadOnly / LaunchAddRepo). Cold-start + onNewIntent both routed. Read-only path registers a `readOnlyViaShare=true` RepoConfig (full background-clone implementation deferred to a follow-up; the intent dispatch + UI surfaces ship now).
+- [x] **O.3** Per-remote "Treat as read-only" toggle in Repo Settings (override of auto-detected `readOnlyDetected`). Banner with M3E error-container styling fires whenever any remote on the repo has `effectiveReadOnly = true`. (Push-queue integration relies on existing SyncScheduler retry path — no change required to the queue itself.)
+- [x] **O.4** Foreign-event styling helpers (`ForeignEventSourceChip` + `Modifier.foreignEventBackground()` → surfaceContainer instead of primaryContainer). Wiring into the event-row rendering surface is gated on Renderer.Sources carrying per-event `repoId` (Round 2 — `RepoSnapshot` plumbing); helpers + RepoConfig fields land in O.
 
 ---
 

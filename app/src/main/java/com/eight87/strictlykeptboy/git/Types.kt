@@ -55,8 +55,18 @@ data class RemoteBinding(
     val fetchEnabled: Boolean = true,
     val pushPolicy: PushPolicy = PushPolicy.Push,
     val readOnlyDetected: Boolean = false,
+    /**
+     * User override: when true, the user has explicitly marked this remote
+     * read-only via Repo Settings (Phase O.3). Push attempts get queued + a
+     * banner shows in the UI. Independent of [readOnlyDetected], which is
+     * the auto-detected flag set when push-rejected has been observed.
+     */
+    val treatAsReadOnly: Boolean = false,
     val displayName: String? = null,
-)
+) {
+    /** True if either auto-detected or user-marked read-only (O.3). */
+    val effectiveReadOnly: Boolean get() = readOnlyDetected || treatAsReadOnly
+}
 
 @Serializable
 data class AuthorIdentity(val name: String, val email: String)

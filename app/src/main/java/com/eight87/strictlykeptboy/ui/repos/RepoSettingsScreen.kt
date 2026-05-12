@@ -58,6 +58,8 @@ const val TestTagRepoSettingsRemoveRemote = "RepoSettings-RemoveRemote"
 const val TestTagRepoSettingsIdentities = "RepoSettings-Identities"
 const val TestTagRepoSettingsAutoSync = "RepoSettings-AutoSync"
 const val TestTagRepoSettingsWifiOnly = "RepoSettings-WifiOnly"
+const val TestTagRepoSettingsShare = "RepoSettings-Share"
+const val TestTagRepoSettingsRemoteReadOnlyToggle = "RepoSettings-RemoteReadOnly"
 
 /**
  * Phase I.3 — Repo settings screen. Renders all sections per the brief:
@@ -74,6 +76,8 @@ fun RepoSettingsScreen(
     onSetPrimaryRemote: (RemoteName) -> Unit,
     onRemoveRepo: (deleteLocalClone: Boolean) -> Unit,
     onOpenIdentities: () -> Unit,
+    onShareRepo: () -> Unit = {},
+    onToggleRemoteReadOnly: (RemoteName, Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
     var draft by remember(repo) { mutableStateOf(repo) }
@@ -195,6 +199,11 @@ fun RepoSettingsScreen(
 
         // Remotes (per ZZ.G)
         SettingsSection(stringResource(R.string.repo_settings_section_remotes), modifier = Modifier.testTag(TestTagRepoSettingsRemotes)) {
+            // Phase O.3 — banner shown when any remote is treated read-only
+            // (auto-detected or user-toggled).
+            if (repo.remotes.any { it.effectiveReadOnly }) {
+                com.eight87.strictlykeptboy.ui.share.ReadOnlyBanner()
+            }
             if (repo.remotes.isEmpty()) {
                 Text(
                     stringResource(R.string.repo_settings_no_remotes),
@@ -212,12 +221,18 @@ fun RepoSettingsScreen(
                         lastSyncedAt = repo.lastSyncedAt,
                         onRemove = { onRemoveRemote(binding.name) },
                         onSetPrimary = { onSetPrimaryRemote(binding.name) },
+                        onToggleReadOnly = { v -> onToggleRemoteReadOnly(binding.name, v) },
                     )
                 }
                 TextButton(
                     onClick = onAddRemote,
                     modifier = Modifier.testTag(TestTagRepoSettingsAddRemote),
                 ) { Text(stringResource(R.string.repo_settings_add_another_remote)) }
+                // Phase O.1 — share entry point.
+                Button(
+                    onClick = onShareRepo,
+                    modifier = Modifier.testTag(TestTagRepoSettingsShare),
+                ) { Text(stringResource(R.string.share_this_repo)) }
             }
         }
 
@@ -327,6 +342,7 @@ private fun RemoteRow(
     lastSyncedAt: Long?,
     onRemove: () -> Unit,
     onSetPrimary: () -> Unit,
+    onToggleReadOnly: (Boolean) -> Unit = {},
 ) {
     Card(
         modifier = Modifier
@@ -362,6 +378,24 @@ private fun RemoteRow(
                 stringResource(R.string.repo_settings_last_synced, syncedSummary),
                 style = MaterialTheme.typography.bodySmall,
             )
+            // Phase O.3 — per-remote "Treat as read-only" toggle.
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    stringResource(R.string.read_only_treat_as_read_only),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.weight(1f),
+                )
+                Switch(
+                    checked = binding.treatAsReadOnly,
+                    onCheckedChange = onToggleReadOnly,
+                    modifier = Modifier.testTag(
+                        "$TestTagRepoSettingsRemoteReadOnlyToggle-${binding.name.value}",
+                    ),
+                )
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 if (!isPrimary) {
                     TextButton(onClick = onSetPrimary) { Text(stringResource(R.string.repo_settings_set_primary)) }

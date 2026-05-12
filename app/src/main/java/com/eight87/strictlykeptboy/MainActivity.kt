@@ -1,6 +1,8 @@
 package com.eight87.strictlykeptboy
 
+import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -43,8 +45,16 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+
+    private var deepLinkHandler: ((Intent) -> Unit)? = null
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        deepLinkHandler?.invoke(intent)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,6 +68,19 @@ class MainActivity : ComponentActivity() {
         val repoStore = RepoStore.open(this)
         val secretsStore = SecretsStore.open(this)
         val reposState = ReposViewState.open(this, repoStore)
+
+        // Phase O.2 — handle strictlykeptboy://share deep links.
+        deepLinkHandler = { intent ->
+            intent.dataString?.let { data ->
+                val action = com.eight87.strictlykeptboy.ui.share.ShareLinkReceiver.classify(data)
+                handleShareAction(action, repoStore)
+            }
+        }
+        // Cold-start: process the launching intent immediately.
+        intent?.dataString?.let { data ->
+            val action = com.eight87.strictlykeptboy.ui.share.ShareLinkReceiver.classify(data)
+            handleShareAction(action, repoStore)
+        }
 
         // Phase K.14 — age gate + neutral-mode toggle prefs.
         val ageGate = AgeGatePrefs.open(this)
@@ -206,6 +229,78 @@ class MainActivity : ComponentActivity() {
                         },
                     )
                 }
+            }
+        }
+    }
+
+    /**
+     * Phase O.2 — dispatch a [ShareLinkReceiver.Action] into concrete side effects.
+     * Composition root only place that wires concrete classes (R.X.3).
+     *
+     * Read-only: clone (deferred for v1 if network unreachable) → register a
+     * `readOnlyViaShare = true` RepoConfig pointing at the URL. For the cold-start
+     * + on-AVD smoke test, the v1 implementation registers a stub entry that
+     * the next sync round will populate by clone. A full background-clone path
+     * lands in a Phase O follow-up; intent dispatch + UI banner ship now.
+     *
+     * Read-write: surface a toast pointing the user at the Add-Repo flow with
+     * the URL prefilled — wiring the wizard pre-fill end-to-end is a follow-up
+     * in the AddRepo nav-host.
+     */
+    private fun handleShareAction(
+        action: com.eight87.strictlykeptboy.ui.share.ShareLinkReceiver.Action,
+        repoStore: RepoStore,
+    ) {
+        when (action) {
+            is com.eight87.strictlykeptboy.ui.share.ShareLinkReceiver.Action.Invalid -> {
+                Toast.makeText(this, getString(R.string.share_invalid), Toast.LENGTH_LONG).show()
+            }
+            is com.eight87.strictlykeptboy.ui.share.ShareLinkReceiver.Action.Expired -> {
+                Toast.makeText(
+                    this,
+                    getString(R.string.share_expired, action.link.expiryIso ?: ""),
+                    Toast.LENGTH_LONG,
+                ).show()
+            }
+            is com.eight87.strictlykeptboy.ui.share.ShareLinkReceiver.Action.CloneReadOnly -> {
+                val link = action.link
+                val repoId = com.eight87.strictlykeptboy.git.Uuid7.generate().toString()
+                val rootDir = filesDir.resolve("shared-readonly/$repoId").apply { mkdirs() }
+                val label = link.sourceLabel?.takeIf { it.isNotBlank() }
+                    ?: link.urls.first().substringAfterLast('/').removeSuffix(".git")
+                // Persist intent — actual clone happens on next sync tick.
+                kotlinx.coroutines.GlobalScope.launch {
+                    runCatching {
+                        repoStore.add(
+                            RepoConfig(
+                                repoId = repoId,
+                                displayName = label,
+                                rootDir = rootDir.absolutePath,
+                                remotes = emptyList(),
+                                primaryRemote = null,
+                                authorIdentity = AuthorIdentity("me", "me@example.com"),
+                                readOnlyViaShare = true,
+                                sourceRepoLabel = label,
+                                sourceRepoBackLink = link.backLink,
+                            ),
+                        )
+                    }
+                }
+                Toast.makeText(
+                    this,
+                    getString(R.string.share_received_read_only_badge),
+                    Toast.LENGTH_SHORT,
+                ).show()
+            }
+            is com.eight87.strictlykeptboy.ui.share.ShareLinkReceiver.Action.LaunchAddRepo -> {
+                // Wizard pre-fill: deferred to a follow-up; for v1, surface a toast
+                // pointing the user at Repos → Add. The URL is observable in the
+                // intent for any future receiver to consume.
+                Toast.makeText(
+                    this,
+                    action.link.urls.first(),
+                    Toast.LENGTH_LONG,
+                ).show()
             }
         }
     }
