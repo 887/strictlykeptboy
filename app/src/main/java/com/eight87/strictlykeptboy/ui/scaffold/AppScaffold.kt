@@ -69,6 +69,7 @@ fun AppScaffold(
     onWriteTask: (TaskQuickAddRequest) -> Unit = {},
     reposState: ReposViewState? = null,
     secretsStore: SecretsStore? = null,
+    onSyncClick: () -> Unit = {},
 ) {
     var selected by rememberSaveable { mutableStateOf(TopDestination.Schedule) }
     val activeRepoName by activeRepoNameFlow.collectAsState()
@@ -99,6 +100,7 @@ fun AppScaffold(
                 activeRepoName = activeRepoName,
                 state = scheduleState,
                 onPersistTab = onPersistTab,
+                onSyncClick = onSyncClick,
             )
             TopDestination.Tasks -> TasksPane(
                 activeRepoName = activeRepoName,

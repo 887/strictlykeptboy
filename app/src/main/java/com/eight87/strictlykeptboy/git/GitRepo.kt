@@ -183,10 +183,61 @@ class GitRepo internal constructor(
                 changedPaths = diffPaths(before, repository.resolve("HEAD")),
             )
             RebaseResult.Status.STOPPED, RebaseResult.Status.CONFLICTS -> PullResult.Conflicted(
-                conflictedPaths = rebase.conflicts ?: emptyList(),
+                conflictedPaths = (rebase.conflicts ?: emptyList()).ifEmpty { unmergedPathsFromDirCache() },
                 handle = RebaseHandle(this),
             )
             else -> PullResult.Failed(SyncError.Unknown())
+        }
+    }
+
+    private fun unmergedPathsFromDirCache(): List<String> {
+        val cache = repository.readDirCache()
+        val out = LinkedHashSet<String>()
+        for (i in 0 until cache.entryCount) {
+            val e = cache.getEntry(i)
+            if (e.stage != 0) out += e.pathString
+        }
+        return out.toList()
+    }
+
+    /**
+     * Stage a single path during conflict resolution. Used by the conflict-
+     * resolution UI after writing the resolved content to disk. Does NOT
+     * commit — the caller drives [continueRebase] once every path is staged.
+     */
+    suspend fun stageForResolve(path: String) = withLock {
+        // Mark conflict resolved: hash the working-tree content into a single
+        // stage-0 DirCache entry, replacing JGit's stage-1/2/3 conflict trio.
+        val workFile = java.io.File(rootDir, path)
+        val ins = repository.newObjectInserter()
+        val blobId = try {
+            val id = java.io.FileInputStream(workFile).use { stream ->
+                ins.insert(org.eclipse.jgit.lib.Constants.OBJ_BLOB, workFile.length(), stream)
+            }
+            ins.flush()
+            id
+        } finally {
+            ins.close()
+        }
+
+        val dirCache = repository.lockDirCache()
+        var committed = false
+        try {
+            val builder = dirCache.builder()
+            for (i in 0 until dirCache.entryCount) {
+                val existing = dirCache.getEntry(i)
+                if (existing.pathString == path) continue
+                builder.add(existing)
+            }
+            val resolved = org.eclipse.jgit.dircache.DirCacheEntry(path)
+            resolved.fileMode = org.eclipse.jgit.lib.FileMode.REGULAR_FILE
+            resolved.setObjectId(blobId)
+            resolved.setLength(workFile.length())
+            builder.add(resolved)
+            builder.commit()
+            committed = true
+        } finally {
+            if (!committed) dirCache.unlock()
         }
     }
 
@@ -366,7 +417,10 @@ class GitRepo internal constructor(
                 changedPaths = diffPaths(before, repository.resolve("HEAD")),
             )
             RebaseResult.Status.STOPPED, RebaseResult.Status.CONFLICTS ->
-                PullResult.Conflicted(result.conflicts ?: emptyList(), RebaseHandle(this))
+                PullResult.Conflicted(
+                    (result.conflicts ?: emptyList()).ifEmpty { unmergedPathsFromDirCache() },
+                    RebaseHandle(this),
+                )
             else -> PullResult.Failed(SyncError.Unknown())
         }
 

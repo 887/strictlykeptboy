@@ -22,6 +22,7 @@ fun SchedulePane(
     state: ScheduleViewState,
     modifier: Modifier = Modifier,
     onPersistTab: (ScheduleViewTab) -> Unit = {},
+    onSyncClick: () -> Unit = {},
 ) {
     val selectedTab by state.selectedTab.collectAsState()
     val date by state.date.collectAsState()
@@ -38,7 +39,7 @@ fun SchedulePane(
                 onPersistTab(it)
             },
             onRepoSwitcherClick = { /* UI-K — stubbed for Phase F */ },
-            onSyncClick = { /* Phase J — stubbed */ },
+            onSyncClick = onSyncClick,
             onIdentityClick = { /* UI-L — stubbed */ },
         )
         when (selectedTab) {

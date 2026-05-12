@@ -8,8 +8,15 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import com.eight87.strictlykeptboy.git.GitRepo
+import com.eight87.strictlykeptboy.git.GitRepoRegistry
 import com.eight87.strictlykeptboy.git.RepoStore
 import com.eight87.strictlykeptboy.git.auth.SecretsStore
+import com.eight87.strictlykeptboy.sync.SyncRuntime
+import com.eight87.strictlykeptboy.sync.SyncScheduler
+import com.eight87.strictlykeptboy.sync.SyncService
+import com.eight87.strictlykeptboy.sync.SyncStatusStore
+import java.io.File
 import com.eight87.strictlykeptboy.resolver.RepoSnapshot
 import com.eight87.strictlykeptboy.resolver.Renderer
 import com.eight87.strictlykeptboy.theme.AppearancePrefs
@@ -34,6 +41,29 @@ class MainActivity : ComponentActivity() {
         val repoStore = RepoStore.open(this)
         val secretsStore = SecretsStore.open(this)
         val reposState = ReposViewState.open(this, repoStore)
+
+        // Phase J — sync orchestration. Build the scheduler once per process and
+        // park it in SyncRuntime so the foreground service can reach it.
+        val statusStore = SyncStatusStore.open(this)
+        val scheduler = SyncScheduler(
+            repoStore = repoStore,
+            statusStore = statusStore,
+            repoProvider = { cfg ->
+                GitRepoRegistry.get(cfg.repoId) ?: runCatching {
+                    GitRepo.open(
+                        rootDir = File(cfg.rootDir),
+                        repoId = cfg.repoId,
+                        remotes = cfg.remotes,
+                        primaryRemote = cfg.primaryRemote,
+                        authorIdentity = cfg.authorIdentity,
+                        defaultBranch = cfg.defaultBranch,
+                    ).also(GitRepoRegistry::put)
+                }.getOrNull()
+            },
+        )
+        scheduler.startPeriodicTicks()
+        SyncRuntime.scheduler = scheduler
+        SyncRuntime.statusStore = statusStore
 
         // Phase F stub: RepoStore + DAO wiring lands in Phase F→G integration.
         // For now we feed an empty snapshot + empty sources so SchedulePane
@@ -72,6 +102,11 @@ class MainActivity : ComponentActivity() {
                     onPersistTab = viewModePrefs::set,
                     reposState = reposState,
                     secretsStore = secretsStore,
+                    onSyncClick = {
+                        if (repoStore.list().any { it.remotes.isNotEmpty() }) {
+                            SyncService.startSyncAll(this@MainActivity)
+                        }
+                    },
                 )
             }
         }

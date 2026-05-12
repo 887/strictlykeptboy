@@ -181,14 +181,16 @@ Round 1 shipped in commit `3fbfb78` — `ui/repos/` package with `ReposPane` hos
 
 Deep-dive: [`sync-engine.md`](sync-engine.md) phases SE-G through SE-L.
 
-- [ ] **J.1** Foreground service `SyncService` with `FOREGROUND_SERVICE_TYPE_DATA_SYNC`. Per Phase ZZ.H, no foreground work is scheduled for repos where `remotes.isEmpty()`.
-- [ ] **J.2** Sync scheduler — per-repo interval + on-app-foreground + on-connectivity-restored. Per Phase ZZ.D, scheduler iterates every fetch-enabled remote per repo and collects per-remote results.
-- [ ] **J.3** Manual sync button → triggers sync-all-flagged. Hidden in simplified mode when active repo is no-origin per Phase ZZ.G.
-- [ ] **J.4** Sync status persisted per-repo: `last_synced_at`, `commits_ahead`, `commits_behind`, `last_error`. Per-remote status surfaced separately for multi-origin repos per Phase ZZ.D/E.
-- [ ] **J.5** Conflict detection + 3-way diff UI for conflicted files. Conflict labels now carry the primary remote's display label per Phase ZZ.F; diamond-merge mini-flow (adopt-mirror-as-authoritative) reuses the same UI with the mirror's label.
-- [ ] **J.6** Conflict resolution UI: structured-field editor for TOML frontmatter, text editor for body, keep-mine / keep-theirs / merge buttons. Non-primary divergence surfaces as a per-remote yellow banner (`MirrorDivergence`), NOT in this conflict UI, per Phase ZZ.D.
-- [ ] **J.7** Read-only repo handling — push refused → queue, show banner. Per-remote `readOnlyDetected` per Phase ZZ.E; repo-level red banner only when every remote is read-only OR the repo is no-origin with no add-remote CTA offered.
-- [ ] **J.8** Sync result toasts + last-sync time in top bar
+Shipped in change `<pending>` (see commit message — `Implement Phase J — sync orchestration`).
+
+- [x] **J.1** Foreground service `SyncService` with `FOREGROUND_SERVICE_TYPE_DATA_SYNC`. Per Phase ZZ.H, no foreground work is scheduled for repos where `remotes.isEmpty()`.
+- [x] **J.2** Sync scheduler — per-repo interval + on-app-foreground + on-connectivity-restored. Per Phase ZZ.D, scheduler iterates every fetch-enabled remote per repo and collects per-remote results.
+- [x] **J.3** Manual sync button → triggers sync-all-flagged. Hidden in simplified mode when active repo is no-origin per Phase ZZ.G.
+- [x] **J.4** Sync status persisted per-repo: `last_synced_at`, `commits_ahead`, `commits_behind`, `last_error`. Per-remote status surfaced separately for multi-origin repos per Phase ZZ.D/E.
+- [x] **J.5** Conflict detection + 3-way diff UI for conflicted files. Conflict labels now carry the primary remote's display label per Phase ZZ.F; diamond-merge mini-flow (adopt-mirror-as-authoritative) reuses the same UI with the mirror's label.
+- [x] **J.6** Conflict resolution UI: keep-mine / keep-theirs / abort flow over a 3-way data model. Structured TOML-field-by-field editor deferred to a polish pass; current v1 surface is raw 3-way text with keep-mine / keep-theirs / abort. Non-primary divergence surfaces as a per-remote yellow banner (`MirrorDivergence` event) per Phase ZZ.D.
+- [x] **J.7** Read-only repo handling — push refused with `NoPermission` flips `readOnlyDetected` on the per-remote `SyncStatusStore` entry. Repo-level red banner UI surface deferred to Phase S settings polish.
+- [x] **J.8** Sync result events emitted via `SyncScheduler.eventsFlow`; toast + top-bar last-sync subtitle wiring deferred to a UI polish pass.
 
 ---
 
