@@ -9,9 +9,32 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.Box as LayoutBox
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AccountTree
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Checklist
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FolderShared
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.PeopleAlt
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -19,6 +42,9 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -198,60 +224,207 @@ fun SettingsPane(
     }
 }
 
+/**
+ * Tonearmboy parity (user direction 2026-05-13): grouped-card settings
+ * list with section headers in accent color, a pill-shaped filled
+ * search bar, and per-row colored circular icon + title + subtitle.
+ * No left gutter — section headers and cards both start flush with
+ * the same horizontal inset.
+ */
+private data class CategoryMeta(
+    val icon: ImageVector,
+    val subtitleRes: Int,
+    val iconTint: androidx.compose.ui.graphics.Color,
+)
+
+@Composable
+private fun metaFor(cat: SettingsCategory): CategoryMeta {
+    val cs = MaterialTheme.colorScheme
+    return when (cat) {
+        SettingsCategory.Appearance ->
+            CategoryMeta(Icons.Filled.Palette, R.string.settings_subtitle_appearance, cs.tertiary)
+        SettingsCategory.Repos ->
+            CategoryMeta(Icons.Filled.FolderShared, R.string.settings_subtitle_repos, cs.primary)
+        SettingsCategory.Identities ->
+            CategoryMeta(Icons.Filled.PeopleAlt, R.string.settings_subtitle_authors, cs.secondary)
+        SettingsCategory.Calendars ->
+            CategoryMeta(Icons.Filled.CalendarMonth, R.string.settings_subtitle_calendars, cs.primary)
+        SettingsCategory.Todolists ->
+            CategoryMeta(Icons.Filled.Checklist, R.string.settings_subtitle_todolists, cs.secondary)
+        SettingsCategory.Templates ->
+            CategoryMeta(Icons.Filled.Description, R.string.settings_subtitle_templates, cs.tertiary)
+        SettingsCategory.Sync ->
+            CategoryMeta(Icons.Filled.Sync, R.string.settings_subtitle_sync, cs.primary)
+        SettingsCategory.Notifications ->
+            CategoryMeta(Icons.Filled.Notifications, R.string.settings_subtitle_notifications, cs.secondary)
+        SettingsCategory.Mode ->
+            CategoryMeta(Icons.Filled.Tune, R.string.settings_subtitle_mode, cs.tertiary)
+        SettingsCategory.Lifestyle ->
+            CategoryMeta(Icons.Filled.Favorite, R.string.settings_subtitle_lifestyle, cs.primary)
+        SettingsCategory.Identity ->
+            CategoryMeta(Icons.Filled.Person, R.string.settings_subtitle_identity, cs.secondary)
+        SettingsCategory.About ->
+            CategoryMeta(Icons.Filled.Info, R.string.settings_subtitle_about, cs.tertiary)
+    }
+}
+
+private data class SettingsSection(val titleRes: Int, val items: List<SettingsCategory>)
+
+private val sections: List<SettingsSection> = listOf(
+    SettingsSection(
+        R.string.settings_section_appearance_header,
+        listOf(SettingsCategory.Appearance),
+    ),
+    SettingsSection(
+        R.string.settings_section_library,
+        listOf(
+            SettingsCategory.Repos,
+            SettingsCategory.Identities,
+            SettingsCategory.Calendars,
+            SettingsCategory.Todolists,
+            SettingsCategory.Templates,
+        ),
+    ),
+    SettingsSection(
+        R.string.settings_section_behaviour,
+        listOf(
+            SettingsCategory.Sync,
+            SettingsCategory.Notifications,
+            SettingsCategory.Mode,
+        ),
+    ),
+    SettingsSection(
+        R.string.settings_section_lifestyle,
+        listOf(
+            SettingsCategory.Lifestyle,
+            SettingsCategory.Identity,
+        ),
+    ),
+    SettingsSection(
+        R.string.settings_section_about_header,
+        listOf(SettingsCategory.About),
+    ),
+)
+
 @Composable
 private fun SettingsCategoryList(
     selected: SettingsCategory,
     onSelect: (SettingsCategory) -> Unit,
 ) {
-    // M3E shape per user direction 2026-05-13: search field at the top + a
-    // flat scrolling list of categories. The big page title "Settings" is
-    // already in the shell top-bar, so no second "Settings" subtitle here
-    // (was redundant). Left padding tightened to 0dp — ListItem provides
-    // its own horizontal inset so rows are no longer visually indented
-    // 100+px from the left edge.
     var query by remember { mutableStateOf("") }
-    val filtered = remember(query) {
-        if (query.isBlank()) SettingsCategory.all
-        else SettingsCategory.all.filter { cat ->
-            // Filter by the row's testTag (which is the English keyword) so
-            // search works without a Composable scope. labelRes is checked
-            // separately by the LazyColumn render.
-            cat.testTag.contains(query, ignoreCase = true)
+    val visibleSections = remember(query) {
+        if (query.isBlank()) sections
+        else sections.mapNotNull { sec ->
+            val kept = sec.items.filter { it.testTag.contains(query, ignoreCase = true) }
+            if (kept.isEmpty()) null else SettingsSection(sec.titleRes, kept)
         }
     }
-    Column(modifier = Modifier.fillMaxSize().testTag(TestTagSettingsCategoryList)) {
-        androidx.compose.material3.OutlinedTextField(
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .testTag(TestTagSettingsCategoryList),
+    ) {
+        // Pill-shaped filled search bar (tonearmboy parity). Edge-to-edge
+        // with 16dp horizontal margin matching the card insets — keeps the
+        // search and the cards optically aligned and removes the previous
+        // 100+px left-gutter.
+        androidx.compose.material3.TextField(
             value = query,
             onValueChange = { query = it },
             placeholder = { Text(stringResource(R.string.settings_search_placeholder)) },
             leadingIcon = {
                 Icon(
-                    imageVector = androidx.compose.material.icons.Icons.Filled.Search,
+                    imageVector = Icons.Filled.Search,
                     contentDescription = null,
                 )
             },
             singleLine = true,
+            shape = RoundedCornerShape(28.dp),
+            colors = TextFieldDefaults.colors(
+                focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                disabledIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            ),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp)
                 .testTag("SettingsSearchField"),
         )
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(0.dp)) {
-            items(filtered) { cat ->
-                val selectedNow = cat::class == selected::class
-                ListItem(
-                    headlineContent = { Text(stringResource(cat.labelRes)) },
-                    modifier = Modifier
-                        .testTag("$TestTagSettingsCategoryPrefix${cat.testTag}")
-                        .clickable { onSelect(cat) },
-                    colors = if (selectedNow) {
-                        ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
-                    } else {
-                        ListItemDefaults.colors()
-                    },
-                )
+
+        visibleSections.forEach { section ->
+            Text(
+                text = stringResource(section.titleRes),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(
+                    start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp,
+                ),
+            )
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                ),
+                shape = RoundedCornerShape(20.dp),
+            ) {
+                section.items.forEachIndexed { idx, cat ->
+                    val meta = metaFor(cat)
+                    val selectedNow = cat::class == selected::class
+                    ListItem(
+                        headlineContent = { Text(stringResource(cat.labelRes)) },
+                        supportingContent = {
+                            Text(
+                                stringResource(meta.subtitleRes),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        },
+                        leadingContent = {
+                            LayoutBox(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .background(
+                                        color = meta.iconTint.copy(alpha = 0.18f),
+                                        shape = CircleShape,
+                                    ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = meta.icon,
+                                    contentDescription = null,
+                                    tint = meta.iconTint,
+                                )
+                            }
+                        },
+                        colors = if (selectedNow) {
+                            ListItemDefaults.colors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            )
+                        } else {
+                            ListItemDefaults.colors(
+                                containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                            )
+                        },
+                        modifier = Modifier
+                            .testTag("$TestTagSettingsCategoryPrefix${cat.testTag}")
+                            .clickable { onSelect(cat) },
+                    )
+                    if (idx < section.items.lastIndex) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(start = 72.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                        )
+                    }
+                }
             }
         }
+        // bottom breathing room
+        androidx.compose.foundation.layout.Spacer(Modifier.size(24.dp))
     }
 }
 

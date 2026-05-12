@@ -88,7 +88,30 @@
     <string name="settings_category_todolists">Todolists</string>
     <string name="settings_category_templates">Templates</string>
     <string name="settings_category_lifestyle">Lifestyle</string>
-    <string name="settings_category_appearance">Appearance</string>
+    <string name="settings_category_appearance">Look and Feel</string>
+    <string name="settings_section_appearance_header">Appearance</string>
+    <string name="settings_section_library">Library</string>
+    <string name="settings_section_behaviour">Behaviour</string>
+    <string name="settings_section_about_header">About</string>
+
+    <!-- Section headers + per-row subtitles for the M3E grouped-card
+         settings list (tonearmboy parity). -->
+    <string name="settings_section_accounts">Accounts</string>
+    <string name="settings_section_content">Content</string>
+    <string name="settings_section_lifestyle">Lifestyle</string>
+    <string name="settings_section_app">App</string>
+    <string name="settings_subtitle_repos">Manage repos, identities and import/export.</string>
+    <string name="settings_subtitle_authors">Per-repo authors used for commits.</string>
+    <string name="settings_subtitle_sync">Auto-sync, conflict resolution, schedule.</string>
+    <string name="settings_subtitle_notifications">Reminders, do-not-disturb, channels.</string>
+    <string name="settings_subtitle_calendars">Visibility, colors, defaults.</string>
+    <string name="settings_subtitle_todolists">Visibility, defaults, layout.</string>
+    <string name="settings_subtitle_templates">Built-in and custom routine templates.</string>
+    <string name="settings_subtitle_lifestyle">Roles, routines, supersedence.</string>
+    <string name="settings_subtitle_identity">Praise, pronouns, honorific, register.</string>
+    <string name="settings_subtitle_appearance">Theme, color scheme, layout.</string>
+    <string name="settings_subtitle_about">Version, licenses, source, privacy.</string>
+    <string name="settings_subtitle_mode">Free vs strictly-kept.</string>
 
     <!-- S.1 Repos navigation tile -->
     <string name="settings_repos_intro">Manage repos, identities and import/export. Tap a repo to open its settings.</string>
