@@ -318,7 +318,11 @@ private fun SkbAppShellContent(
                             PlaceholderScreen(stringResource(R.string.scaffold_dest_together))
                         }
                         TopDestination.Repos -> if (reposState != null) {
-                            ReposPane(state = reposState, secretsStore = secretsStore)
+                            ReposPane(
+                                state = reposState,
+                                secretsStore = secretsStore,
+                                onOpenTogether = { selected = TopDestination.Together },
+                            )
                         } else {
                             PlaceholderScreen(stringResource(R.string.scaffold_dest_repos))
                         }
@@ -383,11 +387,18 @@ private fun ShellTopBar(
                 modifier = Modifier.weight(1f),
                 maxLines = 1,
             )
-            // Top-level destinations as tiny icon-only buttons. Bat/Settings/
-            // Repos hidden — bat lives at rail bottom (D.88), Settings as gear
-            // at rail bottom, Repos reachable via bat tap.
+            // Top-level destinations as tiny icon-only buttons. Hidden:
+            //   - Repos (reachable via the trailing bat avatar)
+            //   - Settings (reachable via the rail-bottom gear)
+            //   - Together (reachable from inside the Repos pane as "find a time")
+            //   - Wizard (Wizard top-bar entry stays for now; planned to demote
+            //     to a "+" inside the Repos pane in a follow-up round)
             TopDestination.entries
-                .filter { it != TopDestination.Repos && it != TopDestination.Settings }
+                .filter {
+                    it != TopDestination.Repos &&
+                        it != TopDestination.Settings &&
+                        it != TopDestination.Together
+                }
                 .forEach { dest ->
                     DestinationButton(
                         dest = dest,
@@ -396,6 +407,11 @@ private fun ShellTopBar(
                     )
                 }
             SyncButton(onClick = onSyncClick)
+            // Far-right: bat/accounts avatar. Per user direction 2026-05-13:
+            // put the bat back up top on the very right (was at rail bottom).
+            // Tapping it navigates to Repos (D.88: bat IS the active-repo
+            // affordance).
+            IdentityAvatar(onClick = onRepoSwitcherClick, iconKind = activeIconKind)
         }
     }
 }
@@ -513,9 +529,8 @@ private fun RailColumn(
                     RailTabItem(item = item)
                 }
             }
-            // BOTTOM: active-repo avatar + settings gear (always visible).
-            Spacer(Modifier.height(8.dp))
-            IdentityAvatar(onClick = onAccountTap, iconKind = activeIconKind, sizeDp = 32)
+            // BOTTOM: settings gear only — the active-repo avatar moved back
+            // to the top-bar far-right slot per user direction 2026-05-13.
             Spacer(Modifier.height(8.dp))
             Box(
                 modifier = Modifier

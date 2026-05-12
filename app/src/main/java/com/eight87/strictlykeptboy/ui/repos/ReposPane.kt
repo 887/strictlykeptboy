@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
@@ -54,6 +56,7 @@ fun ReposPane(
     state: ReposViewState,
     secretsStore: SecretsStore? = null,
     modifier: Modifier = Modifier,
+    onOpenTogether: () -> Unit = {},
 ) {
     var mode by remember { mutableStateOf<Mode>(Mode.List) }
     val repos by state.repos.collectAsState()
@@ -79,6 +82,7 @@ fun ReposPane(
                 onSelect = { state.setActive(it) },
                 onAddRepo = { mode = Mode.Add },
                 onOpenSettings = { repoId -> mode = Mode.Settings(repoId) },
+                onOpenTogether = onOpenTogether,
             )
             Mode.Add -> AddRepoNavHost(
                 onCancel = { mode = Mode.List },
@@ -209,12 +213,34 @@ private fun ReposList(
     onSelect: (String) -> Unit,
     onAddRepo: () -> Unit,
     onOpenSettings: (String) -> Unit,
+    onOpenTogether: () -> Unit,
 ) {
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text(stringResource(R.string.repos_title), style = MaterialTheme.typography.headlineSmall)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(
+                stringResource(R.string.repos_title),
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.weight(1f),
+            )
+            // "Find a time together" → opens the Together pane (common-time
+            // finder across one or more repos). Moved here from the top-bar
+            // per user direction 2026-05-13.
+            androidx.compose.material3.IconButton(
+                onClick = onOpenTogether,
+                modifier = Modifier.testTag("ReposFindTogether"),
+            ) {
+                androidx.compose.material3.Icon(
+                    imageVector = Icons.Filled.Groups,
+                    contentDescription = "Find a time together",
+                )
+            }
+        }
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
