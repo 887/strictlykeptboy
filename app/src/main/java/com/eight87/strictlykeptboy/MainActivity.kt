@@ -194,10 +194,35 @@ class MainActivity : ComponentActivity() {
                             finder = graph.finderPort,
                         )
                     }
+                    val eventCreateController = remember {
+                        com.eight87.strictlykeptboy.ui.schedule.EventCreateController(
+                            scope = scope,
+                            prefs = graph.eventCreatePrefs,
+                            context = applicationContext,
+                            activeRepoProvider = {
+                                val name = graph.activeRepoName.value
+                                graph.repoStore.list().firstOrNull { it.displayName == name }
+                                    ?: graph.repoStore.list().firstOrNull()
+                            },
+                            calendarOptionsProvider = {
+                                val list = graph.repoStore.list()
+                                list.mapNotNull { cfg ->
+                                    val calId = cfg.defaultCalendarId ?: return@mapNotNull null
+                                    com.eight87.strictlykeptboy.ui.schedule.CalendarOption(
+                                        id = calId,
+                                        displayName = cfg.displayName,
+                                        repoDisplayName = if (list.size > 1) cfg.displayName else null,
+                                    )
+                                }
+                            },
+                            neutralModeProvider = { graph.neutralModePrefs.isEnabled() },
+                        )
+                    }
                     SkbAppShell(
                         activeRepoNameFlow = graph.activeRepoName,
                         activeIconKindFlow = graph.activeRepoIconKind,
                         scheduleState = scheduleState,
+                        eventCreateController = eventCreateController,
                         onPersistTab = graph.viewModePrefs::set,
                         reposState = graph.reposState,
                         secretsStore = graph.secretsStore,

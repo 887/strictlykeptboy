@@ -173,6 +173,7 @@ fun SkbAppShell(
     onPickExportFile: (com.eight87.strictlykeptboy.git.RepoConfig) -> Unit = {},
     settingsAccess: SettingsAccess = SettingsAccess(),
     activeIconKindFlow: StateFlow<com.eight87.strictlykeptboy.ui.theming.RepoIconKind>? = null,
+    eventCreateController: com.eight87.strictlykeptboy.ui.schedule.EventCreateController? = null,
 ) {
     ProvideWindowSizeClass(modifier = modifier) { _ ->
         SkbAppShellContent(
@@ -193,6 +194,7 @@ fun SkbAppShell(
             onPickExportFile = onPickExportFile,
             settingsAccess = settingsAccess,
             activeIconKindFlow = activeIconKindFlow,
+            eventCreateController = eventCreateController,
         )
     }
 }
@@ -216,6 +218,7 @@ private fun SkbAppShellContent(
     onPickExportFile: (com.eight87.strictlykeptboy.git.RepoConfig) -> Unit,
     settingsAccess: SettingsAccess,
     activeIconKindFlow: StateFlow<com.eight87.strictlykeptboy.ui.theming.RepoIconKind>?,
+    eventCreateController: com.eight87.strictlykeptboy.ui.schedule.EventCreateController? = null,
 ) {
     var selected by rememberSaveable { mutableStateOf(TopDestination.Schedule) }
     val activeRepoName by activeRepoNameFlow.collectAsState()
@@ -307,6 +310,7 @@ private fun SkbAppShellContent(
                             activeRepoName = activeRepoName,
                             state = scheduleState,
                             onSyncClick = onSyncClick,
+                            eventCreateController = eventCreateController,
                         )
                         TopDestination.Tasks -> TasksPane(
                             activeRepoName = activeRepoName,

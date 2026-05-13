@@ -38,6 +38,10 @@ const val TestTagScheduleMasterPane = "ScheduleMasterPane"
  * `Row(master | detail)` where the right pane always renders the
  * focused event's detail. On Compact (phone) the legacy modal bottom
  * sheet behaviour is preserved.
+ *
+ * Phase FFF — accepts an optional [EventCreateController]. When set,
+ * an `EventCreateFab` overlays the bottom-end and the controller's
+ * sheet renders on top.
  */
 @Composable
 fun SchedulePane(
@@ -46,10 +50,9 @@ fun SchedulePane(
     modifier: Modifier = Modifier,
     onPersistTab: (ScheduleViewTab) -> Unit = {},
     onSyncClick: () -> Unit = {},
+    eventCreateController: EventCreateController? = null,
+    eventCreateEnabled: Boolean = true,
 ) {
-    // Phase V.1 — mark first composition for the cold-start trace. Runs
-    // exactly once per ViewModel-scoped state, immediately after the
-    // composable enters the composition.
     androidx.compose.runtime.LaunchedEffect(state) {
         com.eight87.strictlykeptboy.perf.PerfTraceRecorder.begin(
             com.eight87.strictlykeptboy.perf.PerfTraceRecorder.Section.SchedulePaneFirstRender,
@@ -61,55 +64,85 @@ fun SchedulePane(
 
     var detailBand by remember { mutableStateOf<DayBand?>(null) }
 
-    // Auto-focus the currently-active band (now-card resolver query) on
-    // tablet so the right pane is never empty when there's a clear
-    // "now" event. Compact still opens the sheet only on explicit tap.
     val activeNowBand = remember(rendered) {
-        rendered?.let { rs ->
-            findActiveBand(rs.days.flatMap { it.bands })
-        }
+        rendered?.let { rs -> findActiveBand(rs.days.flatMap { it.bands }) }
     }
     val effectiveDetail = detailBand ?: if (widthClass.isTwoPane()) activeNowBand else null
 
-    if (widthClass.isTwoPane()) {
-        MasterDetailLayout(
-            modifier = modifier,
-            widthClass = widthClass,
-            master = {
-                Box(modifier = Modifier.testTag(TestTagScheduleMasterPane)) {
-                    ScheduleMasterContent(
-                        activeRepoName = activeRepoName,
-                        state = state,
-                        onPersistTab = onPersistTab,
-                        onSyncClick = onSyncClick,
-                        onBandTap = { detailBand = it },
-                    )
-                }
-            },
-            detail = {
-                if (effectiveDetail != null) {
-                    EventDetailContent(band = effectiveDetail)
-                } else {
-                    ScheduleDetailEmptyState()
-                }
-            },
-        )
-    } else {
-        Box(modifier = modifier.fillMaxSize().testTag(TestTagScheduleMasterPane)) {
-            ScheduleMasterContent(
-                activeRepoName = activeRepoName,
-                state = state,
-                onPersistTab = onPersistTab,
-                onSyncClick = onSyncClick,
-                onBandTap = { detailBand = it },
+    Box(modifier = modifier.fillMaxSize()) {
+        if (widthClass.isTwoPane()) {
+            MasterDetailLayout(
+                modifier = Modifier.fillMaxSize(),
+                widthClass = widthClass,
+                master = {
+                    Box(modifier = Modifier.testTag(TestTagScheduleMasterPane)) {
+                        ScheduleMasterContent(
+                            activeRepoName = activeRepoName,
+                            state = state,
+                            onPersistTab = onPersistTab,
+                            onSyncClick = onSyncClick,
+                            onBandTap = { detailBand = it },
+                        )
+                    }
+                },
+                detail = {
+                    if (effectiveDetail != null) {
+                        EventDetailContent(band = effectiveDetail)
+                    } else {
+                        ScheduleDetailEmptyState()
+                    }
+                },
             )
+        } else {
+            Box(modifier = Modifier.fillMaxSize().testTag(TestTagScheduleMasterPane)) {
+                ScheduleMasterContent(
+                    activeRepoName = activeRepoName,
+                    state = state,
+                    onPersistTab = onPersistTab,
+                    onSyncClick = onSyncClick,
+                    onBandTap = { detailBand = it },
+                )
+            }
+            detailBand?.let { band ->
+                EventDetailSheet(
+                    band = band,
+                    onDismiss = { detailBand = null },
+                    onEdit = { /* Phase I/K — stubbed */ },
+                )
+            }
         }
-        detailBand?.let { band ->
-            EventDetailSheet(
-                band = band,
-                onDismiss = { detailBand = null },
-                onEdit = { /* Phase I/K — stubbed */ },
+
+        if (eventCreateController != null) {
+            EventCreateFab(
+                onClick = {
+                    eventCreateController.openSheet(
+                        defaultStart = state.date.value.atTime(12, 0)
+                            .atZone(java.time.ZoneId.systemDefault())
+                            .toOffsetDateTime(),
+                    )
+                },
+                enabled = eventCreateEnabled,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp),
             )
+            val sheetOpen by eventCreateController.sheetOpen.collectAsState()
+            val sheetState by eventCreateController.state.collectAsState()
+            if (sheetOpen) {
+                EventCreateSheet(
+                    state = sheetState,
+                    onDismiss = { eventCreateController.closeSheet() },
+                    onTabChange = eventCreateController::setTab,
+                    onDraftChange = eventCreateController::setDraft,
+                    onConfirmFreeForm = eventCreateController::confirmFreeForm,
+                    onPickTemplate = eventCreateController::pickTemplate,
+                    onConfirmTemplate = eventCreateController::confirmTemplate,
+                    onCancelTemplate = eventCreateController::cancelTemplate,
+                    onOverlapScheduleAnyway = eventCreateController::overlapScheduleAnyway,
+                    onOverlapPickDifferent = eventCreateController::overlapPickDifferent,
+                    onOverlapCancel = eventCreateController::overlapCancel,
+                )
+            }
         }
     }
 }
@@ -127,13 +160,6 @@ private fun ScheduleMasterContent(
     val rendered by state.rendered.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Nav-swap polish: the per-pane view-mode rail + cross-content top
-        // bar are now owned by [com.eight87.strictlykeptboy.ui.scaffold.SkbAppShell].
-        // SchedulePane renders only the active view-mode content; the
-        // shell drives `selectedTab` via [ScheduleViewState]. `activeRepoName`
-        // / `onSyncClick` / `onPersistTab` continue to be hosted at the
-        // shell level (top-bar repo chip + sync button), so the
-        // parameters here are now structural pass-throughs only.
         @Suppress("UNUSED_VARIABLE") val _repo = activeRepoName
         @Suppress("UNUSED_VARIABLE") val _sync = onSyncClick
         when (selectedTab) {
@@ -201,10 +227,6 @@ private fun ScheduleDetailEmptyState() {
     }
 }
 
-/**
- * Now-card resolver query: first band whose effective interval contains
- * `Instant.now()`. Returns null if no band is currently active.
- */
 internal fun findActiveBand(bands: List<DayBand>, now: Instant = Instant.now()): DayBand? =
     bands.firstOrNull { b ->
         val start = b.instance.effectiveStart.toInstant()
