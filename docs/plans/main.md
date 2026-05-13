@@ -57,13 +57,13 @@ Deep-dive: [`sync-engine.md`](sync-engine.md) phases SE-A through SE-F. B.1+B.2 
 
 - [x] **B.1** Vendor JGit 6.x + apache-sshd-osgi; verify clean import on Android (JGit has a few JVM-only fallbacks; document workarounds in `sync-engine.md`)
 - [x] **B.2** Implement `GitRepo` abstraction: open / init / clone / fetch / pull (rebase) / push / commit / status / diff-since. Includes `GitRepo.initLocalOnly(rootDir, authorIdentity)` for no-origin repos (per Phase ZZ.A / D.74). Fetch / pullRebase / push accept a `remote: RemoteName? = primaryRemote` parameter; no-remotes case returns `NoRemotes` result variants without throwing.
-- [ ] **B.3** Implement `RepoStore` — list of configured repos in `EncryptedSharedPreferences`. `RepoConfig` carries `remotes: List<RemoteBinding>` (may be empty) and `primaryRemote: RemoteName?` per Phase ZZ.A.
-- [ ] **B.4** SSH keypair generation + EncryptedSharedPreferences storage; export public key to clipboard / share-sheet. Per Phase ZZ.C, keys are keyed by `(repoId, remoteName)` — adding a second SSH remote generates a fresh keypair by default with opt-in reuse.
-- [ ] **B.5** OAuth Device Flow for GitHub (token in EncryptedSharedPreferences, refresh on 401). Per-remote token binding per Phase ZZ.C.
-- [ ] **B.6** OAuth Device Flow for Forgejo (same shape, different endpoints). Per-remote token binding per Phase ZZ.C.
-- [ ] **B.7** Manual PAT entry path. Per-remote per Phase ZZ.C.
-- [ ] **B.8** Network state monitor (`ConnectivityManager` callbacks) feeding the sync queue
-- [ ] **B.9** Unit tests with Robolectric against a temp `git init --bare` filesystem repo (sidesteps network)
+- [x] **B.3** Implement `RepoStore` — list of configured repos in `EncryptedSharedPreferences`. `RepoConfig` carries `remotes: List<RemoteBinding>` (may be empty) and `primaryRemote: RemoteName?` per Phase ZZ.A. (shipped `61ae385`)
+- [x] **B.4** SSH keypair generation + EncryptedSharedPreferences storage; export public key to clipboard / share-sheet. Per Phase ZZ.C, keys are keyed by `(repoId, remoteName)` — adding a second SSH remote generates a fresh keypair by default with opt-in reuse. (Data layer shipped `61ae385`: `Ed25519KeyGen.generate(comment=…)` + `SecretsStore.storeSshKeypair/getSshPublic` keyed `ssh.pub.<repoId>.<remoteName>`. UI clipboard / share-sheet export is wired in Phase I repo-add screen.)
+- [x] **B.5** OAuth Device Flow for GitHub (token in EncryptedSharedPreferences, refresh on 401). Per-remote token binding per Phase ZZ.C. (shipped `503074a` — `DeviceFlowClient` + `GitHubAuth` config + `SecretsStore.storeOAuthToken/getOAuthToken` with `expiryEpochMs` + `OAuthToken.isExpired()` for 401-refresh gating.)
+- [x] **B.6** OAuth Device Flow for Forgejo (same shape, different endpoints). Per-remote token binding per Phase ZZ.C. (shipped `503074a` — `ForgejoAuth.config(baseUrl, clientId)` reusing `DeviceFlowClient`.)
+- [x] **B.7** Manual PAT entry path. Per-remote per Phase ZZ.C. (shipped `503074a` — `PatAuth.validate` + `SecretsStore.storePat/getPat` keyed `pat.{username,token}.<repoId>.<remoteName>`.)
+- [x] **B.8** Network state monitor (`ConnectivityManager` callbacks) feeding the sync queue (shipped `503074a` — `NetworkMonitor` exposes `Flow<NetworkState>` + `stateIn(scope)`, `NetworkState.Online(metered, wifi)` for wifiOnly gating.)
+- [x] **B.9** Unit tests with Robolectric against a temp `git init --bare` filesystem repo (sidesteps network) (shipped `503074a` — `GitRepoBareFixtureTest` + `RepoStoreTest` + `SecretsStoreTest` + `Ed25519KeyGenTest` + `DeviceFlowClientTest` + `CredentialBindingsTest`.)
 
 ---
 
