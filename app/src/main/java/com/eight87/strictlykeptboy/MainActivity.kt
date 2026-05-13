@@ -200,7 +200,7 @@ class MainActivity : ComponentActivity() {
                             prefs = graph.eventCreatePrefs,
                             context = applicationContext,
                             activeRepoProvider = {
-                                val name = graph.activeRepoName.value
+                                val name = graph.defaultWriteRepoName.value
                                 graph.repoStore.list().firstOrNull { it.displayName == name }
                                     ?: graph.repoStore.list().firstOrNull()
                             },
@@ -219,7 +219,7 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     SkbAppShell(
-                        activeRepoNameFlow = graph.activeRepoName,
+                        activeRepoNameFlow = graph.defaultWriteRepoName,
                         activeIconKindFlow = graph.activeRepoIconKind,
                         scheduleState = scheduleState,
                         eventCreateController = eventCreateController,
@@ -317,7 +317,7 @@ class MainActivity : ComponentActivity() {
                                         },
                                     ),
                                 )
-                                graph.activeRepoName.value = draft.displayName.ifBlank { "my calendar" }
+                                graph.defaultWriteRepoName.value = draft.displayName.ifBlank { "my calendar" }
                                 Unit
                             }
                         },
@@ -327,7 +327,7 @@ class MainActivity : ComponentActivity() {
                         // if no active repo exists yet.
                         onTripMaterialize = { tripDraft ->
                             runCatching {
-                                val activeName = graph.activeRepoName.value
+                                val activeName = graph.defaultWriteRepoName.value
                                 val cfg = graph.repoStore.list().firstOrNull { it.displayName == activeName }
                                     ?: graph.repoStore.list().firstOrNull()
                                     ?: error("no active repo — run the lifestyle wizard first")

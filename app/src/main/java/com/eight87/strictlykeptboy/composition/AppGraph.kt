@@ -207,8 +207,39 @@ class AppGraph(private val appContext: Context) {
     // wired (follow-on phase).
     // ----------------------------------------------------------------
 
-    /** Mutable so wizard scaffolding can flip the displayed active repo. */
-    val activeRepoName: MutableStateFlow<String> = MutableStateFlow("demo-repo")
+    /**
+     * Round 2.1.B.6 / D-2.1.d — write-target repo display name.
+     *
+     * Renamed from `activeRepoName` to make the calendars-first split
+     * explicit: the schedule reads from all repos by default, the avatar
+     * drives only the *write* target. Backed by a `MutableStateFlow` so
+     * wizard scaffolding + the repo switcher can flip it.
+     *
+     * **No more `"demo-repo"` literal.** Defaults to `""` when no repos
+     * are configured; the shell renders the empty/placeholder avatar.
+     * The wizard sets this to the first configured repo's `displayName`
+     * after scaffolding completes (D-2.1.g).
+     */
+    val defaultWriteRepoName: MutableStateFlow<String> by lazy {
+        // Lazy so AppGraph construction doesn't touch EncryptedSharedPreferences
+        // (Robolectric can't init those — see `ColdStartBudgetTest`).
+        MutableStateFlow(
+            runCatching { repoStore.list().firstOrNull()?.displayName }.getOrNull().orEmpty(),
+        )
+    }
+
+    /**
+     * Compatibility alias. The rename in 2.1.B.6 is gradual — UI surfaces
+     * still use the old name internally (parameter naming inside scaffold
+     * composables remains `activeRepoName` because that parameter encodes
+     * "the avatar's current label", which is still meaningful). Removing
+     * the alias is a 2.1.L follow-on.
+     */
+    @Deprecated(
+        message = "Use defaultWriteRepoName (2.1.B.6 rename).",
+        replaceWith = ReplaceWith("defaultWriteRepoName"),
+    )
+    val activeRepoName: MutableStateFlow<String> get() = defaultWriteRepoName
 
     /** Phase D — read-through cache. Owned here so publishers can share it. */
     val cacheDatabase: CacheDatabase by lazy { CacheDatabase.open(appContext) }
@@ -247,6 +278,19 @@ class AppGraph(private val appContext: Context) {
     val snapshot: StateFlow<RepoSnapshot> get() = snapshotPublisher.state
     val sources: StateFlow<Renderer.Sources> get() = sourcesPublisher.state
 
+    /**
+     * Round 2.1.B.1 — calendars-first aggregator. Reads
+     * `calendars/<id>/calendar.toml` from each configured repo and
+     * overlays parsed fields onto the synthesized [snapshot].
+     */
+    val calendarRegistry: com.eight87.strictlykeptboy.resolver.CalendarRegistry by lazy {
+        com.eight87.strictlykeptboy.resolver.CalendarRegistry(
+            repoStore = repoStore,
+            synthesizedSnapshot = snapshot,
+            scope = appScope,
+        )
+    }
+
     /** Phase N — Together repo options (id + label) derived from RepoStore. */
     @Suppress("OPT_IN_USAGE")
     val togetherRepoOptions: StateFlow<List<TogetherRepoOption>> by lazy {
@@ -272,7 +316,7 @@ class AppGraph(private val appContext: Context) {
      */
     @Suppress("OPT_IN_USAGE")
     val activeRepoIconKind: StateFlow<com.eight87.strictlykeptboy.ui.theming.RepoIconKind> by lazy {
-        combine(activeRepoName, repoStore.state) { name, list ->
+        combine(defaultWriteRepoName, repoStore.state) { name, list ->
             val cfg = list.firstOrNull { it.displayName == name } ?: list.firstOrNull()
             cfg?.toIconKind() ?: com.eight87.strictlykeptboy.ui.theming.RepoIconKind.Sticker("bat")
         }.stateIn(
