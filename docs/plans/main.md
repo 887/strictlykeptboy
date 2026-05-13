@@ -871,7 +871,7 @@ Source draft: [`draft-household-travel-vacation.md`](draft-household-travel-vaca
 
 ---
 
-## Phase CCC — Quick-trip wizard + entry-points + sticker beats — compact cut shipped in commit <CCC_COMMIT>
+## Phase CCC — Quick-trip wizard + entry-points + sticker beats — compact cut shipped in commit d0c6c41
 
 Source draft: [`draft-household-travel-vacation.md`](draft-household-travel-vacation.md) phases HV-F (vacation wizard), HV-G (entry-points), HV-H (sticker beats). Cross-references: Phase K (lifestyle wizard — sibling, NOT first-launch), Phase CCC's wizard reuses LW-K's bat-mascot sticker pipeline, [`ui-spec.md`](ui-spec.md) UI-OO.
 
