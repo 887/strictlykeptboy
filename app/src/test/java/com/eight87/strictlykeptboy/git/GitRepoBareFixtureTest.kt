@@ -166,13 +166,16 @@ class GitRepoBareFixtureTest {
     @Test fun statusReflectsLocalChanges() = runTest {
         val bare = initBare()
         val repo = newWorkingRepoCloned(bare, "w")
-        // Empty clone: clean.
-        assertTrue(repo.status().isClean)
+        // Phase ZZ.A clone writes .strictlykeptboy/repo-id (untracked until
+        // first commit — see F47 follow-up). Test verifies status surfaces
+        // new local changes, not the post-clone baseline.
+        val baselineUntracked = repo.status().untracked.toSet()
 
         File(repo.rootDir, "fresh.md").writeText("fresh\n")
         val status = repo.status()
         assertTrue("fresh.md is untracked", "fresh.md" in status.untracked)
-        assertTrue(!status.isClean)
+        assertTrue("status not clean after adding fresh.md", !status.isClean)
+        assertTrue("baseline untracked still present", baselineUntracked.all { it in status.untracked })
     }
 
     @Test fun localOnlyCommitsCountForNoOrigin() = runTest {
