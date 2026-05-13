@@ -829,7 +829,7 @@ Round-2 closeout: ZZ.A..ZZ.H shipped in commit `8441fec` on branch `round2/phase
 
 ---
 
-## Phase AAA — Lifestyle templates (atomic + comprehensive) — shipped on branch `round2/phase-aaa-lifestyle-templates`
+## Phase AAA — Lifestyle templates (atomic + comprehensive) — shipped in commit `2dece78` (branch `round2/phase-aaa-lifestyle-templates`)
 
 Source draft: [`draft-household-travel-vacation.md`](draft-household-travel-vacation.md) phases HV-A, HV-B, HV-C, HV-D, HV-K, HV-L, HV-P. Folds 8 new atomic-template families into the Phase XX (atomic activities, inverted habits) family — same TOML schema as AT-D / AT-E / AT-F, same inverted-default semantics. Cross-references: Phase XX (parent family), Phase K (lifestyle wizard registers role-toggles per template), Phase M (notifications honor per-category defaults from D.79), [`templates-demo-wizard.md`](templates-demo-wizard.md) TW-J (register all 8 templates).
 
