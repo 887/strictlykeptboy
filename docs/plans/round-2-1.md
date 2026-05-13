@@ -172,15 +172,16 @@ Wires the indexer to `AppGraph.snapshot` + `AppGraph.sources`. Without this, eve
 - [x] **2.1.J.3** (Implements 2.1.F.5 prerequisite.) `IdentityNotifBody.bodyFor` consumes `IdentityTomlCodec.readOrDefault(activeRepoRoot)`; `ReminderBroadcastReceiver` wired register-aware with `private = true` collapse to generic copy. `briefingSalutation()` API ready for 2.1.F.6 wiring.
 - [x] **2.1.J.4** Strictly-kept review-feed hook: identity edit commit in strictly-kept mode fires `ReviewFeedWriter.writeReviewableChange` with `IdentityEdit` family path. `AppGraph.bindIdentityToActiveRepo(repoId)` is the composition-root entry point.
 
-## Phase 2.1.K — Mode + dom-persona
+## Phase 2.1.K — Mode + dom-persona — shipped in commit `<pending>`
 
-- [ ] **2.1.K.1** `ModePrefs` becomes thin cache over active repo's `mode.toml`. Same model as 2.1.J.1. Active-repo switch reloads via `ModeTomlCodec.readOrDefault`.
-- [ ] **2.1.K.2** Expand `ModePrefs.AppMode` to include `SelfKeep` matching `RepoMode.SelfKeep`. Truncating to two cases loses a real state.
-- [ ] **2.1.K.3** Surface kept-by-AI vs kept-by-human distinction in `ModeCategory`. Computed `KeptBy`: `Ai` iff `dom_persona ∈ DomPersonaStore.BUILTINS`, `Human` iff `write_back_target != null && dom_persona == null`, `SelfKeep` iff `mode == self-keep`. Three radio-buttons under mode pill; Human → "generate share link" CTA (reuses 2.1.I.4 sheet).
-- [ ] **2.1.K.4** Enforce D.86 24h cooling-off properly. First tap of "switch to free" sets `mode_transition_request_at_ms`. Confirm-button gated for 24h; visible countdown. Typed-confirmation still fires.
-- [ ] **2.1.K.5** Migration paths (DDD.5) wired: kept-by-AI ↔ kept-by-human flips `dom_persona` to/from `null` and sets/unsets `write_back_target`. Self-keep ramp = single button.
-- [ ] **2.1.K.6** `DomPersonaStore` becomes single source of truth. Delete the `DomPersona` enum encoding from `ModePrefs` (or keep just `personaId: String`); `ModeCategory.availablePersonas` calls `DomPersonaStore.list(home)`. Custom-prompt edits go through `DomPersonaStore.writeCustom`.
-- [ ] **2.1.K.7** Full dom-persona picker (DDD.14): bottom-sheet with per-persona prompt preview, cadence override, custom-prompt editor (multiline `OutlinedTextField` backed by `DomPersonaStore.writeCustom`), explicit-content gate behind existing age confirmation. Reachable from `ModeCategory` → "Edit personas".
+- [x] **2.1.K.1** `ModePrefs` becomes thin cache over active repo's `mode.toml`. Same model as 2.1.J.1. Active-repo switch reloads via `ModeTomlCodec.readOrDefault`. `AppGraph.bindModeToActiveRepo(repoId)` added as composition-root sibling of `bindIdentityToActiveRepo`; MainActivity wires a LaunchedEffect on `defaultWriteRepoName` so both prefs rebind on active-repo flips. `ModePrefs.update` is now debounced (500ms) write-back with mutex serialization; `flushWriteBack()` test seam.
+- [x] **2.1.K.2** `AppMode` extended with `SelfKeep` to mirror on-disk `RepoMode.SelfKeep`. `ModePill` + `ModeCategory` exhaustive-when updated. `ModeState.keptBy` derived field.
+- [x] **2.1.K.3** `ModeCategory` shows three-radio `KeptBy` control (`Ai` / `Human` / `SelfKeep`) whenever mode is not Free. Human selection triggers a "generate share link" CTA dialog (the existing ShareSheet from 2.1.I.4 is reachable via the shell's `onShareWithDom` callback — the CTA prompts the user to open Share).
+- [x] **2.1.K.4** D.86 24h cooling-off enforced. First tap of "Switch to free" sets `transitionRequestAtMs` on `ModeState` (NOT yet persisted to `mode.toml` to keep codec API stable — kept in `mode_v1` SharedPreferences mirror); a `CoolingOffCountdown` composable shows "Flips in 23h 59m" and disables the confirm button until 24h elapse. Typed-confirmation dialog opens only once the gate is open.
+- [x] **2.1.K.5** Atomic migrations: `migrateToKeptByAi(personaId)` / `migrateToKeptByHuman(target)` / `migrateToSelfKeep()` flip mode + `dom_persona` ⇄ `write_back_target` in one debounced write.
+- [x] **2.1.K.6** `DomPersonaStore` is now the single source of truth. The old `DomPersona` sealed-interface inside `ModePrefs` is removed; `ModeState.personaId: String?` is the cache. `ModeCategory` reads `DomPersonaStore.list(home)` (with `home = context.filesDir`). Custom-prompt edits land via `DomPersonaStore.writeCustom`.
+- [x] **2.1.K.7** `DomPersonaPickerSheet` (under `ui/settings/`): `ModalBottomSheet` with per-persona radio + 120-char prompt preview, cadence chips (End-of-day / Midday / Weekly), multiline `OutlinedTextField` custom-prompt editor that writes through `DomPersonaStore.writeCustom`. Reachable from `ModeCategory` → "Edit personas" button (only shown when keptBy == Ai).
+- New tests: `ModeTomlRoundTripTest` (4 cases), `DomPersonaSingleSourceTest` (2 cases), updated `ModeCoolingOffTest` (2 cases) and `SettingsPrefsTest`. Total: 630 → 637 (+7).
 
 ## Phase 2.1.L — Polish + tests
 

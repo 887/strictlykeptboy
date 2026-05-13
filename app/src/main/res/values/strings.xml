@@ -251,8 +251,19 @@
     <!-- S.11 Mode -->
     <string name="settings_mode_pill_free">Mode: free</string>
     <string name="settings_mode_pill_strictly_kept">Mode: strictly-kept</string>
+    <string name="settings_mode_pill_self_keep">Mode: self-keep</string>
     <string name="settings_mode_switch_to_free">Switch to free</string>
     <string name="settings_mode_switch_to_strictly_kept">Switch to strictly-kept</string>
+    <string name="settings_mode_kept_by_section">Kept by</string>
+    <string name="settings_mode_kept_by_ai">An AI dom (built-in persona)</string>
+    <string name="settings_mode_kept_by_human">A human dom (share link)</string>
+    <string name="settings_mode_kept_by_self">Self-keep (no dom)</string>
+    <string name="settings_mode_edit_personas">Edit personas</string>
+    <string name="settings_mode_cooling_off_countdown">Flips in %1$dh %2$02dm</string>
+    <string name="settings_mode_cooling_off_ready">24h elapsed — confirmation available.</string>
+    <string name="settings_mode_share_title">Generate share link</string>
+    <string name="settings_mode_share_body">Open the Share screen to generate a write-back link for your human dom.</string>
+    <string name="settings_mode_share_ok">Got it</string>
     <string name="settings_mode_persona_section">Dom persona</string>
     <string name="settings_mode_cadence_section">Dom cadence</string>
     <string name="settings_mode_cadence_realtime">Realtime</string>

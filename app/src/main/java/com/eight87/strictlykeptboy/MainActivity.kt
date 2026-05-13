@@ -8,6 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -179,6 +180,17 @@ class MainActivity : ComponentActivity() {
                 dynamicColor = appearance.dynamicColor,
             ) {
                 val scope = rememberCoroutineScope()
+                // Phase 2.1.J.1 / 2.1.K.1 — keep IdentityPrefs + ModePrefs bound
+                // to the active repo so settings edits round-trip to disk +
+                // commit. Reacts to defaultWriteRepoName flips (wizard finish,
+                // repo switcher, etc.). Idempotent at the bind layer.
+                val activeRepoName by graph.defaultWriteRepoName.collectAsState()
+                LaunchedEffect(activeRepoName) {
+                    val cfg = graph.repoStore.list().firstOrNull { it.displayName == activeRepoName }
+                        ?: graph.repoStore.list().firstOrNull()
+                    graph.bindIdentityToActiveRepo(cfg?.repoId)
+                    graph.bindModeToActiveRepo(cfg?.repoId)
+                }
                 if (!ageOk) {
                     AgeGateScreen(
                         onAccept = {

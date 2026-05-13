@@ -63,10 +63,12 @@ fun ModePill(prefs: ModePrefs, modifier: Modifier = Modifier) {
     val label = when (state.mode) {
         AppMode.Free -> "free"
         AppMode.StrictlyKept -> "kept"
+        AppMode.SelfKeep -> "self"
     }
     val icon = when (state.mode) {
         AppMode.Free -> Icons.Filled.LockOpen
         AppMode.StrictlyKept -> Icons.Filled.Lock
+        AppMode.SelfKeep -> Icons.Filled.Lock
     }
     val a11y = "mode: $label"
 
@@ -127,6 +129,7 @@ private fun TransitionModal(
                 when (currentMode) {
                     AppMode.Free -> "Switch to strictly-kept?"
                     AppMode.StrictlyKept -> "Leave strictly-kept?"
+                    AppMode.SelfKeep -> "Leave self-keep?"
                 },
             )
         },
@@ -135,6 +138,10 @@ private fun TransitionModal(
                 when (currentMode) {
                     AppMode.Free -> Text(
                         "Hand the keys to your dom. You can always switch back.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    AppMode.SelfKeep -> Text(
+                        "Leave self-keep and return to free?",
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     AppMode.StrictlyKept -> {
@@ -166,6 +173,7 @@ private fun TransitionModal(
                     when (currentMode) {
                         AppMode.Free -> "Hand over keys"
                         AppMode.StrictlyKept -> "Leave"
+                        AppMode.SelfKeep -> "Leave"
                     },
                 )
             }

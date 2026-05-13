@@ -187,6 +187,23 @@ class AppGraph(private val appContext: Context) {
     fun bindIdentityToActiveRepo(repoId: String?) {
         val cfg = repoId?.let { repoStore.get(it) }
         val root = cfg?.let { java.io.File(it.rootDir).toPath() }
+        // 2.1.K — ensure the registry has a live handle (the wizard
+        // doesn't register the repo it scaffolds; without this, the
+        // commit step in IdentityPrefs / ModePrefs is silently skipped).
+        if (cfg != null && GitRepoRegistry.get(cfg.repoId) == null) {
+            runCatching {
+                kotlinx.coroutines.runBlocking {
+                    GitRepo.open(
+                        rootDir = File(cfg.rootDir),
+                        repoId = cfg.repoId,
+                        remotes = cfg.remotes,
+                        primaryRemote = cfg.primaryRemote,
+                        authorIdentity = cfg.authorIdentity,
+                        defaultBranch = cfg.defaultBranch,
+                    ).also(GitRepoRegistry::put)
+                }
+            }
+        }
         identityPrefs.bindActiveRepo(
             rootDir = root,
             repoId = cfg?.repoId,
@@ -194,6 +211,35 @@ class AppGraph(private val appContext: Context) {
                 modePrefs.state.value.mode == com.eight87.strictlykeptboy.ui.settings.AppMode.StrictlyKept
             },
         )
+    }
+
+    /**
+     * Phase 2.1.K.1 — bind [ModePrefs] to the active repo so Settings
+     * edits round-trip to `<rootDir>/mode.toml` and commit. Sibling of
+     * [bindIdentityToActiveRepo]; call after wizard scaffolding or when
+     * the active repo flips. Idempotent; null unbinds.
+     */
+    fun bindModeToActiveRepo(repoId: String?) {
+        val cfg = repoId?.let { repoStore.get(it) }
+        val root = cfg?.let { java.io.File(it.rootDir).toPath() }
+        // Ensure GitRepoRegistry has a live handle so commits land. The
+        // wizard's WizardScaffolder doesn't register, so we open lazily
+        // here. Idempotent — `GitRepoRegistry.put` overwrites by repoId.
+        if (cfg != null && GitRepoRegistry.get(cfg.repoId) == null) {
+            runCatching {
+                kotlinx.coroutines.runBlocking {
+                    GitRepo.open(
+                        rootDir = File(cfg.rootDir),
+                        repoId = cfg.repoId,
+                        remotes = cfg.remotes,
+                        primaryRemote = cfg.primaryRemote,
+                        authorIdentity = cfg.authorIdentity,
+                        defaultBranch = cfg.defaultBranch,
+                    ).also(GitRepoRegistry::put)
+                }
+            }
+        }
+        modePrefs.bindActiveRepo(rootDir = root, repoId = cfg?.repoId)
     }
 
     /** Phase J — per-process sync scheduler. */
