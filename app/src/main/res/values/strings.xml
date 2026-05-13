@@ -449,7 +449,8 @@
     <string name="wizard_welcome_blurb">by the end you\'ll have a living calendar, not an empty app.</string>
     <string name="wizard_welcome_cta">let\'s go</string>
     <string name="wizard_welcome_footnote">you can change any of this later in Settings → Add more to my lifestyle.</string>
-    <string name="wizard_species_prompt">Pick your avatar species</string>
+    <string name="wizard_species_prompt">Pick your sticker pack</string>
+    <string name="wizard_species_subtitle">Your sticker pack is how the app illustrates you. Bat is the default. You can clone the scaffolded repo and customize the artwork later.</string>
     <string name="wizard_species_custom_pack_url">Custom sticker-pack URL (GitHub)</string>
     <string name="wizard_alignment_prompt">How would you like the rules to work?</string>
     <string name="wizard_identity_prompt">How should the app speak to you?</string>
@@ -733,11 +734,14 @@
     <string name="species_bat">Bat</string>
     <string name="species_bunny">Bunny</string>
     <string name="species_cat">Cat</string>
+    <string name="species_cat_chan">Cat-chan (anime)</string>
     <string name="species_fox">Fox</string>
+    <string name="species_fox_chan">Fox-chan (anime)</string>
     <string name="species_lion">Lion</string>
     <string name="species_tiger">Tiger</string>
     <string name="species_wolf">Wolf</string>
-    <string name="species_choose_your_own">Choose your own</string>
+    <string name="species_choose_your_own">Customize later</string>
+    <string name="wizard_species_customize_later_info">Your sticker pack lives inside your calendar repo. We\'ll scaffold the repo with the Bat pack — clone it afterward and edit the artwork under `stickers/&lt;species&gt;/`. Hand it to an AI image generator when you\'re ready for your own look.</string>
 
     <!-- Wizard Alignment labels + taglines. -->
     <string name="alignment_dominant">Dominant</string>

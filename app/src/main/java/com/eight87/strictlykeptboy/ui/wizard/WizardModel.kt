@@ -22,11 +22,16 @@ enum class SpeciesChoice(val id: String, val label: String) {
     Bat("bat", "Bat"),
     Bunny("bunny", "Bunny"),
     Cat("cat", "Cat"),
+    CatChan("cat-chan", "Cat-chan"),
     Fox("fox", "Fox"),
+    FoxChan("fox-chan", "Fox-chan"),
     Lion("lion", "Lion"),
     Tiger("tiger", "Tiger"),
     Wolf("wolf", "Wolf"),
-    ChooseYourOwn("custom", "Choose your own"),
+    // ChooseYourOwn no longer clones a remote pack. Picking it scaffolds
+    // with the Bat pack and shows a "how to customize" info card —
+    // clone the repo + edit `stickers/<species>/` later.
+    ChooseYourOwn("custom", "Customize later"),
 }
 
 /**

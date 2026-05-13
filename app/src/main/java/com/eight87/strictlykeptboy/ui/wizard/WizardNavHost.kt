@@ -297,7 +297,9 @@ fun WizardNavHost(
                     onClick = ::goBack,
                     modifier = Modifier.testTag(TestTagWizardBack),
                 ) { Text(stringResource(R.string.wizard_back)) }
-                if (current == WizardScreen.Species || current == WizardScreen.Templates) {
+                // Round 2.6 — Species (sticker pack) is mandatory; only
+                // Templates retains a skip affordance now.
+                if (current == WizardScreen.Templates) {
                     TextButton(
                         onClick = ::goNext,
                         modifier = Modifier.testTag(TestTagWizardSkip),
@@ -396,6 +398,11 @@ private fun SpeciesScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(stringResource(R.string.wizard_species_prompt), style = MaterialTheme.typography.titleMedium)
+        Text(
+            stringResource(R.string.wizard_species_subtitle),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         // Use a single-column flow on phones; 2-col grid is acceptable but
         // simpler to use a Column of clickable cards for v1.
         LazyVerticalGrid(
@@ -427,12 +434,20 @@ private fun SpeciesScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
             }
         }
         if (draft.species == SpeciesChoice.ChooseYourOwn) {
-            OutlinedTextField(
-                value = draft.customPackUrl,
-                onValueChange = { onUpdate(draft.copy(customPackUrl = it)) },
-                label = { Text(stringResource(R.string.wizard_species_custom_pack_url)) },
-                modifier = Modifier.fillMaxWidth().testTag("Wizard-Species-PackUrl"),
-            )
+            // Round 2.6 — no git clone here. Picking "Customize later"
+            // scaffolds the repo with the Bat pack and tells the user how
+            // to swap in their own artwork after first launch.
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("Wizard-Species-CustomizeLaterInfo"),
+            ) {
+                Text(
+                    text = stringResource(R.string.wizard_species_customize_later_info),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(12.dp),
+                )
+            }
         }
     }
 }
