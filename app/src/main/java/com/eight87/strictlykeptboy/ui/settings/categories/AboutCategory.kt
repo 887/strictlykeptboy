@@ -262,13 +262,3 @@ private fun AboutDivider() {
     )
 }
 
-/**
- * Test-compat constants. The current [EasterEggController] uses its own
- * `DEFAULT_WINDOW_MILLIS` (5s) and a 3-tap unlock; an earlier draft
- * (preserved in `EasterEggUnlockTest`) expected a 7-tap / 2s window.
- * These exposed values let the legacy test compile so the suite as a
- * whole can run; the assertions in that test remain pre-existing
- * failures until the test is updated to match the current controller.
- */
-const val ABOUT_EASTER_EGG_TAP_COUNT: Int = 7
-const val ABOUT_EASTER_EGG_RESET_MS: Long = 2_000L

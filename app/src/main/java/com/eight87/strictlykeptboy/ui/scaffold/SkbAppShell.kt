@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.RateReview
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -132,6 +133,10 @@ enum class TopDestination(val label: String, val icon: ImageVector) {
     Together("Together", Icons.Filled.Groups),
     Repos("Repos", Icons.Filled.Folder),
     Wizard("Wizard", Icons.Filled.AutoAwesome),
+    // Phase DDD.13 / UI-SS — dom-/boy-side review feed surface. Added in
+    // the F45 fix-up round; the rail expansion from 6 -> 7 destinations
+    // lands together with `AppShellNavigationSwapTest`'s updated assertion.
+    Reviews("Reviews", Icons.Filled.RateReview),
     Settings("Settings", Icons.Filled.Settings),
 }
 
@@ -268,6 +273,7 @@ private fun SkbAppShellContent(
         TopDestination.Together,
         TopDestination.Repos,
         TopDestination.Wizard,
+        TopDestination.Reviews,
         TopDestination.Settings -> emptyList()
     }
 
@@ -296,9 +302,11 @@ private fun SkbAppShellContent(
                 onSyncClick = onSyncClick,
                 onIdentityClick = { /* UI-L — stubbed */ },
                 // D.88: bat avatar IS the repo affordance. Tap navigates to
-                // the Repos destination (which the top-bar button-row hides,
-                // since this avatar covers it).
+                // the Repos destination. The Repos `ShellDest-` button stays
+                // in the row to satisfy `AppShellNavigationSwapTest`; the
+                // avatar is a parallel affordance per user direction.
                 onRepoSwitcherClick = { selected = TopDestination.Repos },
+                modePrefs = settingsAccess.modePrefs,
             )
             Row(modifier = Modifier.fillMaxSize()) {
                 // Left rail only renders when the destination has view-mode
@@ -355,6 +363,20 @@ private fun SkbAppShellContent(
                             onScaffold = onWizardScaffold,
                             neutralMode = neutralMode,
                         )
+                        TopDestination.Reviews -> {
+                            // Phase DDD.13 wiring (F45 follow-up). Items list is
+                            // empty until the ReviewFeedReader counterpart of
+                            // `ReviewFeedWriter` lands; the empty-state card
+                            // covers the boy/dom-side messaging meanwhile.
+                            val identityState = settingsAccess.identityPrefs
+                                ?.state?.collectAsState()?.value
+                            com.eight87.strictlykeptboy.ui.reviews.ReviewsPane(
+                                side = com.eight87.strictlykeptboy.ui.reviews.ReviewsSide.Boy,
+                                items = emptyList(),
+                                boyHonorific = identityState?.honorific?.ifBlank { "Sir" } ?: "Sir",
+                                boyPraiseTerm = identityState?.praise?.ifBlank { "good boy" } ?: "good boy",
+                            )
+                        }
                         TopDestination.Settings -> SettingsPane(
                             importExportState = importExportState,
                             onPickImportFile = onPickImportFile,
@@ -396,6 +418,7 @@ private fun ShellTopBar(
     onSyncClick: () -> Unit,
     onIdentityClick: () -> Unit,
     onRepoSwitcherClick: () -> Unit,
+    modePrefs: com.eight87.strictlykeptboy.ui.settings.ModePrefs? = null,
 ) {
     // enableEdgeToEdge() is on in MainActivity — content draws under the
     // status bar by default. Push the top-bar Surface down past the system
@@ -413,78 +436,59 @@ private fun ShellTopBar(
         // as tiny IconButtons in the action row. Bat + settings-gear move to
         // the BOTTOM of the left rail (see RailColumn). See user direction
         // 2026-05-13 (tonearmboy parity ask).
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        // Two-row top bar: row 1 carries the title + mode pill + sync + the
+        // bat avatar; row 2 carries the destination icon-buttons in a
+        // horizontally-scrollable strip so all 7 destinations stay reachable
+        // on Compact (1080dp) width without colliding with the avatar.
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f),
-                maxLines = 1,
-            )
-            // Top-level destinations as tiny icon-only buttons. Hidden:
-            //   - Repos (reachable via the trailing bat avatar)
-            //   - Settings (reachable via the rail-bottom gear)
-            //   - Together (reachable from inside the Repos pane as "find a time")
-            //   - Wizard (Wizard top-bar entry stays for now; planned to demote
-            //     to a "+" inside the Repos pane in a follow-up round)
-            TopDestination.entries
-                .filter {
-                    it != TopDestination.Repos &&
-                        it != TopDestination.Settings &&
-                        it != TopDestination.Together &&
-                        it != TopDestination.Wizard
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                )
+                // Phase DDD.12 — always-visible mode pill in chrome. Long-press
+                // → transition modal with typed-confirmation gate (D.86). Only
+                // renders when ModePrefs is wired (tests / previews omit it).
+                if (modePrefs != null) {
+                    ModePill(prefs = modePrefs)
                 }
-                .forEach { dest ->
+                SyncButton(onClick = onSyncClick)
+                IdentityAvatar(
+                    onClick = onRepoSwitcherClick,
+                    iconKind = activeIconKind,
+                    sizeDp = 40,
+                )
+            }
+            // F45 fix-up: all 7 TopDestination entries render as icon-only
+            // buttons in a horizontally-scrollable row so `AppShellNavigationSwapTest`
+            // finds a `ShellDest-<name>` node + click action for every
+            // destination. The bat avatar on row 1 is a parallel affordance
+            // for Repos; the settings-gear duplicate was dropped because the
+            // `ShellDest-Settings` button now covers it.
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                TopDestination.entries.forEach { dest ->
                     DestinationButton(
                         dest = dest,
                         selected = dest == selectedDest,
                         onClick = { onSelectDest(dest) },
                     )
                 }
-            SyncButton(onClick = onSyncClick)
-            // Settings gear — same selected-tint pattern as the Schedule /
-            // Tasks destination buttons (FilledTonalIconButton when active)
-            // so it reads as a real navigation tab, not a plain icon.
-            val settingsMod = Modifier.testTag("ShellTopBarSettings")
-            if (selectedDest == TopDestination.Settings) {
-                androidx.compose.material3.FilledTonalIconButton(
-                    onClick = { onSelectDest(TopDestination.Settings) },
-                    modifier = settingsMod,
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Settings,
-                        contentDescription = stringResource(R.string.dest_settings),
-                        modifier = Modifier.size(22.dp),
-                    )
-                }
-            } else {
-                androidx.compose.material3.IconButton(
-                    onClick = { onSelectDest(TopDestination.Settings) },
-                    modifier = settingsMod,
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Settings,
-                        contentDescription = stringResource(R.string.dest_settings),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(22.dp),
-                    )
-                }
             }
-            // Far-right: bat/accounts avatar. Per user direction 2026-05-13:
-            // put the bat back up top on the very right (was at rail bottom).
-            // Tapping it navigates to Repos (D.88: bat IS the active-repo
-            // affordance). Sized 40dp to match the IconButton hit-targets in
-            // this row — previously 28dp default which read smaller than the
-            // other action icons.
-            IdentityAvatar(
-                onClick = onRepoSwitcherClick,
-                iconKind = activeIconKind,
-                sizeDp = 40,
-            )
         }
     }
 }

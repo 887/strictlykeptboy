@@ -55,6 +55,7 @@ val TopDestination.labelRes: Int
         TopDestination.Together -> R.string.dest_together
         TopDestination.Repos -> R.string.dest_repos
         TopDestination.Wizard -> R.string.dest_wizard
+        TopDestination.Reviews -> R.string.dest_reviews
         TopDestination.Settings -> R.string.dest_settings
     }
 
