@@ -199,6 +199,23 @@ fun SkbAppShell(
      * `allowWriteBack` checkbox pre-set.
      */
     onShareWithDom: () -> Unit = {},
+    /**
+     * Round 2.1.B.2 — phone-local calendar visibility powering the
+     * [CalendarFilterChipStrip] above SchedulePane. Null suppresses the
+     * strip (previews / tests).
+     */
+    calendarVisibility: com.eight87.strictlykeptboy.ui.settings.CalendarVisibilityPrefs? = null,
+    /**
+     * Round 2.1.B.7 — unified-view indicator. When `true`, the top bar
+     * shows an extra chip and the avatar is interpreted as the
+     * write-target picker only.
+     */
+    unifiedViewFlow: StateFlow<Boolean>? = null,
+    /**
+     * Round 2.1.B.2 / B.4 — long-press handler for calendar chips.
+     * Host opens [com.eight87.strictlykeptboy.ui.calendars.CalendarSettingsSheet].
+     */
+    onLongPressCalendar: ((com.eight87.strictlykeptboy.resolver.CalendarMeta) -> Unit)? = null,
 ) {
     ProvideWindowSizeClass(modifier = modifier) { _ ->
         SkbAppShellContent(
@@ -223,6 +240,9 @@ fun SkbAppShell(
             eventCreateController = eventCreateController,
             wizardEntryRequest = wizardEntryRequest,
             onShareWithDom = onShareWithDom,
+            calendarVisibility = calendarVisibility,
+            unifiedViewFlow = unifiedViewFlow,
+            onLongPressCalendar = onLongPressCalendar,
         )
     }
 }
@@ -252,6 +272,9 @@ private fun SkbAppShellContent(
         com.eight87.strictlykeptboy.ui.wizard.WizardScreen?
     >? = null,
     onShareWithDom: () -> Unit = {},
+    calendarVisibility: com.eight87.strictlykeptboy.ui.settings.CalendarVisibilityPrefs? = null,
+    unifiedViewFlow: StateFlow<Boolean>? = null,
+    onLongPressCalendar: ((com.eight87.strictlykeptboy.resolver.CalendarMeta) -> Unit)? = null,
 ) {
     var selected by rememberSaveable { mutableStateOf(TopDestination.Schedule) }
     // Phase 2.1.I.2 — observe wizard re-entry requests.
@@ -322,6 +345,7 @@ private fun SkbAppShellContent(
         modifier = Modifier.fillMaxSize().testTag(TestTagAppShell),
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
+            val unifiedView = unifiedViewFlow?.collectAsState()?.value ?: false
             ShellTopBar(
                 activeRepoName = activeRepoName,
                 activeIconKind = activeIconKind,
@@ -336,6 +360,7 @@ private fun SkbAppShellContent(
                 // avatar is a parallel affordance per user direction.
                 onRepoSwitcherClick = { selected = TopDestination.Repos },
                 modePrefs = settingsAccess.modePrefs,
+                unifiedView = unifiedView,
             )
             Row(modifier = Modifier.fillMaxSize()) {
                 // Left rail only renders when the destination has view-mode
@@ -360,6 +385,8 @@ private fun SkbAppShellContent(
                             onSyncClick = onSyncClick,
                             eventCreateController = eventCreateController,
                             onPlanTrip = { tripWizardOpen = true },
+                            calendarVisibility = calendarVisibility,
+                            onLongPressCalendar = onLongPressCalendar,
                         )
                         TopDestination.Tasks -> TasksPane(
                             activeRepoName = activeRepoName,
@@ -473,6 +500,13 @@ private fun ShellTopBar(
     onIdentityClick: () -> Unit,
     onRepoSwitcherClick: () -> Unit,
     modePrefs: com.eight87.strictlykeptboy.ui.settings.ModePrefs? = null,
+    /**
+     * Round 2.1.B.7 — when true, render a "Unified" indicator chip
+     * before the mode pill. The avatar's semantics shift from
+     * read-AND-write to write-only (the calendar union still pulls
+     * from every repo).
+     */
+    unifiedView: Boolean = false,
 ) {
     // enableEdgeToEdge() is on in MainActivity — content draws under the
     // status bar by default. Push the top-bar Surface down past the system
@@ -509,6 +543,18 @@ private fun ShellTopBar(
                     modifier = Modifier.weight(1f),
                     maxLines = 1,
                 )
+                if (unifiedView) {
+                    androidx.compose.material3.AssistChip(
+                        onClick = {},
+                        label = {
+                            Text(
+                                "Unified",
+                                style = MaterialTheme.typography.labelSmall,
+                            )
+                        },
+                        modifier = Modifier.testTag("ShellTopBar-UnifiedChip"),
+                    )
+                }
                 // Phase DDD.12 — always-visible mode pill in chrome. Long-press
                 // → transition modal with typed-confirmation gate (D.86). Only
                 // renders when ModePrefs is wired (tests / previews omit it).

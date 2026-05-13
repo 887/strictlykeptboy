@@ -18,12 +18,15 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
+import com.eight87.strictlykeptboy.resolver.CalendarMeta
 import com.eight87.strictlykeptboy.resolver.DayBand
 import com.eight87.strictlykeptboy.ui.adaptive.LocalWindowWidthSizeClass
 import com.eight87.strictlykeptboy.ui.adaptive.MasterDetailLayout
 import com.eight87.strictlykeptboy.ui.adaptive.WindowWidthSizeClass
 import com.eight87.strictlykeptboy.ui.adaptive.isTwoPane
+import com.eight87.strictlykeptboy.ui.calendars.CalendarFilterChipStrip
 import com.eight87.strictlykeptboy.ui.scaffold.ScheduleViewTab
+import com.eight87.strictlykeptboy.ui.settings.CalendarVisibilityPrefs
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.temporal.TemporalAdjusters
@@ -54,6 +57,17 @@ fun SchedulePane(
     eventCreateEnabled: Boolean = true,
     /** Phase CCC.10 / HV-G.3 — opens the quick-trip wizard from the FAB long-press or schedule empty-state. */
     onPlanTrip: () -> Unit = {},
+    /**
+     * Round 2.1.B.2 — visibility prefs powering the calendar chip strip.
+     * When `null`, the chip strip is suppressed (back-compat with
+     * preview / test entry-points that don't wire the multirepo path).
+     */
+    calendarVisibility: CalendarVisibilityPrefs? = null,
+    /**
+     * Round 2.1.B.2 — long-press handler for chips. Hosts route this to
+     * [CalendarSettingsSheet]. `null` ⇒ no-op.
+     */
+    onLongPressCalendar: ((CalendarMeta) -> Unit)? = null,
 ) {
     androidx.compose.runtime.LaunchedEffect(state) {
         com.eight87.strictlykeptboy.perf.PerfTraceRecorder.begin(
@@ -77,7 +91,14 @@ fun SchedulePane(
                 modifier = Modifier.fillMaxSize(),
                 widthClass = widthClass,
                 master = {
-                    Box(modifier = Modifier.testTag(TestTagScheduleMasterPane)) {
+                    Column(modifier = Modifier.testTag(TestTagScheduleMasterPane)) {
+                        if (calendarVisibility != null && state.calendarsFlow != null) {
+                            CalendarFilterChipStrip(
+                                calendarsFlow = state.calendarsFlow!!,
+                                visibilityPrefs = calendarVisibility,
+                                onLongPressCalendar = onLongPressCalendar ?: {},
+                            )
+                        }
                         ScheduleMasterContent(
                             activeRepoName = activeRepoName,
                             state = state,
@@ -97,7 +118,14 @@ fun SchedulePane(
                 },
             )
         } else {
-            Box(modifier = Modifier.fillMaxSize().testTag(TestTagScheduleMasterPane)) {
+            Column(modifier = Modifier.fillMaxSize().testTag(TestTagScheduleMasterPane)) {
+                if (calendarVisibility != null && state.calendarsFlow != null) {
+                    CalendarFilterChipStrip(
+                        calendarsFlow = state.calendarsFlow!!,
+                        visibilityPrefs = calendarVisibility,
+                        onLongPressCalendar = onLongPressCalendar ?: {},
+                    )
+                }
                 ScheduleMasterContent(
                     activeRepoName = activeRepoName,
                     state = state,

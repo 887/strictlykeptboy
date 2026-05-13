@@ -1,17 +1,20 @@
 package com.eight87.strictlykeptboy.ui.schedule
 
 import androidx.compose.runtime.Immutable
+import com.eight87.strictlykeptboy.resolver.CalendarMeta
 import com.eight87.strictlykeptboy.resolver.DateRange
 import com.eight87.strictlykeptboy.resolver.RenderedSchedule
 import com.eight87.strictlykeptboy.resolver.Renderer
 import com.eight87.strictlykeptboy.resolver.RepoSnapshot
 import com.eight87.strictlykeptboy.resolver.ViewMode
 import com.eight87.strictlykeptboy.ui.scaffold.ScheduleViewTab
+import com.eight87.strictlykeptboy.ui.settings.VisibilityState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -42,6 +45,19 @@ class ScheduleViewState(
     private val renderer: Renderer = Renderer(),
     private val snapshotFlow: StateFlow<RepoSnapshot>,
     private val sourcesFlow: StateFlow<Renderer.Sources>,
+    /**
+     * Round 2.1.B.2 / B.8 — full calendar list across all repos, overlaid
+     * with TOML fields by [com.eight87.strictlykeptboy.resolver.CalendarRegistry].
+     * Surfaced for the [CalendarFilterChipStrip] rendered above the
+     * schedule grid. Defaults to derived-from-snapshot when not injected.
+     */
+    val calendarsFlow: StateFlow<List<CalendarMeta>>? = null,
+    /**
+     * Round 2.1.B.8 — phone-local visibility overrides. The schedule
+     * filters its rendered output to only calendars that are visible
+     * here. `null` ⇒ all calendars visible (no override).
+     */
+    private val visibilityFlow: StateFlow<VisibilityState>? = null,
     initialDate: LocalDate = LocalDate.now(),
     initialTab: ScheduleViewTab = ScheduleViewTab.Day,
     private val tz: ZoneId = ZoneId.systemDefault(),
@@ -57,21 +73,51 @@ class ScheduleViewState(
     val rendered: StateFlow<RenderedSchedule?> = _rendered.asStateFlow()
 
     init {
+        val visFlow = visibilityFlow ?: MutableStateFlow(VisibilityState())
         scope.launch {
-            combine(_date, _selectedTab, snapshotFlow, sourcesFlow) { d, t, snap, src ->
-                Quadruple(d, t, snap, src)
+            combine(_date, _selectedTab, snapshotFlow, sourcesFlow, visFlow) { d, t, snap, src, vis ->
+                Quintuple(d, t, snap, src, vis)
             }.collect { q ->
-                val d = q.a; val t = q.b; val snap = q.c; val src = q.d
-                val (range, viewMode) = rangeAndModeFor(d, t)
+                val (range, viewMode) = rangeAndModeFor(q.a, q.b)
+                val (filteredSnap, filteredSrc) = applyVisibility(q.c, q.d, q.e)
                 _rendered.value = renderer.render(
                     range = range,
                     viewMode = viewMode,
-                    snapshot = snap,
-                    sources = src,
+                    snapshot = filteredSnap,
+                    sources = filteredSrc,
                     renderTz = tz,
                 )
             }
         }
+    }
+
+    /**
+     * Round 2.1.B.8 — apply phone-local visibility to the snapshot +
+     * sources pair before handing to the renderer. Calendars hidden in
+     * [VisibilityState] are filtered from snapshot.calendars (so the
+     * renderer's `active` set never contains them) and their events /
+     * rules are stripped from sources. No resolver change required.
+     */
+    private fun applyVisibility(
+        snap: RepoSnapshot,
+        src: Renderer.Sources,
+        vis: VisibilityState,
+    ): Pair<RepoSnapshot, Renderer.Sources> {
+        if (vis.ordered.isEmpty()) return snap to src
+        // visible-by-default unless explicit `visible = false`.
+        val hiddenKeys = vis.ordered
+            .filter { !it.visible }
+            .map { it.repoId to it.id }
+            .toSet()
+        if (hiddenKeys.isEmpty()) return snap to src
+        val keptCalendars = snap.calendars.filter { (it.repo.id to it.ref.id) !in hiddenKeys }
+        val keptCalendarRefs = keptCalendars.map { it.ref }.toSet()
+        val newSnap = snap.copy(calendars = keptCalendars)
+        val newSrc = src.copy(
+            events = src.events.filter { it.calendar in keptCalendarRefs },
+            rules = src.rules.filter { it.calendar in keptCalendarRefs },
+        )
+        return newSnap to newSrc
     }
 
     fun setDate(date: LocalDate) { _date.value = date }
@@ -101,4 +147,5 @@ class ScheduleViewState(
         }
 
     private data class Quadruple<A, B, C, D>(val a: A, val b: B, val c: C, val d: D)
+    private data class Quintuple<A, B, C, D, E>(val a: A, val b: B, val c: C, val d: D, val e: E)
 }

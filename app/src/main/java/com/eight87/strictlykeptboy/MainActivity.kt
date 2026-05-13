@@ -252,6 +252,8 @@ class MainActivity : ComponentActivity() {
                             scope = scope,
                             snapshotFlow = graph.snapshot,
                             sourcesFlow = graph.sources,
+                            calendarsFlow = graph.calendarRegistry.state,
+                            visibilityFlow = graph.calendarVisibility.state,
                             initialTab = graph.viewModePrefs.selected.value,
                         )
                     }
@@ -342,11 +344,21 @@ class MainActivity : ComponentActivity() {
                     // repo. We resolve at click-time so the latest scaffold
                     // outcome is observed. Falls back to a toast if no repo.
                     var pendingShareRepo by remember { mutableStateOf<RepoConfig?>(null) }
+                    // Round 2.1.B.2 / B.4 — pending calendar to edit. Long-press
+                    // on a chip routes here; the sheet writes back via
+                    // CalendarSettingsSheet → RoutineCalendarConfig +
+                    // SupersedenceConfig + CalendarActivityConfig codecs.
+                    var pendingCalendarEdit by remember {
+                        mutableStateOf<com.eight87.strictlykeptboy.resolver.CalendarMeta?>(null)
+                    }
                     SkbAppShell(
                         tasksState = tasksViewState,
                         activeRepoNameFlow = graph.defaultWriteRepoName,
                         activeIconKindFlow = graph.activeRepoIconKind,
                         wizardEntryRequest = graph.wizardEntryRequest,
+                        calendarVisibility = graph.calendarVisibility,
+                        unifiedViewFlow = graph.reposState.unifiedView,
+                        onLongPressCalendar = { meta -> pendingCalendarEdit = meta },
                         onShareWithDom = {
                             val name = graph.activeRepoName.value
                             val cfg = graph.repoStore.list()
@@ -491,6 +503,24 @@ class MainActivity : ComponentActivity() {
                             }
                         },
                     )
+                    // Round 2.1.B.4 — overlay CalendarSettingsSheet on
+                    // long-press of a chip. Save writes calendar.toml on
+                    // Dispatchers.IO and commits via GitRepoRegistry.
+                    pendingCalendarEdit?.let { meta ->
+                        com.eight87.strictlykeptboy.ui.calendars.CalendarSettingsSheet(
+                            calendar = meta,
+                            onDismiss = { pendingCalendarEdit = null },
+                            onSave = { draft ->
+                                scope.launch {
+                                    runCatching {
+                                        com.eight87.strictlykeptboy.ui.calendars.CalendarSettingsWriter
+                                            .write(graph, draft)
+                                    }
+                                    pendingCalendarEdit = null
+                                }
+                            },
+                        )
+                    }
                     // Phase 2.1.I.4 — overlay the ShareSheet when the
                     // wizard's Share-with-dom CTA fired. Lives as a sibling
                     // of SkbAppShell so it overlays everything else.
