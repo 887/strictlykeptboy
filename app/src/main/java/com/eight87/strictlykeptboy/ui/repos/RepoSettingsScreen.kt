@@ -117,7 +117,6 @@ fun RepoSettingsScreen(
     onSetPrimaryRemote: (RemoteName) -> Unit,
     onRemoveRepo: (deleteLocalClone: Boolean) -> Unit,
     onOpenIdentities: () -> Unit,
-    onOpenStickerPack: () -> Unit = {},
     onShareRepo: () -> Unit = {},
     onToggleRemoteReadOnly: (RemoteName, Boolean) -> Unit = { _, _ -> },
     /** Phase ZZ.D — names of mirror remotes currently showing divergence from primary. */
@@ -294,51 +293,91 @@ fun RepoSettingsScreen(
             ) { Text(stringResource(R.string.repo_settings_manage_identities)) }
         }
 
-        // Sticker pack (Round 2.5.C.2)
-        SettingsSection("Sticker pack") {
-            val species = draft.iconSpecies
-            if (species == null) {
-                Text(
-                    "This repo has no species set — pick one in the wizard or via the icon picker above to enable sticker packs.",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            } else {
-                val packPrefs = com.eight87.strictlykeptboy.ui.repos.LocalAvatarPackPrefs.current
-                val activePackId = remember(species, packPrefs) {
-                    packPrefs?.activePackFor(species)
+        // ---- Per-repo identity (Round 2.5.B.3) --------------------------------
+        SectionCard(
+            title = stringResource(R.string.repo_settings_section_per_repo_identity),
+            modifier = Modifier.testTag(TestTagRepoSettingsPerRepoIdentity),
+        ) {
+            var praise by remember(identitySnapshot) { mutableStateOf(identitySnapshot.praise) }
+            var pronouns by remember(identitySnapshot) { mutableStateOf(identitySnapshot.pronouns) }
+            var honorific by remember(identitySnapshot) { mutableStateOf(identitySnapshot.honorific) }
+            // Debounced commit: on any field change, schedule a write 500ms later.
+            val scope = rememberCoroutineScope()
+            var pending by remember { mutableStateOf<Job?>(null) }
+            fun fire() {
+                pending?.cancel()
+                pending = scope.launch {
+                    delay(500)
+                    onIdentityEdit(
+                        PerRepoIdentitySnapshot(
+                            praise = praise,
+                            pronouns = pronouns,
+                            honorific = honorific,
+                        ),
+                    )
                 }
-                val packStore = com.eight87.strictlykeptboy.ui.repos.LocalPackStore.current
-                val pack = remember(activePackId, packStore) {
-                    activePackId?.let { packStore?.get(it) }
-                }
+            }
+            OutlinedTextField(
+                value = praise,
+                onValueChange = { praise = it; fire() },
+                label = { Text(stringResource(R.string.repo_settings_per_repo_identity_praise)) },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = pronouns,
+                onValueChange = { pronouns = it; fire() },
+                label = { Text(stringResource(R.string.repo_settings_per_repo_identity_pronouns)) },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = honorific,
+                onValueChange = { honorific = it; fire() },
+                label = { Text(stringResource(R.string.repo_settings_per_repo_identity_honorific)) },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+
+        // ---- Mode (Round 2.5.B.4) --------------------------------------------
+        SectionCard(
+            title = stringResource(R.string.repo_settings_section_mode),
+            modifier = Modifier.testTag(TestTagRepoSettingsPerRepoMode),
+        ) {
+            Text(
+                stringResource(R.string.repo_settings_per_repo_mode_label),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            val rows = listOf(
+                RepoMode.Free to R.string.repo_settings_per_repo_mode_free,
+                RepoMode.SelfKeep to R.string.repo_settings_per_repo_mode_self_keep,
+                RepoMode.StrictlyKept to R.string.repo_settings_per_repo_mode_strictly_kept,
+            )
+            rows.forEach { (mode, labelRes) ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth().clickable { onModeEdit(mode) },
                 ) {
-                    com.eight87.strictlykeptboy.ui.repos.StickerThumbnail(
-                        species = species,
-                        sizeDp = 64.dp,
+                    RadioButton(
+                        selected = modeSnapshot == mode,
+                        onClick = { onModeEdit(mode) },
                     )
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            pack?.name ?: "Default ${species.replaceFirstChar { it.uppercase() }}",
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                        Text(
-                            "pack id: ${activePackId ?: "default-${species.lowercase()}"}",
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
+                    Text(stringResource(labelRes))
                 }
-                TextButton(
-                    onClick = onOpenStickerPack,
-                    modifier = Modifier.testTag("RepoSettings-SwitchStickerPack"),
-                ) { Text("Switch pack") }
             }
         }
 
-        // Defaults
-        SettingsSection(stringResource(R.string.repo_settings_section_defaults)) {
+        // ---- Sticker pack placeholder (Round 2.5.C) --------------------------
+        SectionCard(
+            title = stringResource(R.string.repo_settings_section_sticker_pack),
+            modifier = Modifier.testTag(TestTagRepoSettingsStickerPack),
+        ) {
+            Text(
+                stringResource(R.string.repo_settings_sticker_pack_placeholder),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+
+        // ---- Defaults --------------------------------------------------------
+        SectionCard(title = stringResource(R.string.repo_settings_section_defaults)) {
             OutlinedTextField(
                 value = draft.defaultCalendarId.orEmpty(),
                 onValueChange = { draft = draft.copy(defaultCalendarId = it.ifBlank { null }) },
