@@ -568,12 +568,20 @@ private fun ShellTopBar(
                     sizeDp = 40,
                 )
             }
-            // F45 fix-up: all 7 TopDestination entries render as icon-only
-            // buttons in a horizontally-scrollable row so `AppShellNavigationSwapTest`
-            // finds a `ShellDest-<name>` node + click action for every
-            // destination. The bat avatar on row 1 is a parallel affordance
-            // for Repos; the settings-gear duplicate was dropped because the
-            // `ShellDest-Settings` button now covers it.
+            // Phase 2.2.A.1: top-bar icon row is filtered to READ surfaces
+            // only — Schedule + Tasks + Reviews. The full `TopDestination`
+            // enum stays at 7 cases (so the existing routing paths from the
+            // bat avatar / Repos "+" / `wizardEntryRequest` / Settings gear
+            // continue to compile + work), but Wizard / Together / Repos /
+            // Settings are NOT rendered as icon-buttons in this row anymore.
+            // Restores the pre-Round-2.1 layout (user direction 2026-05-13:
+            // "Together/Wizard demoted to inside ReposPane" + "Settings/
+            // Repos/Together/Wizard filtered out of icon-button row").
+            val topBarDestinations = listOf(
+                TopDestination.Schedule,
+                TopDestination.Tasks,
+                TopDestination.Reviews,
+            )
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -581,7 +589,7 @@ private fun ShellTopBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                TopDestination.entries.forEach { dest ->
+                topBarDestinations.forEach { dest ->
                     DestinationButton(
                         dest = dest,
                         selected = dest == selectedDest,

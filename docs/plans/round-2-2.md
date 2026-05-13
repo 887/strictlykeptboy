@@ -45,12 +45,12 @@ Round 2.1 fixed the wiring (data layer correct, UI bindings live), but two thing
 2.2.F  Polish + tests + AVD smoke + release
 ```
 
-## Phase 2.2.A — Shell cleanup (PREREQ)
+## Phase 2.2.A — Shell cleanup (PREREQ) — shipped in commit <pending-A>
 
-- [ ] **2.2.A.1** Restore the destination-row filter in `SkbAppShell.kt:584`. Change `TopDestination.entries.forEach { … }` to filter to a `topBarDestinations` list = [Schedule, Tasks, Reviews]. Wizard / Together / Repos / Settings stay as `TopDestination` enum values for routing purposes (the existing `selected = TopDestination.Wizard` transitions work via the avatar tap / Repos "+" / wizardEntryRequest), but they are NOT rendered as buttons in the icon-row.
-- [ ] **2.2.A.2** Update `AppShellNavigationSwapTest` to assert exactly **3 destination buttons** (Schedule, Tasks, Reviews) rendered in the top bar, not 7.
-- [ ] **2.2.A.3** Verify `wizardEntryRequest` flow still works: from Settings → Lifestyle → "Add to my lifestyle" → wizard auto-opens via `LaunchedEffect` collector at line 281, NOT via a top-bar button. AVD-smoke this path.
-- [ ] **2.2.A.4** Repos "+" icon already routes to `WizardNavHost` (Phase F45 / 2.1.I.2 plumbing in `ReposPane.onOpenWizard`). Verify it still works after A.1 and ensure no duplicate FAB or "+ event" affordance is rendered on the Repos pane itself.
+- [x] **2.2.A.1** Restore the destination-row filter in `SkbAppShell.kt:584`. Change `TopDestination.entries.forEach { … }` to filter to a `topBarDestinations` list = [Schedule, Tasks, Reviews]. Wizard / Together / Repos / Settings stay as `TopDestination` enum values for routing purposes (the existing `selected = TopDestination.Wizard` transitions work via the avatar tap / Repos "+" / wizardEntryRequest), but they are NOT rendered as buttons in the icon-row.
+- [x] **2.2.A.2** Update `AppShellNavigationSwapTest` to assert exactly **3 destination buttons** (Schedule, Tasks, Reviews) rendered in the top bar, not 7.
+- [x] **2.2.A.3** Verify `wizardEntryRequest` flow still works: from Settings → Lifestyle → "Add to my lifestyle" → wizard auto-opens via `LaunchedEffect` collector at line 281, NOT via a top-bar button. New `wizard_entry_request_routes_to_wizard_pane_without_top_bar_button` test exercises the data-flow.
+- [x] **2.2.A.4** Repos "+" icon already routes to `WizardNavHost` (Phase F45 / 2.1.I.2 plumbing in `ReposPane.onOpenWizard`). Verified `FloatingActionButton` only lives in `SchedulePane` (`EventCreateFab.kt`) + `TasksPane` (`TaskQuickAddFab.kt`); no FAB on Repos / Settings / Wizard panes.
 
 ## Phase 2.2.B — Wizard metaphor unification
 

@@ -31,11 +31,11 @@ import org.robolectric.annotation.Config
 /**
  * Nav-swap polish — asserts the inverted layout.
  *
- *  - The top bar carries all SEVEN destinations as icon-only buttons
- *    (Schedule / Tasks / Together / Repos / Wizard / Reviews / Settings).
- *    Reviews was added in the Phase DDD.13 wiring round; the test loops
- *    `TopDestination.entries` so future additions are picked up
- *    automatically.
+ *  - Phase 2.2.A.2: the top-bar icon row is restricted to READ surfaces
+ *    (Schedule / Tasks / Reviews). The full `TopDestination` enum stays
+ *    at 7 cases — Wizard / Together / Repos / Settings are still valid
+ *    routing targets, just not rendered as icon-buttons in the row.
+ *    Pinned at 3 buttons so accidental re-additions get caught.
  *  - The left rail shows view-mode entries per the active destination.
  *  - Schedule rail has 5 entries (Day / Week / Month / Agenda / Year).
  *  - Tasks rail has 5 entries (Combined / Today / Per-list / Shopping /
@@ -68,20 +68,39 @@ class AppShellNavigationSwapTest {
         }
     }
 
-    @Test fun top_bar_carries_all_destination_buttons() {
+    @Test fun top_bar_carries_only_read_surface_destination_buttons() {
         setShell()
         composeRule.onNodeWithTag(TestTagAppShell).assertExists()
         composeRule.onNodeWithTag(TestTagShellTopBar).assertExists()
-        // Pin the count to catch accidental TopDestination additions /
-        // removals — the Phase DDD.13 rail is 7 destinations.
+        // Phase 2.2.A.2 — the enum stays at 7 cases (routing-only for the
+        // hidden four), but only the 3 READ surfaces render as buttons.
         assert(TopDestination.entries.size == 7) {
             "Expected 7 TopDestination entries, got ${TopDestination.entries.size}"
         }
-        TopDestination.entries.forEach { dest ->
+        val rendered = listOf(
+            TopDestination.Schedule,
+            TopDestination.Tasks,
+            TopDestination.Reviews,
+        )
+        rendered.forEach { dest ->
             composeRule
                 .onNodeWithTag("$TestTagShellDestPrefix${dest.name}")
                 .assertExists()
                 .assertHasClickAction()
+        }
+        // The remaining four destinations are still in the enum (routing
+        // targets via avatar / Repos "+" / `wizardEntryRequest` / gear),
+        // but they must NOT render as icon-buttons in the top row.
+        val hidden = listOf(
+            TopDestination.Together,
+            TopDestination.Repos,
+            TopDestination.Wizard,
+            TopDestination.Settings,
+        )
+        hidden.forEach { dest ->
+            composeRule
+                .onNodeWithTag("$TestTagShellDestPrefix${dest.name}")
+                .assertDoesNotExist()
         }
     }
 
@@ -111,18 +130,58 @@ class AppShellNavigationSwapTest {
             .assertDoesNotExist()
     }
 
-    @Test fun every_destination_button_is_clickable() {
-        setShell()
-        // Smoke-check: every destination has a click action wired. We
-        // don't navigate to Together/Repos/Wizard/Settings here because
-        // their stub-pane render paths exercise other surfaces (the
-        // SettingsPane master-detail is covered separately); instead we
-        // just confirm the buttons are reachable from the test harness.
-        TopDestination.entries.forEach { dest ->
-            composeRule
-                .onNodeWithTag("$TestTagShellDestPrefix${dest.name}")
-                .assertExists()
-                .assertHasClickAction()
+    @Test fun wizard_entry_request_routes_to_wizard_pane_without_top_bar_button() {
+        // Phase 2.2.A.3 — even though `TopDestination.Wizard` no longer
+        // renders an icon-button in the top row, publishing a value into
+        // `wizardEntryRequest` must still flip the shell's `selected`
+        // state to Wizard (the `LaunchedEffect` collector at ~line 281).
+        // We verify by asserting the WizardNavHost root testTag appears.
+        val repoName = MutableStateFlow("demo-repo")
+        val snapshot = MutableStateFlow(RepoSnapshot(emptyList(), emptyList(), emptyList()))
+        val sources = MutableStateFlow(
+            Renderer.Sources(emptyList(), emptyList(), emptyMap(), emptyList(), emptyList()),
+        )
+        val entryReq = MutableStateFlow<
+            com.eight87.strictlykeptboy.ui.wizard.WizardScreen?
+        >(com.eight87.strictlykeptboy.ui.wizard.WizardScreen.Welcome)
+        composeRule.setContent {
+            StrictlyKeptBoyTheme {
+                CompositionLocalProvider(LocalWindowWidthSizeClass provides WindowWidthSizeClass.Compact) {
+                    val state = ScheduleViewState(
+                        scope = CoroutineScope(Dispatchers.Unconfined),
+                        snapshotFlow = snapshot,
+                        sourcesFlow = sources,
+                    )
+                    SkbAppShell(
+                        activeRepoNameFlow = repoName,
+                        scheduleState = state,
+                        wizardEntryRequest = entryReq,
+                    )
+                }
+            }
         }
+        composeRule
+            .onNodeWithTag(com.eight87.strictlykeptboy.ui.wizard.TestTagWizard)
+            .assertExists()
+        // And confirm there is no Wizard top-bar button (icon row stays
+        // filtered to read surfaces).
+        composeRule
+            .onNodeWithTag("$TestTagShellDestPrefix${TopDestination.Wizard.name}")
+            .assertDoesNotExist()
+    }
+
+    @Test fun every_rendered_destination_button_is_clickable() {
+        setShell()
+        // Phase 2.2.A.2 — only the 3 read-surface buttons render in the
+        // icon row; hidden destinations are reached via other affordances
+        // (bat avatar → Repos, Repos "+" → Wizard, gear → Settings) which
+        // route through `selected = TopDestination.X` directly.
+        listOf(TopDestination.Schedule, TopDestination.Tasks, TopDestination.Reviews)
+            .forEach { dest ->
+                composeRule
+                    .onNodeWithTag("$TestTagShellDestPrefix${dest.name}")
+                    .assertExists()
+                    .assertHasClickAction()
+            }
     }
 }
