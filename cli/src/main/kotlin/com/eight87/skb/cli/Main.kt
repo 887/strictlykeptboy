@@ -14,6 +14,9 @@ import com.eight87.skb.cli.repo.RemoteGroup
 import com.eight87.skb.cli.routine.RoutineGroup
 import com.eight87.skb.cli.routine.StreakCommand
 import com.eight87.skb.cli.template.TemplateGroup
+import com.eight87.skb.cli.override.OverrideGroup
+import com.eight87.skb.cli.attachment.AttachGroup
+import com.eight87.skb.cli.reminder.ReminderGroup
 import com.eight87.skb.cli.core.CliContext
 import com.eight87.skb.cli.core.CliError
 import com.eight87.skb.cli.core.ExitCode
@@ -103,6 +106,9 @@ fun main(args: Array<String>) {
     RoutineGroup(ctxOf),
     StreakCommand(ctxOf),
     TemplateGroup(ctxOf),
+    OverrideGroup(ctxOf),
+    AttachGroup(ctxOf),
+    ReminderGroup(ctxOf),
     ReactGroup(ctxOf),
     CommentGroup(ctxOf),
     RepoFingerprintCommand(ctxOf),
