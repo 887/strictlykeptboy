@@ -287,15 +287,18 @@ private fun SkbAppShellContent(
                 onRepoSwitcherClick = { selected = TopDestination.Repos },
             )
             Row(modifier = Modifier.fillMaxSize()) {
-                // Left rail always present — top section is the view-mode tabs
-                // for the current destination (may be empty); bottom section is
-                // the active-repo avatar + settings gear (always there).
-                RailColumn(
-                    items = railItems,
-                    activeIconKind = activeIconKind,
-                    onAccountTap = { selected = TopDestination.Repos },
-                    onSettingsTap = { selected = TopDestination.Settings },
-                )
+                // Left rail only renders when the destination has view-mode
+                // tabs to show. Settings/Repos/Wizard have no view-modes so
+                // the rail collapses and the pane spans edge-to-edge (user
+                // direction 2026-05-13 — "still space on the left").
+                if (railItems.isNotEmpty()) {
+                    RailColumn(
+                        items = railItems,
+                        activeIconKind = activeIconKind,
+                        onAccountTap = { selected = TopDestination.Repos },
+                        onSettingsTap = { selected = TopDestination.Settings },
+                    )
+                }
                 Box(
                     modifier = Modifier.fillMaxSize().testTag(TestTagShellContent),
                 ) {
@@ -409,21 +412,33 @@ private fun ShellTopBar(
                     )
                 }
             SyncButton(onClick = onSyncClick)
-            // Settings gear — moved up here from the rail bottom per user
-            // direction 2026-05-13. Sits between sync and the bat avatar.
-            androidx.compose.material3.IconButton(
-                onClick = { onSelectDest(TopDestination.Settings) },
-                modifier = Modifier.testTag("ShellTopBarSettings"),
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Settings,
-                    contentDescription = stringResource(R.string.dest_settings),
-                    tint = if (selectedDest == TopDestination.Settings) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                )
+            // Settings gear — same selected-tint pattern as the Schedule /
+            // Tasks destination buttons (FilledTonalIconButton when active)
+            // so it reads as a real navigation tab, not a plain icon.
+            val settingsMod = Modifier.testTag("ShellTopBarSettings")
+            if (selectedDest == TopDestination.Settings) {
+                androidx.compose.material3.FilledTonalIconButton(
+                    onClick = { onSelectDest(TopDestination.Settings) },
+                    modifier = settingsMod,
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Settings,
+                        contentDescription = stringResource(R.string.dest_settings),
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
+            } else {
+                androidx.compose.material3.IconButton(
+                    onClick = { onSelectDest(TopDestination.Settings) },
+                    modifier = settingsMod,
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Settings,
+                        contentDescription = stringResource(R.string.dest_settings),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
             }
             // Far-right: bat/accounts avatar. Per user direction 2026-05-13:
             // put the bat back up top on the very right (was at rail bottom).
