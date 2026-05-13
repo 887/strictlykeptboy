@@ -1,0 +1,169 @@
+# Phase AAA.7 / HV-L.B — atomic-menstrual-cycle template.
+# 12 entries (cycle anchors, contraception, preventative screenings,
+# supplies). All `privacy_flag = true` except `supplies-restock`. Sub-
+# toggle "pause kink-care during period?" wires `cal-period-grace`
+# overlay at materialization time (HV-L.B.5).
+
+schema_version = 1
+template_id = "atomic-menstrual-cycle"
+display_name = "Atomic menstrual cycle"
+category = "medical"
+neutral_safe = true
+
+# ── cycle anchors (HV-L.B.2) ─────────────────────────────────────────
+
+[[entry]]
+id = "period-day-1"
+title = "good girl's cycle begins"
+neutral_title = "Period day 1"
+duration_minutes = 5
+sticker_id = "cycle-anchor"
+default_cadence = "cycle-anchor"
+privacy_flag = true
+tags = ["medical", "menstrual"]
+
+[[entry]]
+id = "period-day-N"
+title = "good girl on day N"
+neutral_title = "Period day N"
+duration_minutes = 10
+sticker_id = "cycle-day"
+default_cadence = "days-1-through-7-after-anchor"
+privacy_flag = true
+tags = ["medical", "menstrual"]
+[[entry.subbeat]]
+label = "Tampon / pad / cup change cadence"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "Cramp-management check-in"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "Iron-rich food anchor"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "Extra hydration (+500ml)"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "Heating pad availability check"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "Mood check"
+duration_seconds = 60
+
+[[entry]]
+id = "ovulation-day"
+title = "good girl ovulates"
+neutral_title = "Ovulation day"
+duration_minutes = 2
+sticker_id = "ovulation"
+default_cadence = "mid-cycle"
+privacy_flag = true
+tags = ["medical", "menstrual", "fertility"]
+
+[[entry]]
+id = "pms-week"
+title = "good girl's pms week"
+neutral_title = "PMS week (days -7 to -1)"
+duration_minutes = 15
+sticker_id = "pms"
+default_cadence = "days-minus-7-through-minus-1"
+privacy_flag = true
+tags = ["medical", "menstrual"]
+[[entry.subbeat]]
+label = "Mood-volatility warning"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "Comfort-food permission"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "Energy-conservation note"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "Social-calendar buffer scan"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "Sleep-priority elevation"
+duration_seconds = 60
+
+# ── contraception (HV-L.B.3) ─────────────────────────────────────────
+
+[[entry]]
+id = "pill-time"
+title = "good girl takes her pill"
+neutral_title = "Hormonal contraception pill"
+duration_minutes = 1
+sticker_id = "pill-contraceptive"
+default_cadence = "daily-strict"
+privacy_flag = true
+tags = ["medical", "contraception"]
+
+[[entry]]
+id = "emergency-contraception-window"
+title = "good girl knows her options"
+neutral_title = "Emergency contraception window (link to local pharmacy info)"
+duration_minutes = 2
+sticker_id = "ec-link"
+default_cadence = "triggered"
+privacy_flag = true
+tags = ["medical", "contraception", "rescue"]
+
+# ── preventative + tracking (HV-L.B.4) ───────────────────────────────
+
+[[entry]]
+id = "pap-smear"
+title = "good girl gets her smear test"
+neutral_title = "Pap smear / cervical screening"
+duration_minutes = 30
+sticker_id = "pap"
+default_cadence = "per-local-guideline"
+privacy_flag = true
+tags = ["medical", "preventative"]
+
+[[entry]]
+id = "breast-exam-self"
+title = "good girl checks her chest"
+neutral_title = "Self breast exam"
+duration_minutes = 5
+sticker_id = "self-exam"
+default_cadence = "monthly"
+privacy_flag = true
+tags = ["medical", "preventative"]
+
+[[entry]]
+id = "mammogram"
+title = "good girl gets her mammogram"
+neutral_title = "Mammogram"
+duration_minutes = 30
+sticker_id = "mammogram"
+default_cadence = "per-local-guideline"
+privacy_flag = true
+tags = ["medical", "preventative"]
+
+[[entry]]
+id = "gynae-followup"
+title = "good girl sees her gynae"
+neutral_title = "Gynaecology follow-up"
+duration_minutes = 30
+sticker_id = "gynae"
+default_cadence = "annual"
+privacy_flag = true
+tags = ["medical", "preventative"]
+
+[[entry]]
+id = "supplies-restock"
+title = "good girl restocks her cycle kit"
+neutral_title = "Period supplies restock (tampons / pads / cups / discs / underwear)"
+duration_minutes = 5
+sticker_id = "supplies"
+default_cadence = "biweekly"
+tags = ["medical", "menstrual", "supply"]
+
+[[entry]]
+id = "cycle-tracking-export"
+title = "good girl shares her cycle log with her doctor"
+neutral_title = "Cycle-tracking export (provider request)"
+duration_minutes = 5
+sticker_id = "cycle-export"
+default_cadence = "monthly"
+privacy_flag = true
+tags = ["medical", "menstrual", "monitoring"]

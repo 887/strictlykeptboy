@@ -1,0 +1,1229 @@
+# Phase AAA.1 / HV-A — atomic-household template.
+# 88 base entries across 13 categories + 4 kink variants (HV-A.17).
+# Schema = AT-D (atomic-self-care.toml). `neutral_title` always set; `tags`
+# carry domain ("household", "pet", "kink", "nonSuperseable") for the
+# resolver + privacy layer (D.76).
+
+schema_version = 1
+template_id = "atomic-household"
+display_name = "Atomic household"
+category = "household"
+neutral_safe = true
+
+# ── trash (HV-A.2) ───────────────────────────────────────────────────
+
+[[entry]]
+id = "trash-common"
+title = "good boy takes out the trash"
+neutral_title = "Take out general trash"
+duration_minutes = 5
+sticker_id = "trash-bag"
+category = "household"
+default_cadence = "weekly"
+default_times = ["19:00"]
+default_weekday = "sun"
+tags = ["household"]
+
+[[entry]]
+id = "trash-recyclables"
+title = "good boy sorts recyclables"
+neutral_title = "Take out recyclables (plastic/metal)"
+duration_minutes = 8
+sticker_id = "recycle"
+default_cadence = "biweekly"
+default_weekday = "tue"
+tags = ["household"]
+
+[[entry]]
+id = "trash-paper"
+title = "good boy bundles paper"
+neutral_title = "Take out paper/cardboard"
+duration_minutes = 10
+sticker_id = "paper-bundle"
+default_cadence = "biweekly"
+tags = ["household"]
+
+[[entry]]
+id = "trash-glass"
+title = "good boy hauls glass to the bottle bank"
+neutral_title = "Take glass to recycling bank"
+duration_minutes = 15
+sticker_id = "bottle"
+default_cadence = "monthly"
+tags = ["household"]
+
+[[entry]]
+id = "trash-organic"
+title = "good boy empties the bio bin"
+neutral_title = "Take out organic/bio waste"
+duration_minutes = 5
+sticker_id = "compost"
+default_cadence = "twice-weekly"
+default_times = ["19:00"]
+tags = ["household"]
+
+[[entry]]
+id = "trash-batteries"
+title = "battery-drop run"
+neutral_title = "Drop batteries at collection point"
+duration_minutes = 10
+sticker_id = "battery"
+default_cadence = "quarterly"
+tags = ["household"]
+
+[[entry]]
+id = "trash-ewaste"
+title = "e-waste haul"
+neutral_title = "Drop electronics/e-waste at recycling"
+duration_minutes = 20
+sticker_id = "ewaste"
+default_cadence = "biannual"
+tags = ["household"]
+
+[[entry]]
+id = "trash-medication"
+title = "expired-meds drop"
+neutral_title = "Return expired medication to pharmacy"
+duration_minutes = 15
+sticker_id = "pill-box"
+default_cadence = "biannual"
+tags = ["household", "health"]
+
+[[entry]]
+id = "trash-lightbulbs"
+title = "bulb drop"
+neutral_title = "Take CFL/LED bulbs to e-waste"
+duration_minutes = 10
+sticker_id = "bulb"
+default_cadence = "annual"
+tags = ["household"]
+
+[[entry]]
+id = "trash-hazardous"
+title = "hazardous waste run"
+neutral_title = "Drop paint/oil/chemicals at hazardous-waste site"
+duration_minutes = 30
+sticker_id = "hazard"
+default_cadence = "as-needed"
+tags = ["household"]
+
+# ── laundry (HV-A.3) ─────────────────────────────────────────────────
+
+[[entry]]
+id = "laundry-sort"
+title = "good boy sorts laundry"
+neutral_title = "Sort laundry"
+duration_minutes = 5
+sticker_id = "laundry-basket"
+default_cadence = "weekly"
+tags = ["household"]
+[[entry.subbeat]]
+label = "Lights pile"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "Darks pile"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "Delicates / wool pile"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "Towels / sheets pile"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "Check pockets + zip zips"
+duration_seconds = 60
+
+[[entry]]
+id = "laundry-wash"
+title = "good boy runs the washing machine"
+neutral_title = "Run washing machine"
+duration_minutes = 5
+sticker_id = "washer"
+default_cadence = "weekly"
+tags = ["household"]
+
+[[entry]]
+id = "laundry-move-wet"
+title = "good boy moves wet laundry"
+neutral_title = "Move wet laundry to dryer or hang"
+duration_minutes = 10
+sticker_id = "wet-shirt"
+default_cadence = "weekly"
+tags = ["household"]
+[[entry.subbeat]]
+label = "Undies + socks (small basket)"
+duration_seconds = 120
+[[entry.subbeat]]
+label = "Shirts (hang)"
+duration_seconds = 120
+[[entry.subbeat]]
+label = "Pants (hang)"
+duration_seconds = 120
+[[entry.subbeat]]
+label = "Towels / sheets (rack or dryer)"
+duration_seconds = 120
+[[entry.subbeat]]
+label = "Delicates (flat-dry)"
+duration_seconds = 120
+
+[[entry]]
+id = "laundry-fold"
+title = "good boy folds clean laundry"
+neutral_title = "Fold laundry"
+duration_minutes = 20
+sticker_id = "folded-shirts"
+default_cadence = "weekly"
+tags = ["household"]
+[[entry.subbeat]]
+label = "Undies + socks"
+duration_seconds = 240
+[[entry.subbeat]]
+label = "Shirts"
+duration_seconds = 240
+[[entry.subbeat]]
+label = "Pants"
+duration_seconds = 240
+[[entry.subbeat]]
+label = "Towels"
+duration_seconds = 180
+[[entry.subbeat]]
+label = "Sheets"
+duration_seconds = 180
+
+[[entry]]
+id = "laundry-put-away"
+title = "good boy puts laundry away"
+neutral_title = "Put laundry away"
+duration_minutes = 10
+sticker_id = "dresser"
+default_cadence = "weekly"
+tags = ["household"]
+[[entry.subbeat]]
+label = "Drawer (undies, socks, shirts)"
+duration_seconds = 180
+[[entry.subbeat]]
+label = "Closet (pants, jackets, dresses)"
+duration_seconds = 180
+[[entry.subbeat]]
+label = "Shoe rack / shelf"
+duration_seconds = 120
+[[entry.subbeat]]
+label = "Linen closet (towels, sheets)"
+duration_seconds = 120
+
+[[entry]]
+id = "laundry-iron"
+title = "ironing"
+neutral_title = "Iron clothes"
+duration_minutes = 20
+sticker_id = "iron"
+default_cadence = "as-needed"
+tags = ["household"]
+
+[[entry]]
+id = "laundry-lint-trap"
+title = "lint trap clean"
+neutral_title = "Clean dryer lint trap"
+duration_minutes = 1
+sticker_id = "lint"
+default_cadence = "weekly"
+tags = ["household"]
+
+[[entry]]
+id = "laundry-washer-clean"
+title = "washing machine self-clean cycle"
+neutral_title = "Run washing-machine self-clean cycle"
+duration_minutes = 5
+sticker_id = "washer-sparkle"
+default_cadence = "monthly"
+tags = ["household"]
+
+# ── dishes / kitchen (HV-A.4) ────────────────────────────────────────
+
+[[entry]]
+id = "dishwasher-load"
+title = "load the dishwasher"
+neutral_title = "Load dishwasher"
+duration_minutes = 5
+sticker_id = "dishwasher"
+default_cadence = "daily"
+tags = ["household"]
+
+[[entry]]
+id = "dishwasher-run"
+title = "start the dishwasher"
+neutral_title = "Run dishwasher"
+duration_minutes = 1
+sticker_id = "dishwasher-on"
+default_cadence = "daily"
+default_times = ["22:30"]
+tags = ["household"]
+
+[[entry]]
+id = "dishwasher-unload"
+title = "unload the dishwasher"
+neutral_title = "Unload dishwasher"
+duration_minutes = 5
+sticker_id = "dishwasher-clean"
+default_cadence = "daily"
+default_times = ["07:30"]
+tags = ["household"]
+
+[[entry]]
+id = "dishes-handwash"
+title = "hand-wash dishes"
+neutral_title = "Hand-wash dishes"
+duration_minutes = 15
+sticker_id = "sponge"
+default_cadence = "as-needed"
+tags = ["household"]
+
+[[entry]]
+id = "dishes-dry-putaway"
+title = "dry rack put-away"
+neutral_title = "Put away air-dried dishes"
+duration_minutes = 3
+sticker_id = "drying-rack"
+default_cadence = "daily"
+tags = ["household"]
+
+[[entry]]
+id = "kitchen-wipe-counters"
+title = "wipe counters"
+neutral_title = "Wipe kitchen counters"
+duration_minutes = 3
+sticker_id = "cloth"
+default_cadence = "daily"
+tags = ["household"]
+
+[[entry]]
+id = "kitchen-wipe-stovetop"
+title = "wipe stovetop"
+neutral_title = "Wipe stovetop"
+duration_minutes = 3
+sticker_id = "stove"
+default_cadence = "daily"
+tags = ["household"]
+
+[[entry]]
+id = "kitchen-microwave-inside"
+title = "clean inside microwave"
+neutral_title = "Clean microwave interior"
+duration_minutes = 5
+sticker_id = "microwave"
+default_cadence = "weekly"
+tags = ["household"]
+
+[[entry]]
+id = "kitchen-microwave-outside"
+title = "wipe outside microwave"
+neutral_title = "Wipe microwave exterior"
+duration_minutes = 2
+sticker_id = "microwave"
+default_cadence = "weekly"
+tags = ["household"]
+
+[[entry]]
+id = "kitchen-fridge-small"
+title = "fridge wipe-down"
+neutral_title = "Wipe fridge shelves (light clean)"
+duration_minutes = 10
+sticker_id = "fridge"
+default_cadence = "weekly"
+tags = ["household"]
+
+[[entry]]
+id = "kitchen-fridge-deep"
+title = "deep-clean the fridge"
+neutral_title = "Deep-clean fridge interior"
+duration_minutes = 45
+sticker_id = "fridge-sparkle"
+default_cadence = "monthly"
+tags = ["household"]
+
+[[entry]]
+id = "kitchen-fridge-handles"
+title = "wipe fridge handles + door"
+neutral_title = "Wipe fridge handles and door"
+duration_minutes = 2
+sticker_id = "fridge"
+default_cadence = "weekly"
+tags = ["household"]
+
+[[entry]]
+id = "kitchen-freezer-defrost"
+title = "freezer defrost"
+neutral_title = "Defrost freezer"
+duration_minutes = 60
+sticker_id = "freezer"
+default_cadence = "biannual"
+tags = ["household"]
+
+[[entry]]
+id = "kitchen-empty-trash"
+title = "empty the kitchen bin"
+neutral_title = "Empty kitchen trash"
+duration_minutes = 2
+sticker_id = "trash-can"
+default_cadence = "daily"
+tags = ["household"]
+
+[[entry]]
+id = "kitchen-replace-bag"
+title = "replace trash bag"
+neutral_title = "Replace kitchen trash bag"
+duration_minutes = 1
+sticker_id = "trash-bag"
+default_cadence = "daily"
+tags = ["household"]
+
+[[entry]]
+id = "kitchen-coffee-clean"
+title = "clean coffee maker"
+neutral_title = "Clean coffee maker"
+duration_minutes = 10
+sticker_id = "coffee"
+default_cadence = "weekly"
+tags = ["household"]
+
+[[entry]]
+id = "kitchen-kettle-descale"
+title = "descale kettle"
+neutral_title = "Descale kettle"
+duration_minutes = 15
+sticker_id = "kettle"
+default_cadence = "monthly"
+tags = ["household"]
+
+[[entry]]
+id = "kitchen-sharpen-knives"
+title = "sharpen knives"
+neutral_title = "Sharpen knives"
+duration_minutes = 10
+sticker_id = "knife"
+default_cadence = "monthly"
+tags = ["household"]
+
+[[entry]]
+id = "kitchen-oil-board"
+title = "oil cutting board"
+neutral_title = "Oil wooden cutting board"
+duration_minutes = 5
+sticker_id = "cutting-board"
+default_cadence = "monthly"
+tags = ["household"]
+
+[[entry]]
+id = "kitchen-oven-clean"
+title = "oven self-clean"
+neutral_title = "Run oven self-clean cycle"
+duration_minutes = 90
+sticker_id = "oven"
+default_cadence = "quarterly"
+tags = ["household"]
+
+# ── bathroom (HV-A.5) ────────────────────────────────────────────────
+
+[[entry]]
+id = "bath-toilet"
+title = "scrub the toilet"
+neutral_title = "Clean toilet"
+duration_minutes = 10
+sticker_id = "toilet"
+default_cadence = "weekly"
+tags = ["household"]
+[[entry.subbeat]]
+label = "Bowl (interior + under rim)"
+duration_seconds = 180
+[[entry.subbeat]]
+label = "Seat (top + bottom)"
+duration_seconds = 120
+[[entry.subbeat]]
+label = "Base + behind toilet"
+duration_seconds = 180
+[[entry.subbeat]]
+label = "Flush handle + lid exterior"
+duration_seconds = 60
+
+[[entry]]
+id = "bath-shower"
+title = "clean the shower"
+neutral_title = "Clean shower"
+duration_minutes = 20
+sticker_id = "shower-clean"
+default_cadence = "weekly"
+tags = ["household"]
+[[entry.subbeat]]
+label = "Walls / door"
+duration_seconds = 360
+[[entry.subbeat]]
+label = "Floor"
+duration_seconds = 240
+[[entry.subbeat]]
+label = "Drain hair removal"
+duration_seconds = 120
+[[entry.subbeat]]
+label = "Faucet + handles"
+duration_seconds = 120
+[[entry.subbeat]]
+label = "Squeegee + dry-wipe"
+duration_seconds = 120
+
+[[entry]]
+id = "bath-sink"
+title = "clean the bathroom sink"
+neutral_title = "Clean sink"
+duration_minutes = 8
+sticker_id = "sink"
+default_cadence = "weekly"
+tags = ["household"]
+[[entry.subbeat]]
+label = "Bowl"
+duration_seconds = 180
+[[entry.subbeat]]
+label = "Faucet"
+duration_seconds = 120
+[[entry.subbeat]]
+label = "Mirror"
+duration_seconds = 120
+
+[[entry]]
+id = "bath-shower-curtain"
+title = "wipe shower curtain"
+neutral_title = "Wipe shower curtain"
+duration_minutes = 5
+sticker_id = "curtain"
+default_cadence = "monthly"
+tags = ["household"]
+
+[[entry]]
+id = "bath-mop"
+title = "mop the bathroom"
+neutral_title = "Mop bathroom floor"
+duration_minutes = 8
+sticker_id = "mop"
+default_cadence = "weekly"
+tags = ["household"]
+
+[[entry]]
+id = "bath-refresh-towels"
+title = "swap fresh towels"
+neutral_title = "Refresh bathroom towels"
+duration_minutes = 3
+sticker_id = "towel"
+default_cadence = "weekly"
+tags = ["household"]
+
+[[entry]]
+id = "bath-refill-soap"
+title = "refill hand soap"
+neutral_title = "Refill soap dispenser"
+duration_minutes = 2
+sticker_id = "soap"
+default_cadence = "as-needed"
+tags = ["household"]
+
+[[entry]]
+id = "bath-refill-tp"
+title = "restock toilet paper"
+neutral_title = "Restock toilet paper"
+duration_minutes = 2
+sticker_id = "tp-roll"
+default_cadence = "weekly"
+tags = ["household"]
+
+[[entry]]
+id = "bath-descale-showerhead"
+title = "descale showerhead"
+neutral_title = "Descale showerhead"
+duration_minutes = 15
+sticker_id = "showerhead"
+default_cadence = "monthly"
+tags = ["household"]
+
+[[entry]]
+id = "bath-squeegee-daily"
+title = "squeegee shower glass"
+neutral_title = "Squeegee shower glass after shower"
+duration_minutes = 1
+sticker_id = "squeegee"
+default_cadence = "daily"
+tags = ["household"]
+
+# ── bedroom (HV-A.6) ─────────────────────────────────────────────────
+
+[[entry]]
+id = "bed-make"
+title = "good boy makes the bed"
+neutral_title = "Make the bed"
+duration_minutes = 3
+sticker_id = "bed"
+default_cadence = "daily"
+default_times = ["08:00"]
+tags = ["household"]
+
+[[entry]]
+id = "bed-change-sheets"
+title = "change the sheets"
+neutral_title = "Change bed sheets"
+duration_minutes = 10
+sticker_id = "sheets"
+default_cadence = "weekly"
+tags = ["household"]
+
+[[entry]]
+id = "bed-flip-mattress"
+title = "flip / rotate mattress"
+neutral_title = "Flip and rotate mattress"
+duration_minutes = 10
+sticker_id = "mattress"
+default_cadence = "quarterly"
+tags = ["household"]
+
+[[entry]]
+id = "bed-wash-pillowcases"
+title = "wash pillowcases"
+neutral_title = "Wash pillowcases"
+duration_minutes = 5
+sticker_id = "pillow"
+default_cadence = "weekly"
+tags = ["household"]
+
+[[entry]]
+id = "bed-fluff-pillows"
+title = "fluff the pillows"
+neutral_title = "Fluff pillows"
+duration_minutes = 1
+sticker_id = "pillow"
+default_cadence = "daily"
+tags = ["household"]
+
+[[entry]]
+id = "bed-vacuum-under"
+title = "vacuum under the bed"
+neutral_title = "Vacuum under bed"
+duration_minutes = 5
+sticker_id = "vacuum"
+default_cadence = "monthly"
+tags = ["household"]
+
+[[entry]]
+id = "bed-dust-nightstand"
+title = "dust nightstand"
+neutral_title = "Dust nightstand"
+duration_minutes = 3
+sticker_id = "duster"
+default_cadence = "weekly"
+tags = ["household"]
+
+# ── living spaces (HV-A.7) ───────────────────────────────────────────
+
+[[entry]]
+id = "living-vacuum"
+title = "vacuum / sweep"
+neutral_title = "Vacuum or sweep floors"
+duration_minutes = 15
+sticker_id = "vacuum"
+default_cadence = "weekly"
+tags = ["household"]
+
+[[entry]]
+id = "living-mop"
+title = "mop floors"
+neutral_title = "Mop hard floors"
+duration_minutes = 15
+sticker_id = "mop"
+default_cadence = "biweekly"
+tags = ["household"]
+
+[[entry]]
+id = "living-dust"
+title = "dust horizontal surfaces"
+neutral_title = "Dust horizontal surfaces"
+duration_minutes = 10
+sticker_id = "duster"
+default_cadence = "weekly"
+tags = ["household"]
+
+[[entry]]
+id = "living-glass-tables"
+title = "wipe glass tables"
+neutral_title = "Wipe glass tables"
+duration_minutes = 3
+sticker_id = "glass-table"
+default_cadence = "weekly"
+tags = ["household"]
+
+[[entry]]
+id = "living-windows-interior"
+title = "clean interior windows"
+neutral_title = "Clean windows (interior)"
+duration_minutes = 20
+sticker_id = "window"
+default_cadence = "monthly"
+tags = ["household"]
+
+[[entry]]
+id = "living-window-sills"
+title = "wipe window sills"
+neutral_title = "Clean window sills"
+duration_minutes = 5
+sticker_id = "sill"
+default_cadence = "monthly"
+tags = ["household"]
+
+[[entry]]
+id = "living-baseboards"
+title = "wipe baseboards"
+neutral_title = "Wipe baseboards"
+duration_minutes = 20
+sticker_id = "baseboard"
+default_cadence = "monthly"
+tags = ["household"]
+
+[[entry]]
+id = "living-light-fixtures"
+title = "clean light fixtures"
+neutral_title = "Clean light fixtures"
+duration_minutes = 15
+sticker_id = "lamp"
+default_cadence = "quarterly"
+tags = ["household"]
+
+[[entry]]
+id = "living-fan-blades"
+title = "wipe ceiling fan blades"
+neutral_title = "Wipe ceiling fan blades"
+duration_minutes = 10
+sticker_id = "fan"
+default_cadence = "quarterly"
+tags = ["household"]
+
+[[entry]]
+id = "living-vacuum-upholstery"
+title = "vacuum upholstery"
+neutral_title = "Vacuum couches / chairs"
+duration_minutes = 10
+sticker_id = "couch"
+default_cadence = "monthly"
+tags = ["household"]
+
+[[entry]]
+id = "living-rotate-cushions"
+title = "rotate couch cushions"
+neutral_title = "Rotate / fluff couch cushions"
+duration_minutes = 2
+sticker_id = "cushion"
+default_cadence = "weekly"
+tags = ["household"]
+
+# ── entry / mudroom (HV-A.8) ─────────────────────────────────────────
+
+[[entry]]
+id = "entry-mats"
+title = "shake the door mats"
+neutral_title = "Shake out door mats"
+duration_minutes = 3
+sticker_id = "mat"
+default_cadence = "weekly"
+tags = ["household"]
+
+[[entry]]
+id = "entry-sweep"
+title = "sweep the entry"
+neutral_title = "Sweep entryway"
+duration_minutes = 3
+sticker_id = "broom"
+default_cadence = "weekly"
+tags = ["household"]
+
+[[entry]]
+id = "entry-handles"
+title = "wipe door handles"
+neutral_title = "Wipe door handles + light switches"
+duration_minutes = 3
+sticker_id = "handle"
+default_cadence = "weekly"
+tags = ["household"]
+
+[[entry]]
+id = "entry-organize-shoes"
+title = "organize shoes"
+neutral_title = "Organize shoes at entry"
+duration_minutes = 3
+sticker_id = "shoes"
+default_cadence = "weekly"
+tags = ["household"]
+
+# ── outdoor (HV-A.9) ─────────────────────────────────────────────────
+
+[[entry]]
+id = "outdoor-water-plants"
+title = "water the plants"
+neutral_title = "Water outdoor plants"
+duration_minutes = 10
+sticker_id = "watering-can"
+default_cadence = "configurable"
+tags = ["household"]
+
+[[entry]]
+id = "outdoor-repot"
+title = "repot a plant"
+neutral_title = "Repot outdoor plant"
+duration_minutes = 20
+sticker_id = "pot"
+default_cadence = "annual"
+tags = ["household"]
+
+[[entry]]
+id = "outdoor-prune"
+title = "prune the plants"
+neutral_title = "Prune outdoor plants"
+duration_minutes = 20
+sticker_id = "shears"
+default_cadence = "monthly"
+tags = ["household"]
+
+[[entry]]
+id = "outdoor-balcony-sweep"
+title = "sweep the balcony"
+neutral_title = "Sweep balcony / patio"
+duration_minutes = 10
+sticker_id = "broom"
+default_cadence = "weekly"
+tags = ["household"]
+
+[[entry]]
+id = "outdoor-weed-pull"
+title = "pull weeds"
+neutral_title = "Pull garden weeds"
+duration_minutes = 30
+sticker_id = "weed"
+default_cadence = "biweekly-spring-summer"
+tags = ["household"]
+
+[[entry]]
+id = "outdoor-winter-prep"
+title = "winterize the balcony"
+neutral_title = "Winter prep (cover plants, store cushions)"
+duration_minutes = 60
+sticker_id = "snowflake"
+default_cadence = "annual"
+tags = ["household"]
+
+[[entry]]
+id = "outdoor-summer-prep"
+title = "summer prep"
+neutral_title = "Summer prep (uncover, plant)"
+duration_minutes = 60
+sticker_id = "sun"
+default_cadence = "annual"
+tags = ["household"]
+
+# ── mail / paperwork (HV-A.10) ───────────────────────────────────────
+
+[[entry]]
+id = "mail-check"
+title = "check the mailbox"
+neutral_title = "Check mailbox"
+duration_minutes = 2
+sticker_id = "mailbox"
+default_cadence = "daily"
+tags = ["household"]
+
+[[entry]]
+id = "mail-sort"
+title = "open + sort the mail"
+neutral_title = "Open and sort mail"
+duration_minutes = 10
+sticker_id = "envelope"
+default_cadence = "weekly"
+tags = ["household"]
+[[entry.subbeat]]
+label = "Keep (file pile)"
+duration_seconds = 120
+[[entry.subbeat]]
+label = "Shred pile"
+duration_seconds = 120
+[[entry.subbeat]]
+label = "Pay pile (bills due)"
+duration_seconds = 120
+[[entry.subbeat]]
+label = "Recycle pile"
+duration_seconds = 60
+
+[[entry]]
+id = "mail-shred"
+title = "shred the shred-pile"
+neutral_title = "Shred documents"
+duration_minutes = 10
+sticker_id = "shredder"
+default_cadence = "monthly"
+tags = ["household"]
+
+[[entry]]
+id = "mail-scan"
+title = "scan docs to cloud"
+neutral_title = "Scan documents to cloud"
+duration_minutes = 15
+sticker_id = "scanner"
+default_cadence = "monthly"
+tags = ["household"]
+
+[[entry]]
+id = "mail-taxes-prep"
+title = "tax-prep day"
+neutral_title = "Annual tax preparation"
+duration_minutes = 180
+sticker_id = "tax"
+default_cadence = "annual"
+tags = ["household"]
+
+# ── pantry / fridge (HV-A.11) ────────────────────────────────────────
+
+[[entry]]
+id = "pantry-expiry"
+title = "check expiry dates"
+neutral_title = "Check pantry/fridge expiry dates"
+duration_minutes = 10
+sticker_id = "calendar-check"
+default_cadence = "weekly"
+tags = ["household"]
+
+[[entry]]
+id = "pantry-inventory"
+title = "inventory the pantry"
+neutral_title = "Inventory pantry"
+duration_minutes = 15
+sticker_id = "clipboard"
+default_cadence = "biweekly"
+tags = ["household"]
+
+[[entry]]
+id = "pantry-list"
+title = "write the shopping list"
+neutral_title = "Write shopping list"
+duration_minutes = 10
+sticker_id = "list"
+default_cadence = "weekly"
+tags = ["household"]
+
+[[entry]]
+id = "pantry-shop"
+title = "grocery run"
+neutral_title = "Grocery shopping"
+duration_minutes = 60
+sticker_id = "cart"
+default_cadence = "weekly"
+tags = ["household"]
+
+[[entry]]
+id = "pantry-unpack"
+title = "unpack groceries"
+neutral_title = "Unpack groceries"
+duration_minutes = 10
+sticker_id = "bag"
+default_cadence = "weekly"
+tags = ["household"]
+
+[[entry]]
+id = "pantry-fifo"
+title = "restock fridge FIFO"
+neutral_title = "Restock fridge by FIFO"
+duration_minutes = 5
+sticker_id = "fridge"
+default_cadence = "weekly"
+tags = ["household"]
+
+# ── pets (HV-A.12) — `nonSuperseable` per D.76 ───────────────────────
+
+[[entry]]
+id = "pet-feed"
+title = "feed the pet"
+neutral_title = "Feed pet"
+duration_minutes = 3
+sticker_id = "pet-bowl"
+default_cadence = "twice-daily"
+tags = ["household", "pet", "nonSuperseable"]
+
+[[entry]]
+id = "pet-water"
+title = "fresh water for the pet"
+neutral_title = "Fresh water for pet"
+duration_minutes = 1
+sticker_id = "water-bowl"
+default_cadence = "daily"
+tags = ["household", "pet", "nonSuperseable"]
+
+[[entry]]
+id = "pet-walk"
+title = "walk the dog"
+neutral_title = "Walk dog"
+duration_minutes = 30
+sticker_id = "leash"
+default_cadence = "twice-daily"
+tags = ["household", "pet", "nonSuperseable"]
+
+[[entry]]
+id = "pet-litter"
+title = "scoop the litter box"
+neutral_title = "Clean litter box"
+duration_minutes = 5
+sticker_id = "litter"
+default_cadence = "daily"
+tags = ["household", "pet", "nonSuperseable"]
+
+[[entry]]
+id = "pet-brush"
+title = "brush the pet"
+neutral_title = "Brush pet"
+duration_minutes = 10
+sticker_id = "brush"
+default_cadence = "weekly"
+tags = ["household", "pet"]
+
+[[entry]]
+id = "pet-nails"
+title = "clip pet nails"
+neutral_title = "Clip pet nails"
+duration_minutes = 10
+sticker_id = "clippers"
+default_cadence = "monthly"
+tags = ["household", "pet"]
+
+[[entry]]
+id = "pet-vet"
+title = "vet check-up"
+neutral_title = "Annual vet check-up"
+duration_minutes = 60
+sticker_id = "vet"
+default_cadence = "annual"
+tags = ["household", "pet", "nonSuperseable"]
+
+[[entry]]
+id = "pet-grooming"
+title = "pro grooming appointment"
+neutral_title = "Professional grooming"
+duration_minutes = 90
+sticker_id = "scissors"
+default_cadence = "quarterly"
+tags = ["household", "pet"]
+
+[[entry]]
+id = "pet-food-restock"
+title = "pet-food restock"
+neutral_title = "Restock pet food"
+duration_minutes = 15
+sticker_id = "pet-food-bag"
+default_cadence = "monthly"
+tags = ["household", "pet", "nonSuperseable"]
+
+# ── indoor plants (HV-A.13) ──────────────────────────────────────────
+
+[[entry]]
+id = "plant-water-indoor"
+title = "water indoor plants"
+neutral_title = "Water indoor plants"
+duration_minutes = 5
+sticker_id = "watering-can"
+default_cadence = "twice-weekly"
+tags = ["household"]
+
+[[entry]]
+id = "plant-mist"
+title = "mist humid-lovers"
+neutral_title = "Mist humidity-loving plants"
+duration_minutes = 2
+sticker_id = "mist"
+default_cadence = "daily"
+tags = ["household"]
+
+[[entry]]
+id = "plant-rotate"
+title = "rotate plants toward sun"
+neutral_title = "Rotate plants toward sun"
+duration_minutes = 2
+sticker_id = "sun-rotate"
+default_cadence = "weekly"
+tags = ["household"]
+
+[[entry]]
+id = "plant-prune-indoor"
+title = "prune dead leaves"
+neutral_title = "Prune dead leaves"
+duration_minutes = 5
+sticker_id = "leaf"
+default_cadence = "weekly"
+tags = ["household"]
+
+[[entry]]
+id = "plant-repot-indoor"
+title = "repot indoor plant"
+neutral_title = "Repot indoor plant"
+duration_minutes = 20
+sticker_id = "pot"
+default_cadence = "annual"
+tags = ["household"]
+
+# ── dress-for-work (HV-A.14) ─────────────────────────────────────────
+
+[[entry]]
+id = "dress-for-work"
+title = "good boy gets dressed for work"
+neutral_title = "Get dressed for work"
+duration_minutes = 10
+sticker_id = "shirt-tie"
+default_cadence = "weekday-mornings"
+default_times = ["07:30"]
+tags = ["household"]
+[[entry.subbeat]]
+label = "Underwear"
+duration_seconds = 30
+sticker_id = "undies"
+[[entry.subbeat]]
+label = "Socks"
+duration_seconds = 30
+sticker_id = "sock"
+[[entry.subbeat]]
+label = "Shirt"
+duration_seconds = 60
+sticker_id = "shirt"
+[[entry.subbeat]]
+label = "Pants"
+duration_seconds = 60
+sticker_id = "pants"
+[[entry.subbeat]]
+label = "Belt"
+duration_seconds = 30
+sticker_id = "belt"
+[[entry.subbeat]]
+label = "Shoes"
+duration_seconds = 60
+sticker_id = "shoe"
+[[entry.subbeat]]
+label = "Watch"
+duration_seconds = 15
+sticker_id = "watch"
+[[entry.subbeat]]
+label = "Wallet in pocket"
+duration_seconds = 15
+sticker_id = "wallet"
+[[entry.subbeat]]
+label = "Keys in pocket"
+duration_seconds = 15
+sticker_id = "keys"
+[[entry.subbeat]]
+label = "Phone in pocket"
+duration_seconds = 15
+sticker_id = "phone"
+[[entry.subbeat]]
+label = "Bag packed + on shoulder"
+duration_seconds = 30
+sticker_id = "bag"
+[[entry.subbeat]]
+label = "Coat (season-conditional)"
+duration_seconds = 30
+sticker_id = "coat"
+[[entry.subbeat]]
+label = "Mask if needed"
+duration_seconds = 15
+sticker_id = "mask"
+
+# ── leave-house check (HV-A.15) ──────────────────────────────────────
+
+[[entry]]
+id = "leave-house-check"
+title = "leave-house check"
+neutral_title = "Leave-house checklist"
+duration_minutes = 2
+sticker_id = "checklist"
+default_cadence = "before-leaving"
+tags = ["household"]
+[[entry.subbeat]]
+label = "Stove off"
+duration_seconds = 10
+sticker_id = "stove-off"
+[[entry.subbeat]]
+label = "Lights off"
+duration_seconds = 10
+sticker_id = "lights-off"
+[[entry.subbeat]]
+label = "Windows shut"
+duration_seconds = 15
+sticker_id = "window-shut"
+[[entry.subbeat]]
+label = "Door locked"
+duration_seconds = 10
+sticker_id = "lock"
+[[entry.subbeat]]
+label = "Keys in pocket"
+duration_seconds = 5
+sticker_id = "keys"
+[[entry.subbeat]]
+label = "Wallet in pocket"
+duration_seconds = 5
+sticker_id = "wallet"
+[[entry.subbeat]]
+label = "Phone in pocket"
+duration_seconds = 5
+sticker_id = "phone"
+[[entry.subbeat]]
+label = "Charger if-trip"
+duration_seconds = 10
+sticker_id = "charger"
+
+# ── weekly reset (HV-A.16) ───────────────────────────────────────────
+
+[[entry]]
+id = "weekly-reset"
+title = "good boy's weekly reset"
+neutral_title = "Weekly reset"
+duration_minutes = 120
+sticker_id = "reset"
+default_cadence = "weekly"
+default_weekday = "sun"
+default_times = ["16:00"]
+tags = ["household"]
+[[entry.subbeat]]
+label = "Laundry cycle (start)"
+duration_seconds = 600
+[[entry.subbeat]]
+label = "Groceries (or order)"
+duration_seconds = 1800
+[[entry.subbeat]]
+label = "Meal-prep for the week"
+duration_seconds = 2400
+[[entry.subbeat]]
+label = "Week-ahead glance (calendar review)"
+duration_seconds = 600
+[[entry.subbeat]]
+label = "Mailbox + paperwork sweep"
+duration_seconds = 600
+[[entry.subbeat]]
+label = "Plant water"
+duration_seconds = 300
+[[entry.subbeat]]
+label = "Bed-sheet change"
+duration_seconds = 600
+
+# ── kink variants (HV-A.17) — additive titles when K-mode on ─────────
+
+[[variant]]
+kink_variant_of = "bed-make"
+title = "good boy makes Sir's bed"
+tags = ["kink"]
+
+[[variant]]
+kink_variant_of = "living-vacuum"
+title = "good boy vacuums his cage-area"
+tags = ["kink"]
+
+[[variant]]
+kink_variant_of = "kitchen-empty-trash"
+title = "good boy empties the bin like he was told"
+tags = ["kink"]
+
+[[variant]]
+kink_variant_of = "bath-toilet"
+title = "good boy scrubs the toilet for his keyholder"
+tags = ["kink"]

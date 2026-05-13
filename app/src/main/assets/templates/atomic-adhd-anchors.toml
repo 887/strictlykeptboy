@@ -1,0 +1,456 @@
+# Phase AAA.5 / HV-K — atomic-adhd-anchors template.
+# ADHD brains lose track of body signals; the inverted habit model lets
+# us schedule the body-doubling without the schedule feeling like
+# surveillance. Default state = done; deviation = explicit. Watch buzz
+# is the gentle hand on the shoulder, not a drill sergeant.
+# 34 anchors across 6 categories.
+
+schema_version = 1
+template_id = "atomic-adhd-anchors"
+display_name = "ADHD body-doubling anchors"
+category = "adhd-anchors"
+neutral_safe = true
+
+# ── hydration (HV-K.2) ───────────────────────────────────────────────
+
+[[entry]]
+id = "water-check"
+title = "good boy sips his water"
+neutral_title = "Drink 250ml of water now"
+duration_minutes = 1
+sticker_id = "water-glass"
+category = "hydration"
+default_cadence = "every-90-minutes-waking"
+tags = ["adhd-anchor", "hydration"]
+
+[[entry]]
+id = "water-bottle-refill"
+title = "good boy refills his water bottle"
+neutral_title = "Refill water bottle"
+duration_minutes = 2
+sticker_id = "water-bottle"
+default_cadence = "twice-daily"
+default_times = ["09:00", "15:00"]
+tags = ["adhd-anchor", "hydration"]
+
+[[entry]]
+id = "electrolyte-check"
+title = "good boy checks his electrolytes"
+neutral_title = "Electrolyte check (hot day / hungover / sick)"
+duration_minutes = 2
+sticker_id = "electrolyte"
+default_cadence = "conditional"
+tags = ["adhd-anchor", "hydration", "conditional"]
+
+[[entry]]
+id = "caffeine-cutoff"
+title = "no more zoomies juice for good boy"
+neutral_title = "Caffeine cutoff (8h before sleep)"
+duration_minutes = 1
+sticker_id = "coffee-stop"
+default_cadence = "daily"
+tags = ["adhd-anchor", "sleep-hygiene"]
+
+[[entry]]
+id = "alcohol-water-pair"
+title = "good boy drinks a glass of water for every drink"
+neutral_title = "1:1 water pairing while drinking"
+duration_minutes = 1
+sticker_id = "water-pair"
+default_cadence = "conditional"
+tags = ["adhd-anchor", "hydration", "conditional"]
+
+# ── food (HV-K.3) ────────────────────────────────────────────────────
+
+[[entry]]
+id = "breakfast-anchor"
+title = "good boy eats his breakfast"
+neutral_title = "Breakfast"
+duration_minutes = 20
+sticker_id = "breakfast"
+default_cadence = "daily"
+default_times = ["08:00"]
+tags = ["adhd-anchor", "food"]
+[[entry.subbeat]]
+label = "good boy fed himself today?"
+duration_seconds = 30
+sticker_id = "checkin"
+
+[[entry]]
+id = "lunch-anchor"
+title = "good boy eats his lunch"
+neutral_title = "Lunch"
+duration_minutes = 30
+sticker_id = "lunch"
+default_cadence = "daily"
+default_times = ["12:30"]
+tags = ["adhd-anchor", "food"]
+[[entry.subbeat]]
+label = "good boy fed himself today?"
+duration_seconds = 30
+
+[[entry]]
+id = "dinner-anchor"
+title = "good boy eats his dinner"
+neutral_title = "Dinner"
+duration_minutes = 30
+sticker_id = "dinner"
+default_cadence = "daily"
+default_times = ["19:00"]
+tags = ["adhd-anchor", "food"]
+[[entry.subbeat]]
+label = "good boy fed himself today?"
+duration_seconds = 30
+
+[[entry]]
+id = "snack-anchor"
+title = "good boy gets a snack"
+neutral_title = "Afternoon snack"
+duration_minutes = 10
+sticker_id = "snack"
+default_cadence = "daily"
+default_times = ["16:00"]
+tags = ["adhd-anchor", "food"]
+
+[[entry]]
+id = "blood-sugar-check"
+title = "good boy checks his sugars"
+neutral_title = "Blood glucose check"
+duration_minutes = 2
+sticker_id = "glucose"
+default_cadence = "configurable"
+default_times = ["07:30", "12:00", "18:30", "22:00"]
+tags = ["adhd-anchor", "medical", "conditional"]
+
+# ── medication adherence (HV-K.4) ────────────────────────────────────
+
+[[entry]]
+id = "meds-morning"
+title = "good boy takes his morning meds"
+neutral_title = "Morning medication"
+duration_minutes = 2
+sticker_id = "pill-am"
+default_cadence = "daily"
+default_times = ["08:00"]
+privacy_flag = true
+tags = ["adhd-anchor", "medication"]
+
+[[entry]]
+id = "meds-noon"
+title = "good boy takes his noon meds"
+neutral_title = "Midday medication"
+duration_minutes = 2
+sticker_id = "pill-noon"
+default_cadence = "daily"
+default_times = ["12:00"]
+privacy_flag = true
+tags = ["adhd-anchor", "medication"]
+
+[[entry]]
+id = "meds-evening"
+title = "good boy takes his evening meds"
+neutral_title = "Evening medication"
+duration_minutes = 2
+sticker_id = "pill-pm"
+default_cadence = "daily"
+default_times = ["18:00"]
+privacy_flag = true
+tags = ["adhd-anchor", "medication"]
+
+[[entry]]
+id = "meds-bedtime"
+title = "good boy takes his bedtime meds"
+neutral_title = "Bedtime medication"
+duration_minutes = 2
+sticker_id = "pill-night"
+default_cadence = "daily"
+privacy_flag = true
+tags = ["adhd-anchor", "medication"]
+
+[[entry]]
+id = "meds-as-needed-rescue"
+title = "good boy may take his rescue meds if he needs them"
+neutral_title = "As-needed (rescue) medication available"
+duration_minutes = 1
+sticker_id = "pill-rescue"
+default_cadence = "conditional"
+privacy_flag = true
+tags = ["adhd-anchor", "medication", "rescue"]
+
+[[entry]]
+id = "inhaler-prophylactic"
+title = "good boy puffs his preventer"
+neutral_title = "Prophylactic inhaler"
+duration_minutes = 2
+sticker_id = "inhaler"
+default_cadence = "twice-daily"
+default_times = ["08:00", "20:00"]
+privacy_flag = true
+tags = ["adhd-anchor", "medication", "asthma"]
+
+[[entry]]
+id = "inhaler-rescue"
+title = "good boy reaches for his rescue puffer"
+neutral_title = "Rescue inhaler"
+duration_minutes = 1
+sticker_id = "inhaler-rescue"
+default_cadence = "conditional"
+privacy_flag = true
+tags = ["adhd-anchor", "medication", "asthma", "rescue"]
+
+[[entry]]
+id = "prn-rescue-bag-check"
+title = "good boy checks his rescue meds are in his bag"
+neutral_title = "PRN rescue meds bag check"
+duration_minutes = 3
+sticker_id = "bag-meds"
+default_cadence = "weekly"
+default_weekday = "sun"
+default_times = ["19:00"]
+tags = ["adhd-anchor", "medication"]
+
+# ── body-state (HV-K.5) ──────────────────────────────────────────────
+
+[[entry]]
+id = "bathroom-check"
+title = "when did good boy last pee?"
+neutral_title = "Bathroom check (go if it's been a while)"
+duration_minutes = 3
+sticker_id = "bathroom"
+default_cadence = "every-3-hours-waking"
+tags = ["adhd-anchor", "body-state"]
+
+[[entry]]
+id = "posture-check-adhd"
+title = "good boy sits up straight"
+neutral_title = "Posture check (ADHD slouch reset)"
+duration_minutes = 1
+sticker_id = "posture-reset"
+default_cadence = "every-3-hours-waking"
+tags = ["adhd-anchor", "body-state"]
+
+[[entry]]
+id = "eye-rest"
+title = "good boy looks far away"
+neutral_title = "Eye rest (20-20-20 rule)"
+duration_minutes = 1
+sticker_id = "eye-rest"
+default_cadence = "hourly-waking"
+tags = ["adhd-anchor", "body-state"]
+[[entry.subbeat]]
+label = "Look 20ft away for 20s"
+duration_seconds = 20
+
+[[entry]]
+id = "tension-scan"
+title = "good boy unclenches"
+neutral_title = "Tension scan"
+duration_minutes = 1
+sticker_id = "tension-scan"
+default_cadence = "every-3-hours-waking"
+tags = ["adhd-anchor", "body-state"]
+[[entry.subbeat]]
+label = "Jaw — unclench"
+duration_seconds = 7
+[[entry.subbeat]]
+label = "Shoulders — drop"
+duration_seconds = 7
+[[entry.subbeat]]
+label = "Hands — uncurl"
+duration_seconds = 8
+[[entry.subbeat]]
+label = "Breath — slow exhale"
+duration_seconds = 8
+
+[[entry]]
+id = "body-temp-check"
+title = "is good boy overheated or cold?"
+neutral_title = "Body temperature check"
+duration_minutes = 1
+sticker_id = "thermometer"
+default_cadence = "every-3-hours-waking"
+tags = ["adhd-anchor", "body-state"]
+
+# ── cognitive (HV-K.6) ───────────────────────────────────────────────
+
+[[entry]]
+id = "what-am-i-doing-rn"
+title = "what is good boy doing right now?"
+neutral_title = "What am I doing right now?"
+duration_minutes = 1
+sticker_id = "compass"
+default_cadence = "hourly-during-focus-blocks"
+tags = ["adhd-anchor", "cognitive"]
+
+[[entry]]
+id = "did-i-eat-today"
+title = "did your good boy take care of himself today?"
+neutral_title = "End-of-day self-care audit (food, water, meds)"
+duration_minutes = 3
+sticker_id = "audit"
+default_cadence = "daily"
+default_times = ["21:30"]
+tags = ["adhd-anchor", "cognitive"]
+
+[[entry]]
+id = "tomorrow-glance"
+title = "good boy peeks at tomorrow"
+neutral_title = "Glance at tomorrow's schedule"
+duration_minutes = 5
+sticker_id = "tomorrow"
+default_cadence = "daily"
+default_times = ["21:00"]
+tags = ["adhd-anchor", "cognitive", "sleep-hygiene"]
+[[entry.subbeat]]
+label = "Meds prep (tomorrow's pill caddy)"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "Outfit prep"
+duration_seconds = 90
+[[entry.subbeat]]
+label = "Bag pack"
+duration_seconds = 90
+[[entry.subbeat]]
+label = "Calendar scan"
+duration_seconds = 60
+
+[[entry]]
+id = "dopamine-budget-check"
+title = "is good boy doom-scrolling?"
+neutral_title = "Dopamine-budget check (doom-scroll detector)"
+duration_minutes = 1
+sticker_id = "phone-down"
+default_cadence = "every-2-hours-waking"
+tags = ["adhd-anchor", "cognitive"]
+
+# ── sleep hygiene (HV-K.7) ───────────────────────────────────────────
+
+[[entry]]
+id = "phone-out-of-bedroom"
+title = "good boy banishes his phone from the den"
+neutral_title = "Phone out of bedroom (30min before sleep)"
+duration_minutes = 2
+sticker_id = "phone-out"
+default_cadence = "daily"
+tags = ["adhd-anchor", "sleep-hygiene"]
+
+[[entry]]
+id = "blue-light-cutoff"
+title = "good boy dims his screens"
+neutral_title = "Blue-light cutoff (1h before sleep)"
+duration_minutes = 2
+sticker_id = "screen-dim"
+default_cadence = "daily"
+tags = ["adhd-anchor", "sleep-hygiene"]
+
+[[entry]]
+id = "bedroom-temp-check"
+title = "good boy checks his den temperature"
+neutral_title = "Bedroom temperature check"
+duration_minutes = 2
+sticker_id = "bedroom-thermo"
+default_cadence = "daily"
+tags = ["adhd-anchor", "sleep-hygiene"]
+
+[[entry]]
+id = "wind-down-routine-start"
+title = "good boy starts winding down"
+neutral_title = "Wind-down routine start (1h before sleep)"
+duration_minutes = 60
+sticker_id = "wind-down"
+default_cadence = "daily"
+tags = ["adhd-anchor", "sleep-hygiene"]
+[[entry.subbeat]]
+label = "Shower or skip"
+duration_seconds = 600
+[[entry.subbeat]]
+label = "Teeth"
+duration_seconds = 300
+[[entry.subbeat]]
+label = "Skincare"
+duration_seconds = 180
+[[entry.subbeat]]
+label = "Set tomorrow's outfit"
+duration_seconds = 180
+[[entry.subbeat]]
+label = "Water by bed"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "Alarm set"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "Light out"
+duration_seconds = 30
+
+# ── maintenance (HV-K.8) ─────────────────────────────────────────────
+
+[[entry]]
+id = "meds-refill-check"
+title = "good boy counts his pills"
+neutral_title = "Medication refill check (count vs. days remaining)"
+duration_minutes = 5
+sticker_id = "pill-count"
+default_cadence = "weekly"
+default_weekday = "sun"
+default_times = ["19:30"]
+privacy_flag = true
+tags = ["adhd-anchor", "medication", "maintenance"]
+
+[[entry]]
+id = "therapist-followup"
+title = "good boy talks to his therapist"
+neutral_title = "Therapist appointment"
+duration_minutes = 60
+sticker_id = "therapist"
+default_cadence = "biweekly"
+privacy_flag = true
+tags = ["adhd-anchor", "mental-health"]
+
+[[entry]]
+id = "psychiatrist-followup"
+title = "good boy sees his psychiatrist"
+neutral_title = "Psychiatrist appointment"
+duration_minutes = 30
+sticker_id = "psychiatrist"
+default_cadence = "quarterly"
+privacy_flag = true
+tags = ["adhd-anchor", "mental-health", "medication"]
+
+[[entry]]
+id = "prescription-renewal-adhd"
+title = "good boy renews his script"
+neutral_title = "Prescription renewal"
+duration_minutes = 10
+sticker_id = "renewal"
+default_cadence = "triggered"
+privacy_flag = true
+tags = ["adhd-anchor", "medication", "maintenance"]
+
+[[entry]]
+id = "executive-function-reset"
+title = "good boy resets his week"
+neutral_title = "Executive-function reset (inbox / desk / week-plan)"
+duration_minutes = 30
+sticker_id = "ef-reset"
+default_cadence = "weekly"
+default_weekday = "sun"
+default_times = ["18:00"]
+tags = ["adhd-anchor", "cognitive", "maintenance"]
+[[entry.subbeat]]
+label = "Empty inbox to zero"
+duration_seconds = 600
+[[entry.subbeat]]
+label = "Clear desk surface"
+duration_seconds = 300
+[[entry.subbeat]]
+label = "Plan the week"
+duration_seconds = 900
+
+[[entry]]
+id = "hyperfocus-recovery"
+title = "good boy comes up for air"
+neutral_title = "Hyperfocus recovery (forced break + anchors restart)"
+duration_minutes = 15
+sticker_id = "surface-air"
+default_cadence = "triggered"
+tags = ["adhd-anchor", "cognitive"]

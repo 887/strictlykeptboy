@@ -1,0 +1,696 @@
+# Phase AAA.8 / HV-P + D.87 — atomic-leisure template.
+# A good boy without scheduled play turns feral — and bored boys make
+# poor decisions. Scheduled downtime is not a contradiction; it's the
+# architecture that lets master/dom see at-a-glance whether the boy is
+# busy or available, and lets the boy himself say yes to "free time"
+# without guilt because it's ON the schedule. Inverted habits apply:
+# default state = done = took the rest. Deviation = "I skipped my
+# downtime to grind work" is its own kind of slob-drift the schedule
+# catches.
+#
+# 46 entries across 8 categories. ALWAYS scaffolded (leisure first-class
+# per D.87).
+
+schema_version = 1
+template_id = "atomic-leisure"
+display_name = "Atomic leisure"
+category = "leisure"
+neutral_safe = true
+
+# ── passive consumption (10) ─────────────────────────────────────────
+
+[[entry]]
+id = "tv-watching"
+title = "good boy gets a show"
+neutral_title = "tv watching"
+duration_minutes = 60
+default_cadence = "by-pick"
+category = "passive-consumption"
+tags = ["leisure", "neutral"]
+sticker_id = "bat-with-popcorn"
+[[entry.subbeat]]
+label = "pick-show"
+duration_seconds = 180
+[[entry.subbeat]]
+label = "snack-set"
+duration_seconds = 240
+[[entry.subbeat]]
+label = "watch-ep-1"
+duration_seconds = 1500
+[[entry.subbeat]]
+label = "stretch-between"
+duration_seconds = 180
+[[entry.subbeat]]
+label = "watch-ep-2"
+duration_seconds = 1500
+
+[[entry]]
+id = "movie-night"
+title = "movie-night curled up"
+neutral_title = "movie night"
+duration_minutes = 150
+default_cadence = "by-pick"
+category = "passive-consumption"
+tags = ["leisure", "neutral"]
+sticker_id = "bat-under-blanket"
+[[entry.subbeat]]
+label = "pick"
+duration_seconds = 300
+[[entry.subbeat]]
+label = "snacks"
+duration_seconds = 480
+[[entry.subbeat]]
+label = "curl-up"
+duration_seconds = 180
+[[entry.subbeat]]
+label = "start"
+duration_seconds = 7200
+[[entry.subbeat]]
+label = "debrief"
+duration_seconds = 480
+
+[[entry]]
+id = "youtube-budget-15"
+title = "yt 15min"
+neutral_title = "youtube 15 minutes"
+duration_minutes = 15
+default_cadence = "daily-opt-in"
+category = "passive-consumption"
+tags = ["leisure", "neutral", "hard-cap"]
+sticker_id = "bat-watching-phone"
+
+[[entry]]
+id = "youtube-budget-30"
+title = "yt 30min"
+neutral_title = "youtube 30 minutes"
+duration_minutes = 30
+default_cadence = "daily-opt-in"
+category = "passive-consumption"
+tags = ["leisure", "neutral", "hard-cap"]
+sticker_id = "bat-watching-phone"
+
+[[entry]]
+id = "youtube-budget-60"
+title = "yt 60min"
+neutral_title = "youtube 60 minutes"
+duration_minutes = 60
+default_cadence = "weekly-opt-in"
+category = "passive-consumption"
+tags = ["leisure", "neutral", "hard-cap"]
+sticker_id = "bat-watching-phone"
+
+[[entry]]
+id = "reading-session"
+title = "good boy reads"
+neutral_title = "reading session"
+duration_minutes = 45
+default_cadence = "by-pick"
+category = "passive-consumption"
+tags = ["leisure", "neutral"]
+sticker_id = "bat-with-book"
+[[entry.subbeat]]
+label = "phone-away"
+duration_seconds = 120
+[[entry.subbeat]]
+label = "settle"
+duration_seconds = 180
+[[entry.subbeat]]
+label = "read"
+duration_seconds = 2280
+[[entry.subbeat]]
+label = "bookmark"
+duration_seconds = 120
+
+[[entry]]
+id = "audiobook-while-doing-something"
+title = "audiobook + chore combo"
+neutral_title = "audiobook while doing a chore"
+duration_minutes = 45
+default_cadence = "by-pick"
+category = "passive-consumption"
+tags = ["leisure", "neutral", "combo"]
+sticker_id = "bat-with-headphones"
+
+[[entry]]
+id = "podcast-listen"
+title = "podcast time"
+neutral_title = "podcast"
+duration_minutes = 45
+default_cadence = "by-pick"
+category = "passive-consumption"
+tags = ["leisure", "neutral"]
+sticker_id = "bat-with-headphones"
+
+[[entry]]
+id = "music-deep-listen"
+title = "music with nothing else"
+neutral_title = "deep-listen music"
+duration_minutes = 60
+default_cadence = "by-pick"
+category = "passive-consumption"
+tags = ["leisure", "neutral"]
+sticker_id = "bat-headphones-closed-eyes"
+
+[[entry]]
+id = "social-media-check"
+title = "scroll check (15min cap)"
+neutral_title = "social media check"
+duration_minutes = 15
+default_cadence = "daily-opt-in"
+category = "passive-consumption"
+tags = ["leisure", "neutral", "hard-cap", "doomscroll-risk"]
+sticker_id = "bat-side-eye-at-phone"
+
+[[entry]]
+id = "news-check"
+title = "news catch-up"
+neutral_title = "news check"
+duration_minutes = 15
+default_cadence = "configurable"
+category = "passive-consumption"
+tags = ["leisure", "neutral", "hard-cap"]
+sticker_id = "bat-with-newspaper"
+
+# ── active play (8) ──────────────────────────────────────────────────
+
+[[entry]]
+id = "video-games-session"
+title = "video game time"
+neutral_title = "video game session"
+duration_minutes = 60
+default_cadence = "by-pick"
+category = "active-play"
+tags = ["leisure", "neutral"]
+sticker_id = "bat-controller"
+[[entry.subbeat]]
+label = "hydrate"
+duration_seconds = 120
+[[entry.subbeat]]
+label = "position-check-if-caged"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "start"
+duration_seconds = 1680
+[[entry.subbeat]]
+label = "break-at-30min"
+duration_seconds = 180
+[[entry.subbeat]]
+label = "continue"
+duration_seconds = 1440
+[[entry.subbeat]]
+label = "wrap"
+duration_seconds = 120
+
+[[entry]]
+id = "video-games-session-caged"
+title = "good boy gets video-game time while caged"
+neutral_title = "video game session"
+duration_minutes = 60
+default_cadence = "by-pick"
+category = "active-play"
+tags = ["leisure", "kink"]
+sticker_id = "bat-controller-locked"
+
+[[entry]]
+id = "board-games"
+title = "board games"
+neutral_title = "board games"
+duration_minutes = 90
+default_cadence = "by-pick"
+category = "active-play"
+tags = ["leisure", "neutral"]
+sticker_id = "bat-dice-paw"
+
+[[entry]]
+id = "tabletop-rpg-session"
+title = "ttrpg night"
+neutral_title = "tabletop rpg session"
+duration_minutes = 180
+default_cadence = "weekly-opt-in"
+category = "active-play"
+tags = ["leisure", "neutral", "social"]
+sticker_id = "bat-d20"
+
+[[entry]]
+id = "puzzle-time"
+title = "puzzle"
+neutral_title = "puzzle time"
+duration_minutes = 30
+default_cadence = "by-pick"
+category = "active-play"
+tags = ["leisure", "neutral"]
+sticker_id = "bat-puzzle-piece"
+
+[[entry]]
+id = "hobby-project"
+title = "good-boy hobby time"
+neutral_title = "hobby project"
+duration_minutes = 60
+default_cadence = "by-pick"
+category = "active-play"
+tags = ["leisure", "neutral", "user-customizable"]
+sticker_id = "bat-craft-paws"
+
+[[entry]]
+id = "creative-burst"
+title = "make-something time"
+neutral_title = "creative burst"
+duration_minutes = 45
+default_cadence = "by-pick"
+category = "active-play"
+tags = ["leisure", "neutral"]
+sticker_id = "bat-pencil"
+
+[[entry]]
+id = "learning-pleasure"
+title = "learn-for-fun"
+neutral_title = "learning (pleasure)"
+duration_minutes = 30
+default_cadence = "daily-opt-in"
+category = "active-play"
+tags = ["leisure", "neutral"]
+sticker_id = "bat-graduation-hat"
+
+# ── movement-play (8) ────────────────────────────────────────────────
+
+[[entry]]
+id = "walk-no-purpose"
+title = "walk (no errand)"
+neutral_title = "purposeless walk"
+duration_minutes = 30
+default_cadence = "by-pick"
+category = "movement-play"
+tags = ["leisure", "neutral", "outdoors"]
+sticker_id = "bat-walking"
+
+[[entry]]
+id = "dog-walk"
+title = "good boy walks the doggy"
+neutral_title = "dog walk"
+duration_minutes = 35
+default_cadence = "per-dog-cadence"
+category = "movement-play"
+tags = ["leisure", "neutral", "pet-care-adjacent"]
+sticker_id = "bat-with-dog-leash"
+[[entry.subbeat]]
+label = "leash"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "poop-bag"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "water-for-dog"
+duration_seconds = 120
+[[entry.subbeat]]
+label = "route-pick"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "actual-walk"
+duration_seconds = 1500
+[[entry.subbeat]]
+label = "post-walk-dog-water"
+duration_seconds = 120
+[[entry.subbeat]]
+label = "paw-wipe"
+duration_seconds = 180
+
+[[entry]]
+id = "dog-play-time"
+title = "play with doggy"
+neutral_title = "dog play time"
+duration_minutes = 20
+default_cadence = "daily"
+category = "movement-play"
+tags = ["leisure", "neutral", "pet-care-adjacent"]
+sticker_id = "bat-throwing-ball"
+[[entry.subbeat]]
+label = "fetch"
+duration_seconds = 480
+[[entry.subbeat]]
+label = "tug"
+duration_seconds = 360
+[[entry.subbeat]]
+label = "training-session"
+duration_seconds = 360
+
+[[entry]]
+id = "bike-ride-leisure"
+title = "bike for fun"
+neutral_title = "leisure bike ride"
+duration_minutes = 45
+default_cadence = "by-pick"
+category = "movement-play"
+tags = ["leisure", "neutral", "outdoors"]
+sticker_id = "bat-bicycle"
+
+[[entry]]
+id = "swim-leisure"
+title = "swim"
+neutral_title = "leisure swim"
+duration_minutes = 45
+default_cadence = "by-pick"
+category = "movement-play"
+tags = ["leisure", "neutral"]
+sticker_id = "bat-swim-goggles"
+
+[[entry]]
+id = "playground-or-park-visit"
+title = "park visit"
+neutral_title = "park / playground visit"
+duration_minutes = 60
+default_cadence = "by-pick"
+category = "movement-play"
+tags = ["leisure", "neutral", "outdoors"]
+sticker_id = "bat-on-swing"
+
+[[entry]]
+id = "dance-around-the-house"
+title = "dance break"
+neutral_title = "dance around the house"
+duration_minutes = 10
+default_cadence = "daily-opt-in"
+category = "movement-play"
+tags = ["leisure", "neutral", "joy-anchor"]
+sticker_id = "bat-dancing"
+
+[[entry]]
+id = "stretching-not-yoga"
+title = "lay on the floor"
+neutral_title = "stretch on the floor"
+duration_minutes = 10
+default_cadence = "by-pick"
+category = "movement-play"
+tags = ["leisure", "neutral"]
+sticker_id = "bat-on-the-floor"
+
+# ── social-recreation (8) ────────────────────────────────────────────
+
+[[entry]]
+id = "call-a-friend"
+title = "call a friend"
+neutral_title = "call a friend"
+duration_minutes = 30
+default_cadence = "weekly-opt-in"
+category = "social-recreation"
+tags = ["leisure", "neutral", "social"]
+sticker_id = "bat-on-phone"
+
+[[entry]]
+id = "call-family"
+title = "call family"
+neutral_title = "call family"
+duration_minutes = 30
+default_cadence = "weekly-opt-in"
+category = "social-recreation"
+tags = ["leisure", "neutral", "social"]
+sticker_id = "bat-on-phone-warm"
+
+[[entry]]
+id = "text-someone-i-havent"
+title = "reach out (haven't talked in 3wks)"
+neutral_title = "reach out to someone"
+duration_minutes = 10
+default_cadence = "weekly-opt-in"
+category = "social-recreation"
+tags = ["leisure", "neutral", "social"]
+sticker_id = "bat-typing-paw"
+
+[[entry]]
+id = "coffee-with-friend"
+title = "coffee with a friend"
+neutral_title = "coffee with a friend"
+duration_minutes = 75
+default_cadence = "by-pick"
+category = "social-recreation"
+tags = ["leisure", "neutral", "social"]
+sticker_id = "bat-with-coffee-cup"
+
+[[entry]]
+id = "dinner-with-friend"
+title = "dinner with a friend"
+neutral_title = "dinner with a friend"
+duration_minutes = 120
+default_cadence = "by-pick"
+category = "social-recreation"
+tags = ["leisure", "neutral", "social"]
+sticker_id = "bat-with-fork"
+
+[[entry]]
+id = "group-hangout"
+title = "group hangout"
+neutral_title = "group hangout"
+duration_minutes = 180
+default_cadence = "by-pick"
+category = "social-recreation"
+tags = ["leisure", "neutral", "social"]
+sticker_id = "bat-with-friends"
+[[entry.subbeat]]
+label = "arrive"
+duration_seconds = 600
+[[entry.subbeat]]
+label = "be-present"
+duration_seconds = 9600
+[[entry.subbeat]]
+label = "leave-on-time"
+duration_seconds = 600
+
+[[entry]]
+id = "online-game-with-friends"
+title = "online game w/ friends"
+neutral_title = "online game with friends"
+duration_minutes = 90
+default_cadence = "by-pick"
+category = "social-recreation"
+tags = ["leisure", "neutral", "social"]
+sticker_id = "bat-headset-controller"
+
+[[entry]]
+id = "voice-chat-discord-hangout"
+title = "discord vc hangout"
+neutral_title = "voice chat hangout"
+duration_minutes = 60
+default_cadence = "by-pick"
+category = "social-recreation"
+tags = ["leisure", "neutral", "social"]
+sticker_id = "bat-discord-paw"
+
+# ── solo-decompress (7) ──────────────────────────────────────────────
+
+[[entry]]
+id = "bath-no-purpose"
+title = "good boy gets a long bath"
+neutral_title = "leisurely bath"
+duration_minutes = 45
+default_cadence = "weekly-opt-in"
+category = "solo-decompress"
+tags = ["leisure", "neutral"]
+sticker_id = "bat-in-bubble-bath"
+
+[[entry]]
+id = "nap-permitted-power"
+title = "20min power nap"
+neutral_title = "power nap"
+duration_minutes = 20
+default_cadence = "daily-opt-in"
+category = "solo-decompress"
+tags = ["leisure", "neutral", "rest"]
+sticker_id = "bat-zzz-small"
+
+[[entry]]
+id = "nap-permitted-full"
+title = "90min full nap"
+neutral_title = "full-cycle nap"
+duration_minutes = 90
+default_cadence = "weekly-opt-in"
+category = "solo-decompress"
+tags = ["leisure", "neutral", "rest"]
+sticker_id = "bat-zzz-big"
+
+[[entry]]
+id = "nothing-time"
+title = "literally do nothing"
+neutral_title = "nothing time"
+duration_minutes = 15
+default_cadence = "daily-opt-in"
+category = "solo-decompress"
+tags = ["leisure", "neutral", "rest"]
+sticker_id = "bat-staring-at-wall"
+[[entry.subbeat]]
+label = "phone-out-of-arm-reach"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "be"
+duration_seconds = 840
+
+[[entry]]
+id = "daydream-walk"
+title = "no-phone daydream walk"
+neutral_title = "daydream walk"
+duration_minutes = 15
+default_cadence = "by-pick"
+category = "solo-decompress"
+tags = ["leisure", "neutral", "outdoors"]
+sticker_id = "bat-cloud-thinking"
+
+[[entry]]
+id = "meditation"
+title = "meditate"
+neutral_title = "meditation"
+duration_minutes = 15
+default_cadence = "configurable"
+category = "solo-decompress"
+tags = ["leisure", "neutral"]
+sticker_id = "bat-lotus-paws"
+
+[[entry]]
+id = "journaling-personal"
+title = "private journaling"
+neutral_title = "personal journaling"
+duration_minutes = 20
+default_cadence = "configurable"
+category = "solo-decompress"
+tags = ["leisure", "neutral", "private"]
+sticker_id = "bat-with-diary"
+
+# ── caged-play-affordances (3) — kink-coded; hidden in neutral-mode ──
+
+[[entry]]
+id = "cage-comfort-check"
+title = "good boy comfort check"
+neutral_title = "comfort check"
+duration_minutes = 5
+default_cadence = "every-30min-during-2hr-leisure"
+category = "caged-play-affordances"
+tags = ["leisure", "kink", "safety"]
+sticker_id = "bat-paw-on-chest"
+[[entry.subbeat]]
+label = "position-shift"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "water"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "breath"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "still-good"
+duration_seconds = 120
+
+[[entry]]
+id = "locked-leisure-marker"
+title = "this leisure block happens locked"
+neutral_title = "leisure block (state marker)"
+duration_minutes = 1
+default_cadence = "state-event"
+category = "caged-play-affordances"
+tags = ["leisure", "kink", "state-marker", "review-feed-surface"]
+sticker_id = "bat-with-lock-on-collar"
+
+[[entry]]
+id = "safeword-aware-leisure"
+title = "safeword stays open"
+neutral_title = "safeword reminder"
+duration_minutes = 1
+default_cadence = "at-50-percent-of-kink-leisure-block"
+category = "caged-play-affordances"
+tags = ["leisure", "kink", "safety", "soft-reminder"]
+sticker_id = "bat-paw-up-stop"
+
+# ── recovery-leisure (4) ─────────────────────────────────────────────
+
+[[entry]]
+id = "aftercare-time"
+title = "good boy aftercare"
+neutral_title = "aftercare time"
+duration_minutes = 45
+default_cadence = "post-scene"
+category = "recovery-leisure"
+tags = ["leisure", "kink", "recovery"]
+sticker_id = "bat-with-blanket-tea"
+[[entry.subbeat]]
+label = "water"
+duration_seconds = 180
+[[entry.subbeat]]
+label = "snack"
+duration_seconds = 420
+[[entry.subbeat]]
+label = "blanket"
+duration_seconds = 120
+[[entry.subbeat]]
+label = "cuddle-or-alone-time"
+duration_seconds = 1500
+[[entry.subbeat]]
+label = "debrief"
+duration_seconds = 480
+
+[[entry]]
+id = "post-work-decompress"
+title = "transition off work"
+neutral_title = "post-work decompression"
+duration_minutes = 15
+default_cadence = "daily"
+category = "recovery-leisure"
+tags = ["leisure", "neutral", "transition"]
+sticker_id = "bat-tie-loosen"
+
+[[entry]]
+id = "post-social-recovery"
+title = "recharge after people"
+neutral_title = "post-social recovery"
+duration_minutes = 45
+default_cadence = "proportional-to-group-size-and-duration"
+category = "recovery-leisure"
+tags = ["leisure", "neutral", "introvert-care"]
+sticker_id = "bat-in-cave"
+
+[[entry]]
+id = "sick-day-rest"
+title = "actually sick — rest mode"
+neutral_title = "sick day rest"
+duration_minutes = 1440
+default_cadence = "opt-in-day-mode"
+category = "recovery-leisure"
+tags = ["leisure", "neutral", "rest", "day-mode"]
+sticker_id = "bat-with-thermometer"
+
+# ── long-cycle-leisure-cadence (4) ───────────────────────────────────
+
+[[entry]]
+id = "weekly-treat"
+title = "friday-night flavor"
+neutral_title = "weekly treat"
+duration_minutes = 180
+default_cadence = "weekly"
+category = "long-cycle-leisure-cadence"
+tags = ["leisure", "neutral", "ritual"]
+sticker_id = "bat-with-cake-slice"
+
+[[entry]]
+id = "monthly-day-off"
+title = "monthly off-day"
+neutral_title = "monthly day off"
+duration_minutes = 1440
+default_cadence = "monthly"
+category = "long-cycle-leisure-cadence"
+tags = ["leisure", "neutral", "day-mode", "mini-vacation-overlay"]
+sticker_id = "bat-hammock"
+
+[[entry]]
+id = "quarterly-mini-trip"
+title = "weekend away"
+neutral_title = "quarterly mini-trip"
+duration_minutes = 4320
+default_cadence = "quarterly"
+category = "long-cycle-leisure-cadence"
+tags = ["leisure", "neutral", "trip", "ties-to-hv-f"]
+sticker_id = "bat-with-tiny-suitcase"
+
+[[entry]]
+id = "annual-real-vacation"
+title = "real vacation"
+neutral_title = "annual vacation"
+duration_minutes = 10080
+default_cadence = "yearly"
+category = "long-cycle-leisure-cadence"
+tags = ["leisure", "neutral", "trip", "ties-to-hv-f"]
+sticker_id = "bat-on-beach-towel"

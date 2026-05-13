@@ -829,19 +829,21 @@ Round-2 closeout: ZZ.A..ZZ.H shipped in commit `8441fec` on branch `round2/phase
 
 ---
 
-## Phase AAA — Lifestyle templates (atomic + comprehensive)
+## Phase AAA — Lifestyle templates (atomic + comprehensive) — shipped on branch `round2/phase-aaa-lifestyle-templates`
 
 Source draft: [`draft-household-travel-vacation.md`](draft-household-travel-vacation.md) phases HV-A, HV-B, HV-C, HV-D, HV-K, HV-L, HV-P. Folds 8 new atomic-template families into the Phase XX (atomic activities, inverted habits) family — same TOML schema as AT-D / AT-E / AT-F, same inverted-default semantics. Cross-references: Phase XX (parent family), Phase K (lifestyle wizard registers role-toggles per template), Phase M (notifications honor per-category defaults from D.79), [`templates-demo-wizard.md`](templates-demo-wizard.md) TW-J (register all 8 templates).
 
-- [ ] **AAA.1** `templates/atomic-household.toml` per HV-A (~88 base entries + 4 kink variants across 13 categories: trash, laundry, dishes/kitchen, bathroom, bedroom, living spaces, entry/mudroom, outdoor, mail/paperwork, pantry/fridge, pets, seasonal, misc). All entries carry `neutral_title`; sub-beats validated against the atomic envelope. Wizard role-toggle: "household chores".
-- [ ] **AAA.2** `templates/atomic-travel-prep.toml` per HV-B (~52 entries across 7 lead-time tiers: T-90d documents, T-30d health/visa, T-14d logistics, T-7d cleaning, T-3d packing, T-1d final, T-0 doorstop). Parameterized by `TripDraft`; lead-offsets computed at materialization.
-- [ ] **AAA.3** `templates/atomic-flight-day.toml` per HV-C (19 parameterized entries per flight leg: wake-up, transport, airport-arrive, check-in, security, lounge, board, taxi, fly, arrive, customs, baggage, hotel-shuttle, etc.). Domestic/international toggle adjusts pre-airport buffer (120/180 min).
-- [ ] **AAA.4** `templates/atomic-vacation-daily.toml` per HV-D (15 anchors: 11 self-care + 4 kink). Slob-drift prevention while away from home routine; meal-anchor configurable.
-- [ ] **AAA.5** `templates/atomic-adhd-anchors.toml` per HV-K (34 anchors across 6 categories: hydration 5, food 5, meds adherence 8, body-state 5, cognitive 4, sleep-hygiene 4, maintenance 6 — incl. hyperfocus-recovery trigger). Wizard role-toggle: "ADHD anchors".
-- [ ] **AAA.6** `templates/atomic-medication.toml` per HV-L.A (22 management entries: supply chain, emergency stash, vaccinations, specialist follow-ups, preventative screenings, bodywork). All `privacy_flag = true` by default; all `nonSuperseable` tag (per D.76). Wizard role-toggle: "managing meds".
-- [ ] **AAA.7** `templates/atomic-menstrual-cycle.toml` per HV-L.B (12 entries: cycle anchors, contraception, preventative screenings, supplies). Sub-toggle "pause kink-care during period?" wires `cal-period-grace` per HV-L.B.5.
-- [ ] **AAA.8** `templates/atomic-leisure.toml` per HV-P + D.87 (~46 entries across 8 categories: passive-consumption 10, active-play 8, movement-play 8, social-recreation 8, solo-decompress 7, caged-play-affordances 3 incl. one kink variant, recovery-leisure 4, long-cycle-leisure-cadence 4). The `dog-walk` atomic carries 7 named sub-beats. Always scaffolded (leisure first-class per D.87).
-- [ ] **AAA.9** Tests per HV-I + HV-O (template-content ktoml round-trip, sub-beat envelope validation, neutral-mode rendering, kink-variant gating, period-grace overlay, hyperfocus-recovery materialization, leisure cadence). See `app/src/test/.../templates/`.
+- [x] **AAA.1** `templates/atomic-household.toml` — 88 base entries + 4 kink variants across 13 categories (trash, laundry, dishes/kitchen, bathroom, bedroom, living spaces, entry/mudroom, outdoor, mail/paperwork, pantry/fridge, pets, plants, dress-flow, leave-check, weekly-reset). All entries carry `neutral_title`; sub-beat envelope validated. `pet-*` entries tagged `nonSuperseable` per D.76.
+- [x] **AAA.2** `templates/atomic-travel-prep.toml` — 52 entries across 7 lead-time tiers; every entry carries `lead_offset_days`. `pack-medication` tagged `nonSuperseable`; `pack-kink-kit` carries `privacy_flag = true`.
+- [x] **AAA.3** `templates/atomic-flight-day.toml` — 19 parameterized entries; `offset_minutes_from_departure` / `offset_minutes_from_arrival` carried by entries; domestic/international 120/180-min buffer resolved by wizard at materialization.
+- [x] **AAA.4** `templates/atomic-vacation-daily.toml` — 15 anchors (11 self-care + 4 kink). Kink anchors carry `privacy_flag = true` per K-2.
+- [x] **AAA.5** `templates/atomic-adhd-anchors.toml` — 34 anchors across 6 categories; includes `hyperfocus-recovery` (HV-K.8); `tomorrow-glance` + `wind-down-routine-start` sub-beats fit envelope.
+- [x] **AAA.6** `templates/atomic-medication.toml` — 22 entries. Every entry carries `privacy_flag = true` AND `nonSuperseable` tag per HV-L.A.1 + D.76.
+- [x] **AAA.7** `templates/atomic-menstrual-cycle.toml` — 12 entries. All but `supplies-restock` private. `cal-period-grace` supersedence is opt-in at wizard time (HV-L.B.5; the calendar-overlay scaffold itself lives in Phase BBB).
+- [x] **AAA.8** `templates/atomic-leisure.toml` — 46 entries across 8 categories; `dog-walk` carries 7 named sub-beats per HV-P.10; `TemplateCatalog.ALWAYS_SCAFFOLDED` registers leisure first-class per D.87.
+- [x] **AAA.9** Tests — `app/src/test/.../store/LifestyleTemplatesParseTest.kt` (9 tests: per-template content, envelope, privacy + nonSuperseable invariants, neutral-mode + variant rendering, full catalog smoke). CLI tests at `cli/src/test/.../template/TemplateCommandsTest.kt` (5 tests: parse-fields, apply materialization, idempotency, reset, dry-run).
+- [x] **AAA.10** `template_origin` + `template_slot` frontmatter conventions in `:app/store/TemplateOrigin.kt`. Wizard scaffolder now routes through `TemplateOrigin.tagsFor(WIZARD, ...)`; the CLI `apply` writes `template_origin:cli`. LW-L re-run idempotency keys off the slot prefix.
+- [x] **AAA.11** CLI surface — `skb template list|apply|reset` under `:cli/.../template/TemplateCommands.kt`. Apply is idempotent on `template_slot:` collisions; reset preserves `template_origin:wizard` entries unless `--include-wizard`. Registered in `cli/.../Main.kt` subcommands list.
 
 ---
 

@@ -1,0 +1,250 @@
+# Phase AAA.6 / HV-L.A — atomic-medication template.
+# 22 medication-management entries. All `privacy_flag = true` by default
+# (med info = K-2 sensitive); all carry `nonSuperseable` tag per D.76 —
+# meds cannot be paused by a vacation overlay.
+
+schema_version = 1
+template_id = "atomic-medication"
+display_name = "Atomic medication management"
+category = "medical"
+neutral_safe = true
+
+# ── supply chain (HV-L.A.2) ──────────────────────────────────────────
+
+[[entry]]
+id = "prescription-renewal"
+title = "good boy renews his script"
+neutral_title = "Prescription renewal"
+duration_minutes = 10
+sticker_id = "renewal"
+default_cadence = "per-med-supply"
+privacy_flag = true
+tags = ["medical", "supply", "nonSuperseable"]
+
+[[entry]]
+id = "pharmacy-pickup"
+title = "good boy collects his pills"
+neutral_title = "Pharmacy pickup"
+duration_minutes = 20
+sticker_id = "pharmacy"
+default_cadence = "triggered"
+privacy_flag = true
+tags = ["medical", "supply", "nonSuperseable"]
+
+[[entry]]
+id = "med-side-effect-log"
+title = "good boy logs how he's feeling on his new med"
+neutral_title = "Medication side-effect log"
+duration_minutes = 5
+sticker_id = "side-effect-log"
+default_cadence = "weekly-for-90d-then-monthly"
+privacy_flag = true
+tags = ["medical", "monitoring", "nonSuperseable"]
+
+[[entry]]
+id = "med-titration-check"
+title = "good boy checks his dose ladder"
+neutral_title = "Medication titration check-in"
+duration_minutes = 5
+sticker_id = "titration"
+default_cadence = "conditional"
+privacy_flag = true
+tags = ["medical", "monitoring", "nonSuperseable"]
+
+[[entry]]
+id = "med-interaction-review"
+title = "good boy reviews his med list with his doctor"
+neutral_title = "Annual medication interaction review"
+duration_minutes = 30
+sticker_id = "interaction-review"
+default_cadence = "annual"
+privacy_flag = true
+tags = ["medical", "monitoring", "nonSuperseable"]
+
+[[entry]]
+id = "supplement-cycle-review"
+title = "good boy audits his supplement shelf"
+neutral_title = "Supplement cycle review (what's working, what's woo)"
+duration_minutes = 15
+sticker_id = "supplement-audit"
+default_cadence = "monthly"
+privacy_flag = true
+tags = ["medical", "monitoring", "nonSuperseable"]
+
+# ── emergency stash + vaccinations (HV-L.A.3) ────────────────────────
+
+[[entry]]
+id = "emergency-rescue-meds-check"
+title = "good boy checks his rescue stash"
+neutral_title = "Emergency rescue meds check (epipen / inhaler / glucose / naloxone)"
+duration_minutes = 10
+sticker_id = "rescue-stash"
+default_cadence = "monthly"
+privacy_flag = true
+tags = ["medical", "rescue", "maintenance", "nonSuperseable"]
+[[entry.subbeat]]
+label = "Bag — in-date + present"
+duration_seconds = 120
+[[entry.subbeat]]
+label = "Car — in-date + present"
+duration_seconds = 120
+[[entry.subbeat]]
+label = "Bedside — in-date + present"
+duration_seconds = 120
+[[entry.subbeat]]
+label = "Home backup — in-date + present"
+duration_seconds = 240
+
+[[entry]]
+id = "vaccinations-due"
+title = "good boy gets his jabs"
+neutral_title = "Vaccinations due check"
+duration_minutes = 5
+sticker_id = "vaccine"
+default_cadence = "annual"
+privacy_flag = true
+tags = ["medical", "preventative", "nonSuperseable"]
+
+[[entry]]
+id = "bloodwork-quarterly"
+title = "good boy gets his blood drawn"
+neutral_title = "Quarterly bloodwork (liver / kidney / lipid)"
+duration_minutes = 30
+sticker_id = "bloodwork"
+default_cadence = "quarterly"
+privacy_flag = true
+tags = ["medical", "monitoring", "nonSuperseable"]
+
+# ── specialist follow-ups (HV-L.A.4) ─────────────────────────────────
+
+[[entry]]
+id = "specialist-followup"
+title = "good boy sees his specialist"
+neutral_title = "Specialist follow-up"
+duration_minutes = 45
+sticker_id = "specialist"
+default_cadence = "per-condition"
+privacy_flag = true
+tags = ["medical", "specialist", "nonSuperseable"]
+
+[[entry]]
+id = "dental-cleaning"
+title = "good boy gets his fangs polished"
+neutral_title = "Dental cleaning"
+duration_minutes = 45
+sticker_id = "dental-cleaning"
+default_cadence = "every-6-months"
+privacy_flag = true
+tags = ["medical", "dental", "nonSuperseable"]
+
+[[entry]]
+id = "dental-exam"
+title = "good boy gets his fangs checked"
+neutral_title = "Dental exam"
+duration_minutes = 30
+sticker_id = "dental-exam"
+default_cadence = "annual"
+privacy_flag = true
+tags = ["medical", "dental", "nonSuperseable"]
+
+[[entry]]
+id = "dental-xrays"
+title = "good boy gets fang x-rays"
+neutral_title = "Dental x-rays"
+duration_minutes = 15
+sticker_id = "dental-xray"
+default_cadence = "annual"
+privacy_flag = true
+tags = ["medical", "dental", "nonSuperseable"]
+
+[[entry]]
+id = "dental-deep-clean"
+title = "good boy gets his deep clean"
+neutral_title = "Deep dental cleaning (scaling)"
+duration_minutes = 60
+sticker_id = "dental-deep"
+default_cadence = "as-needed"
+privacy_flag = true
+tags = ["medical", "dental", "nonSuperseable"]
+
+[[entry]]
+id = "vision-exam"
+title = "good boy gets his eyes checked"
+neutral_title = "Vision exam"
+duration_minutes = 45
+sticker_id = "vision"
+default_cadence = "annual"
+privacy_flag = true
+tags = ["medical", "vision", "nonSuperseable"]
+
+[[entry]]
+id = "hearing-check"
+title = "good boy gets his ears checked"
+neutral_title = "Hearing check"
+duration_minutes = 30
+sticker_id = "hearing"
+default_cadence = "configurable"
+privacy_flag = true
+tags = ["medical", "hearing", "nonSuperseable"]
+
+[[entry]]
+id = "skin-cancer-screen"
+title = "good boy gets his moles checked"
+neutral_title = "Skin cancer screening"
+duration_minutes = 30
+sticker_id = "skin-screen"
+default_cadence = "configurable"
+privacy_flag = true
+tags = ["medical", "preventative", "nonSuperseable"]
+
+[[entry]]
+id = "mental-health-checkin-weekly"
+title = "good boy journals about his feelings"
+neutral_title = "Weekly mental-health journaling"
+duration_minutes = 15
+sticker_id = "journal"
+default_cadence = "weekly"
+default_weekday = "sun"
+default_times = ["20:00"]
+privacy_flag = true
+tags = ["medical", "mental-health", "nonSuperseable"]
+
+[[entry]]
+id = "physical-therapy-session"
+title = "good boy does his PT"
+neutral_title = "Physical therapy session"
+duration_minutes = 60
+sticker_id = "pt"
+default_cadence = "per-protocol"
+privacy_flag = true
+tags = ["medical", "rehab", "nonSuperseable"]
+
+[[entry]]
+id = "chiropractor-session"
+title = "good boy gets his back cracked"
+neutral_title = "Chiropractor session"
+duration_minutes = 30
+sticker_id = "chiro"
+default_cadence = "user-toggle"
+privacy_flag = true
+tags = ["medical", "bodywork", "nonSuperseable"]
+
+[[entry]]
+id = "massage-session"
+title = "good boy gets a massage"
+neutral_title = "Massage session"
+duration_minutes = 60
+sticker_id = "massage"
+default_cadence = "user-toggle"
+privacy_flag = true
+tags = ["medical", "bodywork", "nonSuperseable"]
+
+[[entry]]
+id = "acupuncture-session"
+title = "good boy gets needled"
+neutral_title = "Acupuncture session"
+duration_minutes = 60
+sticker_id = "acupuncture"
+default_cadence = "user-toggle"
+privacy_flag = true
+tags = ["medical", "bodywork", "nonSuperseable"]
