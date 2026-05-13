@@ -407,3 +407,25 @@ R.X self-check: all 9 boxes pass. New files mostly < 200 LOC; two flagged below.
 - **F48 — `GitRepo.kt` grew 537 → 671 LOC after Phase ZZ.** Per ZZ agent's own note, multi-origin push fan-out (~70 LOC) is a natural carve-out into `git/MultiOriginPush.kt`. Still single-concern (async JGit wrapper) so passes SRP, but the 700-LOC threshold mentioned in F4-era guidance is being approached. **Priority:** low (style). **Trigger:** at 700 LOC OR next phase that touches GitRepo. **Status:** tracked.
 - **F49 — `RoutineCommands.kt` 372 LOC bundles materializer + start/undo CLI + planner.** Per XX agent's call, tightly coupled enough to keep in one file for now. **Priority:** low. **Trigger:** if `RoutineMaterializer` grows independent reuse (e.g. UI surface in next batch when FFF + XX.8 UI ship together). **Status:** tracked.
 - **F50 — WW agent's compat-stub strings `notif_subbeat_index_body` + `notif_action_skip_ahead` collided with XX continuation's authoritative strings.** Cross-branch compat-stub pattern needs a convention: agents should annotate compat additions with `<!-- COMPAT — remove when <branch> merges -->` and the integration step strips them mechanically. **Priority:** low (process). **Status:** documented; pattern can be tightened in subagent dispatch prompts.
+
+### Audit pass 2026-05-13 — Round 2 batch 3 (Phase AAA + YY + FFF, integrated)
+
+Three opus subagents in parallel worktrees. Phase AAA (lifestyle templates — 8 new TOML assets + schema extensions + `TemplateOrigin` + wizard wiring + `skb template` CLI), Phase YY (cross-repo feedback CLI primitives — fingerprint + registry + writer + resolver + `skb react/comment/ref-set-write-back`), Phase FFF (event-create FAB + template picker + free-form path — primary write path UI). Integrated into main via merges + one CLI `Main.kt` union resolution (AAA's TemplateGroup + YY's 5 feedback commands both register).
+
+R.X self-check: all 9 boxes pass. 451 tests, only F45's 2 pre-existing failures. Largest new files: `FeedbackCommands.kt` 471, `TemplateCommands.kt` 456, `EventCreateController.kt` 284, `EventCreateFreeFormForm.kt` 235, `RepoRegistry.kt` 238 — all under 500.
+
+**Deferred sub-steps tracked** (not failures, deliberate scope-trims by subagents):
+- **FFF.4** save-as-template UI write-back (data path round-trips USER source via `TemplateIndexLoader`; only event-detail overflow + write-back UI pending)
+- **FFF — recurrence-file write** (`EventDraft.recurrence` + `customRRule` captured; `recurrences/<id>.md` write needs Phase C/E recurrence writer wiring — left as hook in `EventCreateController`)
+- **FFF — M3 DateTimePicker** (v1 ships ISO text input; `EventDraft` API already accepts `OffsetDateTime` so swap is local)
+- **YY.7 partial** — bonus + journal layout primitives shipped on CLI; deep-link / state-file fallback / nav-rail tab deferred to app-side phase
+- **YY.10 partial** — `cli-tooling.md` updated; in-app help + AGENTS.md rewrite deferred
+- **AAA — `cal-period-grace` supersedence overlay (HV-L.B.5)** → Phase BBB (supersedence pass RV-P)
+- **YY — Compose feedback drawer (FB-E.4–6)** → app-side phase (deferred from YY.7)
+
+**Findings backlog from this pass:**
+
+- **F51 — Phase FFF FAB rebuilt as hand-rolled `Surface + combinedClickable`** because `ExtendedFloatingActionButton` swallows long-press events. The hand-rolled version uses `Surface(primaryContainer) + Row(Icon + Text)` so long-press surfaces the dropdown menu. **Action:** track Compose Material3 upstream for `FloatingActionButton` long-press support; revert to canonical when available. **Priority:** low. **Status:** tracked.
+- **F52 — Phase FFF ships ISO text input for date+time, not M3 `DateTimePicker`.** v1 trade-off for testability; `EventDraft` API already accepts `OffsetDateTime` so swap is local. **Trigger:** when Phase EE inline-markdown lands or any other date-affecting UI ships in the same area. **Priority:** medium. **Status:** tracked.
+- **F53 — Worktree-leakage convention gap re-surfaced.** AAA + YY agents both reported cross-worktree leakage of uncommitted files from sibling worktrees (FFF files leaking into AAA's worktree, etc.). Agents now reflexively clean these on entry — but the leakage itself indicates the `.claude/worktrees/` lock mechanism isn't fully isolating writes. **Action:** investigate whether the harness's worktree creation pulls untracked files from the parent path (it should NOT). Add an explicit "clean untracked before starting" step to dispatch prompts as belt-and-suspenders. **Priority:** medium (process). **Status:** documented.
+- **F54 — Phase FFF.4 (save-as-template UI) explicitly deferred.** The data-path round-trips USER-source templates via `TemplateIndexLoader` already; only the overflow-menu + write-back sheet are missing. Best paired with the YY app-side phase (feedback drawer) when both UI surfaces ship together. **Priority:** medium. **Status:** tracked.
