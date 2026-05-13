@@ -30,6 +30,8 @@ import com.eight87.strictlykeptboy.sync.SyncRuntime
 import com.eight87.strictlykeptboy.sync.SyncScheduler
 import com.eight87.strictlykeptboy.sync.SyncStatusStore
 import com.eight87.strictlykeptboy.notif.NotificationPrefs
+import com.eight87.strictlykeptboy.prefs.RepoStoragePrefs
+import com.eight87.strictlykeptboy.sync.MirrorReconciler
 import com.eight87.strictlykeptboy.theme.AppearancePrefs
 import com.eight87.strictlykeptboy.ui.repos.ReposViewState
 import com.eight87.strictlykeptboy.ui.schedule.ScheduleViewModePrefs
@@ -261,20 +263,61 @@ class AppGraph(private val appContext: Context) {
         modePrefs.bindActiveRepo(rootDir = root, repoId = cfg?.repoId)
     }
 
+    /**
+     * Round 2.7.B.1 — app-wide mirror location prefs (SAF tree URI).
+     */
+    val repoStoragePrefs: RepoStoragePrefs by lazy { RepoStoragePrefs.open(appContext) }
+
+    /**
+     * Round 2.7.C — bridges [RepoStoragePrefs] to [RepoStore] by
+     * ensuring each repo carries a `file://`-transport `"mirror"` remote
+     * whenever a backup folder is configured. Invoked pre-sync from
+     * [scheduler]'s repoProvider hook.
+     */
+    val mirrorReconciler: MirrorReconciler by lazy {
+        MirrorReconciler(repoStore = repoStore, storagePrefs = repoStoragePrefs)
+    }
+
     /** Phase J — per-process sync scheduler. */
     val scheduler: SyncScheduler by lazy {
         SyncScheduler(
             repoStore = repoStore,
             statusStore = statusStore,
             repoProvider = { cfg ->
-                GitRepoRegistry.get(cfg.repoId) ?: runCatching {
+                // Round 2.7.C.1 — reconcile mirror remote before each sync
+                // pass so repos created before the user picked a folder
+                // catch up on their first tick. Idempotent + safe to call
+                // when no mirror is configured (no-op).
+                try {
+                    mirrorReconciler.reconcile(cfg.repoId)
+                } catch (_: Throwable) {
+                    // Don't fail the primary sync if mirror setup glitches —
+                    // the SyncStatusStore.MirrorPushFailure event surfaces
+                    // the user-visible signal on the next push attempt.
+                }
+                val fresh = repoStore.get(cfg.repoId) ?: cfg
+                GitRepoRegistry.get(fresh.repoId)?.also { existing ->
+                    // Best-effort: if the repo already exists in the
+                    // registry but its remotes list grew (the reconciler
+                    // just added `mirror`), patch the in-memory GitRepo so
+                    // the upcoming push fan-out covers the mirror.
+                    val mirrorBinding = fresh.remotes
+                        .firstOrNull { it.name.value == MirrorReconciler.MIRROR_REMOTE_NAME }
+                    if (mirrorBinding != null && existing.remotes.none { it.name == mirrorBinding.name }) {
+                        try {
+                            existing.addRemote(mirrorBinding)
+                        } catch (_: Throwable) {
+                            // already added by a concurrent pass — ignore.
+                        }
+                    }
+                } ?: runCatching {
                     GitRepo.open(
-                        rootDir = File(cfg.rootDir),
-                        repoId = cfg.repoId,
-                        remotes = cfg.remotes,
-                        primaryRemote = cfg.primaryRemote,
-                        authorIdentity = cfg.authorIdentity,
-                        defaultBranch = cfg.defaultBranch,
+                        rootDir = File(fresh.rootDir),
+                        repoId = fresh.repoId,
+                        remotes = fresh.remotes,
+                        primaryRemote = fresh.primaryRemote,
+                        authorIdentity = fresh.authorIdentity,
+                        defaultBranch = fresh.defaultBranch,
                     ).also(GitRepoRegistry::put)
                 }.getOrNull()
             },
