@@ -116,17 +116,10 @@ private fun ListCategoryBody(
                     }
                 }
             }
-            SectionLabel(stringResource(R.string.settings_lists_active_windows))
-            state.ordered.forEach { entry ->
-                Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                    Text(entry.label, style = MaterialTheme.typography.bodyMedium)
-                    Text(
-                        "${entry.activeFromIso ?: "—"} → ${entry.activeUntilIso ?: "—"}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
+            // Round 2.1.B.3 — active-windows display moved to
+            // calendar.toml (see CalendarActivityConfig). The new
+            // editor surface is CalendarSettingsSheet (2.1.B.4),
+            // reached from the calendars master list (2.1.B.11).
             Spacer(Modifier.height(16.dp))
         }
     }
