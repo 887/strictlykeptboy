@@ -3,6 +3,7 @@ package com.eight87.strictlykeptboy.composition
 import android.content.Context
 import com.eight87.strictlykeptboy.auto.CarAppRuntime
 import com.eight87.strictlykeptboy.auto.TodayEventSource
+import com.eight87.strictlykeptboy.cache.CacheDatabase
 import com.eight87.strictlykeptboy.avatar.AssetPackLoader
 import com.eight87.strictlykeptboy.avatar.AvatarPackPrefs
 import com.eight87.strictlykeptboy.avatar.AvatarResolver
@@ -18,6 +19,7 @@ import com.eight87.strictlykeptboy.git.RepoStore
 import com.eight87.strictlykeptboy.git.auth.SecretsStore
 import com.eight87.strictlykeptboy.notif.SyncEventNotificationBridge
 import com.eight87.strictlykeptboy.resolver.CommonTimeFinder
+import com.eight87.strictlykeptboy.resolver.DateRange
 import com.eight87.strictlykeptboy.resolver.MaterializedInstance
 import com.eight87.strictlykeptboy.resolver.Renderer
 import com.eight87.strictlykeptboy.resolver.RepoSnapshot
@@ -196,27 +198,54 @@ class AppGraph(private val appContext: Context) {
     }
 
     // ----------------------------------------------------------------
-    // Phase F→G integration is still pending: live RepoStore → Room
-    // bridge has not landed. Until then, the schedule pane and the
-    // Auto surface both observe these empty flows. When the bridge
-    // lands, only this section changes.
+    // Round 2.1.A — live RepoStore + Room cache → resolver bridge.
+    //
+    // The two publishers below own the data hand-off into the resolver
+    // pipeline. The schedule pane and Auto surface both observe these
+    // flows. Calendar / todolist metadata is synthesized from row IDs
+    // until the per-repo `calendar.toml` / `todolist.toml` reader is
+    // wired (follow-on phase).
     // ----------------------------------------------------------------
 
     /** Mutable so wizard scaffolding can flip the displayed active repo. */
     val activeRepoName: MutableStateFlow<String> = MutableStateFlow("demo-repo")
 
-    val snapshot: MutableStateFlow<RepoSnapshot> =
-        MutableStateFlow(RepoSnapshot(emptyList(), emptyList(), emptyList()))
+    /** Phase D — read-through cache. Owned here so publishers can share it. */
+    val cacheDatabase: CacheDatabase by lazy { CacheDatabase.open(appContext) }
 
-    val sources: MutableStateFlow<Renderer.Sources> = MutableStateFlow(
-        Renderer.Sources(
-            events = emptyList(),
-            rules = emptyList(),
-            exceptionsByRule = emptyMap(),
-            deviations = emptyList(),
-            overrides = emptyList(),
-        ),
+    /**
+     * Round 2.1.A.2 — visible schedule-pane date range. 90-day window
+     * centered on today by default; downstream view-models can write to
+     * this flow when the user scrolls / changes pane mode.
+     */
+    val visibleDateRange: MutableStateFlow<DateRange> = MutableStateFlow(
+        run {
+            val today = java.time.LocalDate.now()
+            DateRange(start = today.minusDays(45), endInclusive = today.plusDays(45))
+        },
     )
+
+    /** Round 2.1.A.1 — Room → [RepoSnapshot] bridge. */
+    val snapshotPublisher: IndexerSnapshotPublisher by lazy {
+        IndexerSnapshotPublisher(
+            db = cacheDatabase,
+            repoStore = repoStore,
+            scope = appScope,
+        )
+    }
+
+    /** Round 2.1.A.2 — Room → [Renderer.Sources] bridge (windowed). */
+    val sourcesPublisher: SourcesPublisher by lazy {
+        SourcesPublisher(
+            db = cacheDatabase,
+            repoStore = repoStore,
+            visibleRange = visibleDateRange,
+            scope = appScope,
+        )
+    }
+
+    val snapshot: StateFlow<RepoSnapshot> get() = snapshotPublisher.state
+    val sources: StateFlow<Renderer.Sources> get() = sourcesPublisher.state
 
     /** Phase N — Together repo options (id + label) derived from RepoStore. */
     @Suppress("OPT_IN_USAGE")

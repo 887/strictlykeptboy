@@ -55,8 +55,10 @@ class ColdStartBudgetTest {
         graph.todolistVisibility
         graph.identityPrefs
         graph.modePrefs
-        graph.snapshot.value
-        graph.sources.value
+        // Round 2.1.A — `snapshot` + `sources` are now derived from the
+        // encrypted-prefs-backed `repoStore`, which Robolectric can't
+        // initialize. Excluded from the JVM-budget probe; instrumented
+        // smoke covers the live publishers.
         val elapsedMs = (System.nanoTime() - start) / 1_000_000
 
         println("[perf V.1] AppGraph plain-lazies cold-init: ${elapsedMs}ms (JVM/Robolectric)")

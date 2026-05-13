@@ -54,14 +54,18 @@ The fix is not architectural. The fix is wiring, removing stubs, and adding a sm
 
 ---
 
-## Phase 2.1.A — DataBridge (PREREQ)
+## Phase 2.1.A — DataBridge (PREREQ) — shipped in commit `99d8762`
 
 Wires the indexer to `AppGraph.snapshot` + `AppGraph.sources`. Without this, every UI fix below is theoretical.
 
-- [ ] **2.1.A.1** Implement `IndexerSnapshotPublisher` in `composition/` that observes `CacheDatabase` DAOs + `RepoStore.state` and emits a `RepoSnapshot` (calendars + todolists across **all** enabled repos) to `AppGraph.snapshot`. One `combine` per active repo; fold lists; recompute `contentHash`.
-- [ ] **2.1.A.2** Implement `SourcesPublisher` that emits a visible-range-windowed `Renderer.Sources` (events + rules + exceptions + deviations + overrides) by querying the cache DAOs with the schedule pane's selected `DateRange`. Wire to `AppGraph.sources`.
-- [ ] **2.1.A.3** Unit-test both publishers with two seeded repos; assert `RepoSnapshot.calendars` is the union and `Renderer.Sources.events` is the union.
-- [ ] **2.1.A.4** Delete the empty-stub comment block at `AppGraph.kt:198-219`.
+- [x] **2.1.A.1** Implement `IndexerSnapshotPublisher` in `composition/` that observes `CacheDatabase` DAOs + `RepoStore.state` and emits a `RepoSnapshot` (calendars + todolists across **all** enabled repos) to `AppGraph.snapshot`. One `combine` per active repo; fold lists; recompute `contentHash`.
+- [x] **2.1.A.2** Implement `SourcesPublisher` that emits a visible-range-windowed `Renderer.Sources` (events + rules + exceptions + deviations + overrides) by querying the cache DAOs with the schedule pane's selected `DateRange`. Wire to `AppGraph.sources`.
+- [x] **2.1.A.3** Unit-test both publishers with two seeded repos; assert `RepoSnapshot.calendars` is the union and `Renderer.Sources.events` is the union.
+- [x] **2.1.A.4** Delete the empty-stub comment block at `AppGraph.kt:198-219`.
+
+**Known follow-ons (deferred; rolled into Phase 2.1.B):**
+- Calendar/todolist metadata richer fields (priority, supersedes, activeWindows, baselineCadenceDays, displayName, colorSeed) come from per-repo TOML files. `IndexerSnapshotPublisher` synthesizes defaults (active=true, priority=500, system tz) from distinct `calendarId`/`todolistId` values in event/rule/task rows. **Phase 2.1.B.1 (`CalendarRegistry`) reads these from `calendars/<id>/calendar.toml` via `RoutineCalendarConfig` + `SupersedenceConfig` and overlays onto the synthesized snapshot.**
+- `RecurrenceRuleDao` / `TaskDao` lack `listAllFlow()`; publishers re-emit only via the events-table invalidation pulse. Out of 2.1.A scope (constraint: do not modify `CacheDatabase`); revisit if rule-only/task-only edits show staleness.
 
 ## Phase 2.1.B — Multirepo (calendars-first)
 
