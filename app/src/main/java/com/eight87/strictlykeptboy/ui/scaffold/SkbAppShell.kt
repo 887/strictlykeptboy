@@ -183,6 +183,22 @@ fun SkbAppShell(
     settingsAccess: SettingsAccess = SettingsAccess(),
     activeIconKindFlow: StateFlow<com.eight87.strictlykeptboy.ui.theming.RepoIconKind>? = null,
     eventCreateController: com.eight87.strictlykeptboy.ui.schedule.EventCreateController? = null,
+    /**
+     * Phase 2.1.I.2 — external request to switch to the Wizard destination
+     * and pre-position the host at a specific screen (e.g. Roles, from the
+     * Settings → Lifestyle entry-point). When non-null, the shell selects
+     * [TopDestination.Wizard], passes `initialScreen` down, then clears
+     * the request on wizard finish. Null → no auto-routing.
+     */
+    wizardEntryRequest: kotlinx.coroutines.flow.MutableStateFlow<
+        com.eight87.strictlykeptboy.ui.wizard.WizardScreen?
+    >? = null,
+    /**
+     * Phase 2.1.I.4 — share-with-dom CTA from the wizard's last screen.
+     * Caller wires this to ShareSheet with the just-scaffolded repo + the
+     * `allowWriteBack` checkbox pre-set.
+     */
+    onShareWithDom: () -> Unit = {},
 ) {
     ProvideWindowSizeClass(modifier = modifier) { _ ->
         SkbAppShellContent(
@@ -205,6 +221,8 @@ fun SkbAppShell(
             settingsAccess = settingsAccess,
             activeIconKindFlow = activeIconKindFlow,
             eventCreateController = eventCreateController,
+            wizardEntryRequest = wizardEntryRequest,
+            onShareWithDom = onShareWithDom,
         )
     }
 }
@@ -230,8 +248,19 @@ private fun SkbAppShellContent(
     settingsAccess: SettingsAccess,
     activeIconKindFlow: StateFlow<com.eight87.strictlykeptboy.ui.theming.RepoIconKind>?,
     eventCreateController: com.eight87.strictlykeptboy.ui.schedule.EventCreateController? = null,
+    wizardEntryRequest: kotlinx.coroutines.flow.MutableStateFlow<
+        com.eight87.strictlykeptboy.ui.wizard.WizardScreen?
+    >? = null,
+    onShareWithDom: () -> Unit = {},
 ) {
     var selected by rememberSaveable { mutableStateOf(TopDestination.Schedule) }
+    // Phase 2.1.I.2 — observe wizard re-entry requests.
+    val wizardEntry = wizardEntryRequest?.collectAsState()?.value
+    androidx.compose.runtime.LaunchedEffect(wizardEntry) {
+        if (wizardEntry != null) {
+            selected = TopDestination.Wizard
+        }
+    }
     val activeRepoName by activeRepoNameFlow.collectAsState()
     // D.88 / F48 — top-bar avatar reflects the active repo's iconKind. Defaults
     // to Sticker("bat") if the caller hasn't wired the flow (e.g. tests, previews).
@@ -357,11 +386,18 @@ private fun SkbAppShellContent(
                         TopDestination.Wizard -> WizardNavHost(
                             onFinish = {
                                 onWizardFinish()
+                                wizardEntryRequest?.value = null
                                 selected = TopDestination.Schedule
                             },
-                            onCancel = { selected = TopDestination.Schedule },
+                            onCancel = {
+                                wizardEntryRequest?.value = null
+                                selected = TopDestination.Schedule
+                            },
                             onScaffold = onWizardScaffold,
                             neutralMode = neutralMode,
+                            initialScreen = wizardEntry
+                                ?: com.eight87.strictlykeptboy.ui.wizard.WizardScreen.Welcome,
+                            onShareWithDom = onShareWithDom,
                         )
                         TopDestination.Reviews -> {
                             // Phase DDD.13 wiring (F45 follow-up). Items list is

@@ -436,6 +436,24 @@
     <string name="wizard_done_open">Open my calendar</string>
     <string name="wizard_done_fallback_now_card_title">brush teeth</string>
 
+    <!-- Phase 2.1.I.3 — Mode wizard screen -->
+    <string name="wizard_mode_prompt">Who keeps your schedule?</string>
+    <string name="wizard_mode_blurb">You can change this any time in Settings → Mode.</string>
+    <string name="wizard_mode_free_title">Free</string>
+    <string name="wizard_mode_free_blurb">You schedule yourself. The app stays out of the way.</string>
+    <string name="wizard_mode_kept_by_ai_title">Kept by an AI dom</string>
+    <string name="wizard_mode_kept_by_ai_blurb">A built-in dom-persona fills your day and checks in. Stern-but-fair by default.</string>
+    <string name="wizard_mode_kept_by_human_title">Kept by a human dom</string>
+    <string name="wizard_mode_kept_by_human_blurb">You\'ll share your calendar with a partner who schedules for you. We\'ll help you generate a share link at the end.</string>
+    <string name="wizard_mode_self_keep_title">Self-keep</string>
+    <string name="wizard_mode_self_keep_blurb">You keep yourself accountable through reviews. No external dom.</string>
+
+    <!-- Phase 2.1.I.4 — Share-with-dom wizard screen -->
+    <string name="wizard_share_with_dom_title">Share with your dom</string>
+    <string name="wizard_share_with_dom_blurb">Generate a link your dom can open to clone your calendar and write back to it.</string>
+    <string name="wizard_share_with_dom_generate">Generate share link</string>
+    <string name="wizard_share_with_dom_skip">Skip for now</string>
+
     <!-- Phase M — notification channels -->
     <string name="notif_channel_events_name">Events</string>
     <string name="notif_channel_events_desc">Reminders for upcoming calendar events.</string>

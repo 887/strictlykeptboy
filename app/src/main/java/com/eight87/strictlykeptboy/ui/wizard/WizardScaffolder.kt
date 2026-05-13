@@ -3,6 +3,7 @@ package com.eight87.strictlykeptboy.ui.wizard
 import com.eight87.strictlykeptboy.git.AuthorIdentity
 import com.eight87.strictlykeptboy.git.GitRepo
 import com.eight87.strictlykeptboy.git.Uuid7
+import com.eight87.strictlykeptboy.store.DomCadenceWire
 import com.eight87.strictlykeptboy.store.EntityHeader
 import com.eight87.strictlykeptboy.store.EntityWriter
 import com.eight87.strictlykeptboy.store.IdentityPronouns
@@ -10,6 +11,7 @@ import com.eight87.strictlykeptboy.store.IdentityTomlCodec
 import com.eight87.strictlykeptboy.store.IdentityTomlData
 import com.eight87.strictlykeptboy.store.RecurrenceRule
 import com.eight87.strictlykeptboy.store.RepoBootstrap
+import com.eight87.strictlykeptboy.store.RepoMode
 import com.eight87.strictlykeptboy.store.StandingTask
 import com.eight87.strictlykeptboy.store.TemplateOrigin
 import com.eight87.strictlykeptboy.store.TomlTable
@@ -139,6 +141,10 @@ object WizardScaffolder {
             }
             for (atomId in atomsToWrite) {
                 val rid = Uuid7.generate().toString()
+                // Phase 2.1.I.5 — spread atoms across morning/midday/evening
+                // buckets so the wizard's emitted schedule isn't N
+                // overlapping 09:00 blocks. Fallback bucket is 09:00.
+                val hm = TemplateRegistry.dtstartHmFor(atomId)
                 val rule = RecurrenceRule(
                     header = EntityHeader(
                         id = rid,
@@ -148,7 +154,7 @@ object WizardScaffolder {
                     ),
                     title = TemplateRegistry.templatesFor(role)
                         .firstOrNull { it.atomId == atomId }?.label ?: atomId,
-                    dtstart = "2025-01-01T09:00:00",
+                    dtstart = "2025-01-01T$hm:00",
                     duration = "PT15M",
                     tzId = tzId,
                     rrule = "FREQ=DAILY",
@@ -168,6 +174,8 @@ object WizardScaffolder {
                         if (role == RoleId.Kink) add("kink")
                     },
                     emoji = role.emoji,
+                    // Phase 2.1.I.6 — flag inverted-default habit atoms.
+                    inverted = TemplateRegistry.isInvertedAtom(atomId),
                 )
                 EntityWriter.write(rootDir, rule)
                 recurCount += 1
@@ -225,6 +233,27 @@ object WizardScaffolder {
             lifestyle = normalized.lifestyle.id,
         )
         IdentityTomlCodec.write(rootDir.toPath(), identityData)
+
+        // Phase 2.1.I.3 — overwrite mode.toml with the wizard's mode pick.
+        // RepoBootstrap.scaffold wrote ModeTomlData.Default (free, no dom);
+        // here we layer the user's actual pick on top. KeptByAi seeds a
+        // builtin dom-persona; KeptByHuman leaves persona null (the share
+        // link the user generates next populates write_back_target).
+        val modeData = when (normalized.effectiveModePick) {
+            WizardModePick.Free -> ModeTomlData(mode = RepoMode.Free)
+            WizardModePick.SelfKeep -> ModeTomlData(mode = RepoMode.SelfKeep)
+            WizardModePick.KeptByAi -> ModeTomlData(
+                mode = RepoMode.StrictlyKept,
+                domPersona = "stern-but-fair",
+                domCadence = DomCadenceWire.EndOfDay,
+            )
+            WizardModePick.KeptByHuman -> ModeTomlData(
+                mode = RepoMode.StrictlyKept,
+                domPersona = null,
+                domCadence = DomCadenceWire.EndOfDay,
+            )
+        }
+        ModeTomlCodec.write(rootDir.toPath(), modeData)
 
         // Step 5 — git init (phone-only for v1; remote paths land in a follow-up
         // once OAuth client IDs are registered).

@@ -160,6 +160,15 @@ class MainActivity : ComponentActivity() {
         setContent {
             val appearance by graph.appearancePrefs.state.collectAsState()
             var ageOk by remember { mutableStateOf(graph.ageGatePrefs.isConfirmed()) }
+            // Phase 2.1.I.1 — first-launch auto-route to the wizard when the
+            // repo store is empty after the age gate succeeds. We flip
+            // `firstLaunchDone = true` once a repo exists (either after the
+            // wizard scaffold lands, or because the user already had repos
+            // from a prior install). The empty-Schedule flash is avoided by
+            // NOT mounting SkbAppShell on first launch.
+            var firstLaunchDone by remember {
+                mutableStateOf(graph.repoStore.list().isNotEmpty())
+            }
             androidx.compose.runtime.CompositionLocalProvider(
                 com.eight87.strictlykeptboy.avatar.LocalAvatarResolver provides graph.avatarResolver,
             ) {
@@ -176,6 +185,53 @@ class MainActivity : ComponentActivity() {
                             ageOk = true
                         },
                         onDecline = { finish() },
+                    )
+                } else if (!firstLaunchDone) {
+                    // Phase 2.1.I.1 — first-launch wizard. The shell is not
+                    // mounted yet, so there's no empty-Schedule flash. Once
+                    // the user finishes (or cancels with at-least-one repo
+                    // present), we flip `firstLaunchDone = true` and the
+                    // next composition mounts the shell.
+                    com.eight87.strictlykeptboy.ui.wizard.WizardNavHost(
+                        onFinish = { firstLaunchDone = true },
+                        onCancel = { firstLaunchDone = true },
+                        onScaffold = { draft ->
+                            runCatching {
+                                val outcome = WizardScaffolder.materialize(
+                                    parentDir = filesDir.resolve("repos"),
+                                    draft = draft,
+                                    author = AuthorIdentity("me", "me@example.com"),
+                                )
+                                graph.repoStore.add(
+                                    RepoConfig(
+                                        repoId = outcome.repoId,
+                                        displayName = draft.displayName.ifBlank { "my calendar" },
+                                        rootDir = outcome.rootDir.absolutePath,
+                                        remotes = emptyList(),
+                                        primaryRemote = null,
+                                        authorIdentity = outcome.authorIdentity,
+                                        defaultCalendarId = outcome.calendarIds.values.firstOrNull(),
+                                        defaultTodolistId = outcome.todolistId,
+                                        iconEmoji = when (draft.species) {
+                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Bat -> "🦇"
+                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Bunny -> "🐰"
+                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Cat -> "🐱"
+                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Fox -> "🦊"
+                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Lion -> "🦁"
+                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Tiger -> "🐯"
+                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Wolf -> "🐺"
+                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.ChooseYourOwn -> null
+                                        },
+                                        iconSpecies = draft.species.name.takeIf {
+                                            draft.species != com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.ChooseYourOwn
+                                        },
+                                    ),
+                                )
+                                graph.activeRepoName.value = draft.displayName.ifBlank { "my calendar" }
+                                Unit
+                            }
+                        },
+                        neutralMode = graph.neutralModePrefs.isEnabled(),
                     )
                 } else {
                     val scheduleState = remember {
@@ -218,9 +274,21 @@ class MainActivity : ComponentActivity() {
                             neutralModeProvider = { graph.neutralModePrefs.isEnabled() },
                         )
                     }
+                    // Phase 2.1.I.4 — share-with-dom CTA needs the active
+                    // repo. We resolve at click-time so the latest scaffold
+                    // outcome is observed. Falls back to a toast if no repo.
+                    var pendingShareRepo by remember { mutableStateOf<RepoConfig?>(null) }
                     SkbAppShell(
                         activeRepoNameFlow = graph.defaultWriteRepoName,
                         activeIconKindFlow = graph.activeRepoIconKind,
+                        wizardEntryRequest = graph.wizardEntryRequest,
+                        onShareWithDom = {
+                            val name = graph.activeRepoName.value
+                            val cfg = graph.repoStore.list()
+                                .firstOrNull { it.displayName == name }
+                                ?: graph.repoStore.list().firstOrNull()
+                            pendingShareRepo = cfg
+                        },
                         scheduleState = scheduleState,
                         eventCreateController = eventCreateController,
                         onPersistTab = graph.viewModePrefs::set,
@@ -275,6 +343,15 @@ class MainActivity : ComponentActivity() {
                             // Phase W.7 — privacy policy lives in-repo at
                             // docs/privacy-policy.md; the canonical URL is the
                             // GitHub rendering of that file on the main branch.
+                            // Phase 2.1.I.2 — fix the broken K.12 re-entry.
+                            // Setting `wizardEntryRequest` makes SkbAppShell
+                            // switch to the Wizard destination and pass
+                            // `initialScreen = Roles`. Reset to null on
+                            // wizard finish (handled inside SkbAppShell).
+                            onOpenWizardAtRoles = {
+                                graph.wizardEntryRequest.value =
+                                    com.eight87.strictlykeptboy.ui.wizard.WizardScreen.Roles
+                            },
                             onOpenPrivacyPolicy = {
                                 val url = "https://github.com/887/strictlykeptboy/blob/main/docs/privacy-policy.md"
                                 runCatching {
@@ -321,6 +398,11 @@ class MainActivity : ComponentActivity() {
                                 Unit
                             }
                         },
+                        // Phase 2.1.I.4 — share-with-dom sheet host. Reuses
+                        // the existing ShareSheet; the wizard CTA flips
+                        // `pendingShareRepo` and we render here. The user
+                        // sets allowWriteBack themselves in the sheet (the
+                        // wizard advertises that's what we're doing).
                         // Phase CCC.8 — trip-overlay materializer. Writes a
                         // `cal-trip-<uuidv7>/` overlay into the active repo and
                         // commits atomically. Falls back to no-op (Result.failure)
@@ -344,6 +426,31 @@ class MainActivity : ComponentActivity() {
                             }
                         },
                     )
+                    // Phase 2.1.I.4 — overlay the ShareSheet when the
+                    // wizard's Share-with-dom CTA fired. Lives as a sibling
+                    // of SkbAppShell so it overlays everything else.
+                    pendingShareRepo?.let { repo ->
+                        val ctx = androidx.compose.ui.platform.LocalContext.current
+                        com.eight87.strictlykeptboy.ui.share.ShareSheet(
+                            repo = repo,
+                            onDismiss = { pendingShareRepo = null },
+                            onCopy = { link ->
+                                val cm = ctx.getSystemService(
+                                    android.content.Context.CLIPBOARD_SERVICE,
+                                ) as android.content.ClipboardManager
+                                cm.setPrimaryClip(
+                                    android.content.ClipData.newPlainText("share link", link),
+                                )
+                            },
+                            onSend = { link ->
+                                val send = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, link)
+                                }
+                                ctx.startActivity(Intent.createChooser(send, null))
+                            },
+                        )
+                    }
                 }
             }
             }

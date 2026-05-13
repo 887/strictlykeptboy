@@ -62,24 +62,47 @@ const val TestTagWizardTemplates = "Wizard-Templates"
 const val TestTagWizardGit = "Wizard-Git"
 const val TestTagWizardScaffold = "Wizard-Scaffold"
 const val TestTagWizardDone = "Wizard-Done"
+const val TestTagWizardMode = "Wizard-Mode"
+const val TestTagWizardShareWithDom = "Wizard-ShareWithDom"
 const val TestTagWizardNext = "Wizard-Next"
 const val TestTagWizardBack = "Wizard-Back"
 const val TestTagWizardSkip = "Wizard-Skip"
 const val TestTagWizardDiscardDialog = "Wizard-DiscardDialog"
 
-/** Linear screen sequence. Renumbered into a single source-of-truth ordering. */
+/**
+ * Linear screen sequence. Phase 2.1.I.3 inserts the Mode screen between
+ * Lifestyle and Roles. Phase 2.1.I.4 appends a Share-with-dom screen
+ * after Done; it's only entered when [shouldShowShareWithDom] returns
+ * true for the draft.
+ */
 private val SCREEN_ORDER: List<WizardScreen> = listOf(
     WizardScreen.Welcome,
     WizardScreen.Species,
     WizardScreen.Alignment,
     WizardScreen.Identity,
     WizardScreen.Lifestyle,
+    WizardScreen.Mode,
     WizardScreen.Roles,
     WizardScreen.Templates,
     WizardScreen.Git,
     WizardScreen.Scaffold,
     WizardScreen.Done,
+    WizardScreen.ShareWithDom,
 )
+
+/**
+ * Phase 2.1.I.4 — the Share-with-dom screen only renders for sub/switch
+ * users who are kept-by-human (or AI but want to also share). Strict
+ * predicate: alignment ∈ {Submissive, Switch} AND mode pick = KeptByHuman.
+ * Keeping it strict prevents the screen from showing up for users who
+ * picked KeptByAi (where there is no human dom to share with).
+ */
+internal fun shouldShowShareWithDom(draft: WizardDraft): Boolean {
+    val alignmentOk = draft.alignment == Alignment.Submissive ||
+        draft.alignment == Alignment.Switch
+    val keptByHuman = draft.effectiveModePick == WizardModePick.KeptByHuman
+    return alignmentOk && keptByHuman
+}
 
 /**
  * Phase K.1 / LW-A — wizard host. Replaces the stub destination in AppScaffold.
@@ -101,6 +124,13 @@ fun WizardNavHost(
     initialScreen: WizardScreen = WizardScreen.Welcome,
     initialDraft: WizardDraft = WizardDraft(),
     neutralMode: Boolean = false,
+    /**
+     * Phase 2.1.I.4 — callback fired when the user requests to generate a
+     * share link from the Share-with-dom screen. Caller wires this to the
+     * existing [com.eight87.strictlykeptboy.ui.share.ShareSheet] with the
+     * just-scaffolded repo and `allowWriteBack` pre-checked.
+     */
+    onShareWithDom: () -> Unit = {},
 ) {
     // v1: in-memory draft only. SavedStateHandle-backed persistence is a
     // follow-up (LW-A.5 mid-wizard exit safety beyond config-change is
@@ -177,6 +207,10 @@ fun WizardNavHost(
                     draft = draft,
                     onUpdate = { draft = it.normalize() },
                 )
+                WizardScreen.Mode -> ModeScreen(
+                    draft = draft,
+                    onUpdate = { draft = it },
+                )
                 WizardScreen.Roles -> RolesScreen(
                     draft = draft,
                     neutralMode = neutralMode,
@@ -207,14 +241,34 @@ fun WizardNavHost(
                         }
                     }
                 }
-                WizardScreen.Done -> DoneScreen(draft = draft, onOpen = onFinish)
+                WizardScreen.Done -> DoneScreen(
+                    draft = draft,
+                    // Phase 2.1.I.4 — if a human dom is selected, route to
+                    // the Share-with-dom screen first; otherwise finish.
+                    onOpen = {
+                        if (shouldShowShareWithDom(draft)) {
+                            current = WizardScreen.ShareWithDom
+                        } else {
+                            onFinish()
+                        }
+                    },
+                )
+                WizardScreen.ShareWithDom -> ShareWithDomScreen(
+                    draft = draft,
+                    onGenerateLink = {
+                        onShareWithDom()
+                        onFinish()
+                    },
+                    onSkip = onFinish,
+                )
             }
         }
 
         // Buttons
         if (current != WizardScreen.Welcome &&
             current != WizardScreen.Scaffold &&
-            current != WizardScreen.Done
+            current != WizardScreen.Done &&
+            current != WizardScreen.ShareWithDom
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(
@@ -821,6 +875,101 @@ private fun chooseFirstNowCardTitle(draft: WizardDraft, fallback: String): Strin
         if (tmpls.isNotEmpty()) return tmpls.first().label
     }
     return fallback
+}
+
+// --- Phase 2.1.I.3 Mode screen -------------------------------------------------
+
+@Composable
+private fun ModeScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
+    val current = draft.effectiveModePick
+    val options = listOf(
+        WizardModePick.Free,
+        WizardModePick.KeptByAi,
+        WizardModePick.KeptByHuman,
+        WizardModePick.SelfKeep,
+    )
+    Column(
+        modifier = Modifier.fillMaxWidth().testTag(TestTagWizardMode),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            stringResource(R.string.wizard_mode_prompt),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Text(
+            stringResource(R.string.wizard_mode_blurb),
+            style = MaterialTheme.typography.bodySmall,
+        )
+        for (pick in options) {
+            val selected = pick == current
+            Card(
+                onClick = { onUpdate(draft.copy(modePick = pick)) },
+                colors = if (selected) CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                ) else CardDefaults.cardColors(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("Wizard-Mode-${pick.id}"),
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        when (pick) {
+                            WizardModePick.Free -> stringResource(R.string.wizard_mode_free_title)
+                            WizardModePick.KeptByAi -> stringResource(R.string.wizard_mode_kept_by_ai_title)
+                            WizardModePick.KeptByHuman -> stringResource(R.string.wizard_mode_kept_by_human_title)
+                            WizardModePick.SelfKeep -> stringResource(R.string.wizard_mode_self_keep_title)
+                        },
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(
+                        when (pick) {
+                            WizardModePick.Free -> stringResource(R.string.wizard_mode_free_blurb)
+                            WizardModePick.KeptByAi -> stringResource(R.string.wizard_mode_kept_by_ai_blurb)
+                            WizardModePick.KeptByHuman -> stringResource(R.string.wizard_mode_kept_by_human_blurb)
+                            WizardModePick.SelfKeep -> stringResource(R.string.wizard_mode_self_keep_blurb)
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+        }
+    }
+}
+
+// --- Phase 2.1.I.4 Share-with-dom screen ---------------------------------------
+
+@Composable
+private fun ShareWithDomScreen(
+    draft: WizardDraft,
+    onGenerateLink: () -> Unit,
+    onSkip: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().testTag(TestTagWizardShareWithDom),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalAlignment = ComposeAlign.CenterHorizontally,
+    ) {
+        Text(
+            stringResource(R.string.wizard_share_with_dom_title),
+            style = MaterialTheme.typography.headlineSmall,
+        )
+        Text(
+            stringResource(R.string.wizard_share_with_dom_blurb),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Button(
+            onClick = onGenerateLink,
+            modifier = Modifier.testTag("Wizard-ShareWithDom-Generate"),
+        ) {
+            Text(stringResource(R.string.wizard_share_with_dom_generate))
+        }
+        TextButton(
+            onClick = onSkip,
+            modifier = Modifier.testTag("Wizard-ShareWithDom-Skip"),
+        ) {
+            Text(stringResource(R.string.wizard_share_with_dom_skip))
+        }
+    }
 }
 
 // --- Small helpers -------------------------------------------------------------

@@ -153,15 +153,15 @@ Wires the indexer to `AppGraph.snapshot` + `AppGraph.sources`. Without this, eve
 - [ ] **2.1.H.6** `scripts/start-tablet-avd.sh` — codify 10" tablet AVD profile (pixel_tablet, 1600×2560 mdpi 160dpi). Add `--tablet` flag to start script. Update CLAUDE.md test loop to call out dual-target requirement.
 - [ ] **2.1.H.7** Verification pass on real tablet (wifi-adb) for every R-touched screen + every 2.1.H sub-step. Screenshots into `docs/qa/tablet-2-1/`.
 
-## Phase 2.1.I — First-run + Wizard
+## Phase 2.1.I — First-run + Wizard — shipped in commit `PENDING-2-1-I`
 
-- [ ] **2.1.I.1** First-launch auto-route: in `MainActivity.kt:181` branch on `graph.repoStore.list().isEmpty()` after age gate and route directly to `WizardNavHost`. Top-level `firstLaunchDone` state in MainActivity, flipped to `true` after first scaffolding.
-- [ ] **2.1.I.2** Fix `onOpenWizardAtRoles` (Phase K.12) to actually open the wizard. Hoist `wizardEntryRequest: MutableStateFlow<WizardScreen?>` in `AppGraph`; Lifestyle callback sets it; `SkbAppShell` observes and selects `TopDestination.Wizard` + `initialScreen`. Reset on finish.
-- [ ] **2.1.I.3** Add wizard "Mode" screen between Lifestyle and Roles. Default = `free` for UnalignedPrivate/Switch/Dominant; default = `strictly-kept` (kept-by-AI) for Submissive. One-tap override. Writes `mode.toml.mode` + `dom_persona = "stern-but-fair"` + `dom_cadence = "end-of-day"` when strictly-kept.
-- [ ] **2.1.I.4** Add wizard "Share with dom" screen on Done path (when alignment ∈ {Submissive, Switch} AND mode = strictly-kept AND human-dom selected). CTA: "generate share link" → `ShareSheet` with `allowWriteBack` pre-checked. Skippable.
-- [ ] **2.1.I.5** Replace 09:00-stack stub with morning/midday/evening hint per atom. Three-bucket map in `TemplateRegistry`: `brush-teeth → 07:00`, `meds-am → 08:00`, `meds-pm → 21:00`, `cardio-30min → 17:00`, etc. Reason: the existing all-09:00 emission produces N overlapping blocks per role.
-- [ ] **2.1.I.6** Tag inverted-default atoms (`brush-teeth`, `meds-am`/`pm`, `shower`, `feed-am`/`pm`) with `inverted = true` in emitted `RecurrenceRule` per Phase XX inversion model.
-- [ ] **2.1.I.7** `activeRepoName` default `"demo-repo"` → `""`; shell renders empty top-bar instead of stale label.
+- [x] **2.1.I.1** First-launch auto-route: in `MainActivity.kt:181` branch on `graph.repoStore.list().isEmpty()` after age gate and route directly to `WizardNavHost`. Top-level `firstLaunchDone` state in MainActivity, flipped to `true` after first scaffolding.
+- [x] **2.1.I.2** Fix `onOpenWizardAtRoles` (Phase K.12) to actually open the wizard. Hoist `wizardEntryRequest: MutableStateFlow<WizardScreen?>` in `AppGraph`; Lifestyle callback sets it; `SkbAppShell` observes and selects `TopDestination.Wizard` + `initialScreen`. Reset on finish.
+- [x] **2.1.I.3** Add wizard "Mode" screen between Lifestyle and Roles. Default = `free` for UnalignedPrivate/Switch/Dominant; default = `strictly-kept` (kept-by-AI) for Submissive. One-tap override. Writes `mode.toml.mode` + `dom_persona = "stern-but-fair"` + `dom_cadence = "end-of-day"` when strictly-kept.
+- [x] **2.1.I.4** Add wizard "Share with dom" screen on Done path (when alignment ∈ {Submissive, Switch} AND mode = strictly-kept AND human-dom selected). CTA: "generate share link" → `ShareSheet` with `allowWriteBack` pre-checked. Skippable.
+- [x] **2.1.I.5** Replace 09:00-stack stub with morning/midday/evening hint per atom. Three-bucket map in `TemplateRegistry`: `brush-teeth → 07:00`, `meds-am → 08:00`, `meds-pm → 21:00`, `cardio-30min → 17:00`, etc. Reason: the existing all-09:00 emission produces N overlapping blocks per role.
+- [x] **2.1.I.6** Tag inverted-default atoms (`brush-teeth`, `meds-am`/`pm`, `shower`, `feed-am`/`pm`) with `inverted = true` in emitted `RecurrenceRule` per Phase XX inversion model.
+- [x] **2.1.I.7** `activeRepoName` default `"demo-repo"` → `""`; shell renders empty top-bar instead of stale label.
 
 ## Phase 2.1.J — Identity write-back — shipped in commits `ae40605` (J.2), `7ff1130` (J.1+J.4), `5ae05db` (J.3)
 
