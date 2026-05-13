@@ -220,6 +220,24 @@
     <string name="settings_about_privacy_policy">Privacy policy</string>
     <string name="settings_about_version_tap">strictlykeptboy v%1$s</string>
 
+    <!-- About page: grouped-card layout (tonearmboy parity) -->
+    <string name="settings_about_card_build">Build</string>
+    <string name="settings_about_card_source">Source</string>
+    <string name="settings_about_app_label">App</string>
+    <string name="settings_about_app_subtitle">strictlykeptboy — git-backed calendar.</string>
+    <string name="settings_about_version_label">Version</string>
+    <string name="settings_about_version_subtitle">v%1$s · %2$s</string>
+    <string name="settings_about_build_date_label">Built</string>
+    <string name="settings_about_github_label">Source on GitHub</string>
+    <string name="settings_about_github_subtitle">github.com/887/strictlykeptboy</string>
+    <string name="settings_about_licenses_label">Open-source licenses</string>
+    <string name="settings_about_licenses_subtitle">Every dep that ships in the APK.</string>
+    <string name="settings_about_privacy_label">Privacy</string>
+    <string name="settings_about_privacy_subtitle">What lives where, and what leaves the device.</string>
+    <string name="settings_about_easter_egg_first">Click 2 more times for a treat</string>
+    <string name="settings_about_easter_egg_second">1 more time</string>
+    <string name="settings_about_easter_egg_bat_cd">Hang on, batty</string>
+
     <!-- S.11 Mode -->
     <string name="settings_mode_pill_free">Mode: free</string>
     <string name="settings_mode_pill_strictly_kept">Mode: strictly-kept</string>
