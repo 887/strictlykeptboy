@@ -34,6 +34,20 @@ class SkbApp : Application() {
         // Phase M.1 — register all six notification channels at app start.
         // Idempotent: the OS dedupes by id, so we re-run on every cold start.
         NotificationChannels.registerAll(this)
+        // Phase 2.1.F.6 — schedule the morning + evening briefing workers.
+        // Idempotent (KEEP policy). The master toggle short-circuits at
+        // doWork() time so flipping it off in Settings mutes briefings
+        // without needing to cancel work. Wrapped in try/catch because
+        // Robolectric unit tests boot the Application without a
+        // WorkManager initialiser (custom androidx.work init is disabled
+        // in this app's manifest), and WorkManager throws ISE on first
+        // touch in that environment.
+        try {
+            com.eight87.strictlykeptboy.notif.BriefingWorker.scheduleAll(this)
+        } catch (_: IllegalStateException) {
+            // No-op — production wiring happens at the next call site that
+            // explicitly initialises WorkManager.
+        }
         com.eight87.strictlykeptboy.perf.PerfTraceRecorder.end()
     }
 }

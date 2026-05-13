@@ -17,6 +17,7 @@
     <!-- Event detail -->
     <string name="event_detail_attachments">Attachments</string>
     <string name="event_detail_edit">Edit</string>
+    <string name="event_detail_mute_reminders">Mute reminders for this event</string>
     <string name="event_detail_author">Author: %1$s</string>
     <string name="event_detail_state_scheduled">Scheduled</string>
     <string name="event_detail_state_in_progress">In progress</string>
@@ -151,6 +152,15 @@
     <string name="settings_notif_lead_flight">Flight</string>
     <string name="settings_notif_lead_household">Household</string>
     <string name="settings_notif_lead_general">General</string>
+    <!-- Phase 2.1.F.3 / F.4 — per-calendar mute UI -->
+    <string name="settings_notif_calendars_section">Calendars</string>
+    <string name="settings_notif_mute_until_active">Muted (%1$d h left)</string>
+    <string name="settings_notif_mute_until_inactive">Mute for 24 h</string>
+    <!-- Phase 2.1.F.6 — briefings firing path -->
+    <string name="notif_briefing_morning_title">Today\'s schedule</string>
+    <string name="notif_briefing_evening_title">Tomorrow\'s schedule</string>
+    <string name="notif_briefing_empty">Nothing scheduled.</string>
+    <string name="notif_event_collapsed_count">%1$d reminders</string>
 
     <!-- S.5 / S.6 Calendars + Todolists -->
     <string name="settings_lists_visibility_title">Visibility</string>

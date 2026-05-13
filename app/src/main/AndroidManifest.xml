@@ -82,6 +82,16 @@
             android:name=".notif.ReminderBroadcastReceiver"
             android:exported="false" />
 
+        <!-- Phase 2.1.F.8 — re-arm reminders after reboot / package replace. -->
+        <receiver
+            android:name=".notif.BootCompletedReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
         <!-- Phase XX.3 / AT-C — atomic event start/end alarms. -->
         <receiver
             android:name=".notif.AtomicEventReceiver"

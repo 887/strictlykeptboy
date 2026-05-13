@@ -31,12 +31,22 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
     private fun postNotification(context: Context, intent: Intent) {
         val repoId = intent.getStringExtra(EXTRA_REPO_ID) ?: return
         val eventId = intent.getStringExtra(EXTRA_EVENT_ID) ?: return
+        val calendarId = intent.getStringExtra(EXTRA_CALENDAR_ID) ?: ""
         val title = intent.getStringExtra(EXTRA_TITLE) ?: ""
         val priv = intent.getBooleanExtra(EXTRA_PRIVATE, false)
 
         // Respect channel-level enable toggle.
         val prefs = NotificationPrefs.open(context)
         if (!prefs.isChannelEnabled(NotificationChannels.EVENTS)) return
+        // Phase 2.1.F.2 — per-event mute short-circuit.
+        if (prefs.isEventMuted(repoId, eventId)) return
+        // Phase 2.1.F.3 — per-calendar enable.
+        if (calendarId.isNotEmpty() && !prefs.isCalendarEnabled(repoId, calendarId)) return
+        // Phase 2.1.F.4 — time-bounded group mutes (calendar + repo).
+        val now = System.currentTimeMillis()
+        if (calendarId.isNotEmpty() &&
+            prefs.isGroupMutedAt(LogicalGroup.Calendar(repoId, calendarId), now)) return
+        if (prefs.isGroupMutedAt(LogicalGroup.Repo(repoId), now)) return
 
         val displayTitle = if (priv) context.getString(R.string.notif_event_private_title) else title
         val publicVersion = NotificationCompat.Builder(context, NotificationChannels.EVENTS)
@@ -85,7 +95,7 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
             privateEvent = priv,
         )
         val contentText = identityBody.ifBlank { context.getString(R.string.notif_event_role_pre) }
-        val notif = NotificationCompat.Builder(context, NotificationChannels.EVENTS)
+        val baseBuilder = NotificationCompat.Builder(context, NotificationChannels.EVENTS)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(displayTitle)
             .setContentText(contentText)
@@ -98,7 +108,14 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
             .addAction(0, context.getString(R.string.notif_action_snooze_60), snoozePi(60))
             .addAction(0, context.getString(R.string.notif_action_i_didnt), deviationPi(DEVIATION_SKIPPED))
             .addAction(0, context.getString(R.string.notif_action_partial), deviationPi(DEVIATION_PARTIAL))
-            .build()
+        // Phase 2.1.F.9 — apply InboxStyle so multi-reminder stacking
+        // gets a consistent surface; single-event posts still benefit
+        // from the summary line for accessibility.
+        val notif = ReminderInboxStyle.applyToBuilder(
+            context = context,
+            builder = baseBuilder,
+            lines = listOf(ReminderInboxStyle.Line(title = title, isPrivate = priv)),
+        ).build()
 
         val nm = context.getSystemService<NotificationManager>() ?: return
         nm.notify(eventId.hashCode(), notif)

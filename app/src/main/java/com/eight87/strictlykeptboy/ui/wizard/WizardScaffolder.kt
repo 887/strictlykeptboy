@@ -257,6 +257,16 @@ object WizardScaffolder {
         }
         ModeTomlCodec.write(rootDir.toPath(), modeData)
 
+        // Phase 2.1.F.7 — seed `cal-briefings/` so the WorkManager
+        // briefing worker has a canonical system calendar to walk.
+        // Idempotent: re-running the wizard for an existing repo skips
+        // when calendar.toml already exists.
+        com.eight87.strictlykeptboy.store.CalBriefingsSeed.seed(
+            rootDir = rootDir,
+            author = scaffold.identityId,
+            tzId = tzId,
+        )
+
         // Step 5 — git init (phone-only for v1; remote paths land in a follow-up
         // once OAuth client IDs are registered).
         val repoId = scaffold.repoId

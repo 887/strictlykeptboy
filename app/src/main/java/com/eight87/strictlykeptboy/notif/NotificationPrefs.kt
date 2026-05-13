@@ -97,6 +97,56 @@ class NotificationPrefs internal constructor(private val prefs: SharedPreference
         _state.value = loadAll()
     }
 
+    // --- Phase 2.1.F.2 — per-event mute -----------------------------------
+
+    /**
+     * Per-event mute toggle. When `true`, the receiver short-circuits the
+     * notification post for the given `(repoId, eventId)` even though the
+     * channel + calendar are still enabled.
+     */
+    fun isEventMuted(repoId: String, eventId: String): Boolean =
+        prefs.getBoolean(eventKey(repoId, eventId, "muted"), false)
+
+    fun setEventMuted(repoId: String, eventId: String, muted: Boolean) {
+        val k = eventKey(repoId, eventId, "muted")
+        val editor = prefs.edit()
+        if (muted) editor.putBoolean(k, true) else editor.remove(k)
+        editor.apply()
+        _state.value = loadAll()
+    }
+
+    // --- Phase 2.1.F.4 — time-bounded group mute --------------------------
+
+    /**
+     * Persist a time-bounded mute. `untilEpochMs == null` clears the mute.
+     * Scopes are keyed by [LogicalGroup.storageKey] so callers don't have
+     * to think about how a group is serialised.
+     */
+    fun setGroupMute(scope: LogicalGroup, untilEpochMs: Long?) {
+        val k = groupMuteKey(scope)
+        val editor = prefs.edit()
+        if (untilEpochMs == null || untilEpochMs <= 0L) editor.remove(k)
+        else editor.putLong(k, untilEpochMs)
+        editor.apply()
+        _state.value = loadAll()
+    }
+
+    /** Return the absolute epoch-ms a group is muted until, or `null`. */
+    fun groupMuteUntil(scope: LogicalGroup): Long? {
+        val v = prefs.getLong(groupMuteKey(scope), -1L)
+        return if (v <= 0L) null else v
+    }
+
+    /**
+     * True iff [scope] is currently muted at [nowEpochMs]. Expired mutes
+     * are treated as not-muted (the receiver may opt to clear them lazily,
+     * but the read path doesn't mutate prefs).
+     */
+    fun isGroupMutedAt(scope: LogicalGroup, nowEpochMs: Long): Boolean {
+        val until = groupMuteUntil(scope) ?: return false
+        return until > nowEpochMs
+    }
+
     // --- Phase XX.10 / AT-J.4 — global streak-count visibility toggle --------
 
     /** Default ON per AT-J.4. */
@@ -110,6 +160,9 @@ class NotificationPrefs internal constructor(private val prefs: SharedPreference
     private fun channelKey(channelId: String, suffix: String) = "channel.$channelId.$suffix"
     private fun calKey(repoId: String, calendarId: String, suffix: String) =
         "cal.$repoId.$calendarId.$suffix"
+    private fun eventKey(repoId: String, eventId: String, suffix: String) =
+        "event.$repoId.$eventId.$suffix"
+    private fun groupMuteKey(scope: LogicalGroup): String = "mute.${scope.storageKey}"
 
     private fun loadAll(): Map<String, Any> = prefs.all.filterValues { it != null }
         .mapValues { it.value as Any }

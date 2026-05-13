@@ -28,10 +28,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import com.eight87.strictlykeptboy.notif.NotificationPrefs
+import com.eight87.strictlykeptboy.resolver.InstanceSource
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
@@ -56,12 +63,8 @@ const val TestTagEventDetailAttachment = "EventDetailAttachment"
 const val TestTagEventDetailAuthor = "EventDetailAuthor"
 const val TestTagEventDetailCompletion = "EventDetailCompletion"
 const val TestTagEventDetailEdit = "EventDetailEdit"
-// Round 2.1.C.7 — source section that groups repo + calendar + kind + author above the calendar chip.
-const val TestTagEventDetailSource = "EventDetailSource"
-const val TestTagEventDetailSourceRepo = "EventDetailSourceRepo"
-const val TestTagEventDetailSourceKind = "EventDetailSourceKind"
-const val TestTagEventDetailSourceAuthor = "EventDetailSourceAuthor"
-const val TestTagEventDetailSupersededNote = "EventDetailSupersededNote"
+/** Phase 2.1.F.2 — per-event mute toggle. */
+const val TestTagEventDetailMute = "EventDetailMute"
 
 /**
  * Phase G.7 — modal bottom sheet that surfaces an event's full content.
@@ -78,10 +81,7 @@ fun EventDetailSheet(
     onEdit: () -> Unit = {},
     attachments: List<AttachmentRef> = emptyList(),
     calendarName: String? = null,
-    /** Round 2.1.C.7 — repo display label (e.g. `RepoConfig.sourceRepoLabel`). */
-    repoName: String? = null,
-    /** Round 2.1.C.7 — superseding-calendar display name when `band.supersededByCalendar != null`. */
-    supersededByName: String? = null,
+    notificationPrefs: NotificationPrefs? = null,
     modifier: Modifier = Modifier,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -96,8 +96,7 @@ fun EventDetailSheet(
             onEdit = onEdit,
             attachments = attachments,
             calendarName = calendarName,
-            repoName = repoName,
-            supersededByName = supersededByName,
+            notificationPrefs = notificationPrefs,
         )
     }
 }
@@ -113,10 +112,7 @@ fun EventDetailContent(
     onEdit: () -> Unit = {},
     attachments: List<AttachmentRef> = emptyList(),
     calendarName: String? = null,
-    /** Round 2.1.C.7 — repo display label. */
-    repoName: String? = null,
-    /** Round 2.1.C.7 — superseding-calendar display name. */
-    supersededByName: String? = null,
+    notificationPrefs: NotificationPrefs? = null,
     modifier: Modifier = Modifier,
 ) {
     val tz = band.instance.effectiveStart.zone
@@ -256,6 +252,40 @@ fun EventDetailContent(
                     )
                 }
                 Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            // Phase 2.1.F.2 — per-event mute toggle. Surfaces in both the
+            // compact ModalBottomSheet caller and the tablet detail pane
+            // since both flow through this composable. Backed by
+            // `event.<repoId>.<eventId>.muted` in NotificationPrefs.
+            if (notificationPrefs != null) {
+                val eventId = when (val s = band.instance.source) {
+                    is InstanceSource.OneOff -> s.eventId.id
+                    is InstanceSource.RuleInstance -> s.ruleId.id
+                }
+                val repoId = band.instance.repo.id
+                var muted by remember(repoId, eventId) {
+                    mutableStateOf(notificationPrefs.isEventMuted(repoId, eventId))
+                }
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.event_detail_mute_reminders),
+                        modifier = Modifier.padding(end = 8.dp),
+                    )
+                    Spacer(modifier = Modifier.size(0.dp).weight(1f))
+                    Switch(
+                        checked = muted,
+                        onCheckedChange = {
+                            muted = it
+                            notificationPrefs.setEventMuted(repoId, eventId, it)
+                        },
+                        modifier = Modifier.testTag(TestTagEventDetailMute),
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
             }
 
             FilledTonalButton(

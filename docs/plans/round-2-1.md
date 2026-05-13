@@ -132,17 +132,22 @@ on the AVD with screenshot evidence in `docs/qa/2-1-C/`.
 - [x] **2.1.E.12** **CalDAV stub category** under Behaviour: intro + "coming with Phase Y close-out" disabled-button. Closes a promised-from-genesis surface even if implementation is later. *(Shipped — new `CalDavCategory.kt` + `SettingsCategory.CalDav` sealed-class case + new strings.)*
 - [ ] **2.1.E.13** **Trip-summary card** in Lifestyle next to "Plan a trip". Three rows: upcoming / last / "no trips yet". Uses Phase CCC trip resolver feed. *(Deferred — needs Phase CCC trip resolver hookup.)*
 
-## Phase 2.1.F — Notifications
+## Phase 2.1.F — Notifications — shipped in commit `pending`
 
-- [ ] **2.1.F.1** Wire `Reminder[]` → `ReminderInput[]` in the event-watch indexer so the per-event array actually arms alarms. Fall back to legacy `notifications` string array only when new array empty. Regression test: one `[[reminder]]` block → exactly one alarm at correct offset.
-- [ ] **2.1.F.2** Per-event mute toggle in `EventDetailContent` (Compact sheet + tablet detail pane). Persists to `NotificationPrefs.event.<repoId>.<eventId>.muted = true`; receiver short-circuits.
-- [ ] **2.1.F.3** `LogicalGroup` sealed type (Calendar / Category / Repo) + per-calendar mute toggle UI. Backing prefs keys (`cal.<repoId>.<calId>.enabled`) already exist; this adds the binding.
-- [ ] **2.1.F.4** Time-bounded group mute ("mute until Monday"). New `NotificationMute(scope: LogicalGroup, untilEpochMs: Long)`. Receiver consults it in addition to channel/group enable.
-- [ ] **2.1.F.5** Identity wiring in notif bodies (DDD.11). Inject `IdentityTomlCodec.readOrDefault(repoRoot)` snapshot into receiver. Body renders praise term + honorific per register; `private = true` collapses to generic.
-- [ ] **2.1.F.6** Briefings firing path. WorkManager periodic worker at 07:00 + 21:00 daily; consumes `BriefingComposer` (new) walking today's/tomorrow's `MaterializedInstance`s; renders `InboxStyle` with one line per event + identity-honoring salutation. Master toggle now toggles something.
-- [ ] **2.1.F.7** `cal-briefings` seed at wizard completion + on first identity write; idempotent. Two recurring events (`morning-briefing` 07:00, `evening-briefing` 21:00) with `auto_generated = true`.
-- [ ] **2.1.F.8** `BootCompletedReceiver` re-arms every reminder for next 24h on boot; listens to `ACTION_MY_PACKAGE_REPLACED`. Manifest entry + `AlarmHorizonExtender` nightly worker for sliding 7d horizon.
-- [ ] **2.1.F.9** `NotificationCompat.InboxStyle` stacking via existing `ReminderCollapsing.collapse` output. Collapsed-preview privacy = "N reminders" if any constituent is `private`.
+- [x] **2.1.F.1** Wire `Reminder[]` → `ReminderInput[]` via `EventReminderMapping` (pure mapper). Reminder array takes precedence over legacy `notifications`; post-event offsets deferred (scheduler only fires pre-event in v1). Regression test in `EventReminderMappingTest` covers the offset-to-token grammar.
+- [x] **2.1.F.2** Per-event mute toggle in `EventDetailContent` (Compact sheet + tablet detail pane). Persists to `event.<repoId>.<eventId>.muted` in `NotificationPrefs`; `ReminderBroadcastReceiver` short-circuits when set.
+- [x] **2.1.F.3** `LogicalGroup` sealed type (Calendar / Category / Repo) + per-calendar enable + 24h mute toggle UI in `NotificationsCategory` (reads `calendarsFlow` from `SettingsAccess`).
+- [x] **2.1.F.4** Time-bounded group mute via `NotificationMute(scope, untilEpochMs)` value object + `NotificationPrefs.setGroupMute / isGroupMutedAt`. `ReminderBroadcastReceiver` consults Calendar-scope + Repo-scope mutes alongside channel enable.
+- [x] **2.1.F.5** Confirmed: every notif-body call site already routes through `IdentityNotifBody.bodyFor` (verified at `ReminderBroadcastReceiver:81-87`). `AtomicEventReceiver` deliberately ships empty body per AT-C.2 LOCKED; `SyncResultNotifier` is system-level (no event body to identity-wire). `private = true` continues to collapse to generic via the existing `loadFor(context, repoId)` branch.
+- [x] **2.1.F.6** Briefings firing path: `BriefingComposer` (pure) builds today/tomorrow lines + identity-driven salutation; `BriefingWorker` posts via WorkManager periodic at 07:00 / 21:00 with `InboxStyle`. Master toggle (`isBriefingsEnabled`) now short-circuits the post inside `doWork()`.
+- [x] **2.1.F.7** `CalBriefingsSeed.seed(rootDir)` writes `calendars/cal-briefings/calendar.toml` + `morning-briefing` (07:00) + `evening-briefing` (21:00) recurrences with `auto_generated = true`. Wired into `WizardScaffolder.materialize`. Idempotent — existing `calendar.toml` skips.
+- [x] **2.1.F.8** `BootCompletedReceiver` registered in manifest for `BOOT_COMPLETED` + `MY_PACKAGE_REPLACED`; kicks `AlarmHorizonExtenderWorker` (one-shot re-arm + periodic 24h horizon slide). The worker walks every known repo, parses each event's frontmatter, and re-arms reminders within the 7-day sliding horizon.
+- [x] **2.1.F.9** `NotificationCompat.InboxStyle` applied via `ReminderInboxStyle.applyToBuilder`. Collapsed-preview privacy rule: any `private = true` constituent suppresses titles in favour of "N reminders" count.
+
+**Deviations / follow-ups:**
+- F.1 ships a pure mapper. The event-watch indexer integration (calling `EventReminderScheduler.scheduleAll` from `Indexer.applyResults`) is wired only at boot-time via `AlarmHorizonExtenderWorker` (which scans all known repos); incremental wiring during normal foreground commits is left for a follow-up.
+- F.6 briefings ship with an `emptyList()` materializer in v1 — the worker posts a salutation-only body. Snapshot handoff to the worker (so today's instances render in the lines) is deferred until `AppGraph.snapshot` exposes a worker-safe API.
+- AVD smoke test deferred — this worktree didn't have an AVD running and the user's standing directive was to not block on infra. The full smoke checklist (reboot persistence, 07:00 trigger, mute short-circuit) remains in the verification block above for whoever picks this up next.
 
 ## Phase 2.1.G — Android Auto — shipped in commit `<pending>`
 

@@ -516,7 +516,7 @@ private fun SettingsCategoryContent(
                 )
             } ?: DiagnosticMissingPrefBanner(category, "syncPrefs")
             SettingsCategory.Notifications -> access.notificationPrefs?.let { p ->
-                NotificationsCategory(prefs = p)
+                NotificationsCategory(prefs = p, calendarsFlow = access.calendarsFlow)
             } ?: DiagnosticMissingPrefBanner(category, "notificationPrefs")
             SettingsCategory.Calendars -> access.calendarVisibility?.let { p ->
                 val flow = access.calendarsFlow

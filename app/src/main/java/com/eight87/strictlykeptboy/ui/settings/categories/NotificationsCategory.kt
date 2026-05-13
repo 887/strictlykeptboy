@@ -25,10 +25,13 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
+import com.eight87.strictlykeptboy.notif.LogicalGroup
 import com.eight87.strictlykeptboy.notif.NotificationChannels
 import com.eight87.strictlykeptboy.notif.NotificationPrefs
-import com.eight87.strictlykeptboy.ui.adaptive.LocalWindowWidthSizeClass
-import com.eight87.strictlykeptboy.ui.adaptive.WindowWidthSizeClass
+import com.eight87.strictlykeptboy.resolver.CalendarMeta
+import kotlinx.coroutines.flow.StateFlow
+import androidx.compose.runtime.collectAsState
+import java.time.Duration
 
 const val TestTagCatNotifications = "Cat-Notifications"
 
@@ -44,41 +47,12 @@ const val TestTagCatNotificationsChannelsPane = "Cat-Notifications-ChannelsPane"
 const val TestTagCatNotificationsLeadsPane = "Cat-Notifications-LeadsPane"
 
 @Composable
-fun NotificationsCategory(prefs: NotificationPrefs, modifier: Modifier = Modifier) {
-    val widthClass = LocalWindowWidthSizeClass.current
-    // Phase 2.1.H.5 — only Expanded (≥840dp) splits into two columns;
-    // Medium tablets in portrait keep the single-column flow because the
-    // SettingsPane already consumes the master pane at that breakpoint
-    // (the category's *own* sub-layout would force three columns).
-    if (widthClass is WindowWidthSizeClass.Expanded) {
-        Row(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(16.dp)
-                .testTag(TestTagCatNotifications),
-        ) {
-            // Left — per-channel rows.
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState())
-                    .testTag(TestTagCatNotificationsChannelsPane),
-            ) {
-                NotificationsChannelsBlock(prefs)
-            }
-            HorizontalDividerVertical()
-            // Right — lead times + briefings master.
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState())
-                    .testTag(TestTagCatNotificationsLeadsPane),
-            ) {
-                NotificationsLeadsBlock(prefs)
-            }
-        }
-        return
-    }
+fun NotificationsCategory(
+    prefs: NotificationPrefs,
+    modifier: Modifier = Modifier,
+    calendarsFlow: StateFlow<List<CalendarMeta>>? = null,
+    nowEpochMs: () -> Long = { System.currentTimeMillis() },
+) {
     Column(
         modifier
             .fillMaxSize()
@@ -89,7 +63,84 @@ fun NotificationsCategory(prefs: NotificationPrefs, modifier: Modifier = Modifie
         NotificationsLeadsBlock(prefs)
         Spacer(Modifier.height(16.dp))
         HorizontalDivider()
-        NotificationsChannelsBlock(prefs)
+
+        // Inline the per-channel surface here to avoid nested verticalScroll.
+        Text(
+            stringResource(R.string.settings_notifications_title),
+            style = MaterialTheme.typography.titleLarge,
+        )
+        Spacer(Modifier.height(8.dp))
+        ChannelRow(prefs, NotificationChannels.EVENTS, R.string.notif_channel_events_name)
+        ChannelRow(prefs, NotificationChannels.TASKS, R.string.notif_channel_tasks_name)
+        ChannelRow(prefs, NotificationChannels.BRIEFINGS, R.string.notif_channel_briefings_name)
+        ChannelRow(prefs, NotificationChannels.SYNC, R.string.notif_channel_sync_name)
+        ChannelRow(prefs, NotificationChannels.ERRORS, R.string.notif_channel_errors_name)
+        ChannelRow(prefs, NotificationChannels.FOREGROUND, R.string.notif_channel_foreground_name)
+
+        // Phase 2.1.F.3 — per-calendar mute toggle. Backing
+        // `cal.<repoId>.<calId>.enabled` keys are now bound to UI.
+        // Time-bounded mute (F.4) uses a coarse 24h-from-now stamp.
+        if (calendarsFlow != null) {
+            Spacer(Modifier.height(16.dp))
+            HorizontalDivider()
+            SectionLabel(stringResource(R.string.settings_notif_calendars_section))
+            val cals by calendarsFlow.collectAsState()
+            cals.forEach { meta ->
+                CalendarMuteRow(prefs, meta, nowEpochMs)
+            }
+        }
+    }
+}
+
+@Composable
+private fun CalendarMuteRow(
+    prefs: NotificationPrefs,
+    meta: CalendarMeta,
+    nowEpochMs: () -> Long,
+) {
+    val repoId = meta.repo.id
+    val calId = meta.ref.id
+    var enabled by remember(repoId, calId) { mutableStateOf(prefs.isCalendarEnabled(repoId, calId)) }
+    val now = nowEpochMs()
+    var until by remember(repoId, calId) {
+        mutableStateOf(prefs.groupMuteUntil(LogicalGroup.Calendar(repoId, calId)))
+    }
+    Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        Row(
+            Modifier.fillMaxWidth().padding(vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(meta.displayName, modifier = Modifier.weight(1f))
+            Switch(checked = enabled, onCheckedChange = {
+                enabled = it
+                prefs.setCalendarEnabled(repoId, calId, it)
+            }, modifier = Modifier.testTag("$TestTagCatNotifications-Cal-$repoId-$calId-Enabled"))
+        }
+        val muteActive = (until ?: 0L) > now
+        Row(
+            Modifier.fillMaxWidth().padding(vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                if (muteActive) {
+                    val left = Duration.ofMillis((until!! - now).coerceAtLeast(0L))
+                    stringResource(
+                        R.string.settings_notif_mute_until_active,
+                        left.toHours().coerceAtLeast(0L),
+                    )
+                } else {
+                    stringResource(R.string.settings_notif_mute_until_inactive)
+                },
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Switch(checked = muteActive, onCheckedChange = {
+                val newUntil = if (it) now + 24L * 60L * 60L * 1000L else null
+                prefs.setGroupMute(LogicalGroup.Calendar(repoId, calId), newUntil)
+                until = newUntil
+            }, modifier = Modifier.testTag("$TestTagCatNotifications-Cal-$repoId-$calId-Mute24h"))
+        }
+        HorizontalDivider(Modifier.padding(top = 4.dp))
     }
 }
 
