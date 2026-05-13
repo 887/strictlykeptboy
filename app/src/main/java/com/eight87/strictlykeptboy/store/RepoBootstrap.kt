@@ -191,6 +191,10 @@ object RepoBootstrap {
         """.trimIndent() + "\n"
         Files.write(root.resolve(".gitignore"), gitignore.toByteArray(StandardCharsets.UTF_8))
 
+        // Phase DDD.1 / DM-Y.1 — default `mode.toml` at repo creation
+        // (`free`; transitions later flip it). Mode IS committed.
+        ModeTomlCodec.write(root, ModeTomlData.Default)
+
         ScaffoldResult(
             agentsMdPath = agentsPath,
             claudeMdPath = claudePath,
