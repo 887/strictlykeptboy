@@ -58,6 +58,18 @@ class ActiveSetEvaluator {
         }.toSet()
     }
 
+    /**
+     * Round 2.1.C.4 — like [activeCalendarsAt] but does NOT drop superseded
+     * calendars. The renderer uses this so it can render superseded bands
+     * with a paused/strikethrough treatment instead of hiding them.
+     * Override-driven re-inclusion is moot here (everything is already in).
+     */
+    fun activeCalendarsAtIncludingSuperseded(
+        at: ZonedDateTime,
+        snapshot: RepoSnapshot,
+    ): Set<CalendarRef> =
+        snapshot.calendars.filter { isActive(it, at) }.map { it.ref }.toSet()
+
     /** As [activeCalendarsAt], but for todolists. Todolists do not supersede. */
     fun activeTodolistsAt(at: ZonedDateTime, snapshot: RepoSnapshot): Set<TodolistRef> =
         snapshot.todolists.filter { isActive(it, at) }.map { it.ref }.toSet()

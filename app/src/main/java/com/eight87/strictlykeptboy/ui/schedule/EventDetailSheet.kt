@@ -56,6 +56,12 @@ const val TestTagEventDetailAttachment = "EventDetailAttachment"
 const val TestTagEventDetailAuthor = "EventDetailAuthor"
 const val TestTagEventDetailCompletion = "EventDetailCompletion"
 const val TestTagEventDetailEdit = "EventDetailEdit"
+// Round 2.1.C.7 — source section that groups repo + calendar + kind + author above the calendar chip.
+const val TestTagEventDetailSource = "EventDetailSource"
+const val TestTagEventDetailSourceRepo = "EventDetailSourceRepo"
+const val TestTagEventDetailSourceKind = "EventDetailSourceKind"
+const val TestTagEventDetailSourceAuthor = "EventDetailSourceAuthor"
+const val TestTagEventDetailSupersededNote = "EventDetailSupersededNote"
 
 /**
  * Phase G.7 — modal bottom sheet that surfaces an event's full content.
@@ -72,6 +78,10 @@ fun EventDetailSheet(
     onEdit: () -> Unit = {},
     attachments: List<AttachmentRef> = emptyList(),
     calendarName: String? = null,
+    /** Round 2.1.C.7 — repo display label (e.g. `RepoConfig.sourceRepoLabel`). */
+    repoName: String? = null,
+    /** Round 2.1.C.7 — superseding-calendar display name when `band.supersededByCalendar != null`. */
+    supersededByName: String? = null,
     modifier: Modifier = Modifier,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -86,6 +96,8 @@ fun EventDetailSheet(
             onEdit = onEdit,
             attachments = attachments,
             calendarName = calendarName,
+            repoName = repoName,
+            supersededByName = supersededByName,
         )
     }
 }
@@ -101,6 +113,10 @@ fun EventDetailContent(
     onEdit: () -> Unit = {},
     attachments: List<AttachmentRef> = emptyList(),
     calendarName: String? = null,
+    /** Round 2.1.C.7 — repo display label. */
+    repoName: String? = null,
+    /** Round 2.1.C.7 — superseding-calendar display name. */
+    supersededByName: String? = null,
     modifier: Modifier = Modifier,
 ) {
     val tz = band.instance.effectiveStart.zone
@@ -129,18 +145,57 @@ fun EventDetailContent(
                 modifier = Modifier.testTag(TestTagEventDetailTime),
             )
             Spacer(modifier = Modifier.height(8.dp))
-            // Calendar source
-            calendarName?.let {
-                AssistChip(
-                    onClick = {},
-                    label = { Text(it) },
-                    modifier = Modifier.testTag(TestTagEventDetailCalendar),
+            // Round 2.1.C.7 — source section: repo · calendar · kind · author
+            // appears above the calendar chip so the user can tell at a glance
+            // which repo the event lives in, especially with cross-repo views.
+            Column(modifier = Modifier.testTag(TestTagEventDetailSource)) {
+                if (!repoName.isNullOrBlank()) {
+                    Text(
+                        text = "Repo: $repoName",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testTag(TestTagEventDetailSourceRepo),
+                    )
+                }
+                Text(
+                    text = "Kind: " + when (band.kind) {
+                        com.eight87.strictlykeptboy.resolver.CalendarKind.Timebox -> "Timebox"
+                        com.eight87.strictlykeptboy.resolver.CalendarKind.Regular -> "Regular"
+                    },
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testTag(TestTagEventDetailSourceKind),
                 )
-            } ?: AssistChip(
+                band.instance.author?.let { author ->
+                    Text(
+                        text = "Author: ${author.id}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testTag(TestTagEventDetailSourceAuthor),
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            // Calendar source chip — Round 2.1.C.7 falls back to the calendar
+            // ref id only when the caller did not resolve a CalendarMeta.displayName.
+            val chipLabel = calendarName?.takeIf { it.isNotBlank() } ?: band.instance.calendar.id
+            AssistChip(
                 onClick = {},
-                label = { Text(band.instance.calendar.id) },
+                label = { Text(chipLabel) },
                 modifier = Modifier.testTag(TestTagEventDetailCalendar),
             )
+            // Round 2.1.C.4 — pause-by-supersedence explanation.
+            if (band.supersededByCalendar != null) {
+                Spacer(modifier = Modifier.height(6.dp))
+                val byLabel = supersededByName?.takeIf { it.isNotBlank() }
+                    ?: band.supersededByCalendar.id
+                Text(
+                    text = "Paused by $byLabel",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testTag(TestTagEventDetailSupersededNote),
+                )
+            }
             CompletionBadge(state = band.completionState)
 
             Spacer(modifier = Modifier.height(12.dp))

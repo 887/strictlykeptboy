@@ -83,17 +83,24 @@ Wires the indexer to `AppGraph.snapshot` + `AppGraph.sources`. Without this, eve
 - [x] **2.1.B.10** `RepoConfig.defaultCalendarId` replaced with last-used-calendar-per-repo transient prefs + picker in `EventCreateSheet`.
 - [x] **2.1.B.11** Settings → Lists is the calendars master list across all repos; row-tap opens `CalendarSettingsSheet`. **Also satisfies 2.1.E.1.**
 
-## Phase 2.1.C — Schedule rendering
+## Phase 2.1.C — Schedule rendering — partial; resolver-layer (.1, .3, .4) + detail-sheet source section (.7) landed
 
-- [ ] **2.1.C.1** Per-calendar color seed. Pipe `CalendarMeta.colorSeed` (fallback `displayName.hashCode()`) through to `DayBand`. Apply as 4-dp left stripe in Day view, full-fill (reduced chroma) in Week, chip background-tint in Month, dot in Year heat-map legend.
-- [ ] **2.1.C.2** Author chip on the band itself. 16-dp avatar bubble (initials or sticker ref from `identity.toml`) in top-right corner of every Day/Week/Agenda band when `band.instance.author != null` AND author differs from active repo's owner. Skip on Month.
-- [ ] **2.1.C.3** Kind glyph. `CalendarKind.Timebox` → hourglass; `CalendarKind.Regular` → calendar dot. Pipe `kind` through `DayBand`.
-- [ ] **2.1.C.4** Stop dropping superseded bands. Change `Renderer.filterForViewMode` (`Renderer.kt:143-150`) to keep them; render with `alpha = 0.35f` + strikethrough + leaf glyph. Tap → detail sheet explains "paused by `<superseding-calendar>` from `<date>`".
-- [ ] **2.1.C.5** Off-schedule treatment. `band.offSchedule == true` → dashed border + small warning glyph.
-- [ ] **2.1.C.6** Repo-grouped collapse. On Month/Year, overflow-menu toggle re-colors chips by repo + count badge per repo in source rail. Helps "how much am I writing into the sub's repo vs my own".
-- [ ] **2.1.C.7** Detail sheet adds a "source" section above the calendar chip: repo name + icon, calendar name, kind, author. Replace bare `band.instance.calendar.id` fallback at `EventDetailSheet.kt:141` with `CalendarMeta.displayName`.
-- [ ] **2.1.C.8** Empty-state copy correction. Three states: (a) no repos configured, (b) repos configured but every calendar inactive, (c) all calendars active but no events in range. Distinct CTA each.
-- [ ] **2.1.C.9** Timebox view stops treating every event as a timebox. Filter to `CalendarKind.Timebox`; regular events go to a secondary "scheduled events on top of your time blocks" section below.
+Resolver-layer plumbing is in (`DayBand.accentColorSeed`, `DayBand.kind`,
+keep-and-tag for superseded bands, new `RendererSupersedenceTest`). The
+UI-painting work for each band (stripe, fill, chip tint, dot, hourglass
+glyph, dashed border, repo-grouped collapse, etc.) is queued as
+follow-ups — sub-steps below stay unticked until their UI half ships
+on the AVD with screenshot evidence in `docs/qa/2-1-C/`.
+
+- [x] **2.1.C.1** *(resolver half)* `DayBand.accentColorSeed` piped from `CalendarMeta.colorSeed` with `displayName.hashCode()` fallback in `OverlayResolver.assignLanes`. UI painting (stripe / fill / chip tint / Year dot) is a UI-only follow-up.
+- [ ] **2.1.C.2** Author chip on the band itself. 16-dp avatar bubble (initials or sticker ref from `identity.toml`) in top-right corner of every Day/Week/Agenda band when `band.instance.author != null` AND author differs from active repo's owner. Skip on Month. — *not started; `band.instance.author` already available, awaits UI overlay.*
+- [x] **2.1.C.3** *(resolver half)* `DayBand.kind` piped from `CalendarMeta.kind` in `OverlayResolver.assignLanes`. UI glyph rendering (hourglass / calendar dot) is a UI-only follow-up.
+- [x] **2.1.C.4** Stop dropping superseded bands. `Renderer.filterForViewMode` rewritten to keep all bands; `ActiveSetEvaluator.activeCalendarsAtIncludingSuperseded` added and Renderer switched to it; `OverlayResolver` continues to tag `supersededByCalendar` and the per-event `force-show` override path is unchanged. Existing `supersededBands_filteredFromRender` test renamed + reversed to `supersededBands_keptWithTag_perRound2_1_C_4`; new `RendererSupersedenceTest` covers the keep-and-tag contract. UI alpha-0.35 + strikethrough + leaf glyph is a UI-only follow-up; the tap → "paused by …" copy is partially in via the new `EventDetailSheet` supersedence note (test tag `EventDetailSupersededNote`).
+- [ ] **2.1.C.5** Off-schedule treatment. `band.offSchedule == true` → dashed border + small warning glyph. — *not started; `band.offSchedule` already tagged, awaits UI border.*
+- [ ] **2.1.C.6** Repo-grouped collapse. On Month/Year, overflow-menu toggle re-colors chips by repo + count badge per repo in source rail. Helps "how much am I writing into the sub's repo vs my own". — *not started.*
+- [x] **2.1.C.7** *(partial — detail sheet source section)* `EventDetailContent` now renders a Repo / Kind / Author source section above the calendar chip (test tags `EventDetailSource`, `EventDetailSourceRepo`, `EventDetailSourceKind`, `EventDetailSourceAuthor`); fallback for the calendar chip uses `calendarName` when provided, falling back to `band.instance.calendar.id` only when the caller did not resolve a `CalendarMeta.displayName`. Callers in `SchedulePane` still need to pass `repoName` + a resolved `calendarName` lookup — currently `null` so the source row degrades to "Kind: Regular" only. New `EventDetailSheet` params: `repoName`, `supersededByName`.
+- [ ] **2.1.C.8** Empty-state copy correction. Three states: (a) no repos configured, (b) repos configured but every calendar inactive, (c) all calendars active but no events in range. Distinct CTA each. — *not started; current `EmptyScheduleState` is single-state.*
+- [ ] **2.1.C.9** Timebox view stops treating every event as a timebox. Filter to `CalendarKind.Timebox`; regular events go to a secondary "scheduled events on top of your time blocks" section below. — *not started; `band.kind` is now available so the timebox-view filter has the predicate it needs.*
 
 ## Phase 2.1.D — Tasks — shipped in commit `ece85c0`
 

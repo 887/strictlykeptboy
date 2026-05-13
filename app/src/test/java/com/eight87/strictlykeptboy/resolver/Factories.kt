@@ -23,6 +23,8 @@ internal object Factories {
         hours: List<HourRange> = emptyList(),
         supersedes: List<String> = emptyList(),
         baselineCadenceDays: Int? = null,
+        kind: CalendarKind = CalendarKind.Regular,
+        colorSeed: Int? = null,
     ) = CalendarMeta(
         ref = CalendarRef(id),
         repo = RepoRef(repo),
@@ -34,6 +36,8 @@ internal object Factories {
         tzId = tz,
         supersedes = supersedes.map { CalendarRef(it) },
         baselineCadenceDays = baselineCadenceDays,
+        kind = kind,
+        colorSeed = colorSeed,
     )
 
     fun snapshot(vararg cals: CalendarMeta, repos: List<RepoSnapshot.RepoEntry> = listOf(
