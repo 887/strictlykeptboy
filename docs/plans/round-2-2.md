@@ -73,13 +73,13 @@ Round 2.1 fixed the wiring (data layer correct, UI bindings live), but two thing
 - [x] **2.2.C.8** Empty-state copy correction. Three states: (a) no repos configured, (b) repos configured but every calendar inactive, (c) all calendars active but no events. Distinct CTA each. (Pure selector `selectEmptyKind` + composable accepts `kind` + per-state CTAs; host wiring of repo/cal counts deferred.)
 - [x] **2.2.C.9** Timebox view filter. `ScheduleTimeboxView` filters to `CalendarKind.Timebox` only; regular events go to a secondary "scheduled events on top of your time blocks" section below.
 
-## Phase 2.2.D — Settings completion (deferred from 2.1.E)
+## Phase 2.2.D — Settings completion (deferred from 2.1.E) — shipped in commit `<2.2.D-commit>`
 
-- [ ] **2.2.D.2** **Repos as in-pane list.** Kill the trampoline. `ReposCategory` renders repo cards inline (small variant of `RepoSwitcherDropdown`). Row-tap pushes `RepoSettingsScreen` into the Settings detail pane on tablet, or full-screen push on phone. `ImportExportScreen` becomes a sub-section card "Import / export". (Was 2.1.E.2.)
-- [ ] **2.2.D.6** **`Access` category.** New `AccessCategory.kt` between Behaviour and Lifestyle. Global "who has access to what" table — rows = `(repo, recipient, mode r/o or r/w, single-use, expires-at)`. Aggregates `ShareLink` state across all configured repos. Tap row → existing `ShareSheet`. (Was 2.1.E.6.)
-- [ ] **2.2.D.7** **`Auto & Tablet` category.** New `AutoTabletCategory.kt` + new `AutoTabletPrefs.kt`. Toggles: "Show on Android Auto when this repo is active", "Maximum events on Auto Today list" (default 8, range 1-20), "Use master-detail on tablet" (Auto/On/Off), "Open detail by default on tablet". (Was 2.1.E.7.)
-- [ ] **2.2.D.8** **Defaults-for-new-events sub-card** inside Notifications. Replace raw `15m;1h;1d` text input with a ChipGroup (5m / 15m / 30m / 1h / 1d / 1w) + custom-offset dialog. Add "Default notification channel for new events" picker. (Was 2.1.E.8.)
-- [ ] **2.2.D.13** **Trip-summary card** in Lifestyle next to "Plan a trip". Three rows: upcoming / last / "no trips yet". Wires to the Phase CCC trip resolver feed. (Was 2.1.E.13.)
+- [x] **2.2.D.2** **Repos as in-pane list.** Kill the trampoline. `ReposCategory` renders repo cards inline (small variant of `RepoSwitcherDropdown`). Row-tap pushes `RepoSettingsScreen` into the Settings detail pane on tablet, or full-screen push on phone. `ImportExportScreen` becomes a sub-section card "Import / export". (Was 2.1.E.2.)
+- [x] **2.2.D.6** **`Access` category.** New `AccessCategory.kt` between Behaviour and Lifestyle. Global "who has access to what" table — rows = `(repo, recipient, mode r/o or r/w, single-use, expires-at)`. Aggregates `ShareLink` state across all configured repos via pluggable `ShareLinkSource` (empty-default until Phase RR.6 persistence ships). Tap row → existing `ShareSheet`. (Was 2.1.E.6.)
+- [x] **2.2.D.7** **`Auto & Tablet` category.** New `AutoTabletCategory.kt` + new `AutoTabletPrefs.kt`. Toggles: per-repo "Show on Android Auto", "Maximum events on Auto Today list" slider (default 8, range 1-20), master-detail mode chip group (Auto/On/Off), "Open detail by default on tablet". (Was 2.1.E.7.)
+- [x] **2.2.D.8** **Defaults-for-new-events sub-card** inside Notifications. New `NotificationPrefs.defaultLeadTimes()` + `defaultChannel()` API; replaced raw `15m;1h;1d` paradigm with a FilterChip group (5m / 15m / 30m / 1h / 1d / 1w) + "+ custom" duration dialog. Added a "Default notification channel for new events" DropdownMenu. (Was 2.1.E.8.)
+- [x] **2.2.D.13** **Trip-summary card** in Lifestyle above "Plan a trip". Three rows: upcoming / last / "no trips yet" placeholder. Wired to a new `TripFeed` interface (empty `InMemoryTripFeed` default until Phase CCC resolver feed ships). (Was 2.1.E.13.)
 
 ## Phase 2.2.E — Notification polish (deferred from 2.1.F + 2.1.M.5)
 

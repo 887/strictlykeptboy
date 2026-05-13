@@ -437,6 +437,16 @@ class MainActivity : ComponentActivity() {
                                     startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                                 }
                             },
+                            // Round 2.2.D — Settings completion.
+                            reposFlow = graph.repoStore.state,
+                            onOpenRepo = { cfg ->
+                                // Surface per-repo settings via the existing Repos top-destination.
+                                graph.defaultWriteRepoName.value = cfg.displayName
+                            },
+                            accessAggregator = graph.accessAggregator,
+                            onOpenShareFor = { /* hook for ShareSheet wiring */ },
+                            autoTabletPrefs = graph.autoTabletPrefs,
+                            tripFeed = graph.tripFeed,
                         ),
                         onWizardScaffold = { draft ->
                             runCatching {

@@ -160,6 +160,21 @@ class AppGraph(private val appContext: Context) {
     /** Phase S.3 — global sync settings. */
     val syncSettingsPrefs: SyncSettingsPrefs by lazy { SyncSettingsPrefs.open(appContext) }
 
+    /** Round 2.2.D.7 — Android Auto + tablet master-detail prefs. */
+    val autoTabletPrefs: com.eight87.strictlykeptboy.ui.settings.AutoTabletPrefs by lazy {
+        com.eight87.strictlykeptboy.ui.settings.AutoTabletPrefs.open(appContext)
+    }
+
+    /** Round 2.2.D.6 — Access aggregator (read-only across configured repos). */
+    val accessAggregator: com.eight87.strictlykeptboy.store.AccessAggregator by lazy {
+        com.eight87.strictlykeptboy.store.AccessAggregator(repoStore)
+    }
+
+    /** Round 2.2.D.13 — Trip-summary feed; empty default until Phase CCC wires the real resolver. */
+    val tripFeed: com.eight87.strictlykeptboy.ui.trip.TripFeed by lazy {
+        com.eight87.strictlykeptboy.ui.trip.InMemoryTripFeed()
+    }
+
     /** Phase S.4 — notification prefs (per-channel + briefings master + per-category lead times). */
     val notificationPrefs: NotificationPrefs by lazy { NotificationPrefs.open(appContext) }
 

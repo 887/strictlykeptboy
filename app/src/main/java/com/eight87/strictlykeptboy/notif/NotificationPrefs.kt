@@ -147,6 +147,35 @@ class NotificationPrefs internal constructor(private val prefs: SharedPreference
         return until > nowEpochMs
     }
 
+    // --- Round 2.2.D.8 — defaults for new events ---------------------------
+
+    /**
+     * Default reminder offsets applied to events that don't specify their
+     * own. Stored as a semicolon-joined list (e.g. `15m;1h;1d`).
+     */
+    fun defaultLeadTimes(): List<String> {
+        val raw = prefs.getString(KEY_DEFAULT_LEADS, null) ?: return DEFAULT_LEAD_TIMES
+        if (raw.isBlank()) return emptyList()
+        return raw.split(';').filter { it.isNotBlank() }
+    }
+
+    fun setDefaultLeadTimes(values: List<String>) {
+        prefs.edit().putString(KEY_DEFAULT_LEADS, values.joinToString(";")).apply()
+        _state.value = loadAll()
+    }
+
+    /**
+     * Default notification channel id (one of [NotificationChannels.EVENTS],
+     * [NotificationChannels.TASKS], etc). Defaults to EVENTS.
+     */
+    fun defaultChannel(): String =
+        prefs.getString(KEY_DEFAULT_CHANNEL, null) ?: NotificationChannels.EVENTS
+
+    fun setDefaultChannel(channelId: String) {
+        prefs.edit().putString(KEY_DEFAULT_CHANNEL, channelId).apply()
+        _state.value = loadAll()
+    }
+
     // --- Phase XX.10 / AT-J.4 — global streak-count visibility toggle --------
 
     /** Default ON per AT-J.4. */
@@ -171,6 +200,10 @@ class NotificationPrefs internal constructor(private val prefs: SharedPreference
         private const val PREFS_FILE = "notification_prefs_v1"
         private const val KEY_BRIEFINGS_MASTER = "briefings.master.enabled"
         private const val KEY_STREAK_COUNTS = "streak.counts.enabled"
+        // 2.2.D.8 — defaults for new events.
+        private const val KEY_DEFAULT_LEADS = "defaults.new_event.leads"
+        private const val KEY_DEFAULT_CHANNEL = "defaults.new_event.channel"
+        val DEFAULT_LEAD_TIMES: List<String> = listOf("15m", "1h", "1d")
 
         fun open(context: Context): NotificationPrefs {
             val prefs = context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE)

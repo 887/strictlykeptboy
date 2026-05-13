@@ -950,4 +950,54 @@
     <string name="settings_subtitle_caldav">Two-way calendar sync (Phase Y).</string>
     <string name="settings_caldav_intro">Two-way CalDAV mirror is on the roadmap. Phase Y closes this out — until then, this surface is a placeholder.</string>
     <string name="settings_caldav_coming">Coming with Phase Y close-out</string>
+
+    <!-- 2.2.D.2 — Repos as in-pane list. -->
+    <string name="settings_repos_inline_header">Your accounts</string>
+    <string name="settings_repos_inline_empty">No accounts yet. Run the lifestyle wizard from the bat avatar to add one.</string>
+    <string name="settings_repos_import_export_header">Import / export</string>
+    <string name="settings_repos_row_open_a11y">Open account settings</string>
+
+    <!-- 2.2.D.6 — Access category. -->
+    <string name="settings_category_access">Access</string>
+    <string name="settings_subtitle_access">Who has access to which of your accounts.</string>
+    <string name="settings_access_empty">No one has access to your repos yet. Tap a repo → Share to invite.</string>
+    <string name="settings_access_mode_ro">read-only</string>
+    <string name="settings_access_mode_rw">read-write</string>
+    <string name="settings_access_single_use">single-use</string>
+    <string name="settings_access_expires_at">expires %1$s</string>
+    <string name="settings_access_expires_never">no expiry</string>
+
+    <!-- 2.2.D.7 — Auto & Tablet category. -->
+    <string name="settings_category_autotablet">Auto &amp; Tablet</string>
+    <string name="settings_subtitle_autotablet">Android Auto and tablet master-detail behaviour.</string>
+    <string name="settings_autotablet_show_on_auto">Show this repo on Android Auto</string>
+    <string name="settings_autotablet_max_events">Maximum events on Auto Today list: %1$d</string>
+    <string name="settings_autotablet_master_detail">Use master-detail on tablet</string>
+    <string name="settings_autotablet_master_detail_auto">Auto</string>
+    <string name="settings_autotablet_master_detail_on">On</string>
+    <string name="settings_autotablet_master_detail_off">Off</string>
+    <string name="settings_autotablet_open_detail_default">Open detail by default on tablet</string>
+    <string name="settings_autotablet_no_repos">No repos configured yet. Per-repo Auto toggles appear here once you add one.</string>
+
+    <!-- 2.2.D.8 — Defaults-for-new-events. -->
+    <string name="settings_notif_defaults_section">Defaults for new events</string>
+    <string name="settings_notif_defaults_blurb">Reminder offsets and notification channel applied to events you create that don\'t specify their own.</string>
+    <string name="settings_notif_defaults_lead_chips">Default reminder offsets</string>
+    <string name="settings_notif_defaults_channel">Default notification channel</string>
+    <string name="settings_notif_defaults_chip_custom">+ custom</string>
+    <string name="settings_notif_defaults_custom_dialog_title">Custom reminder offset</string>
+    <string name="settings_notif_defaults_custom_amount">Amount</string>
+    <string name="settings_notif_defaults_custom_unit_minutes">minutes</string>
+    <string name="settings_notif_defaults_custom_unit_hours">hours</string>
+    <string name="settings_notif_defaults_custom_unit_days">days</string>
+    <string name="settings_notif_defaults_custom_unit_weeks">weeks</string>
+    <string name="settings_notif_defaults_custom_add">Add</string>
+    <string name="settings_notif_defaults_custom_cancel">Cancel</string>
+
+    <!-- 2.2.D.13 — Trip-summary card. -->
+    <string name="settings_lifestyle_trip_upcoming">Upcoming trip</string>
+    <string name="settings_lifestyle_trip_last">Last trip</string>
+    <string name="settings_lifestyle_trip_none">No trips yet — plan one below.</string>
+    <string name="settings_lifestyle_trip_in_days">in %1$d day(s)</string>
+    <string name="settings_lifestyle_trip_in_today">today</string>
 </resources>

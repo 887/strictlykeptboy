@@ -116,12 +116,17 @@ sealed class SettingsCategory(
     object Mode : SettingsCategory(R.string.settings_category_mode, "Mode")
     /** 2.1.E.12 — CalDAV stub category, sits under Behaviour. */
     object CalDav : SettingsCategory(R.string.settings_category_caldav, "CalDav")
+    /** 2.2.D.6 — Access aggregator (sits between Behaviour and Lifestyle). */
+    object Access : SettingsCategory(R.string.settings_category_access, "Access")
+    /** 2.2.D.7 — Android Auto + tablet master-detail preferences. */
+    object AutoTablet : SettingsCategory(R.string.settings_category_autotablet, "AutoTablet")
 
     companion object {
         val all: List<SettingsCategory> by lazy {
             listOf(
                 Repos, Sync, Notifications, Calendars, Todolists,
                 Templates, Lifestyle, Identity, Appearance, About, Mode, CalDav,
+                Access, AutoTablet,
             )
         }
 
@@ -169,6 +174,17 @@ data class SettingsAccess(
     val onOpenRepoLink: () -> Unit = {},
     val onOpenReposList: () -> Unit = {},
     val onOpenPrivacyPolicy: () -> Unit = {},
+    // 2.2.D.2 — Repos as in-pane list.
+    val reposFlow: kotlinx.coroutines.flow.StateFlow<List<com.eight87.strictlykeptboy.git.RepoConfig>>? = null,
+    val onOpenRepo: (com.eight87.strictlykeptboy.git.RepoConfig) -> Unit = {},
+    // 2.2.D.6 — Access aggregator.
+    val accessAggregator: com.eight87.strictlykeptboy.store.AccessAggregator? = null,
+    val onOpenShareFor: (String) -> Unit = {},
+    // 2.2.D.7 — Auto & Tablet prefs.
+    val autoTabletPrefs: AutoTabletPrefs? = null,
+    // 2.2.D.13 — Trip-summary feed for the Lifestyle card.
+    val tripFeed: com.eight87.strictlykeptboy.ui.trip.TripFeed? = null,
+    val onOpenTrip: (com.eight87.strictlykeptboy.ui.trip.TripSummary) -> Unit = {},
 )
 
 @Composable
@@ -284,6 +300,8 @@ private fun subtitleResFor(cat: SettingsCategory): Int = when (cat) {
     SettingsCategory.Identity -> R.string.settings_subtitle_identity
     SettingsCategory.About -> R.string.settings_subtitle_about
     SettingsCategory.CalDav -> R.string.settings_subtitle_caldav
+    SettingsCategory.Access -> R.string.settings_subtitle_access
+    SettingsCategory.AutoTablet -> R.string.settings_subtitle_autotablet
 }
 
 @Composable
@@ -314,6 +332,10 @@ private fun metaFor(cat: SettingsCategory): CategoryMeta {
             CategoryMeta(Icons.Filled.Person, R.string.settings_subtitle_identity, cs.secondary)
         SettingsCategory.About ->
             CategoryMeta(Icons.Filled.Info, R.string.settings_subtitle_about, cs.tertiary)
+        SettingsCategory.Access ->
+            CategoryMeta(Icons.Filled.FolderShared, R.string.settings_subtitle_access, cs.secondary)
+        SettingsCategory.AutoTablet ->
+            CategoryMeta(Icons.Filled.Tune, R.string.settings_subtitle_autotablet, cs.tertiary)
     }
 }
 
@@ -335,6 +357,7 @@ private val sections: List<SettingsSection> = listOf(
         ),
     ),
     // 2.1.E.12 — CalDAV stub category lives under Behaviour.
+    // 2.2.D.7 — Auto & Tablet sits at the end of Behaviour.
     SettingsSection(
         R.string.settings_section_behaviour,
         listOf(
@@ -342,6 +365,8 @@ private val sections: List<SettingsSection> = listOf(
             SettingsCategory.Notifications,
             SettingsCategory.Mode,
             SettingsCategory.CalDav,
+            SettingsCategory.Access,
+            SettingsCategory.AutoTablet,
         ),
     ),
     SettingsSection(
@@ -503,10 +528,13 @@ private fun SettingsCategoryContent(
 ) {
     Box(modifier = Modifier.fillMaxSize().testTag(TestTagSettingsContent)) {
         when (category) {
+            // 2.2.D.2 — in-pane list of repo rows + Import/Export sub-card.
             SettingsCategory.Repos -> ReposCategory(
+                reposFlow = access.reposFlow,
                 importExportState = importExportState,
                 onPickImportFile = onPickImportFile,
                 onPickExportFile = onPickExportFile,
+                onOpenRepo = access.onOpenRepo,
                 onOpenReposList = access.onOpenReposList,
             )
             SettingsCategory.Sync -> access.syncPrefs?.let { p ->
@@ -543,7 +571,9 @@ private fun SettingsCategoryContent(
             SettingsCategory.Lifestyle -> LifestyleCategory(
                 onOpenWizardAtRoles = access.onOpenWizardAtRoles,
                 onPlanTrip = access.onPlanTrip,
+                onOpenTrip = access.onOpenTrip,
                 neutralPrefs = access.neutralPrefs,
+                tripFeed = access.tripFeed,
             )
             // 2.1.E.5 — IdentityCategory renders sub-sections ("My persona" + "Signing & authors").
             SettingsCategory.Identity -> access.identityPrefs?.let { p ->
@@ -580,6 +610,18 @@ private fun SettingsCategoryContent(
             } ?: DiagnosticMissingPrefBanner(category, "modePrefs")
             // 2.1.E.12 — CalDAV stub category.
             SettingsCategory.CalDav -> CalDavCategory()
+            // 2.2.D.6 — Access aggregator (read-only).
+            SettingsCategory.Access -> com.eight87.strictlykeptboy.ui.settings.categories.AccessCategory(
+                rows = access.accessAggregator?.aggregate().orEmpty(),
+                onOpenShareFor = access.onOpenShareFor,
+            )
+            // 2.2.D.7 — Auto & Tablet preferences.
+            SettingsCategory.AutoTablet -> access.autoTabletPrefs?.let { p ->
+                com.eight87.strictlykeptboy.ui.settings.categories.AutoTabletCategory(
+                    prefs = p,
+                    reposFlow = access.reposFlow,
+                )
+            } ?: DiagnosticMissingPrefBanner(category, "autoTabletPrefs")
         }
     }
 }
