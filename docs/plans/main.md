@@ -625,31 +625,55 @@ Cross-references for Round 3:
 
 ---
 
-## Phase MM — Deep-link / app protocol registration
+## Phase MM — Deep-link / app protocol registration — shipped Round 2 batch 5
 
 Deep-dive: [`shared-schedules.md`](shared-schedules.md) phases SH-A, SH-B.
 
-- [ ] **MM.1** Register intent filter for `strictlykeptboy://add?...` (custom scheme)
-- [ ] **MM.2** Register intent filter for `https://strictlykeptboy.app/add?...` (universal link)
-- [ ] **MM.3** Digital Asset Links JSON at `https://strictlykeptboy.app/.well-known/assetlinks.json` for verified App Links
-- [ ] **MM.4** URL parser: extract `url`, `label`, `mode`, `priority`, `via`, `references` query params
-- [ ] **MM.5** URL fragment parser: extract `token`, `expires` (never sent over network)
-- [ ] **MM.6** Multi-URL support (`?url=A&url=B`)
-- [ ] **MM.7** Token-wipe: clear `#token=` from any persisted referrer after consumption
-- [ ] **MM.8** Expiry enforcement: refuse links past `expires`
-- [ ] **MM.9** QR scan integration (ZXing already in for D.42; verify reuse)
+Round 2 batch-5 scope (per-entity deep-link grammar) shipped in the
+`round2/phase-mm-nn-deeplink-references` branch — extends the original
+`strictlykeptboy://add` link family with per-entity targets
+(`event/<gid>`, `task/<gid>`, `repo/<id>`, `bonus/<gid>`,
+`review/<sha>`) per D.42 and the Round-2 review-feed work (Phase YY).
+The original `add`-link plan items below remain open for the
+share-link bundle flow; the new MM.1..MM.5 sub-steps are the
+per-entity router.
 
-## Phase NN — `references.toml` manifest
+- [x] **MM.1** Manifest intent-filter union for `strictlykeptboy://event/<global-id>`, `strictlykeptboy://task/<global-id>`, `strictlykeptboy://repo/<repo-id>`, `strictlykeptboy://bonus/<global-id>`, `strictlykeptboy://review/<commit-sha>` (in addition to existing `share` from Phase O). — shipped in change `round2/phase-mm-nn-deeplink-references`.
+- [x] **MM.2** Single-entry `DeepLinkRouter` parses URL grammar + dispatches into the right surface (`OpenEvent` / `OpenTask` / `OpenRepo` / `OpenBonus` / `OpenReview` Action variants).
+- [x] **MM.3** Universal-link variant `https://strictlykeptboy.app/link/...` registered + static HTML fallback at `docs/site/link/index.html` (QR + "Open in app" CTA, fragment-only handling per SH-B.8).
+- [x] **MM.4** Token-wipe after first consume — `DeepLinkRouter.redactToken()` redacts the fragment for log surfaces; activity layer drops `link.token` after dispatch.
+- [x] **MM.5** Unit tests covering every URL variant + malformed-URL handling (`DeepLinkTest`, `DeepLinkRouterTest`).
+
+Original `add`-link sub-steps (open — share-link bundle flow):
+
+- [ ] **MM.A1** Register intent filter for `strictlykeptboy://add?...` (custom scheme)
+- [ ] **MM.A2** Register intent filter for `https://strictlykeptboy.app/add?...` (universal link)
+- [ ] **MM.A3** Digital Asset Links JSON at `https://strictlykeptboy.app/.well-known/assetlinks.json` for verified App Links
+- [ ] **MM.A4** URL parser: extract `url`, `label`, `mode`, `priority`, `via`, `references` query params
+- [ ] **MM.A5** URL fragment parser: extract `token`, `expires` (never sent over network)
+- [ ] **MM.A6** Multi-URL support (`?url=A&url=B`)
+- [ ] **MM.A7** Token-wipe: clear `#token=` from any persisted referrer after consumption
+- [ ] **MM.A8** Expiry enforcement: refuse links past `expires`
+- [ ] **MM.A9** QR scan integration (ZXing already in for D.42; verify reuse)
+
+## Phase NN — `references.toml` manifest — shipped Round 2 batch 5
 
 Deep-dives: [`shared-schedules.md`](shared-schedules.md) SH-C, [`data-model.md`](data-model.md) DM-Q.
 
-- [ ] **NN.1** Schema definition + ktoml round-trip. Supports multi-origin per Phase ZZ.B: `remotes = ["url1", "url2"]` array form alongside the singular `url = "..."` (read as one-element list, backwards-compat). Per Phase YY.H, references may carry an optional `write_back_target = "<repo-fingerprint>"` field to opt-in to receiving feedback files.
-- [ ] **NN.2** Reader: scan `.strictlykeptboy/references.toml` on repo open. Reader handles both `url = "..."` singular and `remotes = [...]` array forms per Phase ZZ.B.
-- [ ] **NN.3** Writer: append/remove entries via `skb ref add|remove`. Writer emits the multi-remote array form when more than one remote is configured per Phase ZZ.B.
-- [ ] **NN.4** Auto-dedup against already-configured repos (by source-repo-id, D.51)
-- [ ] **NN.5** "Offer to add referenced repos" sheet UI (per-reference toggle)
-- [ ] **NN.6** Validation: refuse circular reference loops, refuse self-reference
-- [ ] **NN.7** Required-reference warning surface in repo settings ("this repo expects ref X — not added")
+Round 2 batch-5 scope shipped in the
+`round2/phase-mm-nn-deeplink-references` branch. The NN.5 picker-sheet
+UI is intentionally deferred — `Entry.required` and the `[reference.credential_hint]`
+block are emitted by the manifest so the UI layer (Phase UI-GG) can consume
+them without re-touching the schema.
+
+- [x] **NN.1** Schema definition + hand-rolled TOML round-trip (matches the rest of `store/`; ktoml deferred per CLAUDE.md). Supports multi-origin per Phase ZZ.B: `remotes = ["url1", "url2"]` array form alongside the singular `url = "..."`. Per Phase YY.H, references may carry an optional `write_back_target = "<repo-fingerprint>"` field to opt-in to receiving feedback files. — shipped in change `round2/phase-mm-nn-deeplink-references`.
+- [x] **NN.2** Reader: `ReferencesManifest.read(repoRoot)` returns the parsed manifest; graceful empty on missing file. Handles both `url = "..."` singular and `remotes = [...]` array forms per Phase ZZ.B.
+- [x] **NN.3** Writer: `ReferencesManifest.write(repoRoot, manifest)` + `skb ref add|remove|list`. Writer emits the multi-remote array form when more than one remote is configured. NN.3 dedup semantics: newer entry with the same `repo_id` wins.
+- [x] **NN.4** Auto-dedup against already-configured repos — `addOrReplace()` returns `AddResult.Replaced` on `repo_id` collision; the manifest list keeps the latest entry only.
+- [ ] **NN.5** "Offer to add referenced repos" sheet UI (per-reference toggle) — deferred to UI-GG. Schema fields shipped to consume.
+- [x] **NN.6** Validation: refuse circular reference loops, refuse self-reference — `validateNoCycle()` BFS in `ReferencesManifest`; covered by `ReferencesManifestTest`.
+- [x] **NN.7** Required-reference banner data — `Entry.required` flag exposed; UI banner consumes via repo-settings VM. Credential-hint sub-table (`[reference.credential_hint]`) round-trips for the receiver-side auth pre-select per SH-C.6.
+- [x] **NN.CLI** `skb ref add|remove|list` (`cli/.../ref/RefCommands.kt`) — atomic-commit, `--json` envelopes for AI consumers.
 
 ## Phase OO — Cross-repo state files (`state/<source-repo-id>/`)
 

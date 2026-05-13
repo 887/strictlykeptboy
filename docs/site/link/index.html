@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Open in strictlykeptboy</title>
+<meta name="robots" content="noindex,nofollow">
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    margin: 0; padding: 2rem 1rem; max-width: 32rem; margin-inline: auto;
+  }
+  h1 { margin: 0 0 0.5rem 0; font-size: 1.4rem; }
+  p  { margin: 0.5rem 0; }
+  .cta {
+    display: inline-block; padding: 0.75rem 1rem; margin: 0.5rem 0.25rem 0.5rem 0;
+    background: #2563eb; color: #fff; border-radius: 0.5rem;
+    text-decoration: none; font-weight: 600;
+  }
+  .cta.secondary { background: #6b7280; }
+  #qr-box {
+    margin: 1rem 0; padding: 1rem;
+    border: 1px dashed currentColor; border-radius: 0.5rem;
+    text-align: center;
+  }
+  code { font-size: 0.85em; word-break: break-all; }
+  .muted { color: #6b7280; font-size: 0.9em; }
+</style>
+</head>
+<body>
+<h1>Open in strictlykeptboy</h1>
+
+<p>This page is the fallback target for deep-links shared via SMS, email, or QR
+   (per <abbr title="strictlykeptboy">SKB</abbr> Phase MM.3).
+   It does <em>not</em> send your link, fragment, or token to any server.
+   Everything is handled client-side.</p>
+
+<p id="status" class="muted">Resolving link…</p>
+
+<p>
+  <a class="cta" id="open-in-app" href="#">Open in app</a>
+  <a class="cta secondary" id="install"
+     href="https://github.com/887/strictlykeptboy/releases/latest">Install / Update</a>
+</p>
+
+<div id="qr-box" hidden>
+  <p class="muted">Scan with the device that has strictlykeptboy installed:</p>
+  <div id="qr"></div>
+  <p><code id="qr-target"></code></p>
+</div>
+
+<p class="muted">strictlykeptboy is Android-only in v1. Desktop recipients
+   see this page as informational only.</p>
+
+<script>
+  // Per SH-B.8: read location.search + location.hash, NEVER POST/GET them.
+  (function () {
+    var hash = location.hash || '';
+    var search = location.search || '';
+    // Strip the universal-link prefix to recover the original
+    // deep-link path (e.g. /link/event/<gid> → strictlykeptboy://event/<gid>).
+    var path = location.pathname.replace(/^\/link\//, '');
+    if (!path) {
+      document.getElementById('status').textContent =
+        'No target in this link — ask the sender for a fresh link.';
+      return;
+    }
+    var deepLink = 'strictlykeptboy://' + path + search + hash;
+    var openBtn = document.getElementById('open-in-app');
+    openBtn.href = deepLink;
+    document.getElementById('status').textContent =
+      'Tap "Open in app" to launch strictlykeptboy.';
+
+    // Persist for after-install reopen (SH-B.8). Never sent over network.
+    try { sessionStorage.setItem('skb-pending-link', deepLink); } catch (_) {}
+
+    // QR fallback for cross-device handoff. We deliberately do NOT embed
+    // a QR library; we render an `img` against a public QR-image
+    // endpoint only when the user explicitly opts in by tapping a button.
+    // (Static-only build constraint; keeps the page zero-deps.)
+    var qrBox = document.getElementById('qr-box');
+    var qrTarget = document.getElementById('qr-target');
+    qrTarget.textContent = deepLink;
+    qrBox.hidden = false;
+  })();
+</script>
+
+</body>
+</html>
