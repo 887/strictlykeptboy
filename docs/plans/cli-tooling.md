@@ -3429,13 +3429,15 @@ All commands ship with `--json` envelopes per D.24 and `--dry-run` per X.6.
 
 ### `skb react` / `skb comment` / `skb repo fingerprint` / `skb repo registry` / `skb ref set-write-back` (Phase YY / D.71..D.73)
 
-- [ ] **CLI-O.11** `skb react add --target <global-id> --reactions heart,fire,locked [--body "..."] [--reply-to <feedback-uuid>] [--repo X]`. Target resolution helpers: `--target-event <uuid>` resolves to `<this-repo-fp>:<uuid>`; `--target-event <repo-fp>:<uuid>` for cross-repo; same flag shape for `--target-task`, `--target-journal`, `--target-bonus`.
-- [ ] **CLI-O.12** `skb react remove --target <global-id>` — `git rm` the active-identity's feedback file. No-op if absent (exit 0).
-- [ ] **CLI-O.13** `skb react list --target <global-id>` — list all feedback files for the target across all registered visible repos (respects isolation per D.72).
-- [ ] **CLI-O.14** `skb comment add --target <global-id> --body "..."` / `skb comment list --target <global-id>` — shorthand for `skb react` with empty reactions + body. List flattens by thread order.
-- [ ] **CLI-O.15** `skb repo fingerprint [--repo X]` — prints the repo fingerprint per D.71.
-- [ ] **CLI-O.16** `skb repo registry list|isolate|unisolate` — registry CRUD per D.72. `skb repo registry isolate --from <fingerprint> --hide <fingerprint>` for headless agent control.
-- [ ] **CLI-O.17** `skb ref set-write-back <reference-url> --enable|--disable` — toggle the `write_back_target` field in `references.toml` per FB-H.6.
+CLI-O.11–.17 shipped under `:cli/.../feedback/` on branch `round2/phase-yy-feedback-impl`. Commands wired as `skb react`, `skb comment`, `skb repo-fingerprint`, `skb repo-registry list|isolate|unisolate`, `skb ref-set-write-back` (hyphenated top-level names — Clikt nests by command tree, not dotted name). 38 new tests cover RepoFingerprint / RepoRegistry / FeedbackFile / FeedbackWriter / FeedbackResolver / BonusJournalRef.
+
+- [x] **CLI-O.11** `skb react add --target <global-id> --reactions heart,fire,locked [--body "..."] [--reply-to <feedback-uuid>] [--repo X]`. Target resolution helpers: `--target-event <uuid>` resolves to `<this-repo-fp>:<uuid>`; `--target-event <repo-fp>:<uuid>` for cross-repo; same flag shape for `--target-task`, `--target-journal`, `--target-bonus`.
+- [x] **CLI-O.12** `skb react remove --target <global-id>` — `git rm` the active-identity's feedback file. No-op if absent (exit 0).
+- [x] **CLI-O.13** `skb react list --target <global-id>` — list all feedback files for the target across all registered visible repos (respects isolation per D.72).
+- [x] **CLI-O.14** `skb comment add --target <global-id> --body "..."` / `skb comment list --target <global-id>` — shorthand for `skb react` with empty reactions + body. List flattens by thread order.
+- [x] **CLI-O.15** `skb repo-fingerprint [--repo X]` — prints the repo fingerprint per D.71.
+- [x] **CLI-O.16** `skb repo-registry list|isolate|unisolate` — registry CRUD per D.72. `skb repo-registry isolate --from <fingerprint> --hide <fingerprint>` for headless agent control.
+- [x] **CLI-O.17** `skb ref-set-write-back --reference-url <url> --target <fp>|--disable` — toggle the `write_back_target` field in `references.toml` per FB-H.6.
 - [ ] **CLI-O.18** `skb task done --bonus <id>` — completion path for bonus tasks per FB-G.3. Writes `completed_at` to the same file (or to a `state/.../<task-uuid>.done.toml` state file when the shared repo is unavailable per FB-G.4).
 
 ### `skb remote` / `skb repo init --local` (Phase ZZ / D.74)

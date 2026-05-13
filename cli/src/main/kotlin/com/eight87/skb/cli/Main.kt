@@ -5,6 +5,11 @@ import com.eight87.skb.cli.commands.EventGroup
 import com.eight87.skb.cli.commands.HelpCommand
 import com.eight87.skb.cli.commands.RepoGroup
 import com.eight87.skb.cli.commands.TaskGroup
+import com.eight87.skb.cli.feedback.CommentGroup
+import com.eight87.skb.cli.feedback.ReactGroup
+import com.eight87.skb.cli.feedback.RefSetWriteBackCommand
+import com.eight87.skb.cli.feedback.RepoFingerprintCommand
+import com.eight87.skb.cli.feedback.RepoRegistryGroup
 import com.eight87.skb.cli.repo.RemoteGroup
 import com.eight87.skb.cli.routine.RoutineGroup
 import com.eight87.skb.cli.routine.StreakCommand
@@ -98,6 +103,11 @@ fun main(args: Array<String>) {
     RoutineGroup(ctxOf),
     StreakCommand(ctxOf),
     TemplateGroup(ctxOf),
+    ReactGroup(ctxOf),
+    CommentGroup(ctxOf),
+    RepoFingerprintCommand(ctxOf),
+    RepoRegistryGroup(ctxOf),
+    RefSetWriteBackCommand(ctxOf),
     HelpCommand(ctxOf),
   )
 
