@@ -638,7 +638,7 @@ The original `add`-link plan items below remain open for the
 share-link bundle flow; the new MM.1..MM.5 sub-steps are the
 per-entity router.
 
-- [x] **MM.1** Manifest intent-filter union for `strictlykeptboy://event/<global-id>`, `strictlykeptboy://task/<global-id>`, `strictlykeptboy://repo/<repo-id>`, `strictlykeptboy://bonus/<global-id>`, `strictlykeptboy://review/<commit-sha>` (in addition to existing `share` from Phase O). — shipped in change `round2/phase-mm-nn-deeplink-references`.
+- [x] **MM.1** Manifest intent-filter union for `strictlykeptboy://event/<global-id>`, `strictlykeptboy://task/<global-id>`, `strictlykeptboy://repo/<repo-id>`, `strictlykeptboy://bonus/<global-id>`, `strictlykeptboy://review/<commit-sha>` (in addition to existing `share` from Phase O). — shipped in commit `a578ac2`.
 - [x] **MM.2** Single-entry `DeepLinkRouter` parses URL grammar + dispatches into the right surface (`OpenEvent` / `OpenTask` / `OpenRepo` / `OpenBonus` / `OpenReview` Action variants).
 - [x] **MM.3** Universal-link variant `https://strictlykeptboy.app/link/...` registered + static HTML fallback at `docs/site/link/index.html` (QR + "Open in app" CTA, fragment-only handling per SH-B.8).
 - [x] **MM.4** Token-wipe after first consume — `DeepLinkRouter.redactToken()` redacts the fragment for log surfaces; activity layer drops `link.token` after dispatch.
@@ -666,7 +666,7 @@ UI is intentionally deferred — `Entry.required` and the `[reference.credential
 block are emitted by the manifest so the UI layer (Phase UI-GG) can consume
 them without re-touching the schema.
 
-- [x] **NN.1** Schema definition + hand-rolled TOML round-trip (matches the rest of `store/`; ktoml deferred per CLAUDE.md). Supports multi-origin per Phase ZZ.B: `remotes = ["url1", "url2"]` array form alongside the singular `url = "..."`. Per Phase YY.H, references may carry an optional `write_back_target = "<repo-fingerprint>"` field to opt-in to receiving feedback files. — shipped in change `round2/phase-mm-nn-deeplink-references`.
+- [x] **NN.1** Schema definition + hand-rolled TOML round-trip (matches the rest of `store/`; ktoml deferred per CLAUDE.md). Supports multi-origin per Phase ZZ.B: `remotes = ["url1", "url2"]` array form alongside the singular `url = "..."`. Per Phase YY.H, references may carry an optional `write_back_target = "<repo-fingerprint>"` field to opt-in to receiving feedback files. — shipped in commit `a578ac2`.
 - [x] **NN.2** Reader: `ReferencesManifest.read(repoRoot)` returns the parsed manifest; graceful empty on missing file. Handles both `url = "..."` singular and `remotes = [...]` array forms per Phase ZZ.B.
 - [x] **NN.3** Writer: `ReferencesManifest.write(repoRoot, manifest)` + `skb ref add|remove|list`. Writer emits the multi-remote array form when more than one remote is configured. NN.3 dedup semantics: newer entry with the same `repo_id` wins.
 - [x] **NN.4** Auto-dedup against already-configured repos — `addOrReplace()` returns `AddResult.Replaced` on `repo_id` collision; the manifest list keeps the latest entry only.
