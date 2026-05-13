@@ -110,7 +110,7 @@ if "${PUSH_TO_GH}"; then
         COMMIT_RANGE="HEAD"
         CHANGELOG_HEADER="Recent changes"
     fi
-    COMMIT_LIST="$(git log "${COMMIT_RANGE}" --pretty=format:'- %s (%h)' | head -n 50)"
+    COMMIT_LIST="$(git log "${COMMIT_RANGE}" -n 50 --pretty=format:'- %s (%h)')"
     [ -z "${COMMIT_LIST}" ] && COMMIT_LIST="- (no commits since previous tag)"
 
     NOTES_FILE="$(mktemp)"
