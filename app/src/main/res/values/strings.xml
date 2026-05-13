@@ -355,6 +355,30 @@
     <string name="repo_settings_set_primary">Set primary</string>
     <string name="repo_settings_remove">Remove</string>
 
+    <!-- Round 2.5.B — per-repo settings new sections -->
+    <string name="repo_settings_section_calendars">Calendars</string>
+    <string name="repo_settings_section_mode">Mode</string>
+    <string name="repo_settings_section_sticker_pack">Sticker pack</string>
+    <string name="repo_settings_section_per_repo_identity">Repo identity (identity.toml)</string>
+    <string name="repo_settings_calendars_empty">No calendars yet in this repo.</string>
+    <string name="repo_settings_calendars_priority">P=%1$d</string>
+    <string name="repo_settings_calendars_add">+ Add calendar</string>
+    <string name="repo_settings_calendars_new_title">New calendar</string>
+    <string name="repo_settings_calendars_new_name">Name</string>
+    <string name="repo_settings_calendars_new_emoji">Emoji (optional)</string>
+    <string name="repo_settings_calendars_new_kind_regular">Regular</string>
+    <string name="repo_settings_calendars_new_kind_timebox">Timebox</string>
+    <string name="repo_settings_calendars_new_confirm">Create</string>
+    <string name="repo_settings_sticker_pack_placeholder">Sticker pack chooser ships in Round 2.5.C.</string>
+    <string name="repo_settings_per_repo_identity_praise">Praise term</string>
+    <string name="repo_settings_per_repo_identity_pronouns">Pronouns (subject/object)</string>
+    <string name="repo_settings_per_repo_identity_honorific">Honorific for dom</string>
+    <string name="repo_settings_per_repo_mode_label">Repo mode</string>
+    <string name="repo_settings_per_repo_mode_free">Free</string>
+    <string name="repo_settings_per_repo_mode_self_keep">Self-keep</string>
+    <string name="repo_settings_per_repo_mode_strictly_kept">Strictly kept</string>
+    <string name="cd_repo_settings_calendar_chevron">Open calendar settings</string>
+
     <!-- Identities screen -->
     <string name="identities_title">Identities</string>
     <string name="identities_partial_note">Multi-identity editing is partial in this version — the active identity always commits new entries.</string>

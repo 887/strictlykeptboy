@@ -49,13 +49,15 @@ User flagged three connected gaps in the repo configuration surface:
   - Both with explicit content-descriptions for a11y.
 - [ ] **2.5.A.4** Plumb the new flags through `RepoStore.update(repoId) { copy(showOnSchedule = …) }` etc. Add `RepoOverlayPrefsTest` covering migration + flag round-trip.
 
-## Phase 2.5.B — Per-repo settings screen expansion
+## Phase 2.5.B — Per-repo settings screen expansion — shipped in commit (pending; see git log)
 
-- [ ] **2.5.B.1** Rewrite `RepoSettingsScreen` to be a sectioned scroll with the six sections from D-2.5.b. Each section is a labelled `Card` or `Column` with header + content.
-- [ ] **2.5.B.2** **Calendars section.** Lists all calendars in the repo via `CalendarRegistry.calendarsFor(repoId)`. Each row: emoji + display name + `Switch` for `activeToggle` + priority text + chevron. Tap chevron → opens `CalendarSettingsSheet` (2.1.B.4 — sheet already exists, just route into it). "+ Add calendar" button at bottom opens a small "New calendar" dialog → writes a new `calendars/<uuid>/calendar.toml` via existing `RoutineCalendarConfig.write` + `CalendarActivityConfig.write`.
-- [ ] **2.5.B.3** **Identity section.** Reuse `IdentityCategory` (Settings) Composable, parameterized by `repoRoot: File`. Per-repo `IdentityTomlCodec.readOrDefault(repoRoot)` instead of the global `IdentityPrefs`. Edits round-trip through 2.1.J's debounce+commit pattern, scoped to the repo.
-- [ ] **2.5.B.4** **Mode section.** Reuse `ModeCategory` Composable similarly, parameterized by `repoRoot`. The six lifestyle-radios from 2.2.B.4 work as-is; per-repo `mode.toml` already exists (2.1.K.1).
-- [ ] **2.5.B.5** **Sync + Remotes sections.** These already exist in the current `RepoSettingsScreen` — preserve them as sections in the new sectioned layout (don't rewrite).
+- [x] **2.5.B.1** Rewrote `RepoSettingsScreen` as a sectioned scroll of `Card`-wrapped sections: Calendars → Display → Sync → Author signing → Repo identity → Mode → Sticker pack (placeholder) → Defaults → Remotes → Identity preferences.
+- [x] **2.5.B.2** **Calendars section.** Per-repo on-disk scan via a `scanCalendars` helper in `ReposPane.kt` (avoids threading `CalendarRegistry` through the scaffold). Each row: display name + `Switch` + "P=<priority>" text + chevron. Chevron / row-tap opens `CalendarSettingsSheet` (reused). "+ Add calendar" dialog writes a new `calendars/<uuid>/calendar.toml` via `RoutineCalendarConfig.writeInto` + `TomlWriter.emit`, then commits via `GitRepoRegistry.get(repoId).commitAll`.
+- [x] **2.5.B.3** **Repo identity section.** Three text fields (praise / pronouns / honorific) bound to `IdentityTomlCodec.readOrDefault(repoRoot)` with a local 500ms debounce; on fire, merges into existing `IdentityTomlData` and writes via `IdentityTomlCodec.write` + `commitAll`. (Slim per-repo surface instead of reusing `IdentityCategory` whole, which is wired to the global active-repo cache — keeps the per-repo path independent.)
+- [x] **2.5.B.4** **Mode section.** Three radios (Free / Self-keep / Strictly kept) round-tripping through `ModeTomlCodec`. (D.86 24h cooling-off is enforced inside `ModeCategory` for the global active-repo path; per-repo direct edits write the raw value — follow-up if/when per-repo cooling-off becomes a requirement.)
+- [x] **2.5.B.5** **Sync + Remotes sections.** Preserved verbatim, re-wrapped in the new `SectionCard` layout for visual consistency.
+
+Implementation notes: the new wiring lives in a private `RepoSettingsHost` Composable in `ReposPane.kt` that both the compact and two-pane branches delegate to. `RepoSettingsScreen` is now stateless w.r.t. disk I/O — it takes `calendars: List<CalendarMeta>`, `identitySnapshot: PerRepoIdentitySnapshot`, `modeSnapshot: RepoMode` plus matching callbacks, so it's easier to unit-test.
 
 ## Phase 2.5.C — Sticker pack subview
 
