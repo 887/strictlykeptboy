@@ -856,4 +856,20 @@
     <string name="fork_dialog_cancel_button">Cancel</string>
     <string name="fork_settings_entry">Use my own copy</string>
 
+    <!-- Phase VV / EEE — homescreen + lockscreen widgets -->
+    <string name="widget_sticker_cd">Activity sticker</string>
+    <string name="widget_countdown_description">Pin a future event and count down to it.</string>
+    <string name="widget_now_description">What you are scheduled to be doing right now.</string>
+    <string name="widget_now_upcoming_header">Up next</string>
+    <string name="widget_now_empty_good_boy">good boy can rest ;3</string>
+    <string name="widget_now_empty_neutral">Nothing scheduled right now.</string>
+    <string name="widget_redacted_title">Scheduled event</string>
+    <string name="widget_no_pinned_event">Tap to pick an event.</string>
+    <string name="widget_config_title">Configure widget</string>
+    <string name="widget_config_summary">Defaults will be used; pick an event later from Settings → Widgets.</string>
+    <string name="widget_config_save">Save</string>
+    <string name="widget_countdown_in_days">in %1$d days</string>
+    <string name="widget_countdown_tomorrow">tomorrow</string>
+    <string name="widget_countdown_today">today</string>
+    <string name="widget_countdown_past_due">%1$d days ago</string>
 </resources>
