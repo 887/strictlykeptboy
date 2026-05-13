@@ -54,9 +54,11 @@ class ModeCoolingOffTest {
         }
         // Initial: no transition request armed.
         assertNull(mode.state.value.transitionRequestAtMs)
-        // First tap arms.
-        composeRule.onNodeWithTag("$TestTagCatMode-SwitchFree").performScrollTo()
-        composeRule.onNodeWithTag("$TestTagCatMode-SwitchFree").performClick()
+        // Phase 2.2.B.4 — picking "Just a calendar app" while currently
+        // strict arms the 24h cooling-off (the dedicated SwitchFree
+        // button collapsed into the six-radio Lifestyle picker).
+        composeRule.onNodeWithTag("$TestTagCatMode-Lifestyle-JustCalendar").performScrollTo()
+        composeRule.onNodeWithTag("$TestTagCatMode-Lifestyle-JustCalendar").performClick()
         assertNotNull(mode.state.value.transitionRequestAtMs)
         // Still strictly-kept — flip did not happen.
         assertEquals(AppMode.StrictlyKept, mode.state.value.mode)

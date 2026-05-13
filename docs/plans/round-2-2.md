@@ -45,22 +45,22 @@ Round 2.1 fixed the wiring (data layer correct, UI bindings live), but two thing
 2.2.F  Polish + tests + AVD smoke + release
 ```
 
-## Phase 2.2.A — Shell cleanup (PREREQ) — shipped in commit <pending-A>
+## Phase 2.2.A — Shell cleanup (PREREQ) — shipped in commit f70b24b
 
 - [x] **2.2.A.1** Restore the destination-row filter in `SkbAppShell.kt:584`. Change `TopDestination.entries.forEach { … }` to filter to a `topBarDestinations` list = [Schedule, Tasks, Reviews]. Wizard / Together / Repos / Settings stay as `TopDestination` enum values for routing purposes (the existing `selected = TopDestination.Wizard` transitions work via the avatar tap / Repos "+" / wizardEntryRequest), but they are NOT rendered as buttons in the icon-row.
 - [x] **2.2.A.2** Update `AppShellNavigationSwapTest` to assert exactly **3 destination buttons** (Schedule, Tasks, Reviews) rendered in the top bar, not 7.
 - [x] **2.2.A.3** Verify `wizardEntryRequest` flow still works: from Settings → Lifestyle → "Add to my lifestyle" → wizard auto-opens via `LaunchedEffect` collector at line 281, NOT via a top-bar button. New `wizard_entry_request_routes_to_wizard_pane_without_top_bar_button` test exercises the data-flow.
 - [x] **2.2.A.4** Repos "+" icon already routes to `WizardNavHost` (Phase F45 / 2.1.I.2 plumbing in `ReposPane.onOpenWizard`). Verified `FloatingActionButton` only lives in `SchedulePane` (`EventCreateFab.kt`) + `TasksPane` (`TaskQuickAddFab.kt`); no FAB on Repos / Settings / Wizard panes.
 
-## Phase 2.2.B — Wizard metaphor unification
+## Phase 2.2.B — Wizard metaphor unification — shipped in commit <pending-B>
 
-- [ ] **2.2.B.1** New `LifestyleScreen` composable (replaces the current `Alignment` + `Lifestyle` + `Mode` screens). Six cards per D-2.2.c. Card metadata in a new `LifestyleCard` enum with `(alignment, lifestyle, modePick, hasPartner, emoji, title, subtitle)` per card. Pre-selected default = `Pet, kept by an AI dom`.
-- [ ] **2.2.B.2** Drop `WizardScreen.Alignment`, `WizardScreen.Lifestyle`, `WizardScreen.Mode` from the enum + screen order. Replace with single `WizardScreen.Lifestyle`. Update `SCREEN_ORDER` (was 12 screens → now 10).
-- [ ] **2.2.B.3** `WizardDraft.applyLifestyleCard(card)` mutator sets the four fields atomically. `defaultModeFor` deleted (collapsed into card defaults). `shouldShowShareWithDom(draft)` predicate now checks `draft.modePick == KeptByHuman` only.
-- [ ] **2.2.B.4** Settings → Mode category renamed to **"Lifestyle"** (string-res only, test tags + sealed class stable). KeptBy three-radio (2.1.K.3) becomes a six-radio matching the wizard cards. Selecting "Just a calendar" goes through the existing 24h cooling-off (2.1.K.4) — that part of the flow stays.
-- [ ] **2.2.B.5** Update `WizardScaffolder` to read the consolidated fields from `WizardDraft`. `WizardModePick` enum stays (it's the on-disk wire mapping); only the screen surface changes.
-- [ ] **2.2.B.6** Migrate existing wizard tests: `WizardModeDefaultTest` → `WizardLifestyleCardTest` (assert each card maps to expected 4-tuple). Delete `WizardPetModeDefaultTest` (subsumed). Existing `WizardAtomDtstartTest` + `WizardInvertedAtomTest` stay (different concern). `FirstLaunchRoutingTest` stays.
-- [ ] **2.2.B.7** AVD smoke: wipe data, run wizard, verify the new Lifestyle screen shows 6 cards, default = "Pet, kept by AI dom" for fresh start, picking each card auto-progresses to the next screen + final `mode.toml` / `identity.toml` match the table in D-2.2.c. Screenshots to `docs/qa/2-2-B/`.
+- [x] **2.2.B.1** New `LifestyleCardScreen` composable + `LifestyleCard` enum (six cards per D-2.2.c) in `WizardModel.kt`. Card metadata: `(emoji, alignment, lifestyle, modePick, hasPartner)`; titles + subtitles route through `R.string.lifestyle_card_*` so wizard + Settings share copy. Pre-selected default = `PetKeptByAi`; auto-applied via `LaunchedEffect` so a fresh "Continue" emits the correct 4-tuple.
+- [x] **2.2.B.2** Dropped `WizardScreen.Alignment` and `WizardScreen.Mode` from the enum + screen order; the surviving `WizardScreen.Lifestyle` now renders the 6-card screen. `SCREEN_ORDER` collapsed from 12 → **10**.
+- [x] **2.2.B.3** `WizardDraft.applyLifestyleCard(card)` mutator atomically sets `alignment`, `lifestyle`, `modePick`, `hasPartner` (then `normalize()`s). `defaultModeFor` deleted (subsumed by `LifestyleCard.Default.modePick`). `effectiveModePick` falls back to the default card's `modePick`.
+- [x] **2.2.B.4** Settings → `ModeCategory` label string flipped to "Lifestyle" (`settings_category_mode` string-res only). `SettingsCategory.Mode` sealed-class case + test tags stay stable. KeptBy three-radio replaced with a six-radio (`$TestTagCatMode-Lifestyle-<CardName>`) matching `LifestyleCard.entries`. Selecting `JustCalendar` / `DomKeepingPets` / `Switch` from a strict mode still arms the existing 24h cooling-off (2.1.K.4).
+- [x] **2.2.B.5** `WizardScaffolder.materialize` already reads `normalized.alignment` / `lifestyle` / `effectiveModePick`; no signature changes needed. AVD-verified: `PetKeptByAi` emits `mode.toml`: `mode = "strictly-kept"` + `dom_persona = "stern-but-fair"` + `dom_cadence = "end-of-day"` and `identity.toml`: `alignment = "submissive"` + `lifestyle = "single-strict"` (byte-identical to pre-collapse).
+- [x] **2.2.B.6** Deleted `WizardPetModeDefaultTest` + `WizardModeDefaultTest` (both subsumed). Added `WizardLifestyleCardTest` with 12 assertions: per-card 4-tuple pin, `applyLifestyleCard` round-trip, `fromDraft` reverse-lookup, default-card pre-selection. Existing `WizardEntryRequestTest` / `FirstLaunchRoutingTest` left intact. `ModeCoolingOffTest.first_tap_arms_timer` updated to click the new `JustCalendar` radio row.
+- [x] **2.2.B.7** AVD smoke (fresh install, wipe data, walk wizard end-to-end with default `PetKeptByAi`): progress bar shows "Step N of **10**" throughout; the 6-card Lifestyle screen renders correctly; `mode.toml` + `identity.toml` on disk match the spec; main shell renders only the 3 read-surface icon buttons (Schedule / Tasks / Reviews); FAB lives inside SchedulePane only. Screenshots at `docs/qa/2-2-AB/` (01..09).
 
 ## Phase 2.2.C — Schedule UI overlays (deferred from 2.1.C) — shipped in commits 009c52d, 65fca27, e28b869, 238382b
 

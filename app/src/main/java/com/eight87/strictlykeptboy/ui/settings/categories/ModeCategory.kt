@@ -1,5 +1,6 @@
 package com.eight87.strictlykeptboy.ui.settings.categories
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -38,6 +39,8 @@ import com.eight87.strictlykeptboy.ui.settings.AppMode
 import com.eight87.strictlykeptboy.ui.settings.DomCadence
 import com.eight87.strictlykeptboy.ui.settings.KeptBy
 import com.eight87.strictlykeptboy.ui.settings.ModePrefs
+import com.eight87.strictlykeptboy.ui.settings.ModeState
+import com.eight87.strictlykeptboy.ui.wizard.LifestyleCard
 import kotlinx.coroutines.delay
 
 const val TestTagCatMode = "Cat-Mode"
@@ -93,68 +96,67 @@ fun ModeCategory(prefs: ModePrefs, modifier: Modifier = Modifier) {
         )
         Spacer(Modifier.height(12.dp))
 
-        // 2.1.K.3 — KeptBy three-radio control. Visible whenever mode is
-        // NOT Free; selecting flips both mode + persona/target via the
-        // migration helpers.
-        if (state.mode != AppMode.Free) {
-            SectionLabel(stringResource(R.string.settings_mode_kept_by_section))
-            Column(Modifier.fillMaxWidth()) {
-                KeptByRow(
-                    selected = state.keptBy == KeptBy.Ai,
-                    label = stringResource(R.string.settings_mode_kept_by_ai),
-                    testTag = "$TestTagCatMode-KeptBy-Ai",
+        // Phase 2.2.B.4 — six-radio lifestyle picker (replaces the
+        // KeptBy three-radio + Free/StrictlyKept buttons). Rows map 1:1
+        // to the wizard's six LifestyleCard enum values; selecting a
+        // row routes through the existing migrate* helpers. Selecting
+        // "JustCalendar" (mode = free) goes through the 24h cooling-off
+        // (2.1.K.4) when transitioning out of a strict mode.
+        SectionLabel(stringResource(R.string.settings_lifestyle_radio_section))
+        val activeCard = deriveActiveCard(state)
+        val coolingOff = prefs.coolingOffRemainingMs()
+        Column(Modifier.fillMaxWidth()) {
+            for (card in LifestyleCard.entries) {
+                LifestyleRadioRow(
+                    card = card,
+                    selected = card == activeCard,
+                    testTag = "$TestTagCatMode-Lifestyle-${card.name}",
                     onSelect = {
-                        prefs.migrateToKeptByAi(
-                            state.personaId ?: DomPersonaStore.BUILTINS.first().id,
-                        )
+                        when (card) {
+                            LifestyleCard.PetKeptByAi ->
+                                prefs.migrateToKeptByAi(
+                                    state.personaId ?: DomPersonaStore.BUILTINS.first().id,
+                                )
+                            LifestyleCard.PetKeptByPartner -> {
+                                prefs.migrateToKeptByHuman(state.writeBackTarget ?: "pending")
+                                showShareCta = true
+                            }
+                            LifestyleCard.PetSelfKept -> prefs.migrateToSelfKeep()
+                            LifestyleCard.DomKeepingPets,
+                            LifestyleCard.Switch -> {
+                                // Dom + Switch are mode=free with no AI dom
+                                // persona; if currently strict, arm the
+                                // 24h cooling-off before flipping.
+                                if (state.mode == AppMode.Free) {
+                                    // already free — no-op (radio purely
+                                    // marks UI state; persistence stays).
+                                } else {
+                                    prefs.requestTransitionToFree()
+                                }
+                            }
+                            LifestyleCard.JustCalendar -> {
+                                if (state.mode == AppMode.Free) {
+                                    // Direct — no kept-mode anyway.
+                                } else {
+                                    prefs.requestTransitionToFree()
+                                }
+                            }
+                        }
                     },
-                )
-                KeptByRow(
-                    selected = state.keptBy == KeptBy.Human,
-                    label = stringResource(R.string.settings_mode_kept_by_human),
-                    testTag = "$TestTagCatMode-KeptBy-Human",
-                    onSelect = {
-                        prefs.migrateToKeptByHuman(state.writeBackTarget ?: "pending")
-                        showShareCta = true
-                    },
-                )
-                KeptByRow(
-                    selected = state.keptBy == KeptBy.SelfKeep,
-                    label = stringResource(R.string.settings_mode_kept_by_self),
-                    testTag = "$TestTagCatMode-KeptBy-SelfKeep",
-                    onSelect = { prefs.migrateToSelfKeep() },
                 )
             }
         }
 
-        // 2.1.K.4 — Mode switch buttons. Free has direct "go strictly-kept";
-        // strictly-kept goes through 24h cooling-off + typed phrase.
-        when (state.mode) {
-            AppMode.Free -> Button(
-                onClick = { prefs.migrateToKeptByAi(DomPersonaStore.BUILTINS.first().id) },
-                modifier = Modifier.testTag("$TestTagCatMode-SwitchKept"),
-            ) {
-                Text(stringResource(R.string.settings_mode_switch_to_strictly_kept))
-            }
-            AppMode.StrictlyKept, AppMode.SelfKeep -> {
-                // First tap arms the cooling-off; subsequent taps open the
-                // typed-confirmation dialog (gated until 24h elapse).
-                val remaining = prefs.coolingOffRemainingMs()
-                if (remaining == null) {
-                    Button(
-                        onClick = { prefs.requestTransitionToFree() },
-                        modifier = Modifier.testTag("$TestTagCatMode-SwitchFree"),
-                    ) {
-                        Text(stringResource(R.string.settings_mode_switch_to_free))
-                    }
-                } else {
-                    CoolingOffCountdown(
-                        prefs = prefs,
-                        onConfirmReady = { showConfirm = true },
-                        onCancel = { prefs.cancelTransitionRequest() },
-                    )
-                }
-            }
+        // 2.1.K.4 — when a cooling-off is armed, show the countdown +
+        // typed-confirmation gate inline so the user sees why
+        // JustCalendar / Dom / Switch picks aren't taking effect
+        // instantly when leaving a strict mode.
+        if (state.mode != AppMode.Free && coolingOff != null) {
+            CoolingOffCountdown(
+                prefs = prefs,
+                onConfirmReady = { showConfirm = true },
+                onCancel = { prefs.cancelTransitionRequest() },
+            )
         }
 
         // 2.1.K.6 — Dom persona row, sourced from DomPersonaStore.
@@ -234,6 +236,7 @@ fun ModeCategory(prefs: ModePrefs, modifier: Modifier = Modifier) {
     }
 }
 
+@Suppress("unused") // Retained for snapshot-test parity; superseded by LifestyleRadioRow.
 @Composable
 private fun KeptByRow(
     selected: Boolean,
@@ -251,6 +254,76 @@ private fun KeptByRow(
         RadioButton(selected = selected, onClick = onSelect)
         Text(label, style = MaterialTheme.typography.bodyMedium)
     }
+}
+
+/**
+ * Phase 2.2.B.4 — six-radio lifestyle row. Each row maps to one
+ * [LifestyleCard]; titles + subtitles share the wizard's string-res
+ * pool so wizard + Settings stay in sync.
+ */
+@Composable
+private fun LifestyleRadioRow(
+    card: LifestyleCard,
+    selected: Boolean,
+    testTag: String,
+    onSelect: () -> Unit,
+) {
+    val titleRes = when (card) {
+        LifestyleCard.PetKeptByAi -> R.string.lifestyle_card_pet_kept_by_ai_title
+        LifestyleCard.PetKeptByPartner -> R.string.lifestyle_card_pet_kept_by_partner_title
+        LifestyleCard.PetSelfKept -> R.string.lifestyle_card_pet_self_kept_title
+        LifestyleCard.DomKeepingPets -> R.string.lifestyle_card_dom_keeping_pets_title
+        LifestyleCard.Switch -> R.string.lifestyle_card_switch_title
+        LifestyleCard.JustCalendar -> R.string.lifestyle_card_just_calendar_title
+    }
+    val subtitleRes = when (card) {
+        LifestyleCard.PetKeptByAi -> R.string.lifestyle_card_pet_kept_by_ai_subtitle
+        LifestyleCard.PetKeptByPartner -> R.string.lifestyle_card_pet_kept_by_partner_subtitle
+        LifestyleCard.PetSelfKept -> R.string.lifestyle_card_pet_self_kept_subtitle
+        LifestyleCard.DomKeepingPets -> R.string.lifestyle_card_dom_keeping_pets_subtitle
+        LifestyleCard.Switch -> R.string.lifestyle_card_switch_subtitle
+        LifestyleCard.JustCalendar -> R.string.lifestyle_card_just_calendar_subtitle
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp)
+            .clickable(onClick = onSelect)
+            .testTag(testTag),
+    ) {
+        RadioButton(selected = selected, onClick = onSelect)
+        Column {
+            Text(
+                "${card.emoji}  ${stringResource(titleRes)}",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Text(
+                stringResource(subtitleRes),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+/**
+ * Phase 2.2.B.4 — derive which [LifestyleCard] best matches the
+ * current [ModeState]. Used to pre-select the six-radio row from
+ * on-disk truth alone (the alignment/lifestyle fields the wizard
+ * writes live in identity.toml, not in ModePrefs — so this derivation
+ * collapses ModeState onto the subset of cards distinguishable from
+ * mode.toml). Returns null when no card matches (e.g. fresh free
+ * state with no further hint).
+ */
+private fun deriveActiveCard(state: ModeState): LifestyleCard? = when (state.mode) {
+    AppMode.StrictlyKept -> when (state.keptBy) {
+        KeptBy.Ai -> LifestyleCard.PetKeptByAi
+        KeptBy.Human -> LifestyleCard.PetKeptByPartner
+        else -> null
+    }
+    AppMode.SelfKeep -> LifestyleCard.PetSelfKept
+    AppMode.Free -> LifestyleCard.JustCalendar
 }
 
 /**

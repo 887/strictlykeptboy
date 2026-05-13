@@ -454,11 +454,28 @@ data class WizardDraft(
     }
 
     /**
-     * Phase 2.1.I.3 — effective mode pick. Falls back to [defaultModeFor]
-     * when the user hasn't visited the Mode screen yet.
+     * Phase 2.2.B — effective mode pick. Falls back to the default
+     * lifestyle card ([LifestyleCard.PetKeptByAi]) when the user hasn't
+     * visited the Lifestyle screen yet. The card-collapse subsumed the
+     * old `defaultModeFor(alignment, hasPartner)` heuristic — each
+     * lifestyle card now carries its `modePick` field directly.
      */
     val effectiveModePick: WizardModePick
-        get() = modePick ?: defaultModeFor(alignment, hasPartner)
+        get() = modePick ?: LifestyleCard.Default.modePick
+
+    /**
+     * Phase 2.2.B — apply a [LifestyleCard] selection. Sets the four
+     * fields the card encodes (`alignment`, `lifestyle`, `modePick`,
+     * `hasPartner`) atomically and lets [normalize] downstream-clamp
+     * everything else (e.g. kink-off → drop kink role + templates).
+     */
+    fun applyLifestyleCard(card: LifestyleCard): WizardDraft =
+        copy(
+            alignment = card.alignment,
+            lifestyle = card.lifestyle,
+            modePick = card.modePick,
+            hasPartner = card.hasPartner,
+        ).normalize()
 
     /** True when the draft contains anything worth confirming-before-discarding. */
     val hasUserChoices: Boolean
@@ -477,12 +494,13 @@ data class WizardDraft(
 enum class WizardScreen(val stickerKey: String) {
     Welcome("welcome-wave"),
     Species("species-greeting"),
-    Alignment("align-reaction"),
     Identity("name-tag"),         // Screen 3.5 (K.5a)
+    // Phase 2.2.B — collapsed Alignment + Lifestyle + Mode into a single
+    // six-card screen. The on-disk Alignment / Lifestyle / WizardModePick
+    // enums survive (wire format unchanged); only the wizard surface
+    // collapses. Each card sets the four fields atomically via
+    // [WizardDraft.applyLifestyleCard].
     Lifestyle("life-reaction"),
-    // Phase 2.1.I.3 — Mode screen sits between Lifestyle and Roles. Default
-    // = strictly-kept for Submissive, free otherwise. One-tap override.
-    Mode("mode-pick"),
     Roles("roles-notebook"),
     Templates("templates-checklist"),
     Git("git-setup"),
@@ -512,21 +530,84 @@ enum class WizardModePick(val id: String) {
 }
 
 /**
- * Phase 2.1.I.3 — alignment-driven default. Submissive → KeptByAi (the
- * project's genesis use-case is solo Submissive kept by an AI dom);
- * everything else (Dominant / Switch / UnalignedPrivate) → Free.
+ * Phase 2.2.B — collapsed lifestyle cards (D-2.2.c). Each card encodes
+ * the four data-layer fields the wizard needs to write atomically:
+ * `alignment`, `lifestyle`, `modePick`, `hasPartner`. The six cards
+ * replace the previous three-screen Alignment/Lifestyle/Mode flow that
+ * asked the same "how do you live" question in three different
+ * vocabularies. Wire format (Alignment + Lifestyle + WizardModePick
+ * enums + on-disk TOML) is unchanged — the collapse is wizard-surface
+ * only.
  *
- * Phase 2.1.M.2 — Pet-Mode-aware default: when [hasPartner] is true and
- * alignment is Submissive, default flips to KeptByHuman (partner-keeps-me
- * is the genesis partnered case). Switch / Dominant / Unaligned remain
- * Free regardless of partner state.
+ * Default card = [PetKeptByAi] (solo-sub kept by an AI dom, the
+ * project's genesis use-case).
  */
-fun defaultModeFor(
-    alignment: Alignment,
-    hasPartner: Boolean = false,
-): WizardModePick = when (alignment) {
-    Alignment.Submissive -> if (hasPartner) WizardModePick.KeptByHuman else WizardModePick.KeptByAi
-    Alignment.Switch -> WizardModePick.Free
-    Alignment.Dominant -> WizardModePick.Free
-    Alignment.UnalignedPrivate -> WizardModePick.Free
+enum class LifestyleCard(
+    val emoji: String,
+    val alignment: Alignment,
+    val lifestyle: Lifestyle,
+    val modePick: WizardModePick,
+    val hasPartner: Boolean,
+) {
+    PetKeptByAi(
+        emoji = "🤖",
+        alignment = Alignment.Submissive,
+        lifestyle = Lifestyle.SingleStrict,
+        modePick = WizardModePick.KeptByAi,
+        hasPartner = false,
+    ),
+    PetKeptByPartner(
+        emoji = "🧑",
+        alignment = Alignment.Submissive,
+        lifestyle = Lifestyle.PartneredStrict,
+        modePick = WizardModePick.KeptByHuman,
+        hasPartner = true,
+    ),
+    PetSelfKept(
+        emoji = "🪞",
+        alignment = Alignment.Submissive,
+        lifestyle = Lifestyle.SingleStrict,
+        modePick = WizardModePick.SelfKeep,
+        hasPartner = false,
+    ),
+    DomKeepingPets(
+        emoji = "👑",
+        alignment = Alignment.Dominant,
+        lifestyle = Lifestyle.PartneredStrict,
+        modePick = WizardModePick.Free,
+        hasPartner = true,
+    ),
+    Switch(
+        emoji = "🔄",
+        alignment = com.eight87.strictlykeptboy.ui.wizard.Alignment.Switch,
+        lifestyle = Lifestyle.PartneredStrict,
+        modePick = WizardModePick.Free,
+        hasPartner = true,
+    ),
+    JustCalendar(
+        emoji = "📅",
+        alignment = Alignment.UnalignedPrivate,
+        lifestyle = Lifestyle.SingleFree,
+        modePick = WizardModePick.Free,
+        hasPartner = false,
+    );
+
+    companion object {
+        /** Default card pre-selected on fresh start. */
+        val Default: LifestyleCard = PetKeptByAi
+
+        /**
+         * Reverse-lookup: which card matches the current draft? Returns
+         * null when the draft has hand-edited (alignment, lifestyle,
+         * modePick, hasPartner) into a combination no card covers — the
+         * Settings six-radio uses null to fall through to "none of the
+         * above" rather than misrepresenting state.
+         */
+        fun fromDraft(draft: WizardDraft): LifestyleCard? = entries.firstOrNull {
+            it.alignment == draft.alignment &&
+                it.lifestyle == draft.lifestyle &&
+                it.modePick == draft.effectiveModePick &&
+                it.hasPartner == draft.hasPartner
+        }
+    }
 }

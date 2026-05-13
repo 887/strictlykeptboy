@@ -80,7 +80,10 @@
          to render as "Identity" which read as a duplicate in the list. -->
     <string name="settings_category_identity">Authors</string>
     <string name="settings_search_placeholder">Search settings</string>
-    <string name="settings_category_mode">Pet Mode</string>
+    <!-- Phase 2.2.B.4 — Mode category becomes "Lifestyle" (six-radio
+         aligned with the wizard's six lifestyle cards). Test tags +
+         sealed-class case SettingsCategory.Mode stay stable. -->
+    <string name="settings_category_mode">Lifestyle</string>
     <string name="settings_category_notifications">Notifications</string>
     <!-- 2.1.E.3 — user-facing copy renamed to "Accounts"; testTag stays "Repos". -->
     <string name="settings_category_repos">Accounts</string>
@@ -468,7 +471,28 @@
     <string name="wizard_done_open">Open my calendar</string>
     <string name="wizard_done_fallback_now_card_title">brush teeth</string>
 
-    <!-- Phase 2.1.I.3 / 2.1.M — Pet Mode wizard screen -->
+    <!-- Phase 2.2.B — collapsed Lifestyle screen (six-card metaphor). Replaces
+         the old Alignment + Lifestyle + Mode triple. -->
+    <string name="wizard_lifestyle_card_prompt">How do you live?</string>
+    <string name="wizard_lifestyle_card_blurb">Pick one. You can change this any time in Settings → Lifestyle.</string>
+    <string name="lifestyle_card_pet_kept_by_ai_title">Pet, kept by an AI dom</string>
+    <string name="lifestyle_card_pet_kept_by_ai_subtitle">Solo pet — your AI dom keeps you on track.</string>
+    <string name="lifestyle_card_pet_kept_by_partner_title">Pet, kept by my partner</string>
+    <string name="lifestyle_card_pet_kept_by_partner_subtitle">A human dom keeps you — they get a share link.</string>
+    <string name="lifestyle_card_pet_self_kept_title">Pet, keeping myself</string>
+    <string name="lifestyle_card_pet_self_kept_subtitle">Self-discipline — no AI, no human dom.</string>
+    <string name="lifestyle_card_dom_keeping_pets_title">I keep pet(s)</string>
+    <string name="lifestyle_card_dom_keeping_pets_subtitle">You\'re the dom — others share their calendars with you.</string>
+    <string name="lifestyle_card_switch_title">We switch</string>
+    <string name="lifestyle_card_switch_subtitle">Sometimes dom, sometimes sub — depending.</string>
+    <string name="lifestyle_card_just_calendar_title">Just a calendar app</string>
+    <string name="lifestyle_card_just_calendar_subtitle">No kink framing — plain calendar + tasks.</string>
+
+    <!-- Settings → Lifestyle six-radio (Phase 2.2.B.4) shares wording with cards -->
+    <string name="settings_lifestyle_radio_section">How do you live?</string>
+
+    <!-- Phase 2.1.I.3 / 2.1.M — Pet Mode wizard screen (now unused at wizard
+         surface; strings kept for Settings → Mode pill copy) -->
     <string name="wizard_mode_prompt">Pet Mode</string>
     <string name="wizard_mode_blurb">How do you want to be kept? You can change this any time in Settings → Pet Mode.</string>
     <string name="wizard_mode_free_title">Not a pet right now</string>

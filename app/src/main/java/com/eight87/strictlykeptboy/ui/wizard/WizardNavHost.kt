@@ -34,6 +34,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -60,15 +61,17 @@ const val TestTagWizardPreviewPane = "Wizard-PreviewPane"
 const val TestTagWizard = "Wizard"
 const val TestTagWizardWelcome = "Wizard-Welcome"
 const val TestTagWizardSpecies = "Wizard-Species"
-const val TestTagWizardAlignment = "Wizard-Alignment"
 const val TestTagWizardIdentity = "Wizard-Identity"
+// Phase 2.2.B — single Lifestyle screen (6 cards) subsumes the old
+// Alignment + Lifestyle + Mode screens. TestTagWizardLifestyle stays
+// stable so snapshot tests don't churn; the per-card tags are
+// `Wizard-LifestyleCard-<enum-name>`.
 const val TestTagWizardLifestyle = "Wizard-Lifestyle"
 const val TestTagWizardRoles = "Wizard-Roles"
 const val TestTagWizardTemplates = "Wizard-Templates"
 const val TestTagWizardGit = "Wizard-Git"
 const val TestTagWizardScaffold = "Wizard-Scaffold"
 const val TestTagWizardDone = "Wizard-Done"
-const val TestTagWizardMode = "Wizard-Mode"
 const val TestTagWizardShareWithDom = "Wizard-ShareWithDom"
 const val TestTagWizardNext = "Wizard-Next"
 const val TestTagWizardBack = "Wizard-Back"
@@ -76,18 +79,16 @@ const val TestTagWizardSkip = "Wizard-Skip"
 const val TestTagWizardDiscardDialog = "Wizard-DiscardDialog"
 
 /**
- * Linear screen sequence. Phase 2.1.I.3 inserts the Mode screen between
- * Lifestyle and Roles. Phase 2.1.I.4 appends a Share-with-dom screen
- * after Done; it's only entered when [shouldShowShareWithDom] returns
- * true for the draft.
+ * Linear screen sequence. Phase 2.2.B collapsed Alignment + Lifestyle +
+ * Mode into a single six-card Lifestyle screen (D-2.2.c). 12 → 10
+ * screens. Phase 2.1.I.4 appends a Share-with-dom screen after Done;
+ * it's only entered when [shouldShowShareWithDom] returns true.
  */
 private val SCREEN_ORDER: List<WizardScreen> = listOf(
     WizardScreen.Welcome,
     WizardScreen.Species,
-    WizardScreen.Alignment,
     WizardScreen.Identity,
     WizardScreen.Lifestyle,
-    WizardScreen.Mode,
     WizardScreen.Roles,
     WizardScreen.Templates,
     WizardScreen.Git,
@@ -203,19 +204,11 @@ fun WizardNavHost(
                     draft = draft,
                     onUpdate = { draft = it.normalize() },
                 )
-                WizardScreen.Alignment -> AlignmentScreen(
-                    draft = draft,
-                    onUpdate = { draft = it.normalize() },
-                )
                 WizardScreen.Identity -> IdentityScreen(
                     draft = draft,
                     onUpdate = { draft = it.normalize() },
                 )
-                WizardScreen.Lifestyle -> LifestyleScreen(
-                    draft = draft,
-                    onUpdate = { draft = it.normalize() },
-                )
-                WizardScreen.Mode -> ModeScreen(
+                WizardScreen.Lifestyle -> LifestyleCardScreen(
                     draft = draft,
                     onUpdate = { draft = it },
                 )
@@ -444,35 +437,6 @@ private fun SpeciesScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
     }
 }
 
-// --- Screen 3 Alignment --------------------------------------------------------
-
-@Composable
-private fun AlignmentScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxWidth().testTag(TestTagWizardAlignment),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Text(stringResource(R.string.wizard_alignment_prompt), style = MaterialTheme.typography.titleMedium)
-        for (a in Alignment.entries) {
-            val selected = draft.alignment == a
-            Card(
-                onClick = { onUpdate(draft.copy(alignment = a)) },
-                colors = if (selected) CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                ) else CardDefaults.cardColors(),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("Wizard-Alignment-${a.id}"),
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text(a.labelString(), style = MaterialTheme.typography.titleMedium)
-                    Text(a.taglineString(), style = MaterialTheme.typography.bodySmall)
-                }
-            }
-        }
-    }
-}
-
 // --- Screen 3.5 Identity (praise, pronouns, honorific, tone, emoji) -----------
 
 @Composable
@@ -578,47 +542,91 @@ private fun IdentityScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) 
     }
 }
 
-// --- Screen 4 Lifestyle --------------------------------------------------------
+// --- Screen 4 Lifestyle (Phase 2.2.B — six-card collapse) ----------------------
 
+/**
+ * Phase 2.2.B — collapsed Lifestyle screen. Six mutually-exclusive
+ * cards (D-2.2.c); each card atomically writes (alignment, lifestyle,
+ * modePick, hasPartner) via [WizardDraft.applyLifestyleCard]. Pre-
+ * selected default = [LifestyleCard.PetKeptByAi] (solo-sub kept by an
+ * AI dom — the project's genesis use-case).
+ */
 @Composable
-private fun LifestyleScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
+private fun LifestyleCardScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
+    // Reverse-lookup the currently-active card; falls back to Default
+    // when the draft is fresh (no card chosen yet) or to null when the
+    // user has hand-edited via Settings into a non-card combination.
+    val current = LifestyleCard.fromDraft(draft) ?: LifestyleCard.Default
+
+    // Phase 2.2.B — auto-apply the default card on first entry so the
+    // user can simply "Continue" without tapping and have the wizard
+    // emit the matching (alignment, lifestyle, modePick, hasPartner)
+    // tuple on materialization. Idempotent: re-applying the same card
+    // is a no-op for the equality check via [LifestyleCard.fromDraft].
+    LaunchedEffect(Unit) {
+        if (LifestyleCard.fromDraft(draft) == null) {
+            onUpdate(draft.applyLifestyleCard(LifestyleCard.Default))
+        }
+    }
     Column(
         modifier = Modifier.fillMaxWidth().testTag(TestTagWizardLifestyle),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
-            stringResource(R.string.wizard_lifestyle_prompt),
+            stringResource(R.string.wizard_lifestyle_card_prompt),
             style = MaterialTheme.typography.titleMedium,
         )
-
-        val options: List<Lifestyle> = when (draft.alignment) {
-            Alignment.UnalignedPrivate -> listOf(
-                Lifestyle.SingleFree, Lifestyle.SingleRoutine,
-                Lifestyle.PartneredFree, Lifestyle.PartneredRoutine,
-            )
-            else -> listOf(
-                Lifestyle.SingleFree, Lifestyle.SingleStrict,
-                Lifestyle.PartneredFree, Lifestyle.PartneredStrict,
-            )
-        }
-        for (opt in options) {
-            val selected = draft.lifestyle == opt
+        Text(
+            stringResource(R.string.wizard_lifestyle_card_blurb),
+            style = MaterialTheme.typography.bodySmall,
+        )
+        for (card in LifestyleCard.entries) {
+            val selected = card == current
             Card(
-                onClick = { onUpdate(draft.copy(lifestyle = opt)) },
+                onClick = { onUpdate(draft.applyLifestyleCard(card)) },
                 colors = if (selected) CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                 ) else CardDefaults.cardColors(),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testTag("Wizard-Lifestyle-${opt.id}"),
+                    .testTag("Wizard-LifestyleCard-${card.name}"),
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text(opt.labelString(draft.alignment), style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "${card.emoji}  ${stringResource(card.titleRes)}",
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(
+                        stringResource(card.subtitleRes),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
                 }
             }
         }
     }
 }
+
+@get:androidx.annotation.StringRes
+private val LifestyleCard.titleRes: Int
+    get() = when (this) {
+        LifestyleCard.PetKeptByAi -> R.string.lifestyle_card_pet_kept_by_ai_title
+        LifestyleCard.PetKeptByPartner -> R.string.lifestyle_card_pet_kept_by_partner_title
+        LifestyleCard.PetSelfKept -> R.string.lifestyle_card_pet_self_kept_title
+        LifestyleCard.DomKeepingPets -> R.string.lifestyle_card_dom_keeping_pets_title
+        LifestyleCard.Switch -> R.string.lifestyle_card_switch_title
+        LifestyleCard.JustCalendar -> R.string.lifestyle_card_just_calendar_title
+    }
+
+@get:androidx.annotation.StringRes
+private val LifestyleCard.subtitleRes: Int
+    get() = when (this) {
+        LifestyleCard.PetKeptByAi -> R.string.lifestyle_card_pet_kept_by_ai_subtitle
+        LifestyleCard.PetKeptByPartner -> R.string.lifestyle_card_pet_kept_by_partner_subtitle
+        LifestyleCard.PetSelfKept -> R.string.lifestyle_card_pet_self_kept_subtitle
+        LifestyleCard.DomKeepingPets -> R.string.lifestyle_card_dom_keeping_pets_subtitle
+        LifestyleCard.Switch -> R.string.lifestyle_card_switch_subtitle
+        LifestyleCard.JustCalendar -> R.string.lifestyle_card_just_calendar_subtitle
+    }
 
 // --- Screen 5 Roles ------------------------------------------------------------
 
@@ -904,94 +912,6 @@ private fun chooseFirstNowCardTitle(draft: WizardDraft, fallback: String): Strin
         if (tmpls.isNotEmpty()) return tmpls.first().label
     }
     return fallback
-}
-
-// --- Phase 2.1.I.3 Mode screen -------------------------------------------------
-
-@Composable
-private fun ModeScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
-    val current = draft.effectiveModePick
-    // 2.1.M.1 — Pet Mode framing. Order surfaces the AI/partner/self
-    // options first; "Not a pet right now" is the opt-out at the bottom.
-    val options = listOf(
-        WizardModePick.KeptByAi,
-        WizardModePick.KeptByHuman,
-        WizardModePick.SelfKeep,
-        WizardModePick.Free,
-    )
-    val showPartnerCheckbox = draft.alignment == Alignment.Submissive ||
-        draft.alignment == Alignment.Switch
-    Column(
-        modifier = Modifier.fillMaxWidth().testTag(TestTagWizardMode),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Text(
-            stringResource(R.string.wizard_mode_prompt),
-            style = MaterialTheme.typography.titleMedium,
-        )
-        Text(
-            stringResource(R.string.wizard_mode_blurb),
-            style = MaterialTheme.typography.bodySmall,
-        )
-        // 2.1.M.4 — inline partner checkbox. Only renders for submissive/
-        // switch alignments. When ticked, flips the default Pet Mode card
-        // to KeptByHuman (via defaultModeFor). Hidden for Dominant /
-        // Unaligned where partnered-keeps-me framing isn't on offer.
-        if (showPartnerCheckbox) {
-            Row(
-                verticalAlignment = ComposeAlign.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("$TestTagWizardMode-PartnerCheckbox"),
-            ) {
-                Checkbox(
-                    checked = draft.hasPartner,
-                    onCheckedChange = { checked ->
-                        // Clear any explicit modePick so the default
-                        // re-derives off the new hasPartner value.
-                        onUpdate(draft.copy(hasPartner = checked, modePick = null))
-                    },
-                )
-                Text(
-                    stringResource(R.string.wizard_mode_partner_checkbox),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-        }
-        for (pick in options) {
-            val selected = pick == current
-            Card(
-                onClick = { onUpdate(draft.copy(modePick = pick)) },
-                colors = if (selected) CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                ) else CardDefaults.cardColors(),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("Wizard-Mode-${pick.id}"),
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text(
-                        when (pick) {
-                            WizardModePick.Free -> stringResource(R.string.wizard_mode_free_title)
-                            WizardModePick.KeptByAi -> stringResource(R.string.wizard_mode_kept_by_ai_title)
-                            WizardModePick.KeptByHuman -> stringResource(R.string.wizard_mode_kept_by_human_title)
-                            WizardModePick.SelfKeep -> stringResource(R.string.wizard_mode_self_keep_title)
-                        },
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                    Text(
-                        when (pick) {
-                            WizardModePick.Free -> stringResource(R.string.wizard_mode_free_blurb)
-                            WizardModePick.KeptByAi -> stringResource(R.string.wizard_mode_kept_by_ai_blurb)
-                            WizardModePick.KeptByHuman -> stringResource(R.string.wizard_mode_kept_by_human_blurb)
-                            WizardModePick.SelfKeep -> stringResource(R.string.wizard_mode_self_keep_blurb)
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            }
-        }
-    }
 }
 
 // --- Phase 2.1.I.4 Share-with-dom screen ---------------------------------------
