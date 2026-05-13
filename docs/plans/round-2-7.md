@@ -36,10 +36,10 @@
 
 ## Phase 2.7.A — Sticker pack bake-into-repo
 
-- [ ] **2.7.A.1** Add `AssetPackLoader.copyPackInto(species: String, destDir: Path)` that copies all files under `assets/avatar-packs/default-<species>/` to `destDir`. Existing files in `destDir` aren't overwritten (lets future runs add new artwork without clobbering user edits).
-- [ ] **2.7.A.2** `WizardScaffolder.materialize()` calls `copyPackInto(draft.species.id, repoRoot.resolve("stickers/${draft.species.id}/"))` after `RepoBootstrap.scaffold` and before the initial commit. The stickers land in git history.
-- [ ] **2.7.A.3** For `SpeciesChoice.ChooseYourOwn`, copy the Bat pack into `stickers/bat/` so the user has a starting point to clone + edit. Add a `README.md` under `stickers/` explaining: "Edit these files and commit — the app re-reads them from disk on next launch."
-- [ ] **2.7.A.4** Test: `StickerPackScaffoldTest` — scaffold a Fox repo via `WizardScaffolder.materialize`, assert `<repoRoot>/stickers/fox/*.png` files exist + match the bundled asset bytes.
+- [x] **2.7.A.1** Add `AssetPackLoader.copyPackInto(species: String, destDir: Path)` that copies all files under `assets/avatar-packs/<species>/` to `destDir`. Existing files in `destDir` aren't overwritten (lets future runs add new artwork without clobbering user edits). Note: actual on-disk asset layout is `avatar-packs/<species>/` (no `default-` prefix), confirmed against `app/src/main/assets/avatar-packs/`. Returns 0 on empty/missing source so early-Phase-WW state (where artwork hasn't shipped yet) doesn't fail scaffolding.
+- [x] **2.7.A.2** `WizardScaffolder.materialize()` calls `copyPackInto(draft.species.id, repoRoot.resolve("stickers/${draft.species.id}/"))` after `RepoBootstrap.scaffold` and before the initial commit. The stickers land in git history. Passed `assetPackLoader` as an optional `materialize` param (not a constructor dep — `WizardScaffolder` is an `object`, and per-call injection lets the existing Robolectric test surface keep passing `null`). MainActivity wires `graph.assetPackLoader`.
+- [x] **2.7.A.3** For `SpeciesChoice.ChooseYourOwn` (id `"custom"`, no bundled `custom` pack on disk), the Bat pack is copied into `stickers/bat/` as the user's editable starting point. A `stickers/README.md` is written for ChooseYourOwn explaining the customization path; non-custom species do NOT get the README.
+- [x] **2.7.A.4** `StickerPackScaffoldTest` — `foxScaffoldShipsBundledPack` scaffolds a Fox repo, asserts `stickers/fox/` exists, every bundled file is byte-identical on disk, the initial commit contains them, no `stickers/README.md` for Fox. `customScaffoldShipsBatStarter` asserts `stickers/bat/` exists + `stickers/README.md` exists + both land in the initial commit + no `stickers/fox/` is created for ChooseYourOwn.
 
 ## Phase 2.7.B — Mirror prefs + SAF picker + wizard screen
 

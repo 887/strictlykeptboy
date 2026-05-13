@@ -218,6 +218,7 @@ class MainActivity : ComponentActivity() {
                                     parentDir = filesDir.resolve("repos"),
                                     draft = draft,
                                     author = AuthorIdentity("me", "me@example.com"),
+                                    assetPackLoader = graph.assetPackLoader,
                                 )
                                 graph.repoStore.add(
                                     RepoConfig(
@@ -479,6 +480,7 @@ class MainActivity : ComponentActivity() {
                                     parentDir = filesDir.resolve("repos"),
                                     draft = draft,
                                     author = AuthorIdentity("me", "me@example.com"),
+                                    assetPackLoader = graph.assetPackLoader,
                                 )
                                 graph.repoStore.add(
                                     RepoConfig(

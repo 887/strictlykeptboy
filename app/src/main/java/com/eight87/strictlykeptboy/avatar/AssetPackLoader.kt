@@ -4,6 +4,11 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 
 /**
  * Phase WW.1 — load bundled default packs from
@@ -60,6 +65,62 @@ class AssetPackLoader(private val appContext: Context) {
                 BitmapFactory.decodeStream(it)
             }
         }.getOrNull()
+    }
+
+    /**
+     * Phase 2.7.A.1 — copy the bundled sticker pack for [species] from
+     * `assets/avatar-packs/<species>/` into [destDir] (creating it if
+     * needed). Preserves relative paths + filenames.
+     *
+     * - Files that already exist at the destination are NOT overwritten —
+     *   this lets a user clone the repo, edit `stickers/<species>/`, and
+     *   trust that re-scaffolding (or pack-refresh flows) won't clobber
+     *   their edits.
+     * - Missing source directory (e.g. early-Phase-WW state where the
+     *   artwork hasn't shipped yet) is tolerated: the destination dir is
+     *   created empty and the call returns 0.
+     * - I/O runs on [Dispatchers.IO]; safe to invoke from a suspend
+     *   builder on the main thread.
+     *
+     * Returns the number of files written.
+     */
+    suspend fun copyPackInto(species: String, destDir: Path): Int = withContext(Dispatchers.IO) {
+        Files.createDirectories(destDir)
+        val assets = appContext.assets
+        val srcRoot = "$ASSETS_ROOT/$species"
+        var copied = 0
+        fun walk(assetSubDir: String, destSubDir: Path) {
+            val entries: Array<String> = runCatching {
+                assets.list(assetSubDir)
+            }.getOrNull() ?: emptyArray()
+            for (entry in entries) {
+                val childAsset = if (assetSubDir.isEmpty()) entry else "$assetSubDir/$entry"
+                val childDest = destSubDir.resolve(entry)
+                val childChildren = runCatching { assets.list(childAsset) }.getOrNull()
+                if (childChildren != null && childChildren.isNotEmpty()) {
+                    Files.createDirectories(childDest)
+                    walk(childAsset, childDest)
+                } else {
+                    // Either a leaf file, or an empty directory we can ignore.
+                    val isFile = runCatching {
+                        assets.open(childAsset).use { /* just probe */ }
+                        true
+                    }.getOrElse { false }
+                    if (!isFile) continue
+                    if (Files.exists(childDest)) continue
+                    Files.createDirectories(childDest.parent ?: destDir)
+                    assets.open(childAsset).use { stream ->
+                        Files.copy(stream, childDest, StandardCopyOption.REPLACE_EXISTING)
+                    }
+                    // REPLACE_EXISTING is safe because we already checked
+                    // !exists above; passed so the call doesn't throw if a
+                    // racy filesystem creates the file underneath us.
+                    copied += 1
+                }
+            }
+        }
+        walk(srcRoot, destDir)
+        copied
     }
 
     companion object {

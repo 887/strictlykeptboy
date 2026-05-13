@@ -1,5 +1,6 @@
 package com.eight87.strictlykeptboy.ui.wizard
 
+import com.eight87.strictlykeptboy.avatar.AssetPackLoader
 import com.eight87.strictlykeptboy.git.AuthorIdentity
 import com.eight87.strictlykeptboy.git.GitRepo
 import com.eight87.strictlykeptboy.git.Uuid7
@@ -64,6 +65,13 @@ object WizardScaffolder {
      * @param author committer identity (Name <email>)
      * @param tzId default timezone for new calendars
      * @param now optional clock for tests (epoch-millis source)
+     * @param assetPackLoader Phase 2.7.A — when supplied, bundled sticker
+     *   pack for `draft.species` is copied into `stickers/<species>/`
+     *   before the initial commit so the pack lands in git history.
+     *   Passed as a parameter (not a constructor dep) because
+     *   WizardScaffolder is an `object`; injecting per-call keeps the
+     *   existing test surface (Robolectric runs that don't need stickers
+     *   can pass null) while letting MainActivity wire `graph.assetPackLoader`.
      */
     suspend fun materialize(
         parentDir: File,
@@ -71,6 +79,7 @@ object WizardScaffolder {
         author: AuthorIdentity = AuthorIdentity("me", "me@example.com"),
         tzId: String = ZoneId.systemDefault().id,
         now: () -> OffsetDateTime = { OffsetDateTime.now().withNano(0) },
+        assetPackLoader: AssetPackLoader? = null,
     ): Outcome = withContext(Dispatchers.IO) {
         val safeName = draft.displayName.ifBlank { "my-calendar" }
             .lowercase().replace(Regex("[^a-z0-9-]+"), "-").trim('-')
@@ -266,6 +275,38 @@ object WizardScaffolder {
             author = scaffold.identityId,
             tzId = tzId,
         )
+
+        // Phase 2.7.A — bake the bundled sticker pack into the repo so it
+        // lands in the initial commit. ChooseYourOwn maps to the Bat pack
+        // (its on-disk id is "custom" but there's no bundled `custom`
+        // pack — Bat is the editable starting point) and additionally
+        // gets a `stickers/README.md` explaining the customization path.
+        if (assetPackLoader != null) {
+            val speciesId = draft.species.id
+            val (bundledSpecies, isCustom) = when (draft.species) {
+                SpeciesChoice.ChooseYourOwn -> "bat" to true
+                else -> speciesId to false
+            }
+            val destSpeciesDir = if (isCustom) {
+                rootDir.toPath().resolve("stickers/bat/")
+            } else {
+                rootDir.toPath().resolve("stickers/$speciesId/")
+            }
+            assetPackLoader.copyPackInto(bundledSpecies, destSpeciesDir)
+            if (isCustom) {
+                val readme = rootDir.toPath().resolve("stickers/README.md")
+                if (!Files.exists(readme)) {
+                    Files.createDirectories(readme.parent)
+                    Files.write(
+                        readme,
+                        ("# Sticker packs\n\n" +
+                            "Edit these files and commit — the app re-reads them from disk " +
+                            "on next launch. Hand them to an AI image generator if you want " +
+                            "a custom look.\n").toByteArray(StandardCharsets.UTF_8),
+                    )
+                }
+            }
+        }
 
         // Step 5 — git init (phone-only for v1; remote paths land in a follow-up
         // once OAuth client IDs are registered).
