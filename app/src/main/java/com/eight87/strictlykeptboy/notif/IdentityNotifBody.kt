@@ -63,6 +63,52 @@ object IdentityNotifBody {
     }
 
     /**
+     * Phase 2.1.M.5 — Pet-Mode-aware notification body. Layered on top
+     * of [bodyFor]: same private-flag guard, same identity-driven praise
+     * + honorific, but the *phrasing template* tracks the user's Pet
+     * Mode so the register matches how they framed their setup in the
+     * wizard.
+     *
+     * | PetMode        | Phrasing                                      |
+     * |----------------|-----------------------------------------------|
+     * | SelfPet        | "<praise>, your <title> walk, good boy"       |
+     * | PartneredPet   | "<praise>, your <title> — <honorific> wants you ready" |
+     * | SelfKeep       | "<praise>, your <title> — stay on track"      |
+     * | None           | falls through to [bodyFor] (neutral template) |
+     *
+     * `private = true` short-circuits to [GENERIC_BODY] before any
+     * Pet-Mode phrasing applies (K-2 / lockscreen privacy guard).
+     */
+    fun bodyForPet(
+        identity: IdentityTomlData?,
+        title: String,
+        privateEvent: Boolean,
+        petMode: PetMode,
+    ): String {
+        if (privateEvent || identity == null) return GENERIC_BODY
+        val praise = identity.praiseTerm
+        val hon = identity.honorificForDom
+        val safeTitle = title.ifBlank { "your event" }
+        return when (petMode) {
+            PetMode.SelfPet ->
+                // Self-pet register: AI dom keeps you on track. "walk, good boy"
+                // surfaces the playful kept-by-AI framing from M.1.
+                "$praise, your $safeTitle walk, good boy"
+            PetMode.PartneredPet -> {
+                // Partnered register foregrounds the dom's honorific. Fall
+                // back to plain praise when the user has no honorific set.
+                val honorific = if (hon.isBlank() || hon == "(none)") "your partner" else hon
+                "$praise, your $safeTitle — $honorific wants you ready"
+            }
+            PetMode.SelfKeep ->
+                "$praise, your $safeTitle — stay on track"
+            PetMode.None ->
+                // Plain calendar — defer to the neutral template.
+                bodyFor(identity, title, privateEvent)
+        }
+    }
+
+    /**
      * Briefing salutation — consumed by [com.eight87.strictlykeptboy.notif]
      * briefing rendering surfaces. Threads pronouns through the
      * salutation when the dom-persona register asks for it. v1: short

@@ -21,6 +21,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -910,12 +911,16 @@ private fun chooseFirstNowCardTitle(draft: WizardDraft, fallback: String): Strin
 @Composable
 private fun ModeScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
     val current = draft.effectiveModePick
+    // 2.1.M.1 — Pet Mode framing. Order surfaces the AI/partner/self
+    // options first; "Not a pet right now" is the opt-out at the bottom.
     val options = listOf(
-        WizardModePick.Free,
         WizardModePick.KeptByAi,
         WizardModePick.KeptByHuman,
         WizardModePick.SelfKeep,
+        WizardModePick.Free,
     )
+    val showPartnerCheckbox = draft.alignment == Alignment.Submissive ||
+        draft.alignment == Alignment.Switch
     Column(
         modifier = Modifier.fillMaxWidth().testTag(TestTagWizardMode),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -928,6 +933,31 @@ private fun ModeScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
             stringResource(R.string.wizard_mode_blurb),
             style = MaterialTheme.typography.bodySmall,
         )
+        // 2.1.M.4 — inline partner checkbox. Only renders for submissive/
+        // switch alignments. When ticked, flips the default Pet Mode card
+        // to KeptByHuman (via defaultModeFor). Hidden for Dominant /
+        // Unaligned where partnered-keeps-me framing isn't on offer.
+        if (showPartnerCheckbox) {
+            Row(
+                verticalAlignment = ComposeAlign.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("$TestTagWizardMode-PartnerCheckbox"),
+            ) {
+                Checkbox(
+                    checked = draft.hasPartner,
+                    onCheckedChange = { checked ->
+                        // Clear any explicit modePick so the default
+                        // re-derives off the new hasPartner value.
+                        onUpdate(draft.copy(hasPartner = checked, modePick = null))
+                    },
+                )
+                Text(
+                    stringResource(R.string.wizard_mode_partner_checkbox),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+        }
         for (pick in options) {
             val selected = pick == current
             Card(

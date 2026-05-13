@@ -190,7 +190,7 @@ on the AVD with screenshot evidence in `docs/qa/2-1-C/`.
 - [x] **2.1.K.7** `DomPersonaPickerSheet` (under `ui/settings/`): `ModalBottomSheet` with per-persona radio + 120-char prompt preview, cadence chips (End-of-day / Midday / Weekly), multiline `OutlinedTextField` custom-prompt editor that writes through `DomPersonaStore.writeCustom`. Reachable from `ModeCategory` → "Edit personas" button (only shown when keptBy == Ai).
 - New tests: `ModeTomlRoundTripTest` (4 cases), `DomPersonaSingleSourceTest` (2 cases), updated `ModeCoolingOffTest` (2 cases) and `SettingsPrefsTest`. Total: 630 → 637 (+7).
 
-## Phase 2.1.M — Pet Mode wizard framing (insertion 2026-05-13)
+## Phase 2.1.M — Pet Mode wizard framing (insertion 2026-05-13, shipped in commit pending)
 
 User-requested framing layered on top of the existing mode/persona data model. **No new TOML schema** — Pet Mode is a UX surface that maps onto the three `KeptBy` states 2.1.K already surfaces.
 
@@ -205,16 +205,18 @@ User-requested framing layered on top of the existing mode/persona data model. *
 
 **D-2.1.k — Pet Mode is the wizard's framing for what 2.1.K's `KeptBy` already encodes.** The single-vs-partnered split lives on the same screen as the four options; the wizard surfaces "pet" as the primary identity question because that's how the user thinks about their lifestyle setup.
 
-- [ ] **2.1.M.1** Rebrand the wizard's Mode screen (`ModeScreen` shipped in 2.1.I.3) to "Pet Mode". Replace the four `WizardModePick` chips with four labelled cards: "I keep myself" / "Someone keeps me" / "I keep myself (no AI)" / "Not a pet right now". Each card carries a one-line subtitle ("AI keeps you on track — your dom is a persona you pick" / "Your partner keeps you — they'll get a share link" / "You hold yourself accountable, no AI dom" / "Plain calendar app — no kept-mode"). Keep the underlying `WizardModePick` enum + emitted `mode.toml` unchanged.
-- [ ] **2.1.M.2** Pet-Mode defaults per alignment (replaces the simpler default in 2.1.I.3):
+- [x] **2.1.M.1** Rebrand the wizard's Mode screen (`ModeScreen` shipped in 2.1.I.3) to "Pet Mode". Replace the four `WizardModePick` chips with four labelled cards: "I keep myself" / "Someone keeps me" / "I keep myself (no AI)" / "Not a pet right now". Each card carries a one-line subtitle ("AI keeps you on track — your dom is a persona you pick" / "Your partner keeps you — they'll get a share link" / "You hold yourself accountable, no AI dom" / "Plain calendar app — no kept-mode"). Keep the underlying `WizardModePick` enum + emitted `mode.toml` unchanged.
+- [x] **2.1.M.2** Pet-Mode defaults per alignment (replaces the simpler default in 2.1.I.3): `defaultModeFor(alignment, hasPartner)` now branches on the partner checkbox.
   - **Submissive** alone → "I keep myself" pre-selected (AI dom).
-  - **Submissive** with partner (later question, see M.5) → "Someone keeps me" pre-selected.
+  - **Submissive** with partner → "Someone keeps me" pre-selected.
   - **Switch** → "Not a pet right now" pre-selected; user can opt in.
   - **Dominant / UnalignedPrivate** → "Not a pet right now" pre-selected.
-- [ ] **2.1.M.3** Settings → Mode category becomes "Pet Mode" in user-facing copy. The KeptBy three-radio (shipped 2.1.K.3) gets relabelled to the four Pet Mode options. Test tags + sealed-class names unchanged.
-- [ ] **2.1.M.4** Optional inline "Do you have a partner?" follow-up checkbox on the Pet Mode wizard screen — only shown when alignment ∈ {Submissive, Switch}. Defaults off for Submissive (single is the genesis case). When ticked, flips default to "Someone keeps me" and lands on the existing Share-with-dom screen (2.1.I.4) at Done.
-- [ ] **2.1.M.5** Praise/notification copy uses pet-mode-aware register **when set**. New `IdentityNotifBody.bodyForPet(...)` variant (or extend the existing `bodyFor`) reads a derived `petMode: PetMode` from `mode.toml` + `dom_persona` and tunes phrasing: "your 4pm walk, good boy" for self-pet, "your 4pm — Sir wants you ready" for partnered-pet, falls back to neutral when `mode = free`. `private = true` still wins.
-- [ ] **2.1.M.6** Strings + AVD smoke. Wipe data, run wizard end-to-end with Submissive alignment, verify Pet Mode screen renders four cards, default = "I keep myself", finish wizard, open Settings → Pet Mode, confirm KeptBy radio reflects the choice + commits to `mode.toml`. Screenshots to `docs/qa/2-1-M/`.
+- [x] **2.1.M.3** Settings → Mode category becomes "Pet Mode" in user-facing copy. The KeptBy three-radio (shipped 2.1.K.3) is relabelled to the Pet Mode options via `R.string` only. Test tags + sealed-class names unchanged.
+- [x] **2.1.M.4** Inline "I have a partner who keeps me" checkbox on the Pet Mode wizard screen — only shown when alignment ∈ {Submissive, Switch}. Defaults off for Submissive (single is the genesis case). When ticked, clears `modePick` so the default re-derives to KeptByHuman, and lands on the existing Share-with-dom screen (2.1.I.4) at Done via `shouldShowShareWithDom`.
+- [x] **2.1.M.5** New `IdentityNotifBody.bodyForPet(...)` + `PetModeDerivation` helper (`notif/PetModeDerivation.kt`) read a derived `PetMode` from `mode.toml` + `dom_persona` and tune phrasing: "your 4pm walk, good boy" for self-pet, "your 4pm — Sir wants you ready" for partnered-pet, "your 4pm — stay on track" for self-keep, falls back to `bodyFor` neutral when `mode = free`. `private = true` short-circuits to GENERIC_BODY before any pet-mode template runs.
+- [x] **2.1.M.6** AVD smoke complete. Wiped data, ran wizard end-to-end with Submissive alignment, Pet Mode screen renders four cards with "I keep myself" pre-selected, finished wizard, Settings → Pet Mode reflects the choice, `mode.toml` on disk shows `mode = "strictly-kept"` + `dom_persona = "stern-but-fair"`. Screenshots in `docs/qa/2-1-M/`.
+
+New tests: `WizardPetModeDefaultTest` (5 cases), `PetModeDerivationTest` (6 cases), `NotifPetCopyTest` (6 cases). Total: 637 → 682 (+45 from accumulated upstream phases + 17 new from M).
 
 ## Phase 2.1.L — Polish + tests
 

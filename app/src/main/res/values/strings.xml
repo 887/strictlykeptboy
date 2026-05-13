@@ -73,7 +73,7 @@
          to render as "Identity" which read as a duplicate in the list. -->
     <string name="settings_category_identity">Authors</string>
     <string name="settings_search_placeholder">Search settings</string>
-    <string name="settings_category_mode">Mode</string>
+    <string name="settings_category_mode">Pet Mode</string>
     <string name="settings_category_notifications">Notifications</string>
     <!-- 2.1.E.3 — user-facing copy renamed to "Accounts"; testTag stays "Repos". -->
     <string name="settings_category_repos">Accounts</string>
@@ -254,10 +254,12 @@
     <string name="settings_mode_pill_self_keep">Mode: self-keep</string>
     <string name="settings_mode_switch_to_free">Switch to free</string>
     <string name="settings_mode_switch_to_strictly_kept">Switch to strictly-kept</string>
-    <string name="settings_mode_kept_by_section">Kept by</string>
-    <string name="settings_mode_kept_by_ai">An AI dom (built-in persona)</string>
-    <string name="settings_mode_kept_by_human">A human dom (share link)</string>
-    <string name="settings_mode_kept_by_self">Self-keep (no dom)</string>
+    <!-- 2.1.M.3 — Pet Mode framing (sealed-class names unchanged) -->
+    <string name="settings_mode_kept_by_section">Pet Mode</string>
+    <string name="settings_mode_kept_by_ai">I keep myself — AI keeps you on track</string>
+    <string name="settings_mode_kept_by_human">Someone keeps me — partner with share link</string>
+    <string name="settings_mode_kept_by_self">I keep myself (no AI) — no dom</string>
+    <string name="settings_mode_kept_by_free">Not a pet right now — plain calendar</string>
     <string name="settings_mode_edit_personas">Edit personas</string>
     <string name="settings_mode_cooling_off_countdown">Flips in %1$dh %2$02dm</string>
     <string name="settings_mode_cooling_off_ready">24h elapsed — confirmation available.</string>
@@ -450,17 +452,19 @@
     <string name="wizard_done_open">Open my calendar</string>
     <string name="wizard_done_fallback_now_card_title">brush teeth</string>
 
-    <!-- Phase 2.1.I.3 — Mode wizard screen -->
-    <string name="wizard_mode_prompt">Who keeps your schedule?</string>
-    <string name="wizard_mode_blurb">You can change this any time in Settings → Mode.</string>
-    <string name="wizard_mode_free_title">Free</string>
-    <string name="wizard_mode_free_blurb">You schedule yourself. The app stays out of the way.</string>
-    <string name="wizard_mode_kept_by_ai_title">Kept by an AI dom</string>
-    <string name="wizard_mode_kept_by_ai_blurb">A built-in dom-persona fills your day and checks in. Stern-but-fair by default.</string>
-    <string name="wizard_mode_kept_by_human_title">Kept by a human dom</string>
-    <string name="wizard_mode_kept_by_human_blurb">You\'ll share your calendar with a partner who schedules for you. We\'ll help you generate a share link at the end.</string>
-    <string name="wizard_mode_self_keep_title">Self-keep</string>
-    <string name="wizard_mode_self_keep_blurb">You keep yourself accountable through reviews. No external dom.</string>
+    <!-- Phase 2.1.I.3 / 2.1.M — Pet Mode wizard screen -->
+    <string name="wizard_mode_prompt">Pet Mode</string>
+    <string name="wizard_mode_blurb">How do you want to be kept? You can change this any time in Settings → Pet Mode.</string>
+    <string name="wizard_mode_free_title">Not a pet right now</string>
+    <string name="wizard_mode_free_blurb">Plain calendar app — no kept-mode.</string>
+    <string name="wizard_mode_kept_by_ai_title">I keep myself</string>
+    <string name="wizard_mode_kept_by_ai_blurb">AI keeps you on track — your dom is a persona you pick.</string>
+    <string name="wizard_mode_kept_by_human_title">Someone keeps me</string>
+    <string name="wizard_mode_kept_by_human_blurb">Your partner keeps you — they\'ll get a share link.</string>
+    <string name="wizard_mode_self_keep_title">I keep myself (no AI)</string>
+    <string name="wizard_mode_self_keep_blurb">You hold yourself accountable, no AI dom.</string>
+    <!-- 2.1.M.4 — partner checkbox shown on submissive/switch alignments -->
+    <string name="wizard_mode_partner_checkbox">I have a partner who keeps me</string>
 
     <!-- Phase 2.1.I.4 — Share-with-dom wizard screen -->
     <string name="wizard_share_with_dom_title">Share with your dom</string>

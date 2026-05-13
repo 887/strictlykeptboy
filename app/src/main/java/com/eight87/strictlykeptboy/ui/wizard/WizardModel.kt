@@ -417,6 +417,13 @@ data class WizardDraft(
      * resolves null → Free.
      */
     val modePick: WizardModePick? = null,
+    /**
+     * Phase 2.1.M.4 — partner checkbox on the Pet Mode screen. Only
+     * surfaced when alignment ∈ {Submissive, Switch}. When ticked, the
+     * Pet Mode default flips to KeptByHuman + the Share-with-dom screen
+     * is reached at Done.
+     */
+    val hasPartner: Boolean = false,
 ) {
     /** True iff alignment hides kink role / templates / strict-X phrasing. */
     val kinkOff: Boolean get() = alignment == Alignment.UnalignedPrivate
@@ -451,7 +458,7 @@ data class WizardDraft(
      * when the user hasn't visited the Mode screen yet.
      */
     val effectiveModePick: WizardModePick
-        get() = modePick ?: defaultModeFor(alignment)
+        get() = modePick ?: defaultModeFor(alignment, hasPartner)
 
     /** True when the draft contains anything worth confirming-before-discarding. */
     val hasUserChoices: Boolean
@@ -508,8 +515,18 @@ enum class WizardModePick(val id: String) {
  * Phase 2.1.I.3 — alignment-driven default. Submissive → KeptByAi (the
  * project's genesis use-case is solo Submissive kept by an AI dom);
  * everything else (Dominant / Switch / UnalignedPrivate) → Free.
+ *
+ * Phase 2.1.M.2 — Pet-Mode-aware default: when [hasPartner] is true and
+ * alignment is Submissive, default flips to KeptByHuman (partner-keeps-me
+ * is the genesis partnered case). Switch / Dominant / Unaligned remain
+ * Free regardless of partner state.
  */
-fun defaultModeFor(alignment: Alignment): WizardModePick = when (alignment) {
-    Alignment.Submissive -> WizardModePick.KeptByAi
-    else -> WizardModePick.Free
+fun defaultModeFor(
+    alignment: Alignment,
+    hasPartner: Boolean = false,
+): WizardModePick = when (alignment) {
+    Alignment.Submissive -> if (hasPartner) WizardModePick.KeptByHuman else WizardModePick.KeptByAi
+    Alignment.Switch -> WizardModePick.Free
+    Alignment.Dominant -> WizardModePick.Free
+    Alignment.UnalignedPrivate -> WizardModePick.Free
 }
