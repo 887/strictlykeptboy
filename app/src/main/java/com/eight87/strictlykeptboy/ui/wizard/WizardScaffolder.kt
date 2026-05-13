@@ -11,6 +11,8 @@ import com.eight87.strictlykeptboy.store.IdentityTomlCodec
 import com.eight87.strictlykeptboy.store.IdentityTomlData
 import com.eight87.strictlykeptboy.store.RecurrenceRule
 import com.eight87.strictlykeptboy.store.RepoBootstrap
+import com.eight87.strictlykeptboy.store.ModeTomlCodec
+import com.eight87.strictlykeptboy.store.ModeTomlData
 import com.eight87.strictlykeptboy.store.RepoMode
 import com.eight87.strictlykeptboy.store.StandingTask
 import com.eight87.strictlykeptboy.store.TemplateOrigin

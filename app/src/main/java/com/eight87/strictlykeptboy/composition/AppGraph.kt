@@ -260,6 +260,16 @@ class AppGraph(private val appContext: Context) {
     )
     val activeRepoName: MutableStateFlow<String> get() = defaultWriteRepoName
 
+    /**
+     * Phase 2.1.I.2 — wizard re-entry request. Set to a non-null
+     * [com.eight87.strictlykeptboy.ui.wizard.WizardScreen] when a settings
+     * surface (e.g. Lifestyle → "Open wizard at Roles") wants the shell to
+     * switch to the Wizard destination and pre-position the host at a
+     * specific screen. Shell observes; resets back to null on finish.
+     */
+    val wizardEntryRequest: MutableStateFlow<com.eight87.strictlykeptboy.ui.wizard.WizardScreen?> =
+        MutableStateFlow(null)
+
     /** Phase D — read-through cache. Owned here so publishers can share it. */
     val cacheDatabase: CacheDatabase by lazy { CacheDatabase.open(appContext) }
 
