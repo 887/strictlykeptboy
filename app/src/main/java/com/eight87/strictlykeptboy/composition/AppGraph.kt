@@ -177,6 +177,25 @@ class AppGraph(private val appContext: Context) {
     /** Phase S.11 — Mode (HV-Q.1 / DDD.1 / D.86). */
     val modePrefs: ModePrefs by lazy { ModePrefs.open(appContext) }
 
+    /**
+     * Phase 2.1.J.1 — bind [IdentityPrefs] to the active repo so Settings
+     * edits round-trip to `<rootDir>/identity.toml` and commit. Call this
+     * after the wizard finishes scaffolding or when the active repo flips
+     * (see [activeRepoName]). Idempotent. Passing `null` unbinds the
+     * write-back path and reverts IdentityPrefs to in-memory only.
+     */
+    fun bindIdentityToActiveRepo(repoId: String?) {
+        val cfg = repoId?.let { repoStore.get(it) }
+        val root = cfg?.let { java.io.File(it.rootDir).toPath() }
+        identityPrefs.bindActiveRepo(
+            rootDir = root,
+            repoId = cfg?.repoId,
+            strictlyKept = {
+                modePrefs.state.value.mode == com.eight87.strictlykeptboy.ui.settings.AppMode.StrictlyKept
+            },
+        )
+    }
+
     /** Phase J — per-process sync scheduler. */
     val scheduler: SyncScheduler by lazy {
         SyncScheduler(
