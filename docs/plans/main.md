@@ -2,6 +2,31 @@
 
 ## Status: ✅ Round 1 COMPLETE — Phases A–W shipped. Round 2+ tracked below.
 
+## Round 2 closeout summary (audit 2026-05-13)
+
+**Sub-step counts (post-cleanup sweep):**
+
+- Total sub-steps: **469**
+- Ticked `[x]` (shipped): **300** (64%)
+- Retired `[~]` (SUPERSEDED): **7**
+- Unticked `[ ]` total: **162**
+  - Tagged `(deferred — …)`: **44** (small follow-ups; 41 also Round-3-backlog-tagged)
+  - Tagged `(Round 3 backlog)`: **159** (substantial Round 3 work)
+  - Unique "deferred only" (not Round-3): **3**
+  - Unique "Round 3 backlog only": **118**
+
+**refactor-solid.md F-entries (audit 2026-05-13):**
+
+- Total F-entries: **66**
+- RESOLVED / CLOSED: **12** (includes F2 / F17 / F21 / F22 / F25 / F31 / F33 / F43 / F45 / F46 / F59 + F5 / F11 inline closures)
+- Still tracked: **54**
+
+**Round 2 delivered (three-line summary):**
+
+Round 2 promoted the `skb` CLI to a first-class write surface (Phase X), shipped the design-a-lifestyle wizard with atomic activities + inverted habits + 8 lifestyle template families (Phases K / XX / AAA), and landed cross-repo global-ID feedback + share-this-repo + simplified→own fork (Phases YY / RR / SS) so dom→sub schedule-receiving works end-to-end. Event-level extensions (supersedence + attachments + multi-reminder — Phase BBB), the quick-trip wizard (Phase CCC), and the FAB primary write path (Phase FFF) round out the authoring side; widgets (Phases VV countdown + EEE now/lockscreen), CalDAV ↔ git mirror (Phase Y), no-origin + multi-origin git layer (Phase ZZ), deep-link + references manifest (Phases MM / NN), inline-markdown bodies (Phase EE), and mode + identity + dom-persona (Phase DDD) ship Round 2 to a green main with 573+ tests passing.
+
+---
+
 This is the master plan. Each phase below links to a deep-dive document
 where applicable. Phases are listed in dependency order; later phases
 assume earlier ones. The plan is intentionally exhaustive — every
@@ -43,10 +68,10 @@ _Shipped in commit (next push). Scaffolded via `android create` empty-activity t
 - [x] **A.2** Configure `app/build.gradle.kts`: minSdk 26, targetSdk 36, namespace `com.eight87.strictlykeptboy`, applicationId same, Compose + serialization plugins. (KSP / Room / Licensee deferred to subsequent phases where they're actually used — keep scaffold minimal.)
 - [x] **A.3** Bootstrap `libs.versions.toml` with the Compose BOM + M3E pin (1.5.0-alpha18). Heavy libs (JGit, ktoml, commonmark, lib-recur, BouncyCastle, security-crypto, WorkManager, car-app) get added in their owning phases (B/C/J/Q) so the scaffold stays minimal.
 - [x] **A.4** `GIT_SHA` + `BUILD_DATE` `buildConfigField`s wired and rendered on the splash screen
-- [ ] **A.5** Licensee plugin — deferred to Phase LL (Round 2 license audit); not needed at scaffold time
+- [ ] **A.5** Licensee plugin — deferred to Phase LL (Round 2 license audit); not needed at scaffold time (deferred — gated on Phase LL; revisit in Round 3 backlog)
 - [x] **A.6** `MainActivity` + theme scaffolding with M3E (`MaterialExpressiveTheme` + `expressiveLightColorScheme()` for light; `darkColorScheme()` seeded for dark — `expressiveDarkColorScheme()` not yet shipped in 1.5.0-alpha18)
 - [x] **A.7** Edge-to-edge enabled (`enableEdgeToEdge()`), M3E dynamic color when API ≥ S
-- [ ] **A.8** Manual DI scaffolding — deferred to Phase B/C when the first real components are wired
+- [x] **A.8** Manual DI scaffolding — deferred to Phase B/C when the first real components are wired (shipped — verified 2026-05-13; `composition/AppGraph.kt` is the composition root, MainActivity constructs the graph)
 - [x] **A.9** First `assembleDebug` ran clean: `BUILD SUCCESSFUL in 13s, 38 actionable tasks`, 12MB APK at `app/build/outputs/apk/debug/app-debug.apk`. `android run` against AVD is the next step (out of scope for the scaffold commit; the build itself works).
 
 ---
@@ -78,7 +103,7 @@ Deep-dive: [`data-model.md`](data-model.md) phases DM-A through DM-G.
 - [x] **C.5** Write-side `EntityWriter.write` / `writeBatch` / `delete` — atomic write via tmp + rename. (Phase C round 1)
 - [x] **C.6** Schema version check + migration scaffold `SchemaMigrationRunner.migrateIfNeeded` — v1 floor, no migrations yet, runner contract ready for v2. (Phase C round 1)
 - [x] **C.7** AGENTS.md + CLAUDE.md emission via `RepoBootstrap.scaffold` — symlink-first, stub fallback. Template includes the DM-Y.4 `identity.toml` bridge line. (Phase C round 1)
-- [ ] **C.8** Validation: refuse to write malformed entries; surface validation errors to UI — DEFERRED to Phase DM-H follow-up (Phase C scope-trim). Writer currently relies on caller-side construction guarantees.
+- [ ] **C.8** Validation: refuse to write malformed entries; surface validation errors to UI — DEFERRED to Phase DM-H follow-up (Phase C scope-trim). Writer currently relies on caller-side construction guarantees. (deferred — DM-H follow-up; revisit in Round 3 backlog)
 
 ---
 
@@ -222,10 +247,10 @@ Deep-dive: [`draft-lifestyle-wizard.md`](draft-lifestyle-wizard.md) phases LW-A 
 
 **RETIRED** — superseded by Phase K (lifestyle wizard); demo content concept retired in favor of materialized starting state per D.54. See [`draft-lifestyle-wizard.md`](draft-lifestyle-wizard.md). The wizard's scaffold output IS the user's canonical first-run data, not seed/sample/demo data. `demo-sub` / `demo-dom` repo seeds are not shipped.
 
-- [ ] ~~**L.1** `demo-sub` repo seed — full SFW-kinky-coded sub schedule + tasks~~
-- [ ] ~~**L.2** `demo-dom` repo seed — Dom's calendar with check-in events that overlay~~
-- [ ] ~~**L.3** Demo mode flag: spins up local clones (no remote push) with both repos preloaded~~
-- [ ] ~~**L.4** "Exit demo mode" path: option to keep demo data as a real local repo or discard~~
+- [~] ~~**L.1** `demo-sub` repo seed — full SFW-kinky-coded sub schedule + tasks~~ (SUPERSEDED — see D.54 / Phase K lifestyle wizard)
+- [~] ~~**L.2** `demo-dom` repo seed — Dom's calendar with check-in events that overlay~~ (SUPERSEDED — see D.54 / Phase K lifestyle wizard)
+- [~] ~~**L.3** Demo mode flag: spins up local clones (no remote push) with both repos preloaded~~ (SUPERSEDED — see D.54 / Phase K lifestyle wizard)
+- [~] ~~**L.4** "Exit demo mode" path: option to keep demo data as a real local repo or discard~~ (SUPERSEDED — see D.54 / Phase K lifestyle wizard)
 
 ---
 
@@ -252,7 +277,7 @@ _N.1 + N.2 shipped in commit `a1ed1ff` (Round 1). Together rail destination wire
 
 - [x] **N.1** Together-tab UI: select repos, calendars (per-repo sub-filter pending; current build picks all calendars in selected repos), date range, duration, day/time filters
 - [x] **N.2** Run finder → ranked free-slot list
-- [ ] **N.3** Tap slot → quick-create event (target repo + calendar picker) — stub v1; full editor sheet deferred to I-K-EE
+- [ ] **N.3** Tap slot → quick-create event (target repo + calendar picker) — stub v1; full editor sheet deferred to I-K-EE (deferred — wire Together-slot → `EventCreateSheet` from Phase FFF; revisit in Round 3 backlog)
 
 ---
 
@@ -277,9 +302,9 @@ _Shipped Phase P (.ics import + export, v1 scope) in commit `d800c84`: hand-roll
 
 - [x] **P.1** iCal (.ics) export per calendar / per repo / per date-range — per-repo + per-calendar variants ship; date-range filtering deferred until ScopeFilter chip lands (Phase S settings polish).
 - [x] **P.2** iCal (.ics) import into chosen calendar (UID-keyed de-duplication on re-import) — UIDs that aren't UUIDv7-shaped preserved as `external_uid` for round-trip; full de-dup against an existing calendar's `external_uid` set is a P-followup, since the v1 wizard flow always imports into a chosen calendar (caller controls dedup by picking a fresh calendar).
-- [ ] **P.3** CSV export for tasks — deferred to Phase S (tasks shipped tests don't yet exercise an exporter; revisit alongside Phase S.6).
-- [ ] **P.4** iCal export for tasks (VTODO) — bonus, deferred.
-- [ ] **P.5** `tools/` directory with shell scripts for server-side CalDAV/Thunderbird/Outlook hooks — deferred; not in v1 scope.
+- [ ] **P.3** CSV export for tasks — deferred to Phase S (tasks shipped tests don't yet exercise an exporter; revisit alongside Phase S.6). (deferred — small follow-up; revisit in Round 3 backlog)
+- [ ] **P.4** iCal export for tasks (VTODO) — bonus, deferred. (deferred — bonus; revisit in Round 3 backlog)
+- [ ] **P.5** `tools/` directory with shell scripts for server-side CalDAV/Thunderbird/Outlook hooks — deferred; not in v1 scope. (deferred — out of v1 scope; revisit in Round 3 backlog)
 
 ---
 
@@ -290,8 +315,8 @@ Deep-dive: [`ui-spec.md`](ui-spec.md) phase UI-S (corrected from UI-N).
 - [x] **Q.1** `CarAppService` skeleton — `auto/SkbCarAppService` + `SkbSession` + manifest service entry + `res/xml/automotive_app_desc.xml` + `androidx.car.app:app:1.7.0` dep. F22 also triggered an `AppGraph` extraction (`composition/AppGraph.kt`; MainActivity 417 → 327 LOC).
 - [x] **Q.2** Today list template — `auto/TodayScreen` renders `ListTemplate` from the ISP-narrow `TodayEventSource` interface (R.X.1). Row tap pushes `NextUpScreen`.
 - [x] **Q.3** "Next up" pane template — `auto/NextUpScreen` renders `PaneTemplate` with title + duration + time-until + 3 follow-ups + "Open in app" action that fires an intent at MainActivity.
-- [ ] **Q.4** Voice prompts ("what's next?")
-- [ ] **Q.5** Read-only enforcement (already true by construction — Q.1..Q.3 expose no edit affordances; formalize as a service-level invariant + test in Q.5)
+- [ ] **Q.4** Voice prompts ("what's next?") (Round 3 backlog — overlaps with Phase HH Auto voice-create)
+- [x] **Q.5** Read-only enforcement (already true by construction — Q.1..Q.3 expose no edit affordances; formalize as a service-level invariant + test in Q.5) (shipped — verified 2026-05-13; Q.1..Q.3 shipped with no edit affordances; `CarAppRuntimeTest` covers read-only template contract)
 
 ---
 
@@ -396,13 +421,13 @@ Cross-references for Round 2:
 
 Every Round 2+ phase (X onwards) ships with the SOLID self-check baked in. Before any subagent ticks a phase's last sub-step, it MUST run this checklist against the diff and report results in the completion message. This is enforced by the dispatching contract (`CLAUDE.md` § Subagent dispatching) and the standing audit at [`refactor-solid.md`](refactor-solid.md).
 
-- [ ] **SOLID.S** Single Responsibility — every new / modified file has one reason to change. Files past 500 LOC flagged in the report; past 800 LOC split before declaring done unless explicitly justified.
-- [ ] **SOLID.O** Open/Closed — branching done via sealed types + exhaustive `when`, not `enum + when-chain` growing across consumers. New variant = new file, not edit-5-sites.
-- [ ] **SOLID.L** Liskov — no `NotImplementedError` / deferred-bind in production paths; sealed-variant contracts honoured totally.
-- [ ] **SOLID.I** Interface Segregation — composables / ViewModels take the narrowest interface that satisfies the need (e.g. `DayEventSource` one-method, not the whole `CacheDatabase`).
-- [ ] **SOLID.D** Dependency Inversion — concrete classes (Room DAOs, JGit wrappers, OkHttp clients, EncryptedSharedPreferences) live behind interfaces; composition root (`MainActivity` → future `AppGraph`) is the only wiring site.
-- [ ] **SOLID.AVD** AVD smoke — UI-affecting phases run the canonical install + screencap loop per `CLAUDE.md` § Test loop. Unit-tests alone are insufficient evidence for UI work.
-- [ ] **SOLID.LOC** Report LOC of every new file > 200 LOC in the phase completion message. Append to the `refactor-solid.md` audit table when relevant.
+- **SOLID.S** Single Responsibility — every new / modified file has one reason to change. Files past 500 LOC flagged in the report; past 800 LOC split before declaring done unless explicitly justified. _(reference — applied per-phase, not a work item)_
+- **SOLID.O** Open/Closed — branching done via sealed types + exhaustive `when`, not `enum + when-chain` growing across consumers. New variant = new file, not edit-5-sites. _(reference — applied per-phase, not a work item)_
+- **SOLID.L** Liskov — no `NotImplementedError` / deferred-bind in production paths; sealed-variant contracts honoured totally. _(reference — applied per-phase, not a work item)_
+- **SOLID.I** Interface Segregation — composables / ViewModels take the narrowest interface that satisfies the need (e.g. `DayEventSource` one-method, not the whole `CacheDatabase`). _(reference — applied per-phase, not a work item)_
+- **SOLID.D** Dependency Inversion — concrete classes (Room DAOs, JGit wrappers, OkHttp clients, EncryptedSharedPreferences) live behind interfaces; composition root (`MainActivity` → future `AppGraph`) is the only wiring site. _(reference — applied per-phase, not a work item)_
+- **SOLID.AVD** AVD smoke — UI-affecting phases run the canonical install + screencap loop per `CLAUDE.md` § Test loop. Unit-tests alone are insufficient evidence for UI work. _(reference — applied per-phase, not a work item)_
+- **SOLID.LOC** Report LOC of every new file > 200 LOC in the phase completion message. Append to the `refactor-solid.md` audit table when relevant. _(reference — applied per-phase, not a work item)_
 
 Findings that don't block the current phase but warrant follow-up land in [`refactor-solid.md`](refactor-solid.md) as new F-numbered entries.
 
@@ -421,8 +446,8 @@ Scaffold shipped (X.2, X.3, partial X.5) — Clikt + fat-jar + POSIX wrapper smo
 - [x] **X.5** `--json` machine-readable output mode for AI consumers — root flag + per-subcommand `JsonEnvelope.success` / `JsonEnvelope.error` envelope (CLI-C.1).
 - [x] **X.6** `--dry-run` flag (prints proposed change, no write) — short-circuits inside `atomicWriteAndCommit`, returns `CommitResult.DryRun` carrying the would-be file body.
 - [x] **X.7** Exit-code taxonomy `core/ExitCodes.kt` enum mapped 1-to-1 with D.24 / CLI-D.1; Main.kt's outer try/catch routes `CliError` / `UsageError` / `CliktError` / `Throwable` to the right exit code.
-- [ ] **X.8** Bundle in release pipeline alongside APK (GitHub Releases asset; homebrew tap `887/tap/skb`; `curl ... | sh` one-liner)
-- [ ] **X.9** AGENTS.md content references CLI as primary path (rewrite per DM-K of data-model.md extensions)
+- [ ] **X.8** Bundle in release pipeline alongside APK (GitHub Releases asset; homebrew tap `887/tap/skb`; `curl ... | sh` one-liner) (deferred — release-pipeline polish; revisit in Round 3 backlog)
+- [ ] **X.9** AGENTS.md content references CLI as primary path (rewrite per DM-K of data-model.md extensions) (deferred — docs rewrite; revisit in Round 3 backlog)
 - [x] **X.10** Help system — `help/HelpCatalog.kt` single-source-of-truth drives both human (`skb help <cmd>`) and JSON (`skb help --json`) catalogs per CLI-C.4.
 - [x] **X.11** Repo discovery — `core/RepoDiscovery.kt` implements CLI-E.1 precedence: `--repo`, `SKB_REPO`, walk-up from `$PWD` (halts at `$HOME` or filesystem root); the `~/.skb/config.toml` `active_repo` fourth-precedence slot is intentionally deferred to its own CLI-E phase.
 - [x] **X.12** Test suite — 30 pure-JVM JUnit tests covering Uuid7 / MiniToml / AtomicWriter / RepoDiscovery / ExitCodes / Help catalog / end-to-end CLI parse with a fake `GitOps`. Zero Robolectric, zero Android deps.
@@ -478,63 +503,63 @@ Three modes, picked per-mirror at setup time:
 - [x] **Y.5** `PUSH_ONLY` mode (repo → CalDAV) — repo files → CalDAV `VEVENT`s; tracks `imported_uid` on repo files to maintain identity across pushes — `CalDavMirrorWorker.doPush` (also reused by Y.6 BIDI); `external_uid` frontmatter slot is the join key.
 - [x] **Y.6** `BIDI` mode (full two-way, with conflict detection) — `CalDavMirrorWorker` BIDI branch chains `doPull` then `doPush`, plus `CalDavScheduler` adds per-server rate-limit (`minServerGapMs`) + per-mirror interval.
 - [x] **Y.7** Conflict resolution shared with git conflict UI — stale-ETag detection emits `CalDavSyncResult.Conflicted(hrefs)`; pluggable into the existing `sync/ConflictRegistry` shape (Phase SE-J) via `ConflictSource.CALDAV` (full UI parameterization tracked under SE-Q.14).
-- [ ] **Y.8** `skb caldav add|sync|remove|list` subcommands — covers all three modes; `--mode pull|push|bidi` flag at add-time
-- [ ] **Y.9** Per-CalDAV-mirror sync interval (default 30m for mirrors)
-- [ ] **Y.10** ETag- + CTag- + RFC6578 `sync-token`-based incremental change detection (avoid full re-pull)
-- [ ] **Y.11** Mirror-source attribution in event detail UI: small "↻ mirrored from <server-host>" line + last-sync timestamp + link to re-sync now
-- [ ] **Y.12** AGENTS.md note for repos with mirrored calendars: "the `work` calendar is a CalDAV mirror; edits to its files will be overwritten on next pull — change events upstream instead"
+- [ ] **Y.8** `skb caldav add|sync|remove|list` subcommands — covers all three modes; `--mode pull|push|bidi` flag at add-time (Round 3 backlog)
+- [ ] **Y.9** Per-CalDAV-mirror sync interval (default 30m for mirrors) (Round 3 backlog)
+- [ ] **Y.10** ETag- + CTag- + RFC6578 `sync-token`-based incremental change detection (avoid full re-pull) (Round 3 backlog)
+- [ ] **Y.11** Mirror-source attribution in event detail UI: small "↻ mirrored from <server-host>" line + last-sync timestamp + link to re-sync now (Round 3 backlog)
+- [ ] **Y.12** AGENTS.md note for repos with mirrored calendars: "the `work` calendar is a CalDAV mirror; edits to its files will be overwritten on next pull — change events upstream instead" (deferred — docs note; revisit in Round 3 backlog)
 
 ## Phase Z — Git LFS
 
-- [ ] **Z.1** JGit LFS config wiring (`.gitattributes` for `attachments/**` over threshold)
-- [ ] **Z.2** Threshold-based auto-routing (default 1MB, configurable per repo)
-- [ ] **Z.3** Provider capability detection (probe LFS endpoint; on failure, fall back to in-tree)
-- [ ] **Z.4** Fallback warning UI on no-LFS providers ("this provider does not support LFS; large attachments stored inline")
-- [ ] **Z.5** Migration helper: convert existing repo's large in-tree attachments to LFS (`skb migrate --lfs`)
+- [ ] **Z.1** JGit LFS config wiring (`.gitattributes` for `attachments/**` over threshold) (Round 3 backlog)
+- [ ] **Z.2** Threshold-based auto-routing (default 1MB, configurable per repo) (Round 3 backlog)
+- [ ] **Z.3** Provider capability detection (probe LFS endpoint; on failure, fall back to in-tree) (Round 3 backlog)
+- [ ] **Z.4** Fallback warning UI on no-LFS providers ("this provider does not support LFS; large attachments stored inline") (Round 3 backlog)
+- [ ] **Z.5** Migration helper: convert existing repo's large in-tree attachments to LFS (`skb migrate --lfs`) (Round 3 backlog)
 
 ## Phase AA — Multi-timezone first-class
 
 Deep-dives: [`data-model.md`](data-model.md) extension DM-L, [`resolver.md`](resolver.md) extension RV-H+I, [`ui-spec.md`](ui-spec.md) extension UI-V.
 
-- [ ] **AA.1** Per-event `tz_id` field (additive, optional, non-breaking)
-- [ ] **AA.2** Repo default tz in `repo.toml`
-- [ ] **AA.3** Display-tz toggle in top bar; per-event "pin to event tz" flag
-- [ ] **AA.4** Multi-tz common-time finder
-- [ ] **AA.5** DST edge-case test corpus
-- [ ] **AA.6** `skb tz convert <event-id> <new-tz>` CLI subcommand
-- [ ] **AA.7** Participant-tz declaration in Together-tab common-time UI
+- [ ] **AA.1** Per-event `tz_id` field (additive, optional, non-breaking) (Round 3 backlog)
+- [ ] **AA.2** Repo default tz in `repo.toml` (Round 3 backlog)
+- [ ] **AA.3** Display-tz toggle in top bar; per-event "pin to event tz" flag (Round 3 backlog)
+- [ ] **AA.4** Multi-tz common-time finder (Round 3 backlog)
+- [ ] **AA.5** DST edge-case test corpus (Round 3 backlog)
+- [ ] **AA.6** `skb tz convert <event-id> <new-tz>` CLI subcommand (Round 3 backlog)
+- [ ] **AA.7** Participant-tz declaration in Together-tab common-time UI (Round 3 backlog)
 
 ## Phase BB — Weather overlay
 
-- [ ] **BB.1** Open-Meteo client integration (Apache-2.0 lib)
-- [ ] **BB.2** Per-repo location setting + location-permission flow
-- [ ] **BB.3** Cache layer (per-(location, date) day forecast, refresh every 6h)
-- [ ] **BB.4** Day view weather strip (3h granularity)
-- [ ] **BB.5** Week view header icons
-- [ ] **BB.6** Month view day-cell icons
-- [ ] **BB.7** Per-event location override (for travel events)
-- [ ] **BB.8** CC-BY attribution in About screen
-- [ ] **BB.9** `skb weather show <date>` CLI subcommand
+- [ ] **BB.1** Open-Meteo client integration (Apache-2.0 lib) (Round 3 backlog)
+- [ ] **BB.2** Per-repo location setting + location-permission flow (Round 3 backlog)
+- [ ] **BB.3** Cache layer (per-(location, date) day forecast, refresh every 6h) (Round 3 backlog)
+- [ ] **BB.4** Day view weather strip (3h granularity) (Round 3 backlog)
+- [ ] **BB.5** Week view header icons (Round 3 backlog)
+- [ ] **BB.6** Month view day-cell icons (Round 3 backlog)
+- [ ] **BB.7** Per-event location override (for travel events) (Round 3 backlog)
+- [ ] **BB.8** CC-BY attribution in About screen (Round 3 backlog)
+- [ ] **BB.9** `skb weather show <date>` CLI subcommand (Round 3 backlog)
 
 ## Phase CC — Replies / comments on events
 
 Deep-dives: [`data-model.md`](data-model.md) extension DM-K, [`ui-spec.md`](ui-spec.md) extension UI-W, [`notifications-sharing-import.md`](notifications-sharing-import.md) extension NS-M.
 
-- [ ] **CC.1** Schema: `events/<yyyy>/<mm>/<event-id>.comments/<comment-id>.md`
-- [ ] **CC.2** Event detail comments UI section (list + add)
-- [ ] **CC.3** `comments` notification channel + per-event mute toggle (D.37)
-- [ ] **CC.4** `skb comment add|list` CLI subcommands
-- [ ] **CC.5** Comment author chip rendering (same shape as event chip)
-- [ ] **CC.6** Threaded `in_reply_to` rendering (indented under parent)
+- [ ] **CC.1** Schema: `events/<yyyy>/<mm>/<event-id>.comments/<comment-id>.md` (Round 3 backlog)
+- [ ] **CC.2** Event detail comments UI section (list + add) (Round 3 backlog)
+- [ ] **CC.3** `comments` notification channel + per-event mute toggle (D.37) (Round 3 backlog)
+- [ ] **CC.4** `skb comment add|list` CLI subcommands (Round 3 backlog)
+- [ ] **CC.5** Comment author chip rendering (same shape as event chip) (Round 3 backlog)
+- [ ] **CC.6** Threaded `in_reply_to` rendering (indented under parent) (Round 3 backlog)
 
 ## Phase DD — Drag-to-reschedule + pinch-to-zoom
 
-- [ ] **DD.1** Long-press detector on event chips (Day + Week views)
-- [ ] **DD.2** Drag gesture with grid snapping (configurable grid; default 15min)
-- [ ] **DD.3** Drop commit with auto-message `move event "<title>" from <old> to <new>`
-- [ ] **DD.4** Pinch-to-zoom timeline (5min / 15min / 30min / 1h levels)
-- [ ] **DD.5** Zoom-level persistence per device
-- [ ] **DD.6** Recurrence drag: prompt "this instance only / this and future / entire series" — creates appropriate exception or rule edit
+- [ ] **DD.1** Long-press detector on event chips (Day + Week views) (Round 3 backlog)
+- [ ] **DD.2** Drag gesture with grid snapping (configurable grid; default 15min) (Round 3 backlog)
+- [ ] **DD.3** Drop commit with auto-message `move event "<title>" from <old> to <new>` (Round 3 backlog)
+- [ ] **DD.4** Pinch-to-zoom timeline (5min / 15min / 30min / 1h levels) (Round 3 backlog)
+- [ ] **DD.5** Zoom-level persistence per device (Round 3 backlog)
+- [ ] **DD.6** Recurrence drag: prompt "this instance only / this and future / entire series" — creates appropriate exception or rule edit (Round 3 backlog)
 
 ## Phase EE — Inline-markdown body styling — shipped in this change (Round 2 batch 5)
 
@@ -589,63 +614,63 @@ viewer is reachable from the renderer.
 
 ## Phase FF — Custom sticker / icon packs
 
-- [ ] **FF.1** Pack format spec (directory + optional `pack.toml`)
-- [ ] **FF.2** Install from local picker (zip or unzipped dir)
-- [ ] **FF.3** Install from URL fetch
-- [ ] **FF.4** `:sticker-name:` shortcut in title editors with autocomplete
-- [ ] **FF.5** Icon picker integration (repos, calendars, todolists)
-- [ ] **FF.6** Settings → Appearance → Sticker packs (list, install, remove)
+- [ ] **FF.1** Pack format spec (directory + optional `pack.toml`) (Round 3 backlog)
+- [ ] **FF.2** Install from local picker (zip or unzipped dir) (Round 3 backlog)
+- [ ] **FF.3** Install from URL fetch (Round 3 backlog)
+- [ ] **FF.4** `:sticker-name:` shortcut in title editors with autocomplete (Round 3 backlog)
+- [ ] **FF.5** Icon picker integration (repos, calendars, todolists) (Round 3 backlog)
+- [ ] **FF.6** Settings → Appearance → Sticker packs (list, install, remove) (Round 3 backlog)
 
 ## Phase GG — Signed commits (optional capability)
 
-- [ ] **GG.1** GPG private-key import flow (file picker + paste-armored-text)
-- [ ] **GG.2** Per-identity signing-key picker (lists imported key fingerprints)
-- [ ] **GG.3** JGit + BouncyCastle signing wiring (PGP signature on commits when toggle on)
-- [ ] **GG.4** Verified-author chip on entries from signed commits (small verified-checkmark badge)
-- [ ] **GG.5** "Off by default" — confirmed throughout UI and CLI
-- [ ] **GG.6** Key revocation flow (remove imported key; stops signing; existing signed commits unaffected)
-- [ ] **GG.7** Per-repo signing-key picker (override per repo if the active identity has multiple keys)
+- [ ] **GG.1** GPG private-key import flow (file picker + paste-armored-text) (Round 3 backlog)
+- [ ] **GG.2** Per-identity signing-key picker (lists imported key fingerprints) (Round 3 backlog)
+- [ ] **GG.3** JGit + BouncyCastle signing wiring (PGP signature on commits when toggle on) (Round 3 backlog)
+- [ ] **GG.4** Verified-author chip on entries from signed commits (small verified-checkmark badge) (Round 3 backlog)
+- [ ] **GG.5** "Off by default" — confirmed throughout UI and CLI (Round 3 backlog)
+- [ ] **GG.6** Key revocation flow (remove imported key; stops signing; existing signed commits unaffected) (Round 3 backlog)
+- [ ] **GG.7** Per-repo signing-key picker (override per repo if the active identity has multiple keys) (Round 3 backlog)
 
 ## Phase HH — Android Auto voice-create
 
-- [ ] **HH.1** Voice intent registration (`com.eight87.strictlykeptboy.action.CREATE_EVENT`)
-- [ ] **HH.2** Natural-language parsing (date / time / title / calendar) — use Android's `Recognizer` + simple regex; fall back to ChatGPT-style fuzzy if a future ML model is wired in
-- [ ] **HH.3** Default-repo + default-calendar resolution
-- [ ] **HH.4** Confirm-by-voice flow ("create event 'dentist' tomorrow at 3pm in Personal — say yes to confirm")
+- [ ] **HH.1** Voice intent registration (`com.eight87.strictlykeptboy.action.CREATE_EVENT`) (Round 3 backlog)
+- [ ] **HH.2** Natural-language parsing (date / time / title / calendar) — use Android's `Recognizer` + simple regex; fall back to ChatGPT-style fuzzy if a future ML model is wired in (Round 3 backlog)
+- [ ] **HH.3** Default-repo + default-calendar resolution (Round 3 backlog)
+- [ ] **HH.4** Confirm-by-voice flow ("create event 'dentist' tomorrow at 3pm in Personal — say yes to confirm") (Round 3 backlog)
 
 ## Phase II — Cross-device snooze sync (opt-in)
 
-- [ ] **II.1** Setting toggle: Settings → Notifications → "Sync snoozes across devices"
-- [ ] **II.2** `_local/snoozes.toml` schema (`[[snooze]]` entries with `event_id`, `until`, `device_id`)
-- [ ] **II.3** Auto-merge resolver for snoozes (latest-wins per entry; idempotent)
-- [ ] **II.4** Conflict-free idempotency verification (write a snooze, write the same snooze, confirm no double-entry)
+- [ ] **II.1** Setting toggle: Settings → Notifications → "Sync snoozes across devices" (Round 3 backlog)
+- [ ] **II.2** `_local/snoozes.toml` schema (`[[snooze]]` entries with `event_id`, `until`, `device_id`) (Round 3 backlog)
+- [ ] **II.3** Auto-merge resolver for snoozes (latest-wins per entry; idempotent) (Round 3 backlog)
+- [ ] **II.4** Conflict-free idempotency verification (write a snooze, write the same snooze, confirm no double-entry) (Round 3 backlog)
 
 ## Phase JJ — Multi-branch awareness
 
-- [ ] **JJ.1** Repo switcher shows current branch under repo name
-- [ ] **JJ.2** Branch picker in repo settings
-- [ ] **JJ.3** Branch creation flow (`skb branch create <name>`; UI form)
-- [ ] **JJ.4** Branch switching (with stash + reset path for uncommitted local changes)
-- [ ] **JJ.5** PR deep-link to provider's compare page
-- [ ] **JJ.6** `skb branch list|create|switch` CLI subcommands
+- [ ] **JJ.1** Repo switcher shows current branch under repo name (Round 3 backlog)
+- [ ] **JJ.2** Branch picker in repo settings (Round 3 backlog)
+- [ ] **JJ.3** Branch creation flow (`skb branch create <name>`; UI form) (Round 3 backlog)
+- [ ] **JJ.4** Branch switching (with stash + reset path for uncommitted local changes) (Round 3 backlog)
+- [ ] **JJ.5** PR deep-link to provider's compare page (Round 3 backlog)
+- [ ] **JJ.6** `skb branch list|create|switch` CLI subcommands (Round 3 backlog)
 
 ## Phase KK — CSV import for tasks
 
-- [ ] **KK.1** Settings → Templates → "Import tasks from CSV" flow
-- [ ] **KK.2** Column mapping UI (auto-detect common names, user confirms unknowns)
-- [ ] **KK.3** `skb task import-csv <file> --list <todolist>` CLI subcommand
-- [ ] **KK.4** Idempotency on re-import (by row hash; subsequent imports update existing entries)
+- [ ] **KK.1** Settings → Templates → "Import tasks from CSV" flow (Round 3 backlog)
+- [ ] **KK.2** Column mapping UI (auto-detect common names, user confirms unknowns) (Round 3 backlog)
+- [ ] **KK.3** `skb task import-csv <file> --list <todolist>` CLI subcommand (Round 3 backlog)
+- [ ] **KK.4** Idempotency on re-import (by row hash; subsequent imports update existing entries) (Round 3 backlog)
 
 ## Phase LL — License audit + release scope
 
-- [ ] **LL.1** Audit every dep against the no-GPL constraint:
+- [ ] **LL.1** Audit every dep against the no-GPL constraint: (deferred — license-audit completion; revisit in Round 3 backlog)
   - Apache-2.0: kotlinx, Compose, Room, JGit modules, ktoml, commonmark, lib-recur, BouncyCastle, Markwon, open-meteo
   - MPL-2.0: ical4j, dav4jvm — link-clean for our distribution; document in About
   - EPL-2.0 / EDL: JGit core — link-clean; document
   - BSD/MIT: anything that pops up; should be fine
   - **Flagged**: anything LGPL/AGPL/GPL — reject; find alternative
-- [ ] **LL.2** Licensee plugin allowlist updated for Round 2 deps
-- [ ] **LL.3** About screen license list extended
+- [ ] **LL.2** Licensee plugin allowlist updated for Round 2 deps (deferred — license-audit completion; revisit in Round 3 backlog)
+- [ ] **LL.3** About screen license list extended (deferred — license-audit completion; revisit in Round 3 backlog)
 
 ---
 
@@ -690,15 +715,15 @@ per-entity router.
 
 Original `add`-link sub-steps (open — share-link bundle flow):
 
-- [ ] **MM.A1** Register intent filter for `strictlykeptboy://add?...` (custom scheme)
-- [ ] **MM.A2** Register intent filter for `https://strictlykeptboy.app/add?...` (universal link)
-- [ ] **MM.A3** Digital Asset Links JSON at `https://strictlykeptboy.app/.well-known/assetlinks.json` for verified App Links
-- [ ] **MM.A4** URL parser: extract `url`, `label`, `mode`, `priority`, `via`, `references` query params
-- [ ] **MM.A5** URL fragment parser: extract `token`, `expires` (never sent over network)
-- [ ] **MM.A6** Multi-URL support (`?url=A&url=B`)
-- [ ] **MM.A7** Token-wipe: clear `#token=` from any persisted referrer after consumption
-- [ ] **MM.A8** Expiry enforcement: refuse links past `expires`
-- [ ] **MM.A9** QR scan integration (ZXing already in for D.42; verify reuse)
+- [ ] **MM.A1** Register intent filter for `strictlykeptboy://add?...` (custom scheme) (Round 3 backlog)
+- [ ] **MM.A2** Register intent filter for `https://strictlykeptboy.app/add?...` (universal link) (Round 3 backlog)
+- [ ] **MM.A3** Digital Asset Links JSON at `https://strictlykeptboy.app/.well-known/assetlinks.json` for verified App Links (Round 3 backlog)
+- [ ] **MM.A4** URL parser: extract `url`, `label`, `mode`, `priority`, `via`, `references` query params (Round 3 backlog)
+- [ ] **MM.A5** URL fragment parser: extract `token`, `expires` (never sent over network) (Round 3 backlog)
+- [ ] **MM.A6** Multi-URL support (`?url=A&url=B`) (Round 3 backlog)
+- [ ] **MM.A7** Token-wipe: clear `#token=` from any persisted referrer after consumption (Round 3 backlog)
+- [ ] **MM.A8** Expiry enforcement: refuse links past `expires` (Round 3 backlog)
+- [ ] **MM.A9** QR scan integration (ZXing already in for D.42; verify reuse) (Round 3 backlog)
 
 ## Phase NN — `references.toml` manifest — shipped Round 2 batch 5
 
@@ -714,7 +739,7 @@ them without re-touching the schema.
 - [x] **NN.2** Reader: `ReferencesManifest.read(repoRoot)` returns the parsed manifest; graceful empty on missing file. Handles both `url = "..."` singular and `remotes = [...]` array forms per Phase ZZ.B.
 - [x] **NN.3** Writer: `ReferencesManifest.write(repoRoot, manifest)` + `skb ref add|remove|list`. Writer emits the multi-remote array form when more than one remote is configured. NN.3 dedup semantics: newer entry with the same `repo_id` wins.
 - [x] **NN.4** Auto-dedup against already-configured repos — `addOrReplace()` returns `AddResult.Replaced` on `repo_id` collision; the manifest list keeps the latest entry only.
-- [ ] **NN.5** "Offer to add referenced repos" sheet UI (per-reference toggle) — deferred to UI-GG. Schema fields shipped to consume.
+- [ ] **NN.5** "Offer to add referenced repos" sheet UI (per-reference toggle) — deferred to UI-GG. Schema fields shipped to consume. (deferred — UI-GG follow-up; revisit in Round 3 backlog)
 - [x] **NN.6** Validation: refuse circular reference loops, refuse self-reference — `validateNoCycle()` BFS in `ReferencesManifest`; covered by `ReferencesManifestTest`.
 - [x] **NN.7** Required-reference banner data — `Entry.required` flag exposed; UI banner consumes via repo-settings VM. Credential-hint sub-table (`[reference.credential_hint]`) round-trips for the receiver-side auth pre-select per SH-C.6.
 - [x] **NN.CLI** `skb ref add|remove|list` (`cli/.../ref/RefCommands.kt`) — atomic-commit, `--json` envelopes for AI consumers.
@@ -723,37 +748,37 @@ them without re-touching the schema.
 
 Deep-dives: [`shared-schedules.md`](shared-schedules.md) SH-D, [`data-model.md`](data-model.md) DM-R, [`resolver.md`](resolver.md) RV-L.
 
-- [ ] **OO.1** State-file schema (done, snooze, note, reaction, priority-override, mute, hide)
-- [ ] **OO.2** Source-repo-id derivation (SHA-256 of normalized URL → 16 hex)
-- [ ] **OO.3** Resolver merge: source entity ⊕ state file → rendered instance
-- [ ] **OO.4** Writer atomicity: state-file commits one file per state change
-- [ ] **OO.5** `_local/state/` for pre-own-repo state (migrated on repo creation per D.47)
-- [ ] **OO.6** `skb state set --done|...` CLI surface
-- [ ] **OO.7** State-file orphan detection: when source entity is deleted, prompt to clean up state files
+- [ ] **OO.1** State-file schema (done, snooze, note, reaction, priority-override, mute, hide) (Round 3 backlog)
+- [ ] **OO.2** Source-repo-id derivation (SHA-256 of normalized URL → 16 hex) (Round 3 backlog)
+- [ ] **OO.3** Resolver merge: source entity ⊕ state file → rendered instance (Round 3 backlog)
+- [ ] **OO.4** Writer atomicity: state-file commits one file per state change (Round 3 backlog)
+- [ ] **OO.5** `_local/state/` for pre-own-repo state (migrated on repo creation per D.47) (Round 3 backlog)
+- [ ] **OO.6** `skb state set --done|...` CLI surface (Round 3 backlog)
+- [ ] **OO.7** State-file orphan detection: when source entity is deleted, prompt to clean up state files (Round 3 backlog)
 
 ## Phase PP — Simplified mode chrome
 
 Deep-dives: [`shared-schedules.md`](shared-schedules.md) SH-E, [`ui-spec.md`](ui-spec.md) UI-FF.
 
-- [ ] **PP.1** Mode state in app prefs (`simplified` | `full`)
-- [ ] **PP.2** Hidden surfaces: repo management, identities, templates, advanced sync, multi-view tabs, Together tab. When the active repo is no-origin (per Phase ZZ.G), ALL remote/sync UI is hidden including the sync button in the top bar; the sync-status badge becomes a permanent "local" badge.
-- [ ] **PP.3** Visible surfaces: Schedule (single view), Tasks (combined), sync button, comment composer, settings (minimal)
-- [ ] **PP.4** "Switch to full mode" entry point in settings (one-tap-reversible)
-- [ ] **PP.5** Mode-label picker (Simplified / Focused / Received Schedules / Good Boy / Good Girl / Good Pet / Kept / Other)
-- [ ] **PP.6** Auto-entry: simplified by default when only read-only repos OR only no-origin repos are configured AND the user has no own remote repo (per Phase ZZ.G).
-- [ ] **PP.7** Play Store screenshots use "Simplified" label exclusively
+- [ ] **PP.1** Mode state in app prefs (`simplified` | `full`) (Round 3 backlog)
+- [ ] **PP.2** Hidden surfaces: repo management, identities, templates, advanced sync, multi-view tabs, Together tab. When the active repo is no-origin (per Phase ZZ.G), ALL remote/sync UI is hidden including the sync button in the top bar; the sync-status badge becomes a permanent "local" badge. (Round 3 backlog)
+- [ ] **PP.3** Visible surfaces: Schedule (single view), Tasks (combined), sync button, comment composer, settings (minimal) (Round 3 backlog)
+- [ ] **PP.4** "Switch to full mode" entry point in settings (one-tap-reversible) (Round 3 backlog)
+- [ ] **PP.5** Mode-label picker (Simplified / Focused / Received Schedules / Good Boy / Good Girl / Good Pet / Kept / Other) (Round 3 backlog)
+- [ ] **PP.6** Auto-entry: simplified by default when only read-only repos OR only no-origin repos are configured AND the user has no own remote repo (per Phase ZZ.G). (Round 3 backlog)
+- [ ] **PP.7** Play Store screenshots use "Simplified" label exclusively (Round 3 backlog)
 
 ## Phase QQ — First-launch deep-link bootstrap
 
 Deep-dives: [`shared-schedules.md`](shared-schedules.md) SH-F, [`ui-spec.md`](ui-spec.md) UI-GG.
 
-- [ ] **QQ.1** Detect "launched via deep-link AND no repos configured" condition. First-launch routing (per Phase K LW-A.4): if launched via `strictlykeptboy://add?...` deep-link and no repos configured → this QQ bootstrap. Otherwise if no repos configured → Phase K wizard. When launched WITHOUT a deep-link AND no repos AND user picks local-only on the 2-option splash, route to local-only scaffolder via `GitRepo.initLocalOnly` per Phase ZZ.G.
-- [ ] **QQ.2** Skip wizard; go straight to "Add gifted repo" screen with URL prefilled
-- [ ] **QQ.3** Auth flow: try `#token=` fragment first, then OAuth, then PAT prompt
-- [ ] **QQ.4** Clone progress UI with animated mascot
-- [ ] **QQ.5** Post-clone: boot into simplified mode, schedule view, one-time onboarding card
-- [ ] **QQ.6** If receiving repo has `references.toml` with `default_active`, prompt to add referenced repos
-- [ ] **QQ.7** Error handling: bad URL, network down, auth failure — clear messages with retry
+- [ ] **QQ.1** Detect "launched via deep-link AND no repos configured" condition. First-launch routing (per Phase K LW-A.4): if launched via `strictlykeptboy://add?...` deep-link and no repos configured → this QQ bootstrap. Otherwise if no repos configured → Phase K wizard. When launched WITHOUT a deep-link AND no repos AND user picks local-only on the 2-option splash, route to local-only scaffolder via `GitRepo.initLocalOnly` per Phase ZZ.G. (Round 3 backlog)
+- [ ] **QQ.2** Skip wizard; go straight to "Add gifted repo" screen with URL prefilled (Round 3 backlog)
+- [ ] **QQ.3** Auth flow: try `#token=` fragment first, then OAuth, then PAT prompt (Round 3 backlog)
+- [ ] **QQ.4** Clone progress UI with animated mascot (Round 3 backlog)
+- [ ] **QQ.5** Post-clone: boot into simplified mode, schedule view, one-time onboarding card (Round 3 backlog)
+- [ ] **QQ.6** If receiving repo has `references.toml` with `default_active`, prompt to add referenced repos (Round 3 backlog)
+- [ ] **QQ.7** Error handling: bad URL, network down, auth failure — clear messages with retry (Round 3 backlog)
 
 ## Phase RR — Authoring side: share-this-repo flow — shipped Round 2 batch 6 (build on `round2/phase-rr-ss-share-migration`)
 
@@ -761,12 +786,12 @@ _Shipped Phase RR slice in branch `round2/phase-rr-ss-share-migration` (parent `
 
 - [x] **RR.1** Settings → Repos → tap repo → "Share this repo" entry — `ShareSheet` (Phase O) already wires the entry; RR layer adds the write-back + single-use authoring toggles on the sheet.
 - [x] **RR.2** Share-config sheet: mode, label, priority modifier, auth method — extended with `allowWriteBack` + `singleUseToken` policy flags; QR code preview rendered via `SharedRepoQrPreview` (ZXing 3.5.3, Apache-2.0).
-- [ ] **RR.3** Auth method: "Recipient adds own SSH key" path (no token in link) — sender-side SSH-key auth path remains for a future Phase RR.b slice; the existing `mode=read-only` + `mode=read-write` covers the common case and the recipient-accept flow honours both.
-- [ ] **RR.4** Auth method: "Embed one-shot deploy key" — deferred (provider-API integration).
-- [ ] **RR.5** Auth method: "Embed fine-grained PAT" — deferred (provider-API integration); `singleUseToken` field carries the agent-readable single-use semantic in the meantime.
-- [ ] **RR.6** Auth method: "Public repo" (no token needed) — implicit (no `#token=` fragment); UI label deferred.
+- [ ] **RR.3** Auth method: "Recipient adds own SSH key" path (no token in link) — sender-side SSH-key auth path remains for a future Phase RR.b slice; the existing `mode=read-only` + `mode=read-write` covers the common case and the recipient-accept flow honours both. (deferred per Phase RR slice — revisit in Round 3 backlog)
+- [ ] **RR.4** Auth method: "Embed one-shot deploy key" — deferred (provider-API integration). (deferred per Phase RR slice — revisit in Round 3 backlog)
+- [ ] **RR.5** Auth method: "Embed fine-grained PAT" — deferred (provider-API integration); `singleUseToken` field carries the agent-readable single-use semantic in the meantime. (deferred per Phase RR slice — revisit in Round 3 backlog)
+- [ ] **RR.6** Auth method: "Public repo" (no token needed) — implicit (no `#token=` fragment); UI label deferred. (deferred per Phase RR slice — revisit in Round 3 backlog)
 - [x] **RR.7** Output: copy link / save QR / system share sheet — Copy + Share buttons already exist; QR preview ships in `SharedRepoQrPreview`.
-- [ ] **RR.8** `skb share` CLI subcommand — deferred; the Phase SS.4 `skb fork` lands here in the same slice but `skb share` itself is out-of-scope for this batch.
+- [ ] **RR.8** `skb share` CLI subcommand — deferred; the Phase SS.4 `skb fork` lands here in the same slice but `skb share` itself is out-of-scope for this batch. (deferred per Phase RR slice — revisit in Round 3 backlog)
 
 Recipient-side acceptance (RR.3 dup-detection per SH-G.4 + RR.4 references.toml writer per NN.1..NN.8): `ShareAcceptResolver.classify` returns `SelfShareSkip | DuplicateByFingerprint | DuplicateByUrl | Import`, with the `Import` decision carrying a planned `ReferencesManifest.Entry` that the caller can hand to `ReferencesManifest.addOrReplace` + `ReferencesManifest.write`. Sender's `allowWriteBack=true` flag flows through into the recipient's `write_back_target` line on its `references.toml` entry (YY.8 / FB-H).
 
@@ -776,11 +801,11 @@ _Shipped Phase SS slice in branch `round2/phase-rr-ss-share-migration` (parent `
 
 - [x] **SS.1** "Add my own events" entry point in simplified mode (FAB or settings) — `ForkDialog` is the Settings → Repos → <shared-repo> → "Use my own copy" entry surface; the wiring into `RepoSettingsScreen` is a Phase TT follow-up that ties into priority resolution.
 - [x] **SS.2** Mini-wizard: repo name, provider, auth (2–3 screens) — represented as the single-step `ForkDialog` for the fork mechanic + the existing wizard for full repo creation (`Phase K`). Clone-fork mechanic lives in `RepoForker.fork(...)` and the CLI `ForkCommand`.
-- [ ] **SS.3** Optional template-picker (skippable) — deferred; the fork mechanic preserves the source's template-derived structure verbatim, so the picker is only relevant to the "create from blank" path which is the Phase K wizard.
+- [ ] **SS.3** Optional template-picker (skippable) — deferred; the fork mechanic preserves the source's template-derived structure verbatim, so the picker is only relevant to the "create from blank" path which is the Phase K wizard. (deferred per Phase SS slice — revisit in Round 3 backlog)
 - [x] **SS.4** Migrate `_local/state/*` → new repo's `state/` folder — handled by the wholesale tree copy in `RepoForker.copyTree`; the `_local/state/*` path is copied byte-for-byte alongside everything else.
 - [x] **SS.5** Write `references.toml` in new repo listing currently-configured gifted repos — `RepoForker` writes a single back-reference entry to the source repo; multi-source fork (carrying ALL references from the parent) is a TT/RR.b refinement.
-- [ ] **SS.6** Mode-choice prompt: stay simplified or switch to full — deferred to the DDD mode-transition slice.
-- [ ] **SS.7** Reverse path: full mode → "Switch to simplified mode" toggle — deferred to DDD.5.
+- [ ] **SS.6** Mode-choice prompt: stay simplified or switch to full — deferred to the DDD mode-transition slice. (deferred per Phase SS slice — revisit in Round 3 backlog)
+- [ ] **SS.7** Reverse path: full mode → "Switch to simplified mode" toggle — deferred to DDD.5. (deferred per Phase SS slice — revisit in Round 3 backlog)
 
 CLI: `skb fork --source <path> --name <label> <destination>` ships in this slice as a top-level command (per the additive-CLI constraint). Promotion to `skb repo fork` is a renaming task once the `RepoGroup` ownership shifts.
 
@@ -788,11 +813,11 @@ CLI: `skb fork --source <path> --name <label> <destination>` ships in this slice
 
 Deep-dive: [`resolver.md`](resolver.md) RV-M.
 
-- [ ] **TT.1** Local-override (per-device) loaded from state-files at render time
-- [ ] **TT.2** Repo-modifier from `references.toml` (high/normal/low → ±200)
-- [ ] **TT.3** Receiver "pin this repo to top" → +500 modifier
-- [ ] **TT.4** Clamp [1, 1000] with out-of-range warning in broken-entries tray
-- [ ] **TT.5** Visual indicator on calendars whose displayed priority differs from source-declared priority
+- [ ] **TT.1** Local-override (per-device) loaded from state-files at render time (Round 3 backlog)
+- [ ] **TT.2** Repo-modifier from `references.toml` (high/normal/low → ±200) (Round 3 backlog)
+- [ ] **TT.3** Receiver "pin this repo to top" → +500 modifier (Round 3 backlog)
+- [ ] **TT.4** Clamp [1, 1000] with out-of-range warning in broken-entries tray (Round 3 backlog)
+- [ ] **TT.5** Visual indicator on calendars whose displayed priority differs from source-declared priority (Round 3 backlog)
 
 ## Phase UU — CalDAV overlay (read-only, no-repo) — DEFERRED IMPLEMENTATION
 
@@ -802,20 +827,20 @@ Deep-dive: [`sync-engine.md`](sync-engine.md) extension phase SE-X. Locked decis
 
 Peer to **Phase Y** (bidirectional CalDAV ↔ git), but the overlay **never** touches a git repo. Used when the user wants an external calendar (Office 365 "Team Holidays", a shared Google Calendar, an iCloud family calendar) to **appear** in their priority view without being materialized into any repo on disk.
 
-- [ ] **UU.1** Data model: `CalDavOverlay` — no `repoId`, no `targetCalendarId`; events live in an in-memory + Room-cached overlay store keyed by `overlayId`. Additive `CalendarMeta.overlaySource: CalDavOverlayRef?` field on the resolver side.
-- [ ] **UU.2** Strict read-only: no push, no edit, no conflict resolution. Long-press / drag / inline-edit refuse with "this calendar lives on a remote server; edit it where you created it." (banner links to the provider's web UI when known)
-- [ ] **UU.3** Discovery flow reuses SE-Q PROPFIND chain (well-known → principal → calendar-home → calendar list with checkboxes)
-- [ ] **UU.4** Auth reuses SE-Q `CalDavCredential` sealed interface: BasicAuth + OAuth Device Flow (Google/Microsoft) + app-specific-password (Apple)
-- [ ] **UU.5** Cache: ETag/CTag/`sync-token` incremental fetch into Room only — **NEVER written to a git repo**, never appears in any `calendars/<id>/events/...` path
-- [ ] **UU.6** Resolver integration: overlay calendars are first-class priority calendars alongside repo-backed ones — same priority slider (1..1000), same toggle, same active-windows, same priority-tiebreak comparator
-- [ ] **UU.7** Settings UI: `Settings → Calendars → + Add external calendar (CalDAV)` — **top-level** entry, NOT nested under any repo. Distinct from `Settings → Repos → <repo> → + Add CalDAV mirror` (which is the SE-Q mirror surface)
-- [ ] **UU.8** CLI: `skb caldav add --overlay <url>` (flag, not a separate `caldav-overlay` subcommand group — keeps surface flat). `skb caldav list` shows both mirrors and overlays with a `kind` column
-- [ ] **UU.9** Visual treatment: overlay calendars get a small `🔗 external` badge in the calendar drawer and event list to distinguish from repo-backed
-- [ ] **UU.10** Offline behavior: last cached snapshot renders; banner "external calendar last synced Nh ago" when stale beyond 2× sync interval
-- [ ] **UU.11** Per-provider rate-limit profiles: Google (1M req/day), MS Graph (throttling-header aware), Apple iCloud (conservative quiet cap), Nextcloud (server-configurable), generic (RFC-compliant defaults). Default overlay poll: **60m** (vs 30m for mirrors — overlays are less interactive)
-- [ ] **UU.12** Removal path: drop Room rows + `SecretsStore` entry; no repo cleanup needed because nothing was ever written to disk
-- [ ] **UU.13** Test matrix: recorded HTTP fixtures for Google / Microsoft 365 / Apple iCloud / Nextcloud / generic-RFC4791. Live integration tests gated behind a `--live-caldav` flag and skipped in CI until creds are wired
-- [ ] **UU.14** Documentation: README + AGENTS.md note that overlay calendars are remote-only and CLI agents reading the repo will NOT see overlay events on the filesystem
+- [ ] **UU.1** Data model: `CalDavOverlay` — no `repoId`, no `targetCalendarId`; events live in an in-memory + Room-cached overlay store keyed by `overlayId`. Additive `CalendarMeta.overlaySource: CalDavOverlayRef?` field on the resolver side. (Round 3 backlog)
+- [ ] **UU.2** Strict read-only: no push, no edit, no conflict resolution. Long-press / drag / inline-edit refuse with "this calendar lives on a remote server; edit it where you created it." (banner links to the provider's web UI when known) (Round 3 backlog)
+- [ ] **UU.3** Discovery flow reuses SE-Q PROPFIND chain (well-known → principal → calendar-home → calendar list with checkboxes) (Round 3 backlog)
+- [ ] **UU.4** Auth reuses SE-Q `CalDavCredential` sealed interface: BasicAuth + OAuth Device Flow (Google/Microsoft) + app-specific-password (Apple) (Round 3 backlog)
+- [ ] **UU.5** Cache: ETag/CTag/`sync-token` incremental fetch into Room only — **NEVER written to a git repo**, never appears in any `calendars/<id>/events/...` path (Round 3 backlog)
+- [ ] **UU.6** Resolver integration: overlay calendars are first-class priority calendars alongside repo-backed ones — same priority slider (1..1000), same toggle, same active-windows, same priority-tiebreak comparator (Round 3 backlog)
+- [ ] **UU.7** Settings UI: `Settings → Calendars → + Add external calendar (CalDAV)` — **top-level** entry, NOT nested under any repo. Distinct from `Settings → Repos → <repo> → + Add CalDAV mirror` (which is the SE-Q mirror surface) (Round 3 backlog)
+- [ ] **UU.8** CLI: `skb caldav add --overlay <url>` (flag, not a separate `caldav-overlay` subcommand group — keeps surface flat). `skb caldav list` shows both mirrors and overlays with a `kind` column (Round 3 backlog)
+- [ ] **UU.9** Visual treatment: overlay calendars get a small `🔗 external` badge in the calendar drawer and event list to distinguish from repo-backed (Round 3 backlog)
+- [ ] **UU.10** Offline behavior: last cached snapshot renders; banner "external calendar last synced Nh ago" when stale beyond 2× sync interval (Round 3 backlog)
+- [ ] **UU.11** Per-provider rate-limit profiles: Google (1M req/day), MS Graph (throttling-header aware), Apple iCloud (conservative quiet cap), Nextcloud (server-configurable), generic (RFC-compliant defaults). Default overlay poll: **60m** (vs 30m for mirrors — overlays are less interactive) (Round 3 backlog)
+- [ ] **UU.12** Removal path: drop Room rows + `SecretsStore` entry; no repo cleanup needed because nothing was ever written to disk (Round 3 backlog)
+- [ ] **UU.13** Test matrix: recorded HTTP fixtures for Google / Microsoft 365 / Apple iCloud / Nextcloud / generic-RFC4791. Live integration tests gated behind a `--live-caldav` flag and skipped in CI until creds are wired (Round 3 backlog)
+- [ ] **UU.14** Documentation: README + AGENTS.md note that overlay calendars are remote-only and CLI agents reading the repo will NOT see overlay events on the filesystem (Round 3 backlog)
 
 ---
 
@@ -826,7 +851,7 @@ Android AppWidget that shows a large-numerals count to any event the user picks 
 **Sibling widget:** the *now widget* (current-activity glance) lives at Phase EEE — same widget infrastructure, different content mode. VV pins a future event and counts down; EEE shows what you're doing right now. Both share the Phase WW sticker resolver + NS-Z Wear bridge so the same artwork renders consistently across phone widget, lockscreen widget, and watch notification.
 
 - [x] **VV.1** Surface: `AppWidgetProvider` + a configure-activity to pick the target. `CountdownWidgetProvider` + `CountdownWidgetConfigActivity` live under `widget/countdown/`; pointer + override state persisted per-`appWidgetId` in `WidgetConfigPrefs`. Picker mode `(a)` specific-event lands here; mode `(b)` next-upcoming is a `PinnedEventSource` impl that re-evaluates on each `onUpdate` (real picker UI deferred).
-- [ ] **VV.2** Optional event-frontmatter flag `pin_to_widget = true` (additive; resolver-ignored). Picker mode (a) defaults to the most-recently-pinned event, with all events still browsable.
+- [ ] **VV.2** Optional event-frontmatter flag `pin_to_widget = true` (additive; resolver-ignored). Picker mode (a) defaults to the most-recently-pinned event, with all events still browsable. (deferred — VV follow-up; revisit in Round 3 backlog)
 - [x] **VV.3** Layout (Material3 Expressive, glanceable): RemoteViews-backed 2x1 / 4x2 / 4x4 layouts under `res/layout/widget_countdown_*.xml`; 4x4 includes progress bar + subtitle.
 - [x] **VV.4** Sizes: 2x1 / 4x2 / 4x4 selected via `WidgetLayoutSize.pick(minW, minH)`.
 - [x] **VV.5** Update strategy: `WidgetAlarmScheduler` schedules an inexact per-minute `setInexactRepeating` on `onEnabled`, cancelled on `onDisabled`. Event-boundary refresh dispatched via `forceRefresh(context)` (callable from the existing reminder fan-out post-MM).
@@ -834,7 +859,7 @@ Android AppWidget that shows a large-numerals count to any event the user picks 
 - [x] **VV.7** Multiple widgets supported — each `appWidgetId` carries its own prefs namespace.
 - [x] **VV.8** Strings — `widget_countdown_in_days`, `_tomorrow`, `_today`, `_past_due` in `strings.xml`.
 - [x] **VV.9** Past-due styling: countdown bar clamps to 0; `WidgetTimeFormat.Bucket.DaysAgo` drives the subtitle copy.
-- [ ] **VV.10** Demo seed (consumed by Phase L): `demo-sub` ships with one pinned event — "Sir's visit" on 2026-06-21 in `Special Events`.
+- [~] ~~**VV.10** Demo seed (consumed by Phase L): `demo-sub` ships with one pinned event — "Sir's visit" on 2026-06-21 in `Special Events`.~~ (SUPERSEDED — Phase L retired per D.54; widget Picker mode (a) covered by user-pinned events via `WidgetConfigPrefs`)
 - [ ] **VV.11** Test fixtures: time-frozen render previews at +30d / +7d / +1d / 0d / -1d (deferred — needs Robolectric harness).
 - [x] **VV.12** User-authored event titles surface verbatim; privacy redaction routes through `WidgetPrivacy.shouldRedact`.
 - [x] **VV.13** Per-event privacy flag (D.57 / K-2) honoured by `WidgetPrivacy`; lockscreen-stricter calendar-default-private rule wired through the surface enum.
@@ -847,11 +872,11 @@ Deep-dive: [`draft-avatar-stickers.md`](draft-avatar-stickers.md) phases AV-A th
 
 - [x] **WW.1** Pack format + default bat pack (AV-A + AV-G) — MVP: `pack.toml` manifest parser (`PackManifest`), 7 species scaffolds under `assets/avatar-packs/<species>/`, tag taxonomy locked in `StickerTag` sealed (`neutral`, `kink`, `hygiene`, `workout`, `meal`, `work`, `study`, `posture`, `rest`, `idle`, `Custom`). Build-time validator (AV-G.5) deferred. Artwork files land in a follow-up; `AvatarResolver` gracefully falls through to `R.drawable.about_bat` when a referenced WebP isn't shipped yet.
 - [x] **WW.2** Resolver (AV-B) — `StickerResolver` interface + `DefaultStickerResolver` impl with the full 6-rung chain (per-event override → sub-beat-sticker-id → activity-specific → category-generic → species-idle → bat-fallback) per D.66; neutral-mode filter on rungs 3+4 (and pass-through for kink+neutral combined tags); memoization keyed on the request tuple. `AvatarResolver` facade + LRU `StickerBitmapCache` sized by allocation bytes (~20 MB target). NowCard (AV-C) composable is a UI-LL follow-up, NOT in this slice.
-- [ ] **WW.3** Sub-beat support (AV-D). Resolver already accepts `subbeatStickerId` + `subbeatIndex`; CLI + frontmatter array + cross-fade animation pending.
+- [ ] **WW.3** Sub-beat support (AV-D). Resolver already accepts `subbeatStickerId` + `subbeatIndex`; CLI + frontmatter array + cross-fade animation pending. (deferred — WW follow-up; revisit in Round 3 backlog)
 - [x] **WW.4** "Choose your own" species flow (AV-E) — disk side: `UserPackLoader` reads `<filesDir>/avatar-packs/<pack-id>/`, `PackId.fromCloneUrl` (normalized SHA-256 → 16 hex), `CompositePackStore` fan-out user-first → bundled-second. Clone-from-GitHub wiring (jgit/depth=1) + Settings → Advanced template URL field deferred.
 - [x] **WW.5** Customization (AV-F) — storage shipped: `AvatarPackPrefs` with per-species active-pack pointer (plain prefs) + per-activity overrides (`EncryptedSharedPreferences`, key `avatar.overrides.<activity_id>` per D.67). Settings → Appearance "Sticker pack" picker section added (chips per pack matching the active species, with a hint when neutral-mode is on). Per-event sticker override schema deferred to the event-editor surface. JSON export/import deferred to v1.1.
-- [ ] **WW.6** Rendering pipeline + cache (AV-H). LRU cache shipped; Coil 2.x + animated WebP + < 300ms first-frame budget remains.
-- [ ] **WW.7** Snapshot test suite (AV-I). Pure-JVM resolver unit tests landed (`DefaultStickerResolverTest`, `PackManifestTest`); Roborazzi harness remains.
+- [ ] **WW.6** Rendering pipeline + cache (AV-H). LRU cache shipped; Coil 2.x + animated WebP + < 300ms first-frame budget remains. (deferred — WW follow-up; revisit in Round 3 backlog)
+- [ ] **WW.7** Snapshot test suite (AV-I). Pure-JVM resolver unit tests landed (`DefaultStickerResolverTest`, `PackManifestTest`); Roborazzi harness remains. (deferred — WW follow-up; revisit in Round 3 backlog)
 
 ---
 
@@ -938,16 +963,16 @@ Round-2 partial close-out: BBB.1, BBB.2, BBB.5, BBB.7, BBB.8, BBB.9, BBB.14 (ove
 - [x] **BBB.1** Calendar-frontmatter extensions per HV-E.1: `supersedes`, `superseded_during`, `nonSuperseable`. Calendar-config also carries optional `[baseline_cadence]` block per HV-N.4. *(Shipped — see `:app/store/SupersedenceConfig.kt` + round-trip tests in `SupersedenceConfigParseTest`.)*
 - [x] **BBB.2** Resolver supersedence pass per HV-E.2 + HV-E.6 invariants S1–S5. See [`resolver.md`](resolver.md) RV-P. Cache: Room table `event_visibility(date, event_id, hidden_by_calendar_id NULLABLE)` invalidated per HV-E.5. *(Resolver pass + per-event force-show overrides already wired in `ActiveSetEvaluator` + `OverlayResolver`; Room cache deferred until UI consumers in BBB.4 land.)*
 - [x] **BBB.3** `overrides/<superseded-cal-id>/<event-id>/<yyyy-mm-dd>.md` directory per HV-E.4 / D.77. Two `kind` values: `force-show`, `force-show-for-range`. Materialized by the vacation wizard's Screen 5 (Phase CCC) when the user picks "but keep these on". *(On-disk layout + CLI writer shipped in `:cli/override/OverrideCommands.kt`; wizard-side materialization lives in Phase CCC.)*
-- [ ] **BBB.4** UI surfaces per HV-E.3 (schedule hides; manage-overlays renders strikethrough+grey with per-event override toggle; week/month show leaf-glyph). See [`ui-spec.md`](ui-spec.md) UI-PP. *(Deferred — follow-up sub-agent.)*
+- [ ] **BBB.4** UI surfaces per HV-E.3 (schedule hides; manage-overlays renders strikethrough+grey with per-event override toggle; week/month show leaf-glyph). See [`ui-spec.md`](ui-spec.md) UI-PP. *(Deferred — follow-up sub-agent.)* (deferred — BBB UI/notif follow-up; revisit in Round 3 backlog)
 - [x] **BBB.5** Event-frontmatter `attachments: List<Attachment>` array per HV-M, six sealed kinds (link / qr / file / barcode / vcard / location). Storage at `attachments/<event-id>/<filename>`; >100KB files Git-LFS'd (Phase Z); privacy inheritance from event's `private` flag. See DM-W. *(Shipped — `:app/store/Attachment.kt` sealed type + round-trip tests.)*
-- [ ] **BBB.6** Attachment renderers per HV-M.4 (per-kind Composable specs: link, qr, file, barcode, vcard, location). See [`ui-spec.md`](ui-spec.md) UI-QQ. *(Deferred — follow-up sub-agent.)*
+- [ ] **BBB.6** Attachment renderers per HV-M.4 (per-kind Composable specs: link, qr, file, barcode, vcard, location). See [`ui-spec.md`](ui-spec.md) UI-QQ. *(Deferred — follow-up sub-agent.)* (deferred — BBB UI/notif follow-up; revisit in Round 3 backlog)
 - [x] **BBB.7** Event-frontmatter `reminders: List<Reminder>` array per HV-N.1, sealed kinds (heads_up / all_day_banner / tomorrow_briefing / pre_event / at_start / post_event_checkin). See DM-X. *(Shipped — `:app/store/Reminder.kt` codec + `ReminderCollapsing` HV-N.7 helper + round-trip tests.)*
 - [x] **BBB.8** Default reminder cadences per template category per HV-N.3 / D.79 (medical / flight / travel-prep / vacation-daily / household / medication / ADHD / birthdays). *(Shipped — `DefaultCadences` map in `:app/store/Reminder.kt`.)*
 - [x] **BBB.9** Off-schedule detection per HV-N.4 / D.80: per-calendar `baseline_cadence`; events outside window flagged `off_schedule = true`. See [`resolver.md`](resolver.md) RV-Q. *(Schema + `isWithinBaseline` predicate shipped in `:app/store/SupersedenceConfig.kt`; resolver-side `offSchedule` band flag already wired in `Renderer.kt`.)*
-- [ ] **BBB.10** Multi-reminder firing + notification stacking per HV-N.7 (60s collision window collapses into one Android notification with N expansion lines, privacy-aware). See [`notifications-sharing-import.md`](notifications-sharing-import.md) NS-Z. *(Helper `ReminderCollapsing` shipped; WorkManager firing path deferred — follow-up sub-agent.)*
-- [ ] **BBB.11** System `cal-briefings` calendar per HV-N.6 / D.81: morning + evening briefing events with auto-generated bodies; user disable in Settings → Notifications → "Show briefings". See NS-Z. *(Deferred.)*
-- [ ] **BBB.12** Inverted-habit `post_event_checkin` opt-in per HV-N.8 / D.82. *(Reminder kind shipped; opt-in UI deferred.)*
-- [ ] **BBB.13** Import path extensions per HV-M.6: `.ics` URL/DESCRIPTION → `link` attachments; `.eml` airline confirmation → boarding-pass `barcode` + `file`; `.pkpass` → primary `barcode` + metadata + original archive `file`. See NS-Z import-lift. *(Deferred.)*
+- [ ] **BBB.10** Multi-reminder firing + notification stacking per HV-N.7 (60s collision window collapses into one Android notification with N expansion lines, privacy-aware). See [`notifications-sharing-import.md`](notifications-sharing-import.md) NS-Z. *(Helper `ReminderCollapsing` shipped; WorkManager firing path deferred — follow-up sub-agent.)* (deferred — BBB UI/notif follow-up; revisit in Round 3 backlog)
+- [ ] **BBB.11** System `cal-briefings` calendar per HV-N.6 / D.81: morning + evening briefing events with auto-generated bodies; user disable in Settings → Notifications → "Show briefings". See NS-Z. *(Deferred.)* (deferred — BBB UI/notif follow-up; revisit in Round 3 backlog)
+- [ ] **BBB.12** Inverted-habit `post_event_checkin` opt-in per HV-N.8 / D.82. *(Reminder kind shipped; opt-in UI deferred.)* (deferred — BBB UI/notif follow-up; revisit in Round 3 backlog)
+- [ ] **BBB.13** Import path extensions per HV-M.6: `.ics` URL/DESCRIPTION → `link` attachments; `.eml` airline confirmation → boarding-pass `barcode` + `file`; `.pkpass` → primary `barcode` + metadata + original archive `file`. See NS-Z import-lift. *(Deferred.)* (deferred — BBB UI/notif follow-up; revisit in Round 3 backlog)
 - [x] **BBB.14** CLI per HV-E.8 + HV-M.8 + HV-N + HV-J: `skb supersede`, `skb override`, `skb attach`, `skb reminder add|rm`, `skb briefing show`. See [`cli-tooling.md`](cli-tooling.md) CLI-U. *(`skb override add|list`, `skb attach add|list`, `skb reminder add|rm|list` shipped; `skb supersede` and `skb briefing show` deferred.)*
 - [x] **BBB.15** Tests per HV-I.6 (supersedence invariants S1–S5) + HV-O.2 (attachment round-trip + LFS threshold + privacy inheritance) + HV-O.3..O.5 (multi-reminder fire + off-schedule detection + briefing rendering) + HV-O.8 (notification stacking). *(31 new unit tests across `SupersedenceConfigParseTest`, `AttachmentParseTest`, `ReminderParseTest`, `OverrideCommandsTest`, `AttachmentCommandsTest`, `ReminderCommandsTest`.)*
 
@@ -961,13 +986,13 @@ Source draft: [`draft-household-travel-vacation.md`](draft-household-travel-vaca
 
 - [x] **CCC.1** Compose nav-graph per HV-F.1 — compact 4-screen sequence + back/discard handling (`TripWizardNavHost`). In-memory `TripDraft` (Room-backed persistence is the full-spec follow-up). See UI-OO.
 - [x] **CCC.2** Screen 1 — Trip basics per HV-F.2 (name, start/end dates, destination free-text, traveler count). Sticker: `trip-suitcase-waving`. Offline-autocomplete is the full-spec follow-up.
-- [ ] **CCC.3** Screen 2 — Travel-prep cadence per HV-F.3 (HV-B back-fill preview with per-row toggles + lead-offset edit; conditional gating on visa.required etc.). Sticker: `flight-paw-prints`. _Compact cut materializes via the simplified default-filter in `TripScaffolder.eligibleForCompactCut`._
-- [ ] **CCC.4** Screen 3 — Flight details per HV-F.4 (conditional on mode=flight; multi-leg list with IATA codes; per-leg international toggle adjusts buffer). Sticker: `flight-paw-prints`. _Compact cut renders the transport-mode radio on Screen 2 and uses a single default leg in materialization._
+- [ ] **CCC.3** Screen 2 — Travel-prep cadence per HV-F.3 (HV-B back-fill preview with per-row toggles + lead-offset edit; conditional gating on visa.required etc.). Sticker: `flight-paw-prints`. _Compact cut materializes via the simplified default-filter in `TripScaffolder.eligibleForCompactCut`._ (deferred — CCC full-spec follow-up; revisit in Round 3 backlog)
+- [ ] **CCC.4** Screen 3 — Flight details per HV-F.4 (conditional on mode=flight; multi-leg list with IATA codes; per-leg international toggle adjusts buffer). Sticker: `flight-paw-prints`. _Compact cut renders the transport-mode radio on Screen 2 and uses a single default leg in materialization._ (deferred — CCC full-spec follow-up; revisit in Round 3 backlog)
 - [x] **CCC.5** Screen 4 — Vacation-daily anchors per HV-F.5 — compact toggles (include daily, pack kink kit). Sticker: `beach-loungin-with-cage-still-on` (neutral variant `beach-loungin`). Per-anchor cadence-relax + meal-anchor radio are the full-spec follow-ups.
-- [ ] **CCC.6** Screen 5 — Supersedence picker per HV-F.6 (per-calendar pause toggle defaults; nonSuperseable calendars visually locked; per-event "keep this on" override list materializes `overrides/` files). Sticker: `supersedence-snooze-toggle`.
-- [ ] **CCC.7** Screen 6 — Confirm per HV-F.7 (mini-month preview with greyed-strikethrough superseded events; re-edit hop-back). Sticker: `confirm-tail-flick` + `good-boy-stays-good-boy-on-vacation` (neutral `staying-on-track`). _Compact cut renders a text summary card + reassurance line._
+- [ ] **CCC.6** Screen 5 — Supersedence picker per HV-F.6 (per-calendar pause toggle defaults; nonSuperseable calendars visually locked; per-event "keep this on" override list materializes `overrides/` files). Sticker: `supersedence-snooze-toggle`. (deferred — CCC full-spec follow-up; revisit in Round 3 backlog)
+- [ ] **CCC.7** Screen 6 — Confirm per HV-F.7 (mini-month preview with greyed-strikethrough superseded events; re-edit hop-back). Sticker: `confirm-tail-flick` + `good-boy-stays-good-boy-on-vacation` (neutral `staying-on-track`). _Compact cut renders a text summary card + reassurance line._ (deferred — CCC full-spec follow-up; revisit in Round 3 backlog)
 - [x] **CCC.8** Materialization per HV-F.8 — `TripScaffolder` writes `calendars/cal-trip-<uuidv7>/calendar.toml` with trip metadata, HV-B prep events back-filled from `lead_offset_days`, HV-C flight events when mode=flight, HV-D vacation-daily recurring rules bounded by `RRULE UNTIL`. Single atomic commit. Supersedence arrays + override files are the full-spec follow-ups (CCC.6).
-- [ ] **CCC.9** Edit-in-flight + cancel-trip per HV-F.9 / HV-F.10 (rehydrate `TripDraft` from existing `cal-trip-<id>/`; diff-commit; cancel deletes the calendar dir + overrides atomically).
+- [ ] **CCC.9** Edit-in-flight + cancel-trip per HV-F.9 / HV-F.10 (rehydrate `TripDraft` from existing `cal-trip-<id>/`; diff-commit; cancel deletes the calendar dir + overrides atomically). (deferred — CCC full-spec follow-up; revisit in Round 3 backlog)
 - [x] **CCC.10** Entry-points per HV-G — shipped: Settings → Lifestyle → "+ Plan a trip" (HV-G.1, wired via `SettingsAccess.onPlanTrip`), FAB long-press → "Plan a trip" (covers the same affordance HV-G.3 anchors around), Now-card empty-state "No plans today — want to plan a trip?" (HV-G.3, `EmptyScheduleState`). HV-G.2 calendar-detail "+ overlay from template" is the full-spec follow-up.
 - [x] **CCC.11** Sticker beats per HV-H — locked-key registry in `TripStickerBeats`: `trip-suitcase-waving`, `flight-paw-prints`, `beach-loungin-with-cage-still-on` + neutral `beach-loungin`, `confirm-tail-flick` + neutral `staying-on-track`. Resolver-aware swap honours neutral-mode per D.66. HV-H.7 SVG-with-PNG-fallback assets at 64/128/256 sizes are the assets-only follow-up.
 - [x] **CCC.12** Tests per HV-I.4 / HV-I.5 — `TripScaffolderTest`: back-fill math (passport-validity at T-42 produces a May event for a June 12 start), flight-day materialization (Flight emits flight events, Car does not), `RRULE UNTIL` bound to trip end, incomplete-draft rejection. `TripDraftTest`: 6 validation cases. `TripStickerBeatsTest`: every screen has a beat; neutral-variants registered. HV-I.7 Compose UI path-coverage is the follow-up.
@@ -982,16 +1007,16 @@ Source draft: [`draft-household-travel-vacation.md`](draft-household-travel-vaca
 - [x] **DDD.2** `ReviewFeedWriter.writeReviewableChange` materializes `reviews/<commit-sha>/reviewable_change.md` + empty `responses/` dir. Register-aware `autoSummary` aggregates families via `classifyPath`. The JGit post-commit callback wiring lives in the caller; this writer is the surface.
 - [x] **DDD.3** `ReviewResponseWriter.Response` carries the 9-token canonical reaction set + responder-fingerprint; `write(domRepoRoot,…)` emits the response file in the dom's own repo. Cute-coded LGTM (empty body + `good-boy`) marked via `cute_coded_lgtm = true` frontmatter.
 - [x] **DDD.4** `DomPersonaStore` ships the 6 builtin personas with seed prompts + `custom` slot at `~/.config/skb/dom-personas/`. App-private (not in calendar repo). Cadence enum lives in `DomCadenceWire` / `mode.toml`.
-- [ ] **DDD.5** Migration paths per HV-Q.4 (six locked flows): free→kept-by-AI, free→kept-by-human, kept-by-AI↔kept-by-human, kept→free with 24h cooling-off, kept-by-human↔self-keep, self-keep→kept-by-human. (Two flows wired via `ModePrefs.setMode` + transition-modal typed confirmation; the remaining four — human-dom share + self-keep ramp + kept-by-AI↔kept-by-human — depend on Phase RR share-this-repo flow which is not in this slice.)
+- [ ] **DDD.5** Migration paths per HV-Q.4 (six locked flows): free→kept-by-AI, free→kept-by-human, kept-by-AI↔kept-by-human, kept→free with 24h cooling-off, kept-by-human↔self-keep, self-keep→kept-by-human. (Two flows wired via `ModePrefs.setMode` + transition-modal typed confirmation; the remaining four — human-dom share + self-keep ramp + kept-by-AI↔kept-by-human — depend on Phase RR share-this-repo flow which is not in this slice.) (deferred — DDD follow-up; revisit in Round 3 backlog)
 - [x] **DDD.6** Boy-always-keeps-write is structural (mode-flip is a local commit; no dom-side gate exists in the writers); `RepoMode.SelfKeep` variant present in the enum; transition-modal phrasing wired in `ModePill.TransitionModal` per D.86 ("Are you sure you want to leave this dynamic? … No dom can block this.").
 - [x] **DDD.7** `IdentityTomlCodec` + `IdentityTomlData.LockedDefaults` ("good boy", he/him/his/himself, "Sir", "soft-kinky", "medium"). RepoBootstrap already emits identity.toml; locked defaults landed in this slice.
-- [ ] **DDD.8** LW Screen 3.5 — Praise + pronouns wizard insert (depends on Phase K.5a wizard work; data side ready via `IdentityTomlData`).
+- [ ] **DDD.8** LW Screen 3.5 — Praise + pronouns wizard insert (depends on Phase K.5a wizard work; data side ready via `IdentityTomlData`). (deferred — DDD follow-up; revisit in Round 3 backlog)
 - [x] **DDD.9** Settings → Identity surface already shipped in Phase S.8b (`IdentityCategory` + `IdentityPrefs`); live-preview panel renders four surfaces in the existing composable.
 - [x] **DDD.10** AGENTS.md bridge-line wording verified in existing `RepoBootstrap.AGENTS_MD_TEMPLATE`: one line "See `identity.toml` at repo root for the user's praise term, pronouns, and tone register — use these when generating content for this user." No praise/pronoun content embedded. (Byte-identicality test deferred to follow-up.)
-- [ ] **DDD.11** Agent integration — `IdentityTomlCodec.readOrDefault(repoRoot)` is the read API; alternation logic + briefing salutation + notification bodies remain to wire into NS-* + briefing renderers.
+- [ ] **DDD.11** Agent integration — `IdentityTomlCodec.readOrDefault(repoRoot)` is the read API; alternation logic + briefing salutation + notification bodies remain to wire into NS-* + briefing renderers. (deferred — DDD follow-up; revisit in Round 3 backlog)
 - [x] **DDD.12** `ui/scaffold/ModePill.kt` — always-visible mode-pill composable with long-press → transition modal + typed-confirmation gate per UI-TT. Wired into `SkbAppShell.ShellTopBar` in F45 fix-up round (branch `round2/fixup-f45-ddd-wiring`) — pill renders alongside the title when `SettingsAccess.modePrefs` is non-null; AVD smoke confirmed pill + long-press transition modal.
 - [x] **DDD.13** `ui/reviews/ReviewsPane.kt` — Dom-side / Boy-side surface with filter chips, reaction picker (9 tokens), free-text composer, cute-coded LGTM render. Added as `TopDestination.Reviews` (7th destination) in F45 fix-up round (branch `round2/fixup-f45-ddd-wiring`); `SkbAppShell` dispatches to `ReviewsPane(side = Boy, items = emptyList())` with honorific/praise pulled from `IdentityPrefs`. ReviewFeedReader (live items) remains a follow-up.
-- [ ] **DDD.14** Dom-persona picker UI — `ModeCategory` already lists the 6 builtins; sub-screen with per-persona register-preview + cadence control + custom-prompt editor + explicit-content gate remains.
+- [ ] **DDD.14** Dom-persona picker UI — `ModeCategory` already lists the 6 builtins; sub-screen with per-persona register-preview + cadence control + custom-prompt editor + explicit-content gate remains. (deferred — DDD follow-up; revisit in Round 3 backlog)
 - [x] **DDD.15** CLI — `skb mode get|set`, `skb identity show|edit|preview`, `skb dom set-persona|cadence|respond`, `skb review list` shipped in `commands/ModeIdentityCommands.kt` + `core/IdentityModeToml.kt`.
 - [x] **DDD.16** Tests — `IdentityModeTomlTest` (app + CLI) covers identity round-trip, mode round-trip, review writer + responses dir creation, auto-summary register-aware blurb, path classification totality, response cute-coded-LGTM, dom-persona store builtins + custom slot. AGENTS.md byte-identicality + cross-repo roundtrip remain follow-ups.
 
@@ -1033,7 +1058,7 @@ Deep-dive: [`event-create.md`](event-create.md) phases EC-A through EC-G. The us
 - [x] **FFF.1** FAB surface unification (EC-A): `EventCreateFab` composable overlaid on `SchedulePane` (every schedule view-mode shares the same FAB instance via `Box(Alignment.BottomEnd)`); hand-rolled `Surface + combinedClickable` FAB (M3 `ExtendedFloatingActionButton` swallows long-press); long-press opens 3-entry `DropdownMenu` (`New event` / `Start a routine` / `Paste an .ics URL`); v1 wires only "New event" path, the other two surface as no-op tracked menu items; last-used-tab persistence in `EventCreatePrefs` (`event_create_v1` prefs file).
 - [x] **FFF.2** Free-form path (EC-B): `EventCreateFreeFormForm` with title / start / end / calendar chip-bar / notes / `private` toggle (D.57 / K-2); pure `EventDraft` + `EventDraftValidator` for inline supporting-text validation (title non-empty, end > start, duration ≤ 24h, custom RRULE non-blank); recurrence-preset chip group (Once / Daily / Weekly / Monthly / Custom + custom-RRULE field); confirm goes through `DraftToEvent.mint` → `EntityWriter.write` → `GitRepo.commitAll` via `EventCreateController`. Undo payload exposed via `lastWritten` StateFlow; recurrence-file write deferred per EC-B.4 note (caller wraps).
 - [x] **FFF.3** Template picker path (EC-C): pill search (`RoundedCornerShape(28.dp)`, `surfaceContainerHigh` fill, transparent indicators) — UI-WW parity; `TemplateIndex.kt` index types + `TemplateIndexLoader.parse(assets/templates/index.toml)`; `TemplateMerger.merge` resolves USER > PACK > SHIPPED by `templateId`; `TemplateMerger.filter` applies neutral-mode (D.58) + search across displayName/tags/aliases; `TemplateMerger.group` emits ordered `Self-care / Workout / Routine / Kink / Your templates / <pack-name>` sections (section headers in `colorScheme.primary`); `ListItem` rows with hash-derived colored leading badges; `TemplateConfirmSheet` previews sub-beats read-only; `TemplateMaterializer.materialize` writes `materialized_from` + `materialized_at` + UUIDv7 id + sub-beat copy.
-- [ ] **FFF.4** Save-as-template round trip (EC-D): **DEFERRED** — overflow on event detail sheet + `templates/<id>.toml` writer not yet wired. The materializer / index reader already round-trip USER-source TOML files, so the data path is in place; only the UI overflow + write-back is pending. Marked deferred so the test gate + AVD smoke loop can land first; pick this up in a follow-up.
+- [ ] **FFF.4** Save-as-template round trip (EC-D): **DEFERRED** — overflow on event detail sheet + `templates/<id>.toml` writer not yet wired. The materializer / index reader already round-trip USER-source TOML files, so the data path is in place; only the UI overflow + write-back is pending. Marked deferred so the test gate + AVD smoke loop can land first; pick this up in a follow-up. (deferred — save-as-template UI write-back; revisit in Round 3 backlog)
 - [x] **FFF.5** Conflict + guards (EC-E): `OverlapDetector` (pure) + `EventCreateSheet` `AlertDialog` (Schedule anyway / Pick different time / Cancel — no silent overwrite, default focus on Pick); FAB `enabled` parameter dims + ignores taps for read-only repos (caller wires); multi-repo calendar chip-bar groups via `CalendarOption.repoDisplayName`; no cross-repo writes (`EventCreateController.writeEvent` keys off the active repo only). Past-date guard left to caller (free-form already accepts any OffsetDateTime; the snackbar copy will surface "Logged in the past" once the snackbar host lands).
 - [x] **FFF.6** Visual + a11y polish (EC-F): `imePadding()` on the sheet column; empty-state in picker carries inline `Free-form` `AssistChip` that flips the tab (EC-F.5); theme-respect via `MaterialTheme.colorScheme.primaryContainer` (FAB) + `surfaceContainerHigh` (pill search); section header tint = `colorScheme.primary`; focus order tracked by the natural composable order (title → start → end → repeat → calendar → notes); TalkBack via every interactive control's `testTag` + content-description.
 - [x] **FFF.7** Tests + AVD smoke (EC-G): Robolectric-free pure JVM tests at `EventDraftValidatorTest` (6 cases — title, end-before-start, duration cap, missing calendar, custom RRULE, private round-trip), `TemplateIndexMergeTest` (6 cases — parse, USER overrides, neutral-mode, search, group order, pack grouping), `TemplateMaterializerTest` (5 cases — audit fields, duration math, distinct ids, title override, UUIDv7 shape), `OverlapDetectorTest` (4 cases — disjoint, touching, first-wins, adjacent). All 21 new tests pass; full suite 441 tests with the 2 pre-existing F45 failures unchanged. AVD smoke deferred (see report — `:app:assembleDebug` succeeds; emulator-5554 not booted in this worktree session).
@@ -1066,3 +1091,46 @@ documents for *how*. Each deep-dive doc:
 - Carries its own `## Status:` header and tick-as-shipped discipline.
 - Resolves any unforeseen tradeoff inline with a recommended choice — no
   punts back to the user.
+
+---
+
+## Round 3 backlog
+
+Phases below carry substantial unticked work that the Round 2 cleanup sweep
+(2026-05-13) classified as Round-3-scope rather than Phase-X-deferral.
+Each entry is one-line-scoped here; full sub-steps remain inline above
+under their phase header.
+
+- **Phase Z — Git LFS:** JGit LFS wiring + threshold-based auto-routing + provider capability probe + migration helper for existing large in-tree attachments.
+- **Phase AA — Multi-timezone first-class:** per-event `tz_id`, repo default tz, display-tz toggle, multi-tz common-time finder, DST corpus, `skb tz convert`, participant-tz declaration.
+- **Phase BB — Weather overlay:** Open-Meteo client, per-repo location, cache layer, day/week/month strip + icons, per-event location override, `skb weather show`.
+- **Phase CC — Replies / comments on events:** `events/<id>.comments/` schema, event detail comments UI, `comments` notif channel + mute, `skb comment` CLI, threaded `in_reply_to` rendering.
+- **Phase DD — Drag-to-reschedule + pinch-to-zoom:** long-press drag with grid snapping, drop auto-commit, pinch zoom (5m / 15m / 30m / 1h), zoom persistence, recurrence-drag prompt.
+- **Phase FF — Custom sticker / icon packs:** pack format spec, install from local picker / URL, `:sticker:` shortcut + autocomplete, icon picker integration, Settings → Sticker packs.
+- **Phase GG — Signed commits (optional):** GPG key import, per-identity signing-key picker, JGit + BouncyCastle PGP signing, verified-author chip, revocation flow, per-repo picker.
+- **Phase HH — Android Auto voice-create:** voice intent registration, NL parsing, default-repo / default-calendar resolution, confirm-by-voice flow.
+- **Phase II — Cross-device snooze sync (opt-in):** Settings toggle, `_local/snoozes.toml` schema, auto-merge resolver, idempotency verification.
+- **Phase JJ — Multi-branch awareness:** repo switcher shows branch, branch picker in repo settings, create / switch flows, PR deep-link, `skb branch` CLI.
+- **Phase KK — CSV import for tasks:** Settings flow + column-mapping UI + `skb task import-csv` + idempotency on re-import.
+- **Phase LL — License audit completion:** dep audit pass + Licensee allowlist update + About screen license list extension (Phase W shipped the rule set; remainder is the run-through).
+- **Phase OO — Cross-repo state files:** state-file schema (done / snooze / note / reaction / priority-override / mute / hide), source-repo-id derivation, resolver merge, atomic writer, `_local/state/` migration, `skb state set`, orphan detection.
+- **Phase PP — Simplified mode chrome:** mode state in prefs, hidden / visible surface enumeration (no-origin sync UI hidden), mode-label picker, auto-entry rules, Play Store positioning.
+- **Phase QQ — First-launch deep-link bootstrap:** detect "deep-link + no repos", skip wizard, auth fragment-first chain, clone progress, post-clone simplified-mode boot, references prompt, error UX.
+- **Phase TT — Multi-repo priority resolution:** local-override at render time, references.toml repo-modifier, receiver pin-to-top +500, [1,1000] clamp + warning, divergence indicator.
+- **Phase UU — CalDAV overlay (read-only, no-repo):** in-memory + Room overlay store, strict read-only enforcement, SE-Q PROPFIND reuse, `CalDavCredential` reuse, ETag/CTag sync-token incremental, resolver integration, top-level Settings UI, `skb caldav add --overlay`, external badge, offline cached snapshot, per-provider rate-limit profiles, removal path, test matrix, AGENTS.md note.
+- **Phase MM (`add`-link variant) — Share-bundle deep-link grammar:** custom-scheme + universal-link intent-filters for `strictlykeptboy://add?...`, Digital Asset Links JSON, query-param parser, fragment token parser, multi-URL support, token-wipe, expiry enforcement, QR scan integration.
+- **Standalone Round 3 follow-ups** (small, not whole phases):
+  - **Q.4** Auto voice prompts (overlaps with Phase HH).
+  - **N.3** Tap-slot → quick-create-event from Together view (wire to Phase FFF `EventCreateSheet`).
+  - **Y.8..Y.12** CalDAV mirror CLI + per-mirror interval UI + RFC6578 sync-token + mirror-source attribution + AGENTS.md note.
+  - **NN.5** "Offer to add referenced repos" sheet UI (UI-GG).
+  - **RR.3..RR.6, RR.8** Sender-side SSH-key share-link path + deploy-key / PAT embeds + public-repo label + `skb share` CLI.
+  - **SS.3, SS.6, SS.7** Optional template-picker in fork flow + mode-choice prompt + full→simplified reverse toggle (DDD-coupled).
+  - **VV.2, VV.11** `pin_to_widget` frontmatter flag + time-frozen render previews.
+  - **WW.3, WW.6, WW.7** Sub-beat sticker CLI + frontmatter array + cross-fade animation; Coil + animated WebP + 300ms first-frame budget; Roborazzi snapshot harness.
+  - **BBB.4, BBB.6, BBB.10..BBB.13** Supersedence UI surfaces + per-kind attachment renderers + multi-reminder firing & stacking + `cal-briefings` calendar + `post_event_checkin` opt-in + `.ics/.eml/.pkpass` import path extensions.
+  - **CCC.3, CCC.4, CCC.6, CCC.7, CCC.9** Quick-trip travel-prep cadence + flight details + supersedence picker + confirm preview + edit-in-flight / cancel-trip.
+  - **DDD.5, DDD.8, DDD.11, DDD.14** Six locked migration flows + LW Screen 3.5 wiring + agent integration of `IdentityTomlCodec` into NS-* + dom-persona picker UI sub-screen.
+  - **EEE.12, EEE.13** Render-snapshot test harness for widgets + lockscreen-AVD verification.
+  - **FFF.4** Save-as-template overflow + write-back UI.
+  - **A.5, C.8, X.8, X.9, P.3, P.4, P.5, LL.1..LL.3** Small follow-ups: Licensee plugin wiring, entity-validation surface, CLI release-pipeline bundling + AGENTS.md CLI-primary rewrite, CSV / VTODO task export, `tools/` shell scripts, license audit completion.
