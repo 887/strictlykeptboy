@@ -23,6 +23,12 @@
 
 → Full plan: [`round-2-2.md`](round-2-2.md)
 
+## Round 2.5 — per-repo overlay + repo config + sticker packs (PENDING — 2026-05-14)
+
+User feedback after 2.3: per-repo settings screen is too thin, sticker packs are still shown as "emoji", and the unified-view boolean is the wrong overlay metaphor. Three-repo use-case (sub + dom + shared-fun) needs per-repo `showOnSchedule` + `drawTasksFrom` flags. **5 phases, ~20 sub-steps.**
+
+→ Full plan: [`round-2-5.md`](round-2-5.md)
+
 ## Round 2.3 — top-bar consolidation (✅ DONE — 2026-05-14)
 
 User feedback on screenshots: the destination buttons currently occupy row 2; `kept` mode pill and sync icon sit in row 1 alongside title + avatar. Wanted: ONE row only. Mode + sync are per-repo state, not global app-bar concerns — they move into ReposPane.
