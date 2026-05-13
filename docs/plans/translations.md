@@ -1,5 +1,7 @@
 # Translations — workflow + canonical source-of-truth
 
+## Status: ✅ DECIDED — ready for implementation.
+
 > Phase U.5 (closes F11 + ships the locale scaffolding). Mirrors the
 > `shutterboy` / `tonearmboy` / `whisperboy` pattern: every sister app uses
 > the same workflow so a translator coming from one is at home in the next.
@@ -118,3 +120,134 @@ The same pattern across all 887boy apps:
 - AVD smoke at end-of-Phase-U: `adb shell setprop persist.sys.locale
   en-GB`, launch app, confirm "Colour seed" appears on the repo
   settings appearance section.
+
+## Locked decisions (Round 2 deep-dive)
+
+These resolve every open thread that was implicit in the prose above
+so subagents can ship without further user input.
+
+- **T-1 Canonical locale is `values/strings.xml` (English).** Every
+  new string lands here first. **Rationale:** matches Android's
+  built-in fallback floor; mirrors tonearmboy / shutterboy /
+  whisperboy convention.
+- **T-2 Locale variants are partial overrides only.** Mirroring the
+  canonical file into a locale variant is a regression and must be
+  reverted on sight. **Rationale:** see "Partial-override is the
+  design" above — maintenance-cost + silent-divergence + merge-story
+  reasons.
+- **T-3 v1 proof-of-concept locale is `en-rGB`.** One ceremonial diff
+  ("Colour seed" vs "Color seed") is enough to prove the fallback
+  chain end-to-end. **Rationale:** smallest possible diff that
+  exercises the qualifier resolver without bringing a translator into
+  the loop on day 1.
+- **T-4 Wire-format enum `.label` stays English in Kotlin.** Persisted
+  to `calendar.toml` / `identity.toml`; UI reads via `labelString()` /
+  `labelRes` in `ui/a11y/EnumLabels.kt`. **Rationale:** repo files are
+  the source of truth and must round-trip across locales — a German
+  user's `identity.toml` opened on an English phone must read
+  identically.
+- **T-5 No community translation PRs in v1.** User + Claude pair in a
+  dedicated session per locale; user owns final wording. **Rationale:**
+  per CLAUDE.md "Editorial — user-facing copy"; identity-driven copy
+  is too kink-positive / register-sensitive to crowd-source.
+- **T-6 No translation-management tooling (Weblate / Crowdin / Lokalise)
+  in v1.** Plain `strings.xml` files only, edited in the repo.
+  **Rationale:** agent-native + file-first; an external SaaS would
+  break the "Claude can read and write the schedule the same way the
+  user can" invariant.
+- **T-7 Plurals use `<plurals>` from day one, even on English-only
+  strings that have a count.** **Rationale:** retrofitting plurals
+  after a locale ships is a breaking change for that locale's
+  translator; cheap to do up front.
+- **T-8 No RTL-specific layout work in v1.** Compose handles BiDi
+  automatically; no Hebrew / Arabic locale is in scope for Round 2.
+  **Rationale:** scope discipline — first non-English locale will be
+  German or French (LTR).
+- **T-9 Untranslated keys fall back to English silently. No
+  `???PLACEHOLDER???` markers, no logcat warnings, no Crashlytics
+  events.** **Rationale:** partial coverage is shippable by design
+  (see prose above); noise would train users + agents to ignore the
+  channel.
+- **T-10 Locale switching is OS-level only.** No in-app language
+  picker in v1. **Rationale:** Android 13+ per-app language is
+  available system-side; building a duplicate UI is wasted surface
+  for a 1-locale-and-a-half app.
+- **T-11 Locale qualifier convention is BCP-47 with Android's
+  `-r<REGION>` form (e.g. `values-en-rGB/`, `values-pt-rBR/`).**
+  **Rationale:** required by AGP resource resolver; the
+  `BCP47:values-<tag>/` style is for `valuesB+...` which we are not
+  using.
+- **T-12 String key naming: `snake_case`, prefixed by surface
+  (`wizard_`, `schedule_`, `cd_` for content-description, `err_` for
+  errors).** **Rationale:** matches existing keys in the codebase and
+  keeps the wizard / schedule diffs reviewable in isolation.
+- **T-13 Each new locale ships its own `LocaleFallbackTest`
+  variant + an AVD smoke commit.** **Rationale:** locale regressions
+  are silent on unit tests alone; the AVD-smoke discipline applies
+  to translation work the same way it applies to Compose work.
+
+## Phase U.5 — locale scaffolding (shipped)
+
+- [x] **U.5.1** Migrate every user-facing literal in Kotlin to
+  `R.string.*` via `stringResource` / `getString`.
+- [x] **U.5.2** Stand up `values/strings.xml` as the canonical English
+  source-of-truth.
+- [x] **U.5.3** Stand up `values-en-rGB/strings.xml` as the partial-
+  override proof-of-concept (one ceremonial spelling diff).
+- [x] **U.5.4** Add `ui/a11y/EnumLabels.kt` with `labelString()` /
+  `labelRes` extensions so wire-format enum labels never leak into
+  the UI directly.
+- [x] **U.5.5** Add `EnumLabelLocalizationTest` covering every enum
+  variant previously hardcoded.
+- [x] **U.5.6** Add `LocaleFallbackTest` proving canonical-English
+  fallback for un-overridden keys.
+- [x] **U.5.7** AVD-smoke `en-GB`: confirm "Colour seed" appears on
+  repo settings appearance section; confirm un-overridden keys fall
+  back to English with no `???` markers.
+
+## Phase TR-A — translation tooling hygiene (open)
+
+- [ ] **TR-A.1** Add a lint rule (or CI grep) that flags hardcoded
+  user-facing literals in `app/src/main/java/**/*.kt` outside the
+  whitelisted wire-format enum files. Rationale: prevents
+  regressions on the canonical-English invariant.
+- [ ] **TR-A.2** Add a `translations:audit` Gradle task that diffs
+  each `values-<bcp47>/strings.xml` against canonical and prints
+  coverage % per locale. Rationale: makes the "30% is shippable"
+  call observable without manual key counting.
+- [ ] **TR-A.3** Convert every count-bearing English string to a
+  `<plurals>` resource (T-7). Audit `schedule_*`, `tasks_*`,
+  `wizard_*` namespaces.
+- [ ] **TR-A.4** Document the per-locale AVD-smoke ritual in
+  `docs/plans/translations.md` (this file) as locales are added,
+  appending rows to the "Tested locales" table.
+
+## Phase TR-B — first non-English locale (deferred to user-pick session)
+
+- [ ] **TR-B.1** User + Claude pair in a dedicated session, picking
+  the first non-English locale (default: `de` — German — unless the
+  user picks otherwise at session start).
+- [ ] **TR-B.2** Create `values-<bcp47>/strings.xml` empty-shell.
+- [ ] **TR-B.3** Translate string-by-string, only the keys the user
+  wants to ship. Skipping is fine (T-9).
+- [ ] **TR-B.4** Add a locale-specific `LocaleFallbackTest` variant.
+- [ ] **TR-B.5** AVD-smoke: `adb shell setprop persist.sys.locale
+  <lang>-<region>`, walk Schedule / Tasks / Settings / Wizard,
+  screencap the wizard alignment + lifestyle pages (identity-driven
+  copy from `identity.toml` flows through verbatim — confirm).
+- [ ] **TR-B.6** Append a row to the "Tested locales" table with
+  coverage %.
+- [ ] **TR-B.7** Reset locale to `en-US` before closing the session.
+
+## Phase TR-C — identity-driven copy boundary (locked)
+
+- [ ] **TR-C.1** Confirm via test that no key under
+  `values/strings.xml` references praise terms, pronouns,
+  honorifics, or dom persona register — those are user-supplied via
+  `identity.toml` and must never appear as resource keys.
+  Rationale: locks the boundary defined in "Out-of-scope copy" above
+  so a future translator cannot accidentally translate a user's
+  personal vocabulary.
+- [ ] **TR-C.2** Document the boundary inline at the top of
+  `values/strings.xml` as a `<!-- comment -->` so the next
+  translator sees it before touching the file.

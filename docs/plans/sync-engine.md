@@ -1,6 +1,6 @@
 # strictlykeptboy — sync engine deep-dive
 
-## Status: 🚧 IN-PLANNING
+## Status: ✅ DECIDED — ready for implementation.
 
 This document is the exhaustive specification for the Git sync engine of
 `strictlykeptboy`. It owns:

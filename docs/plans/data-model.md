@@ -1,6 +1,13 @@
 # strictlykeptboy — data model deep-dive
 
-## Status: 🚧 IN-PLANNING
+## Status: ✅ DECIDED — ready for implementation.
+
+All DM-A..DM-AA phases below carry sub-step checkboxes and locked
+decisions; nothing in this file punts back to the user. Items marked
+⚠️ STILL DEFERRED v1.1 in the deferrals roll-up are **decided
+out-of-scope for v1** (with rationale), not open questions. As DM-*
+work lands, tick the boxes and add the jj change ID to the phase
+header per the global plan-file convention.
 
 This is the field-by-field, file-by-file specification for everything that
 lives inside a user-data repository produced or consumed by
@@ -850,14 +857,19 @@ Per [`decisions.md`](decisions.md) §D.20:
       pull` from a desktop.
 - [ ] **DM-F.5** v1 ships with no migrations (it IS the floor).
       First migration will be v1 → v2 when v2 is defined.
-- [ ] **DM-F.6** Open-question deferred to a future schema bump:
+- [ ] **DM-F.6** Locked v1-deferrals (decided out of v1; tracked for
+      future schema bumps — see the "Open questions deferred…"
+      roll-up at the bottom of this file for the authoritative list):
   - **Comment preservation in TOML frontmatter** — drops at v1,
     likely returns at v2 once we ship a custom comment-aware writer.
-  - **Per-entity timezone overrides on one-off events** — v1 stores
-    the offset only; v2 may add `tz_id` on `Event` if user feedback
-    surfaces DST issues with single events that span DST transitions.
-  - **Internationalised tag namespaces** — v1 enforces ASCII
-    `[a-z0-9_-]+`; v2 may relax to Unicode if needed.
+    **Decision:** stay deferred for v1; rationale per DM-A.4.
+  - **Per-entity timezone overrides on one-off events** — **Decision:**
+    MOVED into v1 via Phase DM-L (`tz_id` on `Event`, additive,
+    schema_version stays 1 because the field is optional).
+  - **Internationalised tag namespaces** — **Decision:** stay deferred
+    for v1; v1 enforces ASCII `[a-z0-9_-]+`. Rationale: avoids
+    normalisation and case-folding traps in the search index; no
+    Round 2/3/4/5 use-case flipped this calculus.
 
 ---
 

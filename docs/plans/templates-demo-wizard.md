@@ -1,6 +1,6 @@
 # strictlykeptboy — templates, demo content, wizard
 
-## Status: 🚧 PARTIALLY SUPERSEDED — see [`draft-lifestyle-wizard.md`](draft-lifestyle-wizard.md) (now Phase K) and [`draft-kink-positive-identity.md`](draft-kink-positive-identity.md) (D.55–D.62)
+## Status: 🚧 PARTIALLY SUPERSEDED — wizard owned by [`draft-lifestyle-wizard.md`](draft-lifestyle-wizard.md) (now Phase K), template *picker UI* owned by [`event-create.md`](event-create.md) (Phase FFF), kink-positive identity owned by [`draft-kink-positive-identity.md`](draft-kink-positive-identity.md) (D.55–D.62). This file's surviving content is template *content* + `template_origin` / `template_slot` conventions only.
 
 **Round 4 integration notes (see `decisions.md` Round 4):**
 

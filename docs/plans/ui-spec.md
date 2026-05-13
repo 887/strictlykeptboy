@@ -1,6 +1,16 @@
 # strictlykeptboy — UI / UX specification
 
-## Status: 🚧 IN-PLANNING
+## Status: ✅ DECIDED — ready for implementation.
+
+> **Authoritative FAB / event-create surface lives in
+> [`event-create.md`](event-create.md) (Phase FFF).** Any FAB material
+> in this spec — UI-C (schedule shell FAB), UI-D (tap-empty-area
+> quick-add), UI-I.2 (quick-add compact sheet), UI-J.7 (tasks quick-add
+> FAB), UI-FF.6 (simplified-mode FAB) — describes the *visual shell*
+> only. The event-create state machine, free-form vs. template path
+> routing, validation rules, overlap-guard semantics, and write
+> chokepoint through `EntityWriter` are all owned by event-create.md.
+> Where the two specs disagree, event-create.md wins.
 
 This document is the exhaustive UI spec for `strictlykeptboy`. It owns
 every screen, every component, every navigation surface, every visual
@@ -3273,12 +3283,17 @@ components used:
 
 This document is "done" (Status: ✅ DONE) when:
 
-- Every phase UI-A through UI-U has its sub-step checkboxes ticked.
+- Every phase UI-A through UI-VV has its sub-step checkboxes ticked
+  (Round 1: UI-A..UI-U; Round 2: UI-V..UI-EE; Round 3: UI-FF..UI-KK;
+  Round 4: UI-LL..UI-NN; Round 5: UI-OO..UI-VV).
 - Every ASCII mockup has been re-validated against the implemented
   composable on the AVD.
 - The "Tradeoffs resolved inline" list has been re-read and any
   reversed call has been logged with the date and reason.
 - The "Deferred to future versions" list has been triaged at v1 ship.
+- All FAB / event-create surfaces defer to `event-create.md` (Phase
+  FFF) as the authoritative spec; this doc only carries the visual
+  shell for those surfaces.
 
 ---
 
@@ -4709,3 +4724,81 @@ See HV-R.3 / HV-J.21 and `decisions.md` D.83.
 - [ ] **UI-VV.3** "Reset to wizard defaults" button: writes the HV-R.1.3 locked defaults (`praise.term = "good boy"`, he/him/his/himself, `Sir`, `soft-kinky`, `medium`).
 - [ ] **UI-VV.4** Save behavior: identity changes commit to `identity.toml`. In `strictly-kept` mode (D.84) the commit goes through the review-feed like any other commit.
 - [ ] **UI-VV.5** Multi-pronoun alternation preview: if `[pronouns].extra_sets` is non-empty, the preview alternates pronoun sets across the four preview surfaces to demonstrate the agent-side alternation.
+
+---
+
+## Phase UI-WW — Tonearmboy parity convention (shared visual language)
+
+This is the **durable cross-surface convention** for any settings-adjacent surface in strictlykeptboy. It was reverse-engineered from tonearmboy + landed iteratively in the 2026-05-13 session (see `main.md` Phase GGG for the per-surface ship log). Every future surface that wants the "Settings register" must conform to this section — that's how the four `887`-family apps (strictlykeptboy / tonearmboy / shutterboy / whisperboy) end up visually rhyming without coordination.
+
+### UI-WW.1 — Pill search field (top of any browsable settings surface)
+
+- `TextField` with `RoundedCornerShape(28.dp)`.
+- `colors = TextFieldDefaults.colors(focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, disabledIndicatorColor = Color.Transparent)` — no underline ever.
+- Container colour: `colorScheme.surfaceContainerHigh`.
+- Leading icon: `Icons.Outlined.Search` tinted `colorScheme.onSurfaceVariant`.
+- Placeholder: section-specific (e.g. `settings_search_placeholder`, `settings_appearance_search_placeholder`, `settings_template_picker_search_placeholder`).
+- Single-line, `imeAction = ImeAction.Search`, `keyboardOptions = KeyboardOptions(autoCorrect = false)`.
+
+- [ ] **UI-WW.1.1** Provide a single `SettingsPillSearchField(value, onValueChange, placeholderRes, modifier)` composable to be reused across Settings root, Appearance, Template picker (FFF), About-of-any-future-list-screen. Anti-pattern: each surface reaching for its own `TextField` config.
+- [ ] **UI-WW.1.2** Pill renders inside the surface's content padding, NOT inside the top-bar — the LargeTopAppBar collapses cleanly when the user scrolls; the pill stays glued to the top of the scrollable content.
+
+### UI-WW.2 — Grouped cards with section headers
+
+- Sections separated by a `Spacer(Modifier.height(12.dp))` band.
+- Each section: a `SectionHeader` line above the card — `Text(stringResource(headerRes), style = MaterialTheme.typography.titleSmall, color = colorScheme.primary, modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp))`.
+- Card: `Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceContainer))`.
+- Rows inside the card: M3 `ListItem`s with `leadingContent`, `headlineContent`, `supportingContent` (optional), `trailingContent` (optional). Divider between rows via M3 `HorizontalDivider(modifier = Modifier.padding(start = 72.dp))` (left-inset past the leading badge).
+
+- [ ] **UI-WW.2.1** Single shared `CategoryCard` + `SectionHeader` + `RowDivider` helpers. Already shipped under `ui/settings/categories/` — promote them to a common `ui/components/SettingsCardKit.kt` so they're not category-coupled.
+- [ ] **UI-WW.2.2** Sections collapse / expand is OUT of scope for v1 — the surface is short enough that scroll-and-skim wins. Reopening would require redesigning the search empty-state.
+
+### UI-WW.3 — Leading colored circular badges (`LeadingBadge`)
+
+- 40dp circle, `colorScheme.<accent>` background (the accent is hand-picked per row family — Repos uses tertiary, Notifications uses error-container, etc., per UI-P).
+- 24dp icon centered inside, tinted `colorScheme.onPrimary` / `onTertiary` / etc. matching the background.
+- Stable across the row's life — never animates on tap, only on theme change.
+
+- [ ] **UI-WW.3.1** Shared `LeadingBadge(iconRes, tint, contentDescriptionRes)` composable in `ui/components/SettingsCardKit.kt`.
+- [ ] **UI-WW.3.2** Per-row accent assignment is centralised in a `CategoryMeta(icon, subtitleRes, iconTint)` map so future row additions don't need to invent a new tint pick.
+
+### UI-WW.4 — Edge-to-edge layout (no empty left band)
+
+- The navigation rail is rendered ONLY when `railItems.isNotEmpty()`. When the active destination has no view-mode tabs (Settings, Repos, Wizard, About, Templates, anything else without a sub-view), the rail composable is NOT placed at all — content spans the full width of the device minus system insets.
+
+- [ ] **UI-WW.4.1** `SkbAppShell` wraps the rail call in `if (railItems.isNotEmpty()) { RailColumn(...) }`. This is the rail-collapse-when-empty pattern shipped 2026-05-13.
+- [ ] **UI-WW.4.2** Any future surface that wants the rail-less treatment must pass `viewModeTabs = emptyList()` (the existing parameter) rather than inventing a new `hideRail = true` flag — single source of truth.
+
+### UI-WW.5 — Top-bar destination button selected-state
+
+- `DestinationButton` is the canonical entry-point composable. When `selectedDest == this.dest`, it renders as `FilledTonalIconButton`; otherwise plain `IconButton`. Tint is the M3E expressive default for each variant — do not hand-pick.
+- The Settings gear and every other top-bar destination ride this same composable, so they all get the highlight uniformly.
+
+- [ ] **UI-WW.5.1** All top-bar destinations route through `DestinationButton` — no plain `IconButton` with a manual tint-swap. The Settings-gear-doesn't-highlight regression of 2026-05-13 was caused by exactly this anti-pattern; do not reintroduce it.
+
+### UI-WW.6 — Inline keyword search (within a single settings-category surface)
+
+When a surface is browsable (multiple cards, multiple toggles), search filters by keyword table:
+
+- A `query: String` `remember { mutableStateOf("") }` is held at the surface top.
+- Each section composable receives `query` and computes `showSection = keywords.any { it.contains(query, ignoreCase = true) }`. Sections with `showSection = false` are not composed.
+- When `query.isNotBlank() && noSectionShown`, render the `<surface>_no_results` empty state (small text, link-chip back to a sibling tab or to a reset).
+
+- [ ] **UI-WW.6.1** Shipped pattern in `AppearanceCategory.kt` — keep that shape. Per-surface keyword tables (e.g. `theme`, `dark`, `light`, `density`, `font`, `neutral`) are inlined at the top of the file for grep-ability.
+- [ ] **UI-WW.6.2** When porting to a new surface, derive keywords from (a) the section title, (b) every visible row title, (c) every visible row subtitle, (d) any localised synonyms (e.g. `colour` / `color`).
+
+### UI-WW.7 — Easter egg pattern (3-tap + snackbar)
+
+Codified in `EasterEggController.kt` (framework-free state machine). 3 taps within a 5-second window trigger the reveal; tap-1 + tap-2 surface escalating snackbar prompts ("Click 2 more times for a treat" → "1 more time" → reveal). After reveal, counter resets and the egg is repeatable.
+
+- [ ] **UI-WW.7.1** Wire the controller wherever a "reveal a mascot / a private payoff" lands. About-version row uses it; future ideas: long-press repo avatar, 7-tap on the wizard "Done" celebrate. Each reveal renders over a 60%-opacity scrim so the rest of the screen reads as "paused".
+- [ ] **UI-WW.7.2** Reveal-asset paths: `R.drawable.about_bat` is the canonical species-default. Custom species packs (Phase WW avatar packs) provide a `R.drawable.about_<species>` override; resolver walks the same fallback chain as the sticker resolver.
+
+### UI-WW.8 — Anti-patterns (catch in review)
+
+- ❌ Nested `LazyColumn` inside `Modifier.verticalScroll` — throws `IllegalStateException: Vertically scrollable component was measured with an infinity maximum height constraints`. Fix: plain `Column` + `forEach` when the parent already scrolls (load-bearing for Settings > Repos screen). Shipped fix: `ImportExportScreen.kt`.
+- ❌ Plain `IconButton` on a top-bar destination with manual tint logic. Use `DestinationButton`.
+- ❌ Each settings-category file reinventing its own pill search / card / badge / divider. Use the shared kit from UI-WW.1-3.
+- ❌ Rail rendered unconditionally on a destination with no view-mode tabs. The left empty-band is the visual tell.
+- ❌ A settings surface without a top pill search when it has > 6 rows. The user has confirmed search is required at that density (it's load-bearing for "I can navigate the whole settings tree by typing").
+

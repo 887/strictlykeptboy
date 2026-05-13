@@ -1,6 +1,8 @@
 # strictlykeptboy — resolver + common-time finder
 
-## Status: 🚧 IN-PLANNING
+## Status: ✅ DECIDED — ready for implementation.
+
+Phase E (Round 1) + Phase AA / BB / Y (Round 2) + Phase OO / TT (Round 3) + Phase XX / YY (Round 4) + Phase BBB (Round 5) resolver-side mechanics are fully specified. Every phase below carries sub-step checkboxes; every previously-open question has been locked with an inline **Decision** + **Rationale**. Subagents may implement any RV-* phase without further user input.
 
 Owns the algorithmic core of the app: how N active calendars × M active
 todolists × time-window rules × priorities × RRULE recurrences ×
@@ -31,6 +33,17 @@ Locked-decision references: `decisions.md` D.5 (overlay/priority), D.6
 | RV-E — common-time finder | E.5 + N.1–N.3 | D.10, D.21 |
 | RV-F — caching + invalidation | E.6 | D.21 |
 | RV-G — testing strategy | (cross-cuts) | D.21 |
+| RV-H — multi-timezone semantics | AA.1–AA.5 | D.27, D.6, D.25 |
+| RV-I — multi-tz common-time finder | AA.4, AA.7, N | D.10, D.27 |
+| RV-J — weather overlay (non-busy layer) | BB.1, BB.3–BB.7 | D.28 |
+| RV-K — Round 2 out-of-scope housekeeping | (cross-cuts) | — |
+| RV-L — cross-repo state-file overlay | OO | D.44 |
+| RV-M — multi-repo priority resolution | TT | D.49, D.5 |
+| RV-N — source-repo-id matching + dedup | OO + TT | D.51 |
+| RV-O — Round 3 out-of-scope housekeeping | (cross-cuts) | — |
+| RV-R — inverted-default completion + cross-repo feedback overlay | XX + YY | D.70, D.71, D.72, D.73 |
+| RV-P — supersedence pass | BBB | D.75, D.76, D.77, D.78 |
+| RV-Q — off-schedule detection | BBB | D.80, D.81 |
 
 ---
 
@@ -2582,37 +2595,46 @@ calendar-wide.
 - RV-E → main.md `E.5`, `N.1`–`N.3` (common-time finder + UI).
 - RV-F → main.md `E.6` (cache).
 - RV-G → main.md `V.3, V.4` (performance budgets verified).
+- RV-H → main.md `Phase AA` (multi-timezone semantics).
+- RV-I → main.md `Phase AA` + `Phase N` (multi-tz common-time finder).
+- RV-J → main.md `Phase BB` (weather overlay as a non-busy data layer).
+- RV-K → cross-cuts (Round 2 out-of-scope housekeeping).
 - RV-L → main.md `Phase OO` (cross-repo state-file overlay).
 - RV-M → main.md `Phase TT` (multi-repo priority resolution).
 - RV-N → main.md `Phase OO` + `Phase TT` (source-repo-id matching + dedup).
-- RV-O → cross-cuts (out-of-scope housekeeping).
+- RV-O → cross-cuts (Round 3 out-of-scope housekeeping).
+- RV-R → main.md `Phase XX` + `Phase YY` (inverted-default completion + cross-repo feedback overlay; Round 4).
+- RV-P → main.md `Phase BBB` (supersedence pass; Round 5).
+- RV-Q → main.md `Phase BBB` (off-schedule detection; Round 5).
 
 ---
 
-## Phase RV-N — Inverted-default completion state + cross-repo feedback overlay (Round 4)
+## Phase RV-R — Inverted-default completion state + cross-repo feedback overlay (Round 4)
+
+> **Phase-letter note:** originally drafted as a second `RV-N` (collision with the Source-repo-id phase above). **Decision (rename):** this Round-4 block is renumbered to **RV-R** so each phase letter is unique across the doc. The sub-step prefixes (`RV-R.1` … `RV-R.10`) keep their original numbering. **Rationale:** the global CLAUDE.md plan-file rule demands unambiguous `<prefix>.N` references; two RV-N phases would break sub-agent dispatch. RV-P and RV-Q are already taken by Round 5; RV-R is the next free letter.
 
 **See [`draft-atomic-activities.md`](draft-atomic-activities.md) (`main.md` Phase XX) + [`draft-global-id-feedback.md`](draft-global-id-feedback.md) (`main.md` Phase YY) and `decisions.md` D.70 / D.71 / D.72 / D.73 for the authoritative spec.**
 
 ### Inverted-default completion state (D.70)
 
-- [ ] **RV-N.1** `resolveCompletionState(event, now): CompletionState` step added to the render pipeline (after recurrence materialization, before overlay layering). Returns one of: `scheduled | completed-by-schedule | skipped | partial | completed-early | completed-late | in-progress`.
-- [ ] **RV-N.2** Algorithm: (1) `event.start > now` → `scheduled`. (2) `event.start <= now < event.end` and no deviation file → `in-progress`. (3) `now >= event.end` and no deviation file → `completed-by-schedule` (THE inversion). (4) any past-or-current event WITH a deviation file → that file's `kind`.
-- [ ] **RV-N.3** Recurrence + exception interaction: deviation files for recurring events live under `<rule-id>/<yyyy-mm-dd>.md`; resolver looks up by `(rule-id, occurrence-date)`. An `exceptions/<rule-id>/<yyyy-mm-dd>.md` with `kind = "cancel"` shadows any deviation (cancelled occurrences never had a scheduled state to deviate from).
-- [ ] **RV-N.4** Cache: Room column `completion_state` on `event_instances`. Keyed on `(repo, entity-id-or-rule-id, occurrence-date)`. Invalidated when (a) underlying file changes, (b) deviation file for that (entity, date) is added/removed, (c) `now` crosses `event.start` / `event.end` (handled by per-event AlarmManager state-tick from Phase XX.3).
-- [ ] **RV-N.5** Visual treatment table:
+- [ ] **RV-R.1** `resolveCompletionState(event, now): CompletionState` step added to the render pipeline (after recurrence materialization, before overlay layering). Returns one of: `scheduled | completed-by-schedule | skipped | partial | completed-early | completed-late | in-progress`.
+- [ ] **RV-R.2** Algorithm: (1) `event.start > now` → `scheduled`. (2) `event.start <= now < event.end` and no deviation file → `in-progress`. (3) `now >= event.end` and no deviation file → `completed-by-schedule` (THE inversion). (4) any past-or-current event WITH a deviation file → that file's `kind`.
+- [ ] **RV-R.3** Recurrence + exception interaction: deviation files for recurring events live under `<rule-id>/<yyyy-mm-dd>.md`; resolver looks up by `(rule-id, occurrence-date)`. An `exceptions/<rule-id>/<yyyy-mm-dd>.md` with `kind = "cancel"` shadows any deviation (cancelled occurrences never had a scheduled state to deviate from).
+- [ ] **RV-R.4** Cache: Room column `completion_state` on `event_instances`. Keyed on `(repo, entity-id-or-rule-id, occurrence-date)`. Invalidated when (a) underlying file changes, (b) deviation file for that (entity, date) is added/removed, (c) `now` crosses `event.start` / `event.end` (handled by per-event AlarmManager state-tick from Phase XX.3).
+- [ ] **RV-R.5** Visual treatment table:
   - `completed-by-schedule` → checked tile, dimmed slightly, no celebration animation, no "great job" copy.
   - `skipped` → outline-only tile, muted color, no red, no warning glyph.
   - `partial` → half-filled tile.
   - `completed-early` / `completed-late` → checked tile with small clock-offset glyph.
   - `in-progress` → soft progress arc; never blinking, never attention-grabbing.
-- [ ] **RV-N.6** Sub-beat resolution for the active event: when `(now - event.start) ∈ [Σ_{j<i} d_j, Σ_{j≤i} d_j)`, sub-beat `i` is active. Sub-beats cycle if their total duration is shorter than the parent event; they truncate at event end if longer. Sub-beat state feeds the `StickerResolver` per D.66.
+- [ ] **RV-R.6** Sub-beat resolution for the active event: when `(now - event.start) ∈ [Σ_{j<i} d_j, Σ_{j≤i} d_j)`, sub-beat `i` is active. Sub-beats cycle if their total duration is shorter than the parent event; they truncate at event end if longer. Sub-beat state feeds the `StickerResolver` per D.66. **Decision (bounded depth):** sub-beat nesting is at most **1 level deep** (parent event → flat list of sub-beats); a sub-beat MUST NOT itself contain sub-beats. **Rationale:** D.70 atomic-activities models sub-beats as a flat sequence within an event; nested beats double-encode structure that recurring events + exceptions already handle. Validator rejects nested sub-beats with `EBEAT_NESTED`.
 
 ### Cross-repo feedback overlay (D.71 / D.72 / D.73)
 
-- [ ] **RV-N.7** Extend RV-L (cross-repo state-file overlay) with a parallel feedback-file overlay. Every cross-repo lookup goes through `RepoRegistry.allVisibleTo(viewerFp)` — the single chokepoint enforcing per-direction isolation per D.72.
-- [ ] **RV-N.8** `FeedbackResolver.aggregate(targetGlobalId): AggregatedFeedback` queries the `FeedbackEntry` Room index across every repo in `allVisibleTo(viewerFp)`. Returns `{reactionsByToken: Map<String, List<Author>>, comments: List<Comment>, threads: List<Thread>}`. Threading by `reply_to`, linear `created` order within threads.
-- [ ] **RV-N.9** Aggregation memoization keyed on `(targetGlobalId, set-of-visible-repo-HEADs)`. Invalidated when any visible repo's HEAD changes (incremental indexer hook).
-- [ ] **RV-N.10** Isolation invariants verified by privacy tests (Phase YY.6 / FB-F.5): no count masking ("N hidden" leak forbidden); notification suppression; search/autocomplete masking; author-chip rendering uses the receiving repo's local label.
+- [ ] **RV-R.7** Extend RV-L (cross-repo state-file overlay) with a parallel feedback-file overlay. Every cross-repo lookup goes through `RepoRegistry.allVisibleTo(viewerFp)` — the single chokepoint enforcing per-direction isolation per D.72.
+- [ ] **RV-R.8** `FeedbackResolver.aggregate(targetGlobalId): AggregatedFeedback` queries the `FeedbackEntry` Room index across every repo in `allVisibleTo(viewerFp)`. Returns `{reactionsByToken: Map<String, List<Author>>, comments: List<Comment>, threads: List<Thread>}`. Threading by `reply_to`, linear `created` order within threads.
+- [ ] **RV-R.9** Aggregation memoization keyed on `(targetGlobalId, set-of-visible-repo-HEADs)`. Invalidated when any visible repo's HEAD changes (incremental indexer hook).
+- [ ] **RV-R.10** Isolation invariants verified by privacy tests (Phase YY.6 / FB-F.5): no count masking ("N hidden" leak forbidden); notification suppression; search/autocomplete masking; author-chip rendering uses the receiving repo's local label.
 
 ---
 

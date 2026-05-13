@@ -1,6 +1,6 @@
 # notifications-sharing-import — deep-dive plan
 
-## Status: 🚧 IN-PLANNING
+## Status: ✅ DECIDED — ready for implementation.
 
 Owns the deep mechanics behind `main.md` Phases **M** (notifications),
 **O** (sharing + read-only) and **P** (import/export). Cross-link
@@ -2236,6 +2236,26 @@ The deferred-items section is rewritten to three tiers:
 - **Still out of scope** — items rejected as wrong-fit (not just
   postponed).
 
+- [ ] **NS-Q.3.1** Land the "Moved to v1" table verbatim in the
+      deferred-items section of this doc. Cross-link each row to the
+      NS-L through NS-P phase implementing it. **Rationale:** the
+      table is the canonical mapping readers will use to find the
+      replacement phase.
+- [ ] **NS-Q.3.2** Land the "Still deferred to v1.1" table verbatim,
+      keeping the per-row v1.1 path column. **Rationale:** each
+      remaining deferral has a concrete future-path; documenting the
+      path inline prevents the items from rotting into "we'll see"
+      limbo.
+- [ ] **NS-Q.3.3** Land the "Still out of scope" table verbatim with
+      one-line rejection rationale per row. **Rationale:** rejected
+      items must be distinguishable from postponed items so future-me
+      doesn't accidentally re-litigate.
+- [ ] **NS-Q.3.4** Add a stable anchor `nsq3-reclassification` above
+      the three tables so external link updates per NS-Q.4.2 have a
+      durable target. **Rationale:** markdown anchor stability is the
+      cheapest migration aid for any reader who linked to the old
+      "Deferred to v2 with rationale" anchors.
+
 #### Moved to v1
 
 | Original deferral | Now implemented in | Notes |
@@ -2489,29 +2509,29 @@ See [`draft-household-travel-vacation.md`](draft-household-travel-vacation.md) H
 
 Android forwards phone notifications to a paired Wear OS watch automatically — no Wear OS module needed (user explicit: no full Wear app). Notification *rich content* (large icon, full-bleed Wear background) renders on the wrist using two standard `NotificationCompat` APIs. The activity-specific sticker (resolved per Phase WW from `(activity_id, species)`) is the bitmap.
 
-- [ ] **NS-Z.9** `EventReminderScheduler` (NS-C) calls `WW-StickerResolver.resolve(activity_id, species)` → `Bitmap` at notification-build time. Resolver fallback chain (per WW): activity-specific → category-generic → species-idle → `R.drawable.about_bat`. Lookup is cached LRU (~40 entries) per WW's caching contract.
-- [ ] **NS-Z.10** Phone-side: pass the bitmap to `NotificationCompat.Builder.setLargeIcon(bitmap)`. Renders as the right-edge icon in the system shade + as the avatar on the lockscreen preview. Privacy contract: if `event.private = true` (K-2), DO NOT call `setLargeIcon` — generic bat-shaped silhouette only.
-- [ ] **NS-Z.11** Wear-side: `NotificationCompat.WearableExtender().setBackground(bitmap).extend(builder)` paints the sticker as the full-bleed background of the Wear notification card. Same privacy gate as NS-Z.10. The user sees the *good-boy-brushes-teeth* sticker filling the watch when the brush-teeth reminder fires.
-- [ ] **NS-Z.12** Sub-beat sticker swap on the wrist: when a sub-beat boundary fires (per HV-N event-with-subbeats), re-post the notification with the new sub-beat sticker. Wear bridge updates in place. Snoozing the sub-beat freezes the current sticker.
-- [ ] **NS-Z.13** Test: synth event with `activity_id = "brush-teeth"` + sub-beats; assert `setLargeIcon` + `WearableExtender.setBackground` both called with the right bitmap key at each sub-beat; assert private-flag suppresses both surfaces.
-- [ ] **NS-Z.14** Locked: NO custom Wear OS watch face (that's a separate app module + Wear OS dependencies the user has explicitly said no to). NO standalone Wear OS app. Just rich notifications via the standard bridge. Future "complication on watch face" support is deferred to a v2 Wear-companion phase if/when the user asks for it.
-- [ ] **NS-Z.15** Same sticker bitmap that rides the Wear bridge ALSO renders on the **homescreen now-widget** + **lockscreen widget** per Phase EEE (sibling to Phase VV countdown widget). The sticker resolver is the same `WW-StickerResolver.resolve(activity_id, species)` call site; the Wear notification, homescreen widget, and lockscreen widget MUST stay byte-equivalent (same bitmap, same fallback chain, same LRU). Sub-beat boundary fires re-render all three surfaces at the same instant. Privacy contract (K-2 private = generic silhouette) is enforced identically across all three surfaces.
+- [ ] **NS-Z.6** `EventReminderScheduler` (NS-C) calls `WW-StickerResolver.resolve(activity_id, species)` → `Bitmap` at notification-build time. Resolver fallback chain (per WW): activity-specific → category-generic → species-idle → `R.drawable.about_bat`. Lookup is cached LRU (~40 entries) per WW's caching contract.
+- [ ] **NS-Z.7** Phone-side: pass the bitmap to `NotificationCompat.Builder.setLargeIcon(bitmap)`. Renders as the right-edge icon in the system shade + as the avatar on the lockscreen preview. Privacy contract: if `event.private = true` (K-2), DO NOT call `setLargeIcon` — generic bat-shaped silhouette only.
+- [ ] **NS-Z.8** Wear-side: `NotificationCompat.WearableExtender().setBackground(bitmap).extend(builder)` paints the sticker as the full-bleed background of the Wear notification card. Same privacy gate as NS-Z.7. The user sees the *good-boy-brushes-teeth* sticker filling the watch when the brush-teeth reminder fires.
+- [ ] **NS-Z.9** Sub-beat sticker swap on the wrist: when a sub-beat boundary fires (per HV-N event-with-subbeats), re-post the notification with the new sub-beat sticker. Wear bridge updates in place. Snoozing the sub-beat freezes the current sticker.
+- [ ] **NS-Z.10** Test: synth event with `activity_id = "brush-teeth"` + sub-beats; assert `setLargeIcon` + `WearableExtender.setBackground` both called with the right bitmap key at each sub-beat; assert private-flag suppresses both surfaces.
+- [ ] **NS-Z.11** Locked: NO custom Wear OS watch face (that's a separate app module + Wear OS dependencies the user has explicitly said no to per D.70 / Phase XX). NO standalone Wear OS app. Just rich notifications via the standard phone-paired bridge. Future "complication on watch face" support is deferred to a post-v1 Wear-companion phase if/when the user asks for it. **Rationale:** D.70 locks no-standalone-Wear; the bridge-only path is free (Android forwards automatically).
+- [ ] **NS-Z.12** Same sticker bitmap that rides the Wear bridge ALSO renders on the **homescreen now-widget** + **lockscreen widget** per Phase EEE (sibling to Phase VV countdown widget). The sticker resolver is the same `WW-StickerResolver.resolve(activity_id, species)` call site; the Wear notification, homescreen widget, and lockscreen widget MUST stay byte-equivalent (same bitmap, same fallback chain, same LRU). Sub-beat boundary fires re-render all three surfaces at the same instant. Privacy contract (K-2 private = generic silhouette) is enforced identically across all three surfaces.
 
 ### Briefing surfaces (D.81)
 
-- [ ] **NS-Z.6** System `cal-briefings` calendar scaffolded by default at wizard time; user disable at Settings → Notifications → "Show briefings". Two recurring events: `morning-briefing` (default 07:00 daily) and `evening-briefing` (default 21:00 daily). Both `FREQ=DAILY`.
-- [ ] **NS-Z.7** Body AUTO-GENERATED at fire time: walk the upcoming-window query (today for morning; tomorrow for evening). Render inline Markdown list, one item per event with off-schedule items ⚠-prefixed and contextual hint (per RV-Q.3 / D.80).
-- [ ] **NS-Z.8** Non-user-editable bodies: user edit attempts get a "regenerate?" prompt. Body field marked `auto_generated = true` in frontmatter; resolver overwrites on next fire.
-- [ ] **NS-Z.9** Notification expand-actions per line: `snooze`, `re-arm`, `mark-done-early`, `mark-skipped`. Map to existing deviation / exception write paths.
-- [ ] **NS-Z.10** Off-schedule highlight rendering: ⚠ glyph in notification body + AccentColor on the line; expanded view shows contextual hint *"(off-schedule — work calendar normally runs 9-17)"*.
+- [ ] **NS-Z.13** System `cal-briefings` calendar scaffolded by default at wizard time; user disable at Settings → Notifications → "Show briefings". Two recurring events: `morning-briefing` (default 07:00 daily) and `evening-briefing` (default 21:00 daily). Both `FREQ=DAILY`.
+- [ ] **NS-Z.14** Body AUTO-GENERATED at fire time: walk the upcoming-window query (today for morning; tomorrow for evening). Render inline Markdown list, one item per event with off-schedule items ⚠-prefixed and contextual hint (per RV-Q.3 / D.80).
+- [ ] **NS-Z.15** Non-user-editable bodies: user edit attempts get a "regenerate?" prompt. Body field marked `auto_generated = true` in frontmatter; resolver overwrites on next fire.
+- [ ] **NS-Z.16** Notification expand-actions per line: `snooze`, `re-arm`, `mark-done-early`, `mark-skipped`. Map to existing deviation / exception write paths. Briefing channel = `events-briefings` (LOW, expandable per NS-Z.2). **Rationale:** LOW importance keeps the daily rollup non-intrusive; expand actions match the existing deviation API surface (no new write paths).
+- [ ] **NS-Z.17** Off-schedule highlight rendering: ⚠ glyph in notification body + AccentColor on the line; expanded view shows contextual hint *"(off-schedule — work calendar normally runs 9-17)"*. Privacy gate: any `private = true` event included in the briefing is rendered as "Scheduled event" with no title (K-2 / NS-Y.1 parity).
 
 ### Post-event checkin (D.82)
 
-- [ ] **NS-Z.11** `post_event_checkin` is opt-in per event and per template (default off everywhere). When opted-in, notification fires at `event.end + checkin_offset` (default `event.end`). Actions: `Yes` (no-op — default-by-schedule already wins per D.70), `No` (writes `deviations/.../<date>.md` with `kind = "skipped"`), `Partial` (writes `kind = "partial"` with sub-beat picker bottom-sheet), `Remind me again in X` (re-arms at `now + X`).
+- [ ] **NS-Z.18** `post_event_checkin` is opt-in per event and per template (default off everywhere). When opted-in, notification fires at `event.end + checkin_offset` (default `event.end`) on channel `events-checkin` (DEFAULT importance per NS-Z.2). Actions: `Yes` (no-op — default-by-schedule already wins per D.70), `No` (writes `deviations/.../<date>.md` with `kind = "skipped"`), `Partial` (writes `kind = "partial"` with sub-beat picker bottom-sheet), `Remind me again in X` (re-arms at `now + X`). All writes go through `EntityWriter` as a single atomic commit. **Rationale:** opt-in default keeps the inverted-habit model (D.54) noise-free for users who don't want check-ins; routing through `EntityWriter` honors the single-commit atomic-write invariant.
 
 ### Attachment-lift import paths (HV-M.6)
 
-- [ ] **NS-Z.12** `.ics` import (extends NS-I): `URL` and `DESCRIPTION` field URLs → `link` attachments.
-- [ ] **NS-Z.13** `.eml` airline-confirmation import (NEW): boarding-pass PDF → `barcode` (decoded) + `file` (raw PDF) attachments; gate/seat/PNR → event description; arrival/departure → event start/end.
-- [ ] **NS-Z.14** `.pkpass` Apple Wallet pass import (NEW): unzip; primary barcode → `barcode` attachment; metadata → event fields; original archive → `file` attachment for future re-use.
-- [ ] **NS-Z.15** Travel-prep events (HV-B) inherit attachments at materialization time (passport photo, insurance card scan, visa PDF) from the wizard's per-trip input sheet.
+- [ ] **NS-Z.19** `.ics` import (extends NS-I): `URL` and `DESCRIPTION` field URLs → `link` attachments. Inline `ATTACH;ENCODING=BASE64` blobs continue to land per NS-I.5 (SHA-256 → `attachments/<sha-prefix>/<sha>.<ext>`). **Rationale:** reuses the existing NS-I.5 attachment landing path; only the `URL`-as-link mapping is new.
+- [ ] **NS-Z.20** `.eml` airline-confirmation import (NEW): boarding-pass PDF → `barcode` (decoded via ZXing) + `file` (raw PDF) attachments; gate/seat/PNR → event description; arrival/departure → event start/end. Entry: share-target intent filter on `message/rfc822` mime; SAF picker as alternative entry. **Rationale:** boarding-pass PDFs are the most common travel-attachment source; landing both decoded barcode AND raw PDF lets agents re-render or re-decode later without the original email.
+- [ ] **NS-Z.21** `.pkpass` Apple Wallet pass import (NEW): unzip; primary barcode → `barcode` attachment; metadata → event fields (`title` from `description` JSON key, `start`/`end` from `relevantDate` + `expirationDate`); original archive → `file` attachment for future re-use. Entry: share-target intent filter on `application/vnd.apple.pkpass`. **Rationale:** keeping the original `.pkpass` archive lets the user re-add to Wallet later from the SKB-stored copy.
+- [ ] **NS-Z.22** Travel-prep events (HV-B) inherit attachments at materialization time (passport photo, insurance card scan, visa PDF) from the wizard's per-trip input sheet. Inheritance is by SHA reference (not copy) — one attachment blob, many event references. **Rationale:** SHA-keyed dedup avoids ballooning the repo when 10 travel-prep events all reference the same passport photo.

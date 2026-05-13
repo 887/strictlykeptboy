@@ -1,6 +1,6 @@
 # strictlykeptboy — shared schedules + simplified mode
 
-## Status: 🚧 IN-PLANNING
+## Status: ✅ DECIDED — ready for implementation.
 
 This document is the holistic specification for the Round 3 feature
 set: **a recipient receives a complete schedule from someone else via
@@ -54,10 +54,14 @@ mapping:
 | SH-I | (folded into RR) | Revocation + token rotation |
 | SH-J | (folded into X, deferred to cli-tooling.md) | CLI surface summary |
 | SH-K | (cross-cutting) | Edge cases + cross-cutting concerns |
+| SH-L | YY (Round 4) | Cross-repo feedback (write-back-target on references) |
+| SH-M | YY (Round 4) | Repo registry + fingerprint cache (D.71 / D.72) |
+| SH-N | DDD (Round 5) | Review-feed cross-repo contract (kept-mode) |
+| SH-O | DDD (Round 5) | Dom-persona pointer (`ai-dom-pointer.toml`) |
 
 ---
 
-# The four worked scenarios
+# The four worked scenarios — Phase SH-Scenarios
 
 The whole feature is built around four concrete user stories.
 Every later technical choice traces back to one of these. They are
@@ -65,6 +69,36 @@ written from both the **recipient's** perspective (the person who's
 never used a calendar app before) and the **author's** perspective
 (the person sending the schedule). Read these first; the rest of
 the document is "how we make each step work."
+
+The sub-step checkboxes below are **verification anchors** — they
+tick when an end-to-end smoke-test of the named scenario has been
+run against the AVD (or the wifi-adb phone) and the recipient-side
+flow completes as described. They are NOT independent implementation
+units; the implementation lives in SH-A..SH-O.
+
+- [ ] **SH-Scenarios.1** Scenario 1 (Dom → sub, private repo,
+  embedded deploy key) verified end-to-end: deep-link tap →
+  install → first-launch bootstrap → simplified mode → done-tick
+  writes to `_local/state/` → days-later FAB-driven evolution
+  to own repo migrates state cleanly.
+- [ ] **SH-Scenarios.2** Scenario 2 (coach → client, public repo,
+  durable QR) verified: QR scan → install → bootstrap → simplified
+  mode → comment composer writes a `note` state file.
+- [ ] **SH-Scenarios.3** Scenario 3 (club → 30 members, public,
+  pull-only) verified for both code paths: (a) recipient already
+  has the app → in-app add-gifted-repo overlay, (b) recipient
+  does not → web-fallback → install → bootstrap.
+- [ ] **SH-Scenarios.4** Scenario 4 (school → students+parents,
+  public, pull-only) verified: PDF-embedded link → install →
+  bootstrap → simplified mode; parent-side in-app overlay add
+  onto existing full-mode setup.
+- [ ] **SH-Scenarios.5** Matrix-completeness audit: every row of
+  the matrix table at the end of this section (author × recipient
+  × auth × mode × receiver-has-app) has at least one passing
+  smoke-test in CI or AVD-manual notes. **Decision: matrix
+  coverage is the gating criterion for declaring Round 3 shippable**
+  — partial coverage means some recipient profile has never been
+  exercised on real hardware.
 
 ## Scenario 1 — Dom shares a kink-coded schedule with sub
 
@@ -2343,44 +2377,52 @@ single subagent or single dev session.
 
 ---
 
-## Phase SH-I — Cross-repo feedback (Round 4 extension)
+## Phase SH-L — Cross-repo feedback (Round 4 extension)
 
 **See [`draft-global-id-feedback.md`](draft-global-id-feedback.md) (`main.md` Phase YY) for the authoritative spec.** Round 4 extends shared-schedules with cross-repo feedback under multi-life isolation per `decisions.md` D.71 / D.72 / D.73.
 
-- [ ] **SH-I.1** Extend SH-C (`references.toml`) with the `write_back_target = "<repo-fingerprint>"` field per reference (FB-H.1). Opt-in: only references with this field set surface the "+ react" UI affordance for entities owned by that fingerprint.
-- [ ] **SH-I.2** Extend SH-D (state files) note: **feedback files are a sibling primitive to state files**. State = receiver's mutations on sender's entities (`state/<source-repo-id>/<entity-id>.<kind>.toml`). Feedback = receiver's reactions on sender's entities (`feedback/<target-fingerprint>/<target-entity-uuid>/<feedback-uuid>.md` in the feedbacker's own repo). Both keyed by their respective IDs (state by URL-id per D.51; feedback by repo-fingerprint per D.71). Independent layers.
-- [ ] **SH-I.3** Extend SH-G (share-this-repo) — "Allow this share's recipient to leave feedback on my entries" checkbox in the share-config sheet (RR.2). When set, the generated share link is paired with a `write_back_target = <this-repo-fingerprint>` line auto-written into the recipient's `references.toml` when they accept (Phase QQ).
-- [ ] **SH-I.4** Symmetric write-back: when both sides share to each other with write-back enabled, both `references.toml` files carry `write_back_target` entries pointing to each other. Feedback flows in both directions.
-- [ ] **SH-I.5** Revoking write-back: edit local `references.toml` to remove the line. UI: Settings → Repos → tap repo → "References" → tap reference → "Allow feedback" toggle. Already-written feedback files persist (we don't reach into history); no new ones surface in the leave-feedback picker.
-- [ ] **SH-I.6** Share-link generation for multi-origin repos (per D.74): share-config sheet (RR.2) gains a "include mirror remotes in the link" toggle (default OFF — privacy). When ON, the generated link carries `?url=A&url=B` per MM.6 (parser already supports this). Receiver can opt into adding all listed remotes or just the first.
+**Decision: this Round 4 extension is re-prefixed from the original `SH-I` draft to `SH-L` to avoid collision with the Round 3 `SH-I` (revocation + token rotation) above. SH-I/SH-J/SH-K Round-3 prefixes are the canonical owners; Round 4/5 extensions take SH-L through SH-O.** Rationale: the doc already shipped SH-I/SH-J/SH-K with concrete sub-steps; re-using those prefixes for unrelated Round-4 work would silently break any tracker or subagent that referenced the originals.
 
-## Phase SH-J — Repo registry + fingerprint cache (Round 4 extension)
+- [ ] **SH-L.1** Extend SH-C (`references.toml`) with the `write_back_target = "<repo-fingerprint>"` field per reference (FB-H.1). Opt-in: only references with this field set surface the "+ react" UI affordance for entities owned by that fingerprint.
+- [ ] **SH-L.2** Extend SH-D (state files) note: **feedback files are a sibling primitive to state files**. State = receiver's mutations on sender's entities (`state/<source-repo-id>/<entity-id>.<kind>.toml`). Feedback = receiver's reactions on sender's entities (`feedback/<target-fingerprint>/<target-entity-uuid>/<feedback-uuid>.md` in the feedbacker's own repo). Both keyed by their respective IDs (state by URL-id per D.51; feedback by repo-fingerprint per D.71). Independent layers.
+- [ ] **SH-L.3** Extend SH-G (share-this-repo) — "Allow this share's recipient to leave feedback on my entries" checkbox in the share-config sheet (RR.2). When set, the generated share link is paired with a `write_back_target = <this-repo-fingerprint>` line auto-written into the recipient's `references.toml` when they accept (Phase QQ).
+- [ ] **SH-L.4** Symmetric write-back: when both sides share to each other with write-back enabled, both `references.toml` files carry `write_back_target` entries pointing to each other. Feedback flows in both directions.
+- [ ] **SH-L.5** Revoking write-back: edit local `references.toml` to remove the line. UI: Settings → Repos → tap repo → "References" → tap reference → "Allow feedback" toggle. Already-written feedback files persist (we don't reach into history); no new ones surface in the leave-feedback picker.
+- [ ] **SH-L.6** Share-link generation for multi-origin repos (per D.74): share-config sheet (RR.2) gains a "include mirror remotes in the link" toggle (default OFF — privacy). When ON, the generated link carries `?url=A&url=B` per MM.6 (parser already supports this). Receiver can opt into adding all listed remotes or just the first.
+- [ ] **SH-L.7** Privacy interaction with K-2 / D.57: a per-event `private = true` flag suppresses cross-repo feedback entirely for that entity — the "+ react" affordance is hidden and no `feedback/<target-fp>/<event-uuid>/...` file may be written. **Decision: privacy flag wins over write-back-target.** Rationale: K-2 / D.57 mandate that private events are structurally invisible to aggregation; permitting feedback writes against them would leak existence-of-entity to the feedbacker's repo. Aggregation never count-masks — isolated sources remain invisible.
 
-- [ ] **SH-J.1** Repo registry per D.72: `<app-data>/repo-registry.toml` device-local. Auto-registers on every successful repo open (Phase B, Phase QQ deep-link, Phase SS own-repo mini-wizard).
-- [ ] **SH-J.2** Per-direction (asymmetric) isolation per D.72: each repo controls only what *it* refuses to see. Aggregation count masking forbidden.
-- [ ] **SH-J.3** Fingerprint cache file `.strictlykeptboy/repo-fingerprint` (gitignored per D.71) — auto-derived on repo open if missing.
+## Phase SH-M — Repo registry + fingerprint cache (Round 4 extension)
+
+- [ ] **SH-M.1** Repo registry per D.72: `<app-data>/repo-registry.toml` device-local. Auto-registers on every successful repo open (Phase B, Phase QQ deep-link, Phase SS own-repo mini-wizard).
+- [ ] **SH-M.2** Per-direction (asymmetric) isolation per D.72: each repo controls only what *it* refuses to see. Aggregation count masking forbidden — isolated sources are structurally invisible, never reported as "N hidden."
+- [ ] **SH-M.3** Fingerprint cache file `.strictlykeptboy/repo-fingerprint` (gitignored per D.71) — auto-derived on repo open if missing.
+- [ ] **SH-M.4** Atomic-write discipline for `repo-registry.toml`: write to `repo-registry.toml.tmp` then `Files.move(..., ATOMIC_MOVE)` per SOLID + the project's `java.nio.file.Path` convention. **Decision: registry corruption from a half-write would orphan every repo on next launch; atomic-move is non-negotiable.**
+- [ ] **SH-M.5** Registry entry shape (one `[[repo]]` table per row): `fingerprint` (D.71 derivation), `local_path`, `first_opened_at`, `last_opened_at`, `display_name` (cached from `repo.toml`), `is_own_repo` (bool, derived from identity-default-author check), `mode` (`free` / `strictly-kept` per D.83), `gifted_via` (optional source-repo-id if this repo was added by deep-link).
 
 ---
 
-## Phase SH-K — Review-feed cross-repo contract (Round 5; main.md Phase DDD)
+## Phase SH-N — Review-feed cross-repo contract (Round 5; main.md Phase DDD)
 
 See [`draft-household-travel-vacation.md`](draft-household-travel-vacation.md) HV-Q.2 and `decisions.md` D.84. Per HV-J.18. Extends the Phase YY cross-repo feedback semantics with the kept-mode review-feed contract.
 
-- [ ] **SH-K.1** New sealed-kind `kind = "review"` joins the existing feedback-kind union alongside reactions / comments / journal-replies / bonus-tasks. Review entries are first-class cross-repo feedback objects.
-- [ ] **SH-K.2** In `mode = "strictly-kept"` (D.84), every commit to the boy's repo materializes `reviews/<commit-sha>/reviewable_change.md` via a JGit post-commit callback (NOT a git hook on disk — in-app). Auto-summary uses `identity.toml` praise term per DDD.11.
-- [ ] **SH-K.3** Dom's app picks up unreviewed entries via the existing cross-repo resolver (Phase YY). Sort: newest-first with unread pill. Surface: "Reviews" tab (UI-SS).
-- [ ] **SH-K.4** Dom writes responses to `reviews/<commit-sha>/responses/<dom-fingerprint>-<timestamp>.md` IN THE DOM'S OWN REPO per write-back-target. Reaction set per D.84: `locked` / `collar` / `good-boy` / `paw` / `heart` / `fire` / `thumbsup` / `🦇` / `smirk`.
-- [ ] **SH-K.5** Boy's app surfaces responses on the original commit in the existing per-commit feedback feed (the same feed already used for reaction-on-event), extended with the new `review` kind. Empty-text + `good-boy` reaction renders as the cute-coded LGTM (DM-Z.4).
-- [ ] **SH-K.6** Self-keep mode (D.86): write-back-target is the boy's OWN repo; the boy commits their own reviews on themselves. Same SH-K.4 path with `responder_fingerprint = self`.
-- [ ] **SH-K.7** Mode-flip notification: the dom-side app receives a NEUTRAL informational notification when the boy flips to `free` (per D.86). No veto UI; no negotiation surface.
+- [ ] **SH-N.1** New sealed-kind `kind = "review"` joins the existing feedback-kind union alongside reactions / comments / journal-replies / bonus-tasks. Review entries are first-class cross-repo feedback objects.
+- [ ] **SH-N.2** In `mode = "strictly-kept"` (D.84), every commit to the boy's repo materializes `reviews/<commit-sha>/reviewable_change.md` via a JGit post-commit callback (NOT a git hook on disk — in-app). Auto-summary uses `identity.toml` praise term per DDD.11.
+- [ ] **SH-N.3** Dom's app picks up unreviewed entries via the existing cross-repo resolver (Phase YY). Sort: newest-first with unread pill. Surface: "Reviews" tab (UI-SS).
+- [ ] **SH-N.4** Dom writes responses to `reviews/<commit-sha>/responses/<dom-fingerprint>-<timestamp>.md` IN THE DOM'S OWN REPO per write-back-target. Reaction set per D.84: `locked` / `collar` / `good-boy` / `paw` / `heart` / `fire` / `thumbsup` / `🦇` / `smirk`.
+- [ ] **SH-N.5** Boy's app surfaces responses on the original commit in the existing per-commit feedback feed (the same feed already used for reaction-on-event), extended with the new `review` kind. Empty-text + `good-boy` reaction renders as the cute-coded LGTM (DM-Z.4).
+- [ ] **SH-N.6** Self-keep mode (D.86): write-back-target is the boy's OWN repo; the boy commits their own reviews on themselves. Same SH-N.4 path with `responder_fingerprint = self`.
+- [ ] **SH-N.7** Mode-flip notification: the dom-side app receives a NEUTRAL informational notification when the boy flips to `free` (per D.86). No veto UI; no negotiation surface.
+- [ ] **SH-N.8** Privacy interaction: per-event `private = true` (D.57 / K-2) suppresses review-feed materialization for that entity. The post-commit callback skips entities whose source frontmatter carries `private = true`, even in strictly-kept mode. **Decision: private events never appear in the review feed, period.** Rationale: review feed is a cross-repo aggregation surface; D.57 privacy must dominate.
 
 ---
 
-## Phase SH-L — Dom-persona pointer (Round 5; main.md Phase DDD)
+## Phase SH-O — Dom-persona pointer (Round 5; main.md Phase DDD)
 
 See HV-Q.3 / HV-J.18. Extends Phase OO cross-repo state.
 
-- [ ] **SH-L.1** Per-link state file `.strictlykeptboy/ai-dom-pointer.toml` (device-local, NOT committed) records which AI-dom-persona is currently active for which kept-link. Allows the persona to be swapped without churning the cross-repo link itself.
-- [ ] **SH-L.2** Schema: `[[link]]` entries with `repo_fingerprint`, `persona_name` (one of D.85 shipped names or `custom-prompt`), `persona_file_path` (`~/.config/skb/dom-personas/<name>.md`), `cadence` (`realtime` / `end-of-day` / `weekly`), `last_run_at`.
-- [ ] **SH-L.3** Persona file path resolution: app-private at `~/.config/skb/dom-personas/<name>.md` per D.85; ships with 6 defaults + `custom-prompt`. NEVER in the calendar repo (agent-tooling, not user-data).
-- [ ] **SH-L.4** Swap-persona migration (HV-Q.4.3): kept-by-AI → new persona writes a single mode-change commit noting the transition; old reviews remain readable in history.
+- [ ] **SH-O.1** Per-link state file `.strictlykeptboy/ai-dom-pointer.toml` (device-local, NOT committed) records which AI-dom-persona is currently active for which kept-link. Allows the persona to be swapped without churning the cross-repo link itself.
+- [ ] **SH-O.2** Schema: `[[link]]` entries with `repo_fingerprint`, `persona_name` (one of D.85 shipped names or `custom-prompt`), `persona_file_path` (`~/.config/skb/dom-personas/<name>.md`), `cadence` (`realtime` / `end-of-day` / `weekly`), `last_run_at`.
+- [ ] **SH-O.3** Persona file path resolution: app-private at `~/.config/skb/dom-personas/<name>.md` per D.85; ships with 6 defaults + `custom-prompt`. NEVER in the calendar repo (agent-tooling, not user-data).
+- [ ] **SH-O.4** Swap-persona migration (HV-Q.4.3): kept-by-AI → new persona writes a single mode-change commit noting the transition; old reviews remain readable in history.
+- [ ] **SH-O.5** Atomic-write for `ai-dom-pointer.toml` via `.tmp` + `Files.move(..., ATOMIC_MOVE)`. **Decision: even device-local config files use the atomic-write discipline.** Rationale: a half-written pointer file could route a kept-mode boy to the wrong persona; the file is small, the cost is zero.
+- [ ] **SH-O.6** Pointer-file privacy: this file is device-local and gitignored by construction (the entire `.strictlykeptboy/` subset for app-private state is enumerated as gitignored in the produced-repo `.gitignore`). **Decision: dom-persona selection is never committed.** Rationale: persona names (e.g. `wolf-dom`, `fox-dom`) are kink-coded and orthogonal to the calendar contract — they belong on-device, not in cross-device history.

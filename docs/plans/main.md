@@ -99,9 +99,9 @@ Deep-dive: [`data-model.md`](data-model.md) phases DM-A through DM-G.
 
 Deep-dive: [`resolver.md`](resolver.md) phases RV-A through RV-F.
 
-- [x] **E.1** Active-set evaluator: given `(date, time)`, return active calendars/todolists across all configured repos. Includes supersedence + override re-include (RV-O / HV-E).
+- [x] **E.1** Active-set evaluator: given `(date, time)`, return active calendars/todolists across all configured repos. Includes supersedence + override re-include (RV-P / HV-E; was RV-O pre-Round-4-rename).
 - [x] **E.2** Recurrence materializer: given an RRULE + a date range, emit instances. Apply exceptions (cancel / move / override / note) via dmfs lib-recur 0.17.1.
-- [x] **E.3** Overlay layer: layer events from N calendars; resolve priority for collision (per-overlay `priority` per D.20, `priorityOverride` per-event); compute visual band layout via interval-graph lane assignment. Bands carry RV-N inversion state + RV-O supersedence tag.
+- [x] **E.3** Overlay layer: layer events from N calendars; resolve priority for collision (per-overlay `priority` per D.20, `priorityOverride` per-event); compute visual band layout via interval-graph lane assignment. Bands carry RV-R inversion state (was RV-N pre-Round-4-rename) + RV-P supersedence tag (was RV-O pre-Round-4-rename).
 - [x] **E.4** Render pipeline: `(date-range, view-mode)` → `RenderedSchedule` (Compose-ready structure). Includes RV-P off-schedule detection.
 - [x] **E.5** Common-time finder: sweep-line subtraction across N participants, ranked by length / proximity-to-ideal / earliest.
 - [x] **E.6** Cache layer: LRU 20-entry memoization keyed on `(snapshot.contentHash, viewMode, range)`; contentHash = SHA-256 over `(repoId, lastIndexedHeadSha)` tuples.
@@ -389,6 +389,22 @@ Cross-references for Round 2:
 - UI extensions: [`ui-spec.md`](ui-spec.md) (extends with UI-V+)
 - Notifications/sharing extensions: [`notifications-sharing-import.md`](notifications-sharing-import.md) (extends with NS-L+)
 - Resolver extensions: [`resolver.md`](resolver.md) (extends with RV-H+)
+
+---
+
+## Round 2+ universal completion checklist (applies to every phase below)
+
+Every Round 2+ phase (X onwards) ships with the SOLID self-check baked in. Before any subagent ticks a phase's last sub-step, it MUST run this checklist against the diff and report results in the completion message. This is enforced by the dispatching contract (`CLAUDE.md` § Subagent dispatching) and the standing audit at [`refactor-solid.md`](refactor-solid.md).
+
+- [ ] **SOLID.S** Single Responsibility — every new / modified file has one reason to change. Files past 500 LOC flagged in the report; past 800 LOC split before declaring done unless explicitly justified.
+- [ ] **SOLID.O** Open/Closed — branching done via sealed types + exhaustive `when`, not `enum + when-chain` growing across consumers. New variant = new file, not edit-5-sites.
+- [ ] **SOLID.L** Liskov — no `NotImplementedError` / deferred-bind in production paths; sealed-variant contracts honoured totally.
+- [ ] **SOLID.I** Interface Segregation — composables / ViewModels take the narrowest interface that satisfies the need (e.g. `DayEventSource` one-method, not the whole `CacheDatabase`).
+- [ ] **SOLID.D** Dependency Inversion — concrete classes (Room DAOs, JGit wrappers, OkHttp clients, EncryptedSharedPreferences) live behind interfaces; composition root (`MainActivity` → future `AppGraph`) is the only wiring site.
+- [ ] **SOLID.AVD** AVD smoke — UI-affecting phases run the canonical install + screencap loop per `CLAUDE.md` § Test loop. Unit-tests alone are insufficient evidence for UI work.
+- [ ] **SOLID.LOC** Report LOC of every new file > 200 LOC in the phase completion message. Append to the `refactor-solid.md` audit table when relevant.
+
+Findings that don't block the current phase but warrant follow-up land in [`refactor-solid.md`](refactor-solid.md) as new F-numbered entries.
 
 ---
 
@@ -868,11 +884,11 @@ Source draft: [`draft-household-travel-vacation.md`](draft-household-travel-vaca
 
 ## Phase DDD — Mode + identity + dom-persona
 
-Source draft: [`draft-household-travel-vacation.md`](draft-household-travel-vacation.md) phases HV-Q (free-vs-kept + review-feed + AI-dom + migration paths + safety), HV-R (identity.toml + LW Screen 3.5 + AGENTS.md split). Cross-references: Phase YY (cross-repo feedback — review-feed builds on it), Phase OO (cross-repo state — `dom_persona_pointer`), Phase ZZ (remote-removal = revoke-dom-access), Phase K.5a (the LW Screen 3.5 insert above), Phase S.8b (Settings → Identity), [`shared-schedules.md`](shared-schedules.md) Phase SH-K + SH-L, [`data-model.md`](data-model.md) DM-Y / DM-Z, [`ui-spec.md`](ui-spec.md) UI-SS..VV. Locks D.83 / D.84 / D.85 / D.86.
+Source draft: [`draft-household-travel-vacation.md`](draft-household-travel-vacation.md) phases HV-Q (free-vs-kept + review-feed + AI-dom + migration paths + safety), HV-R (identity.toml + LW Screen 3.5 + AGENTS.md split). Cross-references: Phase YY (cross-repo feedback — review-feed builds on it), Phase OO (cross-repo state — `dom_persona_pointer`), Phase ZZ (remote-removal = revoke-dom-access), Phase K.5a (the LW Screen 3.5 insert above), Phase S.8b (Settings → Identity), [`shared-schedules.md`](shared-schedules.md) Phase SH-N + SH-O (review-feed + dom-persona pointer; were SH-K + SH-L pre-Round-4-rename), [`data-model.md`](data-model.md) DM-Y / DM-Z, [`ui-spec.md`](ui-spec.md) UI-SS..VV. Locks D.83 / D.84 / D.85 / D.86.
 
 - [ ] **DDD.1** `mode.toml` at calendar-repo root per HV-Q.1 + D.84: `mode = "free" | "strictly-kept"` (per-repo default, per-calendar override block); optional `write_back_target`, `dom_persona`, `dom_cadence`, `kept_since`. Mode IS committed (transitions are history). See DM-Y.
 - [ ] **DDD.2** Review-feed mechanic per HV-Q.2: post-commit JGit callback materializes `reviews/<commit-sha>/reviewable_change.md` (auto-summary + collapsed diff hunks + empty `responses/`). Auto-summary maps changed-path families to register-aware blurbs using `identity.toml`'s praise term. See DM-Z.
-- [ ] **DDD.3** Dom responses per HV-Q.2.4: dom writes to `reviews/<commit-sha>/responses/<dom-fingerprint>-<ts>.md` IN THE DOM'S OWN REPO; cross-repo resolver (Phase YY) surfaces back to boy's per-commit feedback feed. Reaction set: `locked` / `collar` / `good-boy` / `paw` / `heart` / `fire` / `thumbsup` / `🦇` / `smirk`. Empty-text + `good-boy` reaction renders as the cute-coded LGTM. See [`shared-schedules.md`](shared-schedules.md) SH-K.
+- [ ] **DDD.3** Dom responses per HV-Q.2.4: dom writes to `reviews/<commit-sha>/responses/<dom-fingerprint>-<ts>.md` IN THE DOM'S OWN REPO; cross-repo resolver (Phase YY) surfaces back to boy's per-commit feedback feed. Reaction set: `locked` / `collar` / `good-boy` / `paw` / `heart` / `fire` / `thumbsup` / `🦇` / `smirk`. Empty-text + `good-boy` reaction renders as the cute-coded LGTM. See [`shared-schedules.md`](shared-schedules.md) SH-N (review-feed; was SH-K pre-Round-4-rename).
 - [ ] **DDD.4** AI-dom-persona system per HV-Q.3 + D.85: 6 shipped personas + `custom-prompt` at `~/.config/skb/dom-personas/<name>.md` (app-private, NOT in calendar repo); cadence `realtime` / `end-of-day` / `weekly` (default end-of-day); explicit-content guardrails default ON (opt-in setting + K-6 age-gate). Per-link `dom_persona_pointer` state file per Phase OO extension (SH-L).
 - [ ] **DDD.5** Migration paths per HV-Q.4 (six locked flows): free→kept-by-AI, free→kept-by-human, kept-by-AI↔kept-by-human, kept→free with 24h cooling-off, kept-by-human↔self-keep, self-keep→kept-by-human. All transitions committed; git log is the authoritative record of who held the keys when.
 - [ ] **DDD.6** Toxic-dom safety affordances per HV-Q.5 + D.86: boy ALWAYS retains write access; revoke-dom-read via Phase ZZ remote-removal; mode-flip cannot be blocked by dom; always-visible "transition my mode" affordance reachable from most-kept UI state (NOT buried); self-keep as fully-supported exit ramp (identity.toml carries over unchanged). See UI-TT mode-aware chrome.
@@ -921,6 +937,36 @@ Sibling to Phase VV (countdown widget). VV pins a *future event* and counts down
 - [ ] **EEE.11** Configure-activity for the home-widget variant: pick which calendar(s) source the active-event query, sticker-pack override per species (defers to repo-level identity.toml if not overridden), 2x1 / 4x2 / 4x4 size preview, optional "show remaining-time as exact-minutes vs. coarse-bucket" toggle.
 - [ ] **EEE.12** Render-snapshot tests at: cold start (no active event → empty state), event-active mid-block (sticker + title + remaining), sub-beat-mid-event (sub-beat sticker + label), private-event (generic), lockscreen variant under private + non-private events, transitions on event-end + sub-beat-boundary.
 - [ ] **EEE.13** AVD smoke: drop the now-widget on the homescreen via `adb shell appwidget` + observe the sticker + title; transition through an event boundary and assert re-render; lock the device and confirm the lockscreen widget honors the privacy contract.
+
+---
+
+## Phase FFF — Event-create FAB + template picker
+
+Deep-dive: [`event-create.md`](event-create.md) phases EC-A through EC-G. The user-facing `+` FAB on every schedule surface — the single primary write path after the wizard (Phase K) seeds the repo. Two-tab sheet: **Free-form** (appointment-style: title + time + calendar + notes + optional recurrence + `private` toggle) vs **From template** (searchable picker over Phase XX / AAA atomic-activity templates, materializes with sub-beats inline). Save-as-template round-trips user-authored events back into the picker. Overlap + read-only + routine guards. Single-commit writes through `EntityWriter`; Undo deletes the just-written file. Bridges Phase XX (data model + inversion engine) and Phase G (read/render surfaces).
+
+- [ ] **FFF.1** FAB surface unification (EC-A): `EventCreateFab` composable wired into Day/Week/Month/Year/Agenda/Timebox; M3E `ExtendedFloatingActionButton` with scroll-collapse; long-press menu for routine quick-start + .ics paste (v1 wires only "New event"); last-used-tab persistence in `EventCreatePrefs`.
+- [ ] **FFF.2** Free-form path (EC-B): `EventCreateFreeFormForm` with title / start / end / calendar chip-bar / notes / identity / reminder / `private` toggle; inline supporting-text validation; recurrence sub-flow writes `recurrences/<id>.md` + first-instance materialization; confirm goes through `EntityWriter.write` with Undo snackbar.
+- [ ] **FFF.3** Template picker path (EC-C): pill search matching L&F register; index merges shipped (`assets/templates/index.toml`) + user (`templates/`) + custom packs; section grouping (Self-care / Workout / Routine / Kink / Your templates / pack name); ListItem with colored leading badge + duration + sub-beat-count subtitle; neutral-mode filters `kink` tag; `TemplateConfirmSheet` previews sub-beats read-only; `TemplateMaterializer.materialize` writes `materialized_from` + `materialized_at` frontmatter.
+- [ ] **FFF.4** Save-as-template round trip (EC-D): overflow `Save as template` on event detail sheet (Phase G.7); writes `templates/<id>.toml`; editor read-only for SHIPPED/PACK sources, editable for USER; delete leaves dangling `materialized_from` references intact (template-id is just a string).
+- [ ] **FFF.5** Conflict + guards (EC-E): overlap detection with M3E AlertDialog (Schedule anyway / Pick different time / Cancel — no silent overwrite); routine-overlay refusal when `routine_can_materialize = false`; read-only-share + read-only-calendar disable the FAB; multi-repo calendar chip-bar groups by repo header (no cross-repo writes); past-date guard logs cleanly into Phase XX inversion model.
+- [ ] **FFF.6** Visual + a11y polish (EC-F): IME-aware sheet height; focus order title → start → end → calendar → notes; TalkBack chip-bar announcements; `AdaptiveSpacing.minInteractive` (Phase R.5) for tablet density; theme-respect via `colorScheme.surfaceContainerHigh`; picker empty-state inline tip with "Free-form" chip that flips the tab.
+- [ ] **FFF.7** Tests + AVD smoke (EC-G): Robolectric for free-form validation, picker index-merge + neutral-mode filter, materializer frontmatter/UUIDv7/single-commit, overlap dialog branches, read-only-share refusal; AVD-smoke (a) free-form add visible on Day, (b) template materialization shows sub-beats in detail sheet, (c) save-as-template round trip via picker, (d) overlap dialog fires.
+
+---
+
+## Phase GGG — Tonearmboy parity sweep (2026-05-13 session) — shipped
+
+Reactive polish landed in a single session bringing every settings-adjacent surface to tonearmboy parity. **Convention now durable at [`ui-spec.md`](ui-spec.md) Phase UI-WW** — any future settings-adjacent surface must conform. Logged here for the per-surface ship record; convention is the load-bearing artifact, not this phase.
+
+- [x] **GGG.1** Settings root pane — grouped cards with section headers in `colorScheme.primary`, pill search at top, colored circular leading badges per row, no left gutter, edge-to-edge. Section taxonomy: Appearance (Look and Feel), Library (Repos/Authors/Calendars/Todolists/Templates), Behaviour (Sync/Notifications/Mode), Lifestyle (Lifestyle/Identity), About. Files: `ui/settings/SettingsPane.kt`, `res/values/strings.xml` (section-header + per-row subtitle strings).
+- [x] **GGG.2** App shell — rail collapses when `railItems.isEmpty()`; previously rendered an empty 52dp band on Settings / Repos / Wizard. File: `ui/scaffold/SkbAppShell.kt`. Mirrors UI-WW.4.
+- [x] **GGG.3** Settings gear top-bar highlight — gear renders as `FilledTonalIconButton` when `selectedDest == TopDestination.Settings`, matching Schedule/Tasks via the shared `DestinationButton` composable. File: `ui/scaffold/SkbAppShell.kt`. Mirrors UI-WW.5.
+- [x] **GGG.4** About category — rewritten with grouped cards (Build + Source). Build: App / Version-with-egg / Built date. Source: GitHub / Licenses / Privacy. `LeadingBadge` colored circles, section headers in primary. File: `ui/settings/categories/AboutCategory.kt`.
+- [x] **GGG.5** Easter egg controller — framework-free 3-tap state machine with 5s window, escalating snackbar prompts (`settings_about_easter_egg_first` / `_second` / `_bat_cd`), reveal of `R.drawable.about_bat` over scrim, counter resets after reveal so the egg is repeatable. File: `ui/settings/categories/EasterEggController.kt`. Wired into the AboutCategory Version row. Convention at UI-WW.7.
+- [x] **GGG.6** Look and Feel category — full rewrite with pill search + inline keyword filtering across three section cards (Theme / Display / Neutral). Helpers `SectionHeader`, `CategoryCard`, `LeadingBadge`, `PickerRow`, `ToggleRowM3`, `RowDivider`. Empty-state copy `settings_appearance_no_results`. File: `ui/settings/categories/AppearanceCategory.kt`. Mirrors UI-WW.1, UI-WW.2, UI-WW.6.
+- [x] **GGG.7** Repos screen crash fix — `LazyColumn` inside `Modifier.verticalScroll` parent threw `IllegalStateException: Vertically scrollable component was measured with an infinity maximum height constraints`. Replaced with plain `Column { repos.forEach { … } }`. File: `ui/import_export/ImportExportScreen.kt`. Anti-pattern recorded at UI-WW.8.
+- [x] **GGG.8** strings.xml additions — `settings_section_*_header`, `settings_subtitle_*` (per-row subtitles), Appearance renamed to "Look and Feel", easter-egg copy strings, About card strings (`settings_about_card_build`, `_source`, `_app_label`, `_version_label`, `_github_label`), L&F search strings (`settings_appearance_search_placeholder`, `_section_theme`, `_section_display`, `_section_neutral`, `_theme_subtitle`, `_dynamic_subtitle`, `_density_subtitle`, `_font_scale_subtitle`, `_no_results`). File: `res/values/strings.xml`.
+- [x] **GGG.9** Convention codified at UI-WW — pill search, grouped cards, leading badges, edge-to-edge, top-bar highlight pattern, inline keyword search, easter egg framework, anti-patterns. This is the load-bearing record; the per-surface checkboxes above are the audit trail.
 
 ---
 
