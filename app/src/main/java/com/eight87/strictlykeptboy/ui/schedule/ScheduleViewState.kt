@@ -1,6 +1,7 @@
 package com.eight87.strictlykeptboy.ui.schedule
 
 import androidx.compose.runtime.Immutable
+import com.eight87.strictlykeptboy.git.RepoConfig
 import com.eight87.strictlykeptboy.resolver.CalendarMeta
 import com.eight87.strictlykeptboy.resolver.DateRange
 import com.eight87.strictlykeptboy.resolver.RenderedSchedule
@@ -58,6 +59,14 @@ class ScheduleViewState(
      * here. `null` ⇒ all calendars visible (no override).
      */
     private val visibilityFlow: StateFlow<VisibilityState>? = null,
+    /**
+     * Round 2.5.D.1 — per-repo overlay flags. When non-null, the view-state
+     * filters [RepoSnapshot.repos] / `calendars` / sources to only repos
+     * with `showOnSchedule = true` BEFORE handing to the renderer. Bands
+     * from hidden repos are excluded entirely. Null preserves the legacy
+     * behaviour (all repos visible) for tests / previews.
+     */
+    private val repoConfigsFlow: StateFlow<List<RepoConfig>>? = null,
     initialDate: LocalDate = LocalDate.now(),
     initialTab: ScheduleViewTab = ScheduleViewTab.Day,
     private val tz: ZoneId = ZoneId.systemDefault(),
@@ -74,12 +83,25 @@ class ScheduleViewState(
 
     init {
         val visFlow = visibilityFlow ?: MutableStateFlow(VisibilityState())
+        val repoCfgFlow = repoConfigsFlow ?: MutableStateFlow(emptyList())
         scope.launch {
-            combine(_date, _selectedTab, snapshotFlow, sourcesFlow, visFlow) { d, t, snap, src, vis ->
-                Quintuple(d, t, snap, src, vis)
+            combine(_date, _selectedTab, snapshotFlow, sourcesFlow, visFlow, repoCfgFlow) {
+                args ->
+                @Suppress("UNCHECKED_CAST")
+                Sextuple(
+                    args[0] as LocalDate,
+                    args[1] as ScheduleViewTab,
+                    args[2] as RepoSnapshot,
+                    args[3] as Renderer.Sources,
+                    args[4] as VisibilityState,
+                    args[5] as List<RepoConfig>,
+                )
             }.collect { q ->
                 val (range, viewMode) = rangeAndModeFor(q.a, q.b)
-                val (filteredSnap, filteredSrc) = applyVisibility(q.c, q.d, q.e)
+                val (repoFilteredSnap, repoFilteredSrc) =
+                    applyRepoOverlay(q.c, q.d, q.f)
+                val (filteredSnap, filteredSrc) =
+                    applyVisibility(repoFilteredSnap, repoFilteredSrc, q.e)
                 _rendered.value = renderer.render(
                     range = range,
                     viewMode = viewMode,
@@ -90,6 +112,12 @@ class ScheduleViewState(
             }
         }
     }
+
+    private fun applyRepoOverlay(
+        snap: RepoSnapshot,
+        src: Renderer.Sources,
+        repoConfigs: List<RepoConfig>,
+    ): Pair<RepoSnapshot, Renderer.Sources> = applyRepoOverlayFilter(snap, src, repoConfigs)
 
     /**
      * Round 2.1.B.8 — apply phone-local visibility to the snapshot +
@@ -146,6 +174,49 @@ class ScheduleViewState(
             }
         }
 
+    @Suppress("unused")
     private data class Quadruple<A, B, C, D>(val a: A, val b: B, val c: C, val d: D)
     private data class Quintuple<A, B, C, D, E>(val a: A, val b: B, val c: C, val d: D, val e: E)
+    private data class Sextuple<A, B, C, D, E, F>(
+        val a: A, val b: B, val c: C, val d: D, val e: E, val f: F,
+    )
+}
+
+/**
+ * Round 2.5.D.1 — filter snapshot + sources to only repos with
+ * `RepoConfig.showOnSchedule = true`. Pure function exposed as
+ * top-level for direct unit-testing (PerRepoOverlayResolverTest).
+ *
+ * Empty [repoConfigs] ⇒ no filter (back-compat).
+ */
+fun applyRepoOverlayFilter(
+    snap: RepoSnapshot,
+    src: Renderer.Sources,
+    repoConfigs: List<RepoConfig>,
+): Pair<RepoSnapshot, Renderer.Sources> {
+    if (repoConfigs.isEmpty()) return snap to src
+    val visibleRepoIds = repoConfigs
+        .filter { it.showOnSchedule }
+        .map { it.repoId }
+        .toSet()
+    val snapRepoIds = snap.repos.map { it.ref.id }.toSet()
+    if (snapRepoIds.all { it in visibleRepoIds }) return snap to src
+    val keptRepos = snap.repos.filter { it.ref.id in visibleRepoIds }
+    val keptCalendars = snap.calendars.filter { it.repo.id in visibleRepoIds }
+    val keptTodolists = snap.todolists.filter { it.repo.id in visibleRepoIds }
+    val newSnap = snap.copy(
+        repos = keptRepos,
+        calendars = keptCalendars,
+        todolists = keptTodolists,
+    )
+    val keptCalendarRefs = keptCalendars.map { it.ref }.toSet()
+    val newSrc = src.copy(
+        events = src.events.filter {
+            it.repo.id in visibleRepoIds && it.calendar in keptCalendarRefs
+        },
+        rules = src.rules.filter {
+            it.repo.id in visibleRepoIds && it.calendar in keptCalendarRefs
+        },
+    )
+    return newSnap to newSrc
 }

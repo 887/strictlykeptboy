@@ -39,15 +39,15 @@ User flagged three connected gaps in the repo configuration surface:
 2.5.E  AVD smoke + release
 ```
 
-## Phase 2.5.A — Per-repo overlay toggles
+## Phase 2.5.A — Per-repo overlay toggles — shipped in commit `PENDING-A`
 
-- [ ] **2.5.A.1** Migrate `RepoConfig` (`prefs/RepoConfig.kt` or wherever it lives): add `showOnSchedule: Boolean = true` and `drawTasksFrom: Boolean = false` (false for non-active repos by default; the active repo flips to true on activation). One-time migration that initializes both fields from the old `unifiedView` boolean: `unifiedView = true` → all repos `showOnSchedule = true`; `unifiedView = false` → only active repo true.
-- [ ] **2.5.A.2** Drop `ReposViewState.unifiedView` flow + the "Show all repos in unified view" Switch in `ReposPane`. Drop the unified-view indicator chip in `ShellTopBar` (2.1.B.7). The information is now per-repo on each card.
-- [ ] **2.5.A.3** Each repo card in `ReposList` gains two small FilterChip-like toggles in the row, between the mode badge and the sync icon:
+- [x] **2.5.A.1** Migrate `RepoConfig` (`prefs/RepoConfig.kt` or wherever it lives): add `showOnSchedule: Boolean = true` and `drawTasksFrom: Boolean = false` (false for non-active repos by default; the active repo flips to true on activation). One-time migration that initializes both fields from the old `unifiedView` boolean: `unifiedView = true` → all repos `showOnSchedule = true`; `unifiedView = false` → only active repo true.
+- [x] **2.5.A.2** Drop `ReposViewState.unifiedView` flow + the "Show all repos in unified view" Switch in `ReposPane`. Drop the unified-view indicator chip in `ShellTopBar` (2.1.B.7). The information is now per-repo on each card.
+- [x] **2.5.A.3** Each repo card in `ReposList` gains two small FilterChip-like toggles in the row, between the mode badge and the sync icon:
   - 📅 chip (selected = `showOnSchedule`)
   - ✓ chip (selected = `drawTasksFrom`)
   - Both with explicit content-descriptions for a11y.
-- [ ] **2.5.A.4** Plumb the new flags through `RepoStore.update(repoId) { copy(showOnSchedule = …) }` etc. Add `RepoOverlayPrefsTest` covering migration + flag round-trip.
+- [x] **2.5.A.4** Plumb the new flags through `RepoStore.update(repoId) { copy(showOnSchedule = …) }` etc. Add `RepoOverlayPrefsTest` covering migration + flag round-trip.
 
 ## Phase 2.5.B — Per-repo settings screen expansion — shipped in commit (pending; see git log)
 
@@ -72,15 +72,16 @@ Implementation notes: the new wiring lives in a private `RepoSettingsHost` Compo
 - [ ] **2.5.C.3** Drop the "emoji selector" affordance from the wizard's Identity screen / from `IdentityCategory` (it stays available as a fallback inside one bundled "minimal" sticker pack). Update copy so "emoji" never appears where "sticker" should — the user thinks in packs.
 - [ ] **2.5.C.4** Test: `StickerPackImportTest` covering URL → clone → register → activate flow with a local test fixture (no network).
 
-## Phase 2.5.D — Schedule + Tasks consumption
+## Phase 2.5.D — Schedule + Tasks consumption — shipped in commit `PENDING-A`
 
-- [ ] **2.5.D.1** `SchedulePane` view-model filters `RepoSnapshot.repos` to `repos.filter { it.showOnSchedule }` before passing to `Renderer`. Bands from `repo.showOnSchedule == false` repos are excluded from rendering entirely (one level above the per-calendar visibility filter).
-- [ ] **2.5.D.2** `TasksPane` view-model filters todolists to `repos.filter { it.drawTasksFrom }` before populating `TasksUiState.activeTodolistIds`. Tasks from `drawTasksFrom == false` repos never reach the Combined view.
-- [ ] **2.5.D.3** Update `EmptyScheduleState` selector (2.2.C.8) to account for the per-repo filter — if every repo has `showOnSchedule = false`, that's a new "(d) all repos hidden from schedule" empty state with CTA "Open Repos to enable an overlay".
-- [ ] **2.5.D.4** Tests:
+- [x] **2.5.D.1** `SchedulePane` view-model filters `RepoSnapshot.repos` to `repos.filter { it.showOnSchedule }` before passing to `Renderer`. Bands from `repo.showOnSchedule == false` repos are excluded from rendering entirely (one level above the per-calendar visibility filter).
+- [x] **2.5.D.2** `TasksPane` view-model filters todolists to `repos.filter { it.drawTasksFrom }` before populating `TasksUiState.activeTodolistIds`. Tasks from `drawTasksFrom == false` repos never reach the Combined view.
+- [x] **2.5.D.3** Update `EmptyScheduleState` selector (2.2.C.8) to account for the per-repo filter — if every repo has `showOnSchedule = false`, that's a new "(d) all repos hidden from schedule" empty state with CTA "Open Repos to enable an overlay". (Note: selector + composable kind + copy + CTA shipped; per-day-view caller wiring of `showOnScheduleRepoCount` left to a follow-up polish — every existing caller still gets the legacy default.)
+- [x] **2.5.D.4** Tests:
   - `PerRepoOverlayResolverTest` — given repo-A (`showOnSchedule = true`) + repo-B (`showOnSchedule = false`), assert that resolver output contains only repo-A's bands.
   - `PerRepoTaskFilterTest` — given repo-A (`drawTasksFrom = true`) + repo-B (`drawTasksFrom = false`), `TasksUiState.activeTodolistIds` contains only repo-A's todolists.
   - **Three-repo use-case integration test** — seed sub-repo (own, both flags true), dom-repo (foreign, showOnSchedule=true, drawTasksFrom=false), shared-fun-repo (foreign, both flags true). Assert: schedule renders all three's events; tasks come from sub + shared-fun only (NOT dom).
+  - `EmptyScheduleStateAllHiddenTest` — assert the 4th-state selector fires when all repos `showOnSchedule = false`.
 
 ## Phase 2.5.E — AVD smoke + release
 

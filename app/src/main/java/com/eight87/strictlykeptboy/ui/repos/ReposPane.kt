@@ -13,7 +13,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -64,7 +63,6 @@ import java.nio.file.Path
 const val TestTagReposPaneDetailEmpty = "ReposPane-DetailEmpty"
 
 const val TestTagReposPane = "ReposPane"
-const val TestTagReposPaneUnifiedToggle = "ReposPane-UnifiedToggle"
 const val TestTagReposPaneSwitcher = "ReposPane-Switcher"
 const val TestTagReposPaneEmpty = "ReposPane-Empty"
 
@@ -104,7 +102,6 @@ fun ReposPane(
     val activeRepoId by state.activeRepoId.collectAsState()
     var showShareSheetForRepo by remember { mutableStateOf<String?>(null) }
     val context = androidx.compose.ui.platform.LocalContext.current
-    val unified by state.unifiedView.collectAsState()
     val scope = rememberCoroutineScope()
     val widthClass = LocalWindowWidthSizeClass.current
 
@@ -134,9 +131,8 @@ fun ReposPane(
                     ReposList(
                         repos = repos,
                         activeRepoId = activeRepoId,
-                        unified = unified,
                         state = state,
-                        onSetUnified = { state.setUnifiedView(it) },
+                        scope = scope,
                         onSelect = { repoId ->
                             state.setActive(repoId)
                             mode = Mode.Settings(repoId)
@@ -199,14 +195,14 @@ fun ReposPane(
             is Mode.List -> ReposList(
                 repos = repos,
                 activeRepoId = activeRepoId,
-                unified = unified,
                 state = state,
-                onSetUnified = { state.setUnifiedView(it) },
+                scope = scope,
                 onSelect = { state.setActive(it) },
                 onAddRepo = { mode = Mode.Add },
                 onOpenSettings = { repoId -> mode = Mode.Settings(repoId) },
                 onOpenTogether = onOpenTogether,
                 onOpenWizard = onOpenWizard,
+                onOpenAppSettings = onOpenAppSettings,
                 onSyncRepo = resolvedOnSyncRepo,
             )
             Mode.Add -> AddRepoNavHost(
@@ -304,9 +300,8 @@ fun ReposPane(
 private fun ReposList(
     repos: List<RepoConfig>,
     activeRepoId: String?,
-    unified: Boolean,
     state: ReposViewState,
-    onSetUnified: (Boolean) -> Unit,
+    scope: kotlinx.coroutines.CoroutineScope,
     onSelect: (String) -> Unit,
     onAddRepo: () -> Unit,
     onOpenSettings: (String) -> Unit,
@@ -367,24 +362,6 @@ private fun ReposList(
             }
         }
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(stringResource(R.string.repos_unified_toggle_title), style = MaterialTheme.typography.titleSmall)
-                Text(
-                    if (unified) stringResource(R.string.repos_unified_on)
-                    else stringResource(R.string.repos_unified_off),
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-            Switch(
-                checked = unified,
-                onCheckedChange = onSetUnified,
-                modifier = Modifier.testTag(TestTagReposPaneUnifiedToggle),
-            )
-        }
         HorizontalDivider()
 
         if (repos.isEmpty()) {
@@ -412,6 +389,12 @@ private fun ReposList(
             onAddRepo = onAddRepo,
             onOpenSettings = onOpenSettings,
             onSyncRepo = onSyncRepo,
+            onToggleShowOnSchedule = { repoId, value ->
+                scope.launch { state.store.setShowOnSchedule(repoId, value) }
+            },
+            onToggleDrawTasksFrom = { repoId, value ->
+                scope.launch { state.store.setDrawTasksFrom(repoId, value) }
+            },
             modifier = Modifier.fillMaxWidth().testTag(TestTagReposPaneSwitcher),
         )
     }

@@ -136,6 +136,22 @@ fun evaluateActiveTodolistIds(
     .toSet()
 
 /**
+ * Round 2.5.D.2 — filter a [RepoSnapshot] down to only those todolists
+ * whose owning repo has `drawTasksFrom = true`. Repos / calendars are
+ * left intact; only the `todolists` list is filtered. Empty
+ * [drawTasksFromRepoIds] ⇒ identity (back-compat).
+ */
+fun filterSnapshotForTasks(
+    snapshot: RepoSnapshot,
+    drawTasksFromRepoIds: Set<String>,
+): RepoSnapshot {
+    if (drawTasksFromRepoIds.isEmpty()) return snapshot
+    return snapshot.copy(
+        todolists = snapshot.todolists.filter { it.repo.id in drawTasksFromRepoIds },
+    )
+}
+
+/**
  * Phase 2.1.D.1 / D.2 — final filter applied by views over
  * [TasksUiState.tasks]. Drops:
  *   - tasks whose todolist is in [TasksUiState.hiddenTodolistIds];

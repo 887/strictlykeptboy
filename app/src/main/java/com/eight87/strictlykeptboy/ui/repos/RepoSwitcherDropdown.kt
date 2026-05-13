@@ -29,6 +29,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -57,6 +59,10 @@ const val TestTagRepoSwitcherHouseGlyph = "RepoSwitcherHouseGlyph"
 const val TestTagRepoSwitcherSettings = "RepoSwitcherSettings"
 const val TestTagRepoSwitcherModeBadge = "RepoSwitcherModeBadge"
 const val TestTagRepoSwitcherSync = "RepoSwitcherSync"
+/** Round 2.5.A.3 — per-repo "show on schedule" chip toggle. */
+const val TestTagRepoSwitcherShowOnSchedule = "RepoSwitcherShowOnSchedule"
+/** Round 2.5.A.3 — per-repo "draw tasks from" chip toggle. */
+const val TestTagRepoSwitcherDrawTasksFrom = "RepoSwitcherDrawTasksFrom"
 
 /**
  * Phase I.1 — Repo switcher dropdown. Lists configured repos with circular
@@ -80,6 +86,16 @@ fun RepoSwitcherDropdown(
      * Wires to [SyncService.startSyncRepo] in production.
      */
     onSyncRepo: ((String) -> Unit)? = null,
+    /**
+     * Round 2.5.A.3 — toggle the per-repo "show on schedule" chip.
+     * Null suppresses the chip (back-compat for previews / tests).
+     */
+    onToggleShowOnSchedule: ((String, Boolean) -> Unit)? = null,
+    /**
+     * Round 2.5.A.3 — toggle the per-repo "draw tasks from" chip.
+     * Null suppresses the chip (back-compat for previews / tests).
+     */
+    onToggleDrawTasksFrom: ((String, Boolean) -> Unit)? = null,
 ) {
     Surface(
         shape = MaterialTheme.shapes.large,
@@ -96,6 +112,12 @@ fun RepoSwitcherDropdown(
                     onSelect = { onSelect(repo.repoId) },
                     onSettings = { onOpenSettings(repo.repoId) },
                     onSync = onSyncRepo?.let { fn -> { fn(repo.repoId) } },
+                    onToggleShowOnSchedule = onToggleShowOnSchedule?.let { fn ->
+                        { v -> fn(repo.repoId, v) }
+                    },
+                    onToggleDrawTasksFrom = onToggleDrawTasksFrom?.let { fn ->
+                        { v -> fn(repo.repoId, v) }
+                    },
                 )
             }
             HorizontalDivider()
@@ -127,6 +149,8 @@ private fun RepoRow(
     onSelect: () -> Unit,
     onSettings: () -> Unit,
     onSync: (() -> Unit)? = null,
+    onToggleShowOnSchedule: ((Boolean) -> Unit)? = null,
+    onToggleDrawTasksFrom: ((Boolean) -> Unit)? = null,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -156,6 +180,25 @@ private fun RepoRow(
         }
         // Round 2.3.A.2 — per-repo mode badge read-only from mode.toml.
         RepoModeBadge(repo = repo)
+        // Round 2.5.A.3 — per-repo overlay chips (📅 + ✓).
+        if (onToggleShowOnSchedule != null) {
+            OverlayChip(
+                selected = repo.showOnSchedule,
+                glyph = "📅", // 📅
+                contentDescription = "Show on schedule",
+                onClick = { onToggleShowOnSchedule(!repo.showOnSchedule) },
+                testTag = "$TestTagRepoSwitcherShowOnSchedule-${repo.repoId}",
+            )
+        }
+        if (onToggleDrawTasksFrom != null) {
+            OverlayChip(
+                selected = repo.drawTasksFrom,
+                glyph = "✓", // ✓
+                contentDescription = "Draw tasks from this repo",
+                onClick = { onToggleDrawTasksFrom(!repo.drawTasksFrom) },
+                testTag = "$TestTagRepoSwitcherDrawTasksFrom-${repo.repoId}",
+            )
+        }
         StatusBadge(status = status, isLocalOnly = repo.remotes.isEmpty())
         // Round 2.3.A.3 — per-repo sync icon (replaces the global one
         // formerly in ShellTopBar). Hidden for local-only repos and
@@ -180,6 +223,44 @@ private fun RepoRow(
         ) {
             Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.cd_repo_switcher_settings_for, repo.displayName))
         }
+    }
+}
+
+/**
+ * Round 2.5.A.3 — small filter-chip-style toggle for the per-repo
+ * overlay flags (showOnSchedule + drawTasksFrom). Renders a single
+ * glyph inside a rounded surface; tint flips on selection.
+ */
+@Composable
+private fun OverlayChip(
+    selected: Boolean,
+    glyph: String,
+    contentDescription: String,
+    onClick: () -> Unit,
+    testTag: String,
+) {
+    val bg = if (selected) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceContainerHighest
+    }
+    val fg = if (selected) {
+        MaterialTheme.colorScheme.onPrimaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    Box(
+        modifier = Modifier
+            .size(28.dp)
+            .clip(CircleShape)
+            .background(bg)
+            .clickable(onClick = onClick)
+            .testTag(testTag)
+            .semantics { this.contentDescription = contentDescription }
+            .padding(4.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(text = glyph, style = MaterialTheme.typography.labelMedium, color = fg)
     }
 }
 

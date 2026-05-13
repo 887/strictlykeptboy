@@ -254,6 +254,7 @@ class MainActivity : ComponentActivity() {
                             sourcesFlow = graph.sources,
                             calendarsFlow = graph.calendarRegistry.state,
                             visibilityFlow = graph.calendarVisibility.state,
+                            repoConfigsFlow = graph.repoStore.state,
                             initialTab = graph.viewModePrefs.selected.value,
                         )
                     }
@@ -272,9 +273,28 @@ class MainActivity : ComponentActivity() {
                         ) { snap, writeName, repos ->
                             Triple(snap, writeName, repos)
                         }.collect { (snap, writeName, repos) ->
+                            // Round 2.5.D.2 — filter snapshot to repos with
+                            // `drawTasksFrom = true` BEFORE evaluating the
+                            // active set. Todolists from `drawTasksFrom =
+                            // false` repos never reach `activeTodolistIds`,
+                            // so Combined / Today views won't surface their
+                            // tasks.
+                            val drawRepoIds = repos
+                                .filter { it.drawTasksFrom }
+                                .map { it.repoId }
+                                .toSet()
+                            val filteredSnap = if (drawRepoIds.isEmpty()) {
+                                snap
+                            } else {
+                                snap.copy(
+                                    todolists = snap.todolists.filter {
+                                        it.repo.id in drawRepoIds
+                                    },
+                                )
+                            }
                             val ids = com.eight87.strictlykeptboy.ui.tasks.evaluateActiveTodolistIds(
                                 evaluator,
-                                snap,
+                                filteredSnap,
                             )
                             val activeRepo = repos.firstOrNull { it.displayName == writeName }
                                 ?: repos.firstOrNull()
@@ -357,7 +377,6 @@ class MainActivity : ComponentActivity() {
                         activeIconKindFlow = graph.activeRepoIconKind,
                         wizardEntryRequest = graph.wizardEntryRequest,
                         calendarVisibility = graph.calendarVisibility,
-                        unifiedViewFlow = graph.reposState.unifiedView,
                         onLongPressCalendar = { meta -> pendingCalendarEdit = meta },
                         onShareWithDom = {
                             val name = graph.activeRepoName.value

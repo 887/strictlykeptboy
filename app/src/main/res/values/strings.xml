@@ -6,6 +6,7 @@
     <string name="schedule_empty_primary">nothing scheduled — %1$s can rest ;3</string>
     <!-- Round 2.2.C.8 — three-state empty schedule branches. -->
     <string name="schedule_empty_no_repos">Welcome — set up your first calendar</string>
+    <string name="schedule_empty_all_repos_hidden">All repos hidden from schedule</string>
     <string name="schedule_empty_no_active_cals">All your calendars are paused</string>
     <string name="schedule_empty_cta_open_repos">Open Repos</string>
     <string name="schedule_empty_cta_open_calendars">Open Calendars</string>
@@ -298,9 +299,6 @@
 
     <!-- Repos pane -->
     <string name="repos_title">Repositories</string>
-    <string name="repos_unified_toggle_title">Show all repos in unified view</string>
-    <string name="repos_unified_on">All configured repos render together</string>
-    <string name="repos_unified_off">Only the active repo\'s data renders</string>
     <string name="repos_empty_title">No repositories yet</string>
     <string name="repos_empty_hint">Tap + Add repo below to create your first.</string>
     <string name="repos_select_hint_title">Select a repo</string>

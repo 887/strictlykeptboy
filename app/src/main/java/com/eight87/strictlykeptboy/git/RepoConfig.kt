@@ -56,6 +56,24 @@ data class RepoConfig(
      * "Open in source app" CTA in O.4. May be null if no return-link was provided.
      */
     val sourceRepoBackLink: String? = null,
+    /**
+     * Round 2.5.A — per-repo overlay flag for the main schedule. When
+     * `true`, this repo's bands appear in the unified schedule; when
+     * `false`, they are filtered out entirely (one level above the
+     * per-calendar `CalendarVisibilityPrefs`). Replaces the binary
+     * `ReposViewState.unifiedView` toggle from Round 2.1.B.7.
+     */
+    val showOnSchedule: Boolean = true,
+    /**
+     * Round 2.5.A — per-repo overlay flag for the tasks view. When
+     * `true`, tasks from this repo enter the Combined / Today views;
+     * when `false`, this repo's todolists are filtered out from
+     * `TasksUiState.activeTodolistIds`. Defaults to `false` for
+     * foreign repos so the dom-repo's todos don't leak into the
+     * user's task list by default (per the three-repo acceptance
+     * scenario in `docs/plans/round-2-5.md`).
+     */
+    val drawTasksFrom: Boolean = false,
 ) {
     init {
         require(remotes.isEmpty() == (primaryRemote == null)) {

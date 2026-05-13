@@ -36,10 +36,13 @@ const val TestTagEmptyCta = "EmptyCta"
  * Selected by the pure helper [selectEmptyKind] so the branch logic
  * stays unit-testable without Compose runtime.
  */
-enum class EmptyScheduleKind { NoRepos, NoActiveCalendars, NoEvents }
+enum class EmptyScheduleKind { NoRepos, NoActiveCalendars, NoEvents, AllReposHidden }
 
 /**
- * Pure selector for the three-state empty branch.
+ * Pure selector for the four-state empty branch.
+ *
+ * Round 2.5.D.3 — adds [AllReposHidden] when repos are configured but
+ * every single one has `showOnSchedule = false`.
  *
  * Inputs are caller-aggregated counts so we don't reach across
  * `repoStore` / `calendarRegistry` / `CalendarVisibilityPrefs` directly
@@ -49,8 +52,10 @@ fun selectEmptyKind(
     repoCount: Int,
     calendarCount: Int,
     activeCalendarCount: Int,
+    showOnScheduleRepoCount: Int = repoCount,
 ): EmptyScheduleKind = when {
     repoCount <= 0 -> EmptyScheduleKind.NoRepos
+    showOnScheduleRepoCount <= 0 -> EmptyScheduleKind.AllReposHidden
     calendarCount <= 0 || activeCalendarCount <= 0 -> EmptyScheduleKind.NoActiveCalendars
     else -> EmptyScheduleKind.NoEvents
 }
@@ -85,6 +90,7 @@ fun EmptyScheduleState(
     val message = when (kind) {
         EmptyScheduleKind.NoRepos -> stringResource(R.string.schedule_empty_no_repos)
         EmptyScheduleKind.NoActiveCalendars -> stringResource(R.string.schedule_empty_no_active_cals)
+        EmptyScheduleKind.AllReposHidden -> stringResource(R.string.schedule_empty_all_repos_hidden)
         EmptyScheduleKind.NoEvents -> if (neutralOnly) {
             stringResource(R.string.schedule_empty_neutral)
         } else {
@@ -119,6 +125,11 @@ fun EmptyScheduleState(
             EmptyScheduleKind.NoActiveCalendars -> if (onOpenCalendars != null) {
                 TextButton(onClick = onOpenCalendars, modifier = Modifier.testTag(TestTagEmptyCta)) {
                     Text(stringResource(R.string.schedule_empty_cta_open_calendars))
+                }
+            }
+            EmptyScheduleKind.AllReposHidden -> if (onOpenRepos != null) {
+                TextButton(onClick = onOpenRepos, modifier = Modifier.testTag(TestTagEmptyCta)) {
+                    Text(stringResource(R.string.schedule_empty_cta_open_repos))
                 }
             }
             EmptyScheduleKind.NoEvents -> if (onAddEvent != null) {
