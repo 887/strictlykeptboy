@@ -76,8 +76,15 @@ fun ImportExportScreen(
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Spacer(Modifier.height(16.dp))
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(repos, key = { it.repoId }) { repo ->
+                // Plain Column instead of LazyColumn: the parent
+                // CategorySurface already provides vertical scrolling, and
+                // nesting a LazyColumn inside Modifier.verticalScroll throws
+                // ("Vertically scrollable component was measured with an
+                // infinity maximum height constraints"). Repo counts here
+                // are small (one row per configured repo), so the
+                // lazy-virtualization wasn't load-bearing.
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    repos.forEach { repo ->
                         RepoRow(
                             repo = repo,
                             onImport = { onPickImportFile(repo) },
