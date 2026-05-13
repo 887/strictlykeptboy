@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.resolver.CompletionState
 import com.eight87.strictlykeptboy.resolver.DayBand
+import com.eight87.strictlykeptboy.ui.components.MarkdownRenderer
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -146,12 +147,12 @@ fun EventDetailContent(
             HorizontalDivider()
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Body
+            // Body (Phase EE — inline Markdown via Markwon).
             if (band.instance.body.isNotBlank()) {
-                Text(
-                    text = band.instance.body,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.testTag(TestTagEventDetailBody),
+                MarkdownRenderer(
+                    markdown = band.instance.body,
+                    modifier = Modifier.fillMaxWidth(),
+                    testTag = TestTagEventDetailBody,
                 )
                 Spacer(modifier = Modifier.height(12.dp))
             }

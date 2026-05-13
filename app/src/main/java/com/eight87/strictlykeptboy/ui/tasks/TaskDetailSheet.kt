@@ -37,6 +37,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
+import com.eight87.strictlykeptboy.ui.components.MarkdownRenderer
 
 const val TestTagDetailSheet = "TaskDetailSheet"
 const val TestTagDetailPane = "TaskDetailPane"
@@ -163,11 +164,17 @@ fun TaskDetailContent(
             }
 
             if (task.body.isNotBlank()) {
-                Text(
-                    text = renderBodyForSheet(task.body),
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(top = 12.dp),
-                )
+                // Phase EE — inline-markdown body styling. Subtask
+                // lines (`- [ ] foo`) are stripped from the rendered
+                // body and surfaced as Compose Checkboxes below;
+                // everything else flows through Markwon.
+                val markdownBody = renderBodyForSheet(task.body)
+                if (markdownBody.isNotBlank()) {
+                    MarkdownRenderer(
+                        markdown = markdownBody,
+                        modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                    )
+                }
                 // Subtask checkboxes — quick visual per H.6.
                 val subtasks = parseSubtasks(task.body)
                 if (subtasks.isNotEmpty()) {

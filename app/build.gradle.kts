@@ -207,6 +207,15 @@ dependencies {
   implementation(libs.androidx.car.app)
   testImplementation(libs.androidx.car.app.testing)
 
+  // Phase EE — inline-markdown body styling (D.31 / UI-Y).
+  // Markwon (Apache-2.0). Bridged into Compose via AndroidView in
+  // `ui/components/MarkdownRenderer.kt`.
+  implementation(libs.markwon.core)
+  implementation(libs.markwon.ext.strikethrough)
+  implementation(libs.markwon.ext.tables)
+  implementation(libs.markwon.html)
+  implementation(libs.markwon.linkify)
+
   // Local tests
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)

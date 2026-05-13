@@ -45,6 +45,11 @@ carApp = "1.7.0"
 ical4j = "4.0.4"
 dav4jvm = "2.2.1"
 
+# Phase EE — inline-markdown body styling (D.31 / UI-Y).
+# noties/Markwon, Apache-2.0. Pure-Android TextView markdown renderer
+# bridged into Compose via AndroidView in `ui/components/MarkdownRenderer.kt`.
+markwon = "4.6.2"
+
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidxActivity" }
@@ -106,6 +111,13 @@ androidx-car-app-testing = { module = "androidx.car.app:app-testing", version.re
 # helpers without another dep wave.
 ical4j-core = { module = "org.mnode.ical4j:ical4j", version.ref = "ical4j" }
 dav4jvm-core = { module = "com.github.bitfireAT:dav4jvm", version.ref = "dav4jvm" }
+
+# Phase EE — Markwon (Apache-2.0)
+markwon-core = { module = "io.noties.markwon:core", version.ref = "markwon" }
+markwon-ext-strikethrough = { module = "io.noties.markwon:ext-strikethrough", version.ref = "markwon" }
+markwon-ext-tables = { module = "io.noties.markwon:ext-tables", version.ref = "markwon" }
+markwon-html = { module = "io.noties.markwon:html", version.ref = "markwon" }
+markwon-linkify = { module = "io.noties.markwon:linkify", version.ref = "markwon" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }
