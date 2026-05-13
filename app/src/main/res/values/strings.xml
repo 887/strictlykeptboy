@@ -4,6 +4,12 @@
     <!-- Schedule rail -->
     <string name="schedule_empty_neutral">Nothing scheduled today.</string>
     <string name="schedule_empty_primary">nothing scheduled — %1$s can rest ;3</string>
+    <!-- Round 2.2.C.8 — three-state empty schedule branches. -->
+    <string name="schedule_empty_no_repos">Welcome — set up your first calendar</string>
+    <string name="schedule_empty_no_active_cals">All your calendars are paused</string>
+    <string name="schedule_empty_cta_open_repos">Open Repos</string>
+    <string name="schedule_empty_cta_open_calendars">Open Calendars</string>
+    <string name="schedule_empty_cta_add_event">+ Add event</string>
     <string name="cd_bat_mascot">Bat mascot</string>
     <string name="cd_identity_avatar">Identity</string>
     <string name="cd_repo_switcher_active">Switch repo, active: %1$s</string>
