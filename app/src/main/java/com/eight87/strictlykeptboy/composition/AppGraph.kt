@@ -77,6 +77,11 @@ class AppGraph(private val appContext: Context) {
     /** Phase G — schedule view mode (week / day / month / agenda / todolist). */
     val viewModePrefs: ScheduleViewModePrefs by lazy { ScheduleViewModePrefs.open(appContext) }
 
+    /** Phase FFF / EC-A.3 — last-used event-create tab. */
+    val eventCreatePrefs: com.eight87.strictlykeptboy.ui.schedule.EventCreatePrefs by lazy {
+        com.eight87.strictlykeptboy.ui.schedule.EventCreatePrefs.open(appContext)
+    }
+
     /** Phase I — encrypted repo configs. */
     val repoStore: RepoStore by lazy { RepoStore.open(appContext) }
 

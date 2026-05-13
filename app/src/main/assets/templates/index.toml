@@ -1,0 +1,40 @@
+# Phase FFF / EC-C — Template picker index.
+#
+# Lists all shipped atomic-activity templates the event-create picker
+# surfaces. Each entry references a sibling TOML file under
+# `assets/templates/`. The picker merges this with `templates/` files
+# from the active repo (USER source) plus any active custom packs
+# (PACK source) into a single grouped list.
+#
+# `kink` tag is filtered out under neutral-mode (D.58 / K-3).
+# `neutral_safe = true` means the entry is visible regardless of
+# neutral-mode state.
+
+schema_version = 1
+
+[[template]]
+template_id = "atomic-self-care"
+display_name = "Atomic self-care"
+asset_file = "atomic-self-care.toml"
+category = "self-care"
+neutral_safe = true
+tags = ["self-care", "hygiene", "morning", "evening"]
+aliases = ["hygiene", "morning"]
+
+[[template]]
+template_id = "atomic-workout"
+display_name = "Atomic workout"
+asset_file = "atomic-workout.toml"
+category = "workout"
+neutral_safe = true
+tags = ["workout", "exercise", "fitness"]
+aliases = ["gym", "exercise"]
+
+[[template]]
+template_id = "atomic-kink-self-care"
+display_name = "Atomic kink self-care"
+asset_file = "atomic-kink-self-care.toml"
+category = "kink"
+neutral_safe = false
+tags = ["kink", "self-care"]
+aliases = ["cage", "play"]
