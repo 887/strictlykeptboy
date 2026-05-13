@@ -95,7 +95,7 @@ Wires the indexer to `AppGraph.snapshot` + `AppGraph.sources`. Without this, eve
 - [ ] **2.1.C.8** Empty-state copy correction. Three states: (a) no repos configured, (b) repos configured but every calendar inactive, (c) all calendars active but no events in range. Distinct CTA each.
 - [ ] **2.1.C.9** Timebox view stops treating every event as a timebox. Filter to `CalendarKind.Timebox`; regular events go to a secondary "scheduled events on top of your time blocks" section below.
 
-## Phase 2.1.D — Tasks — shipped in commit `<pending>`
+## Phase 2.1.D — Tasks — shipped in commit `ece85c0`
 
 - [x] **2.1.D.1** Wire `ActiveSetEvaluator.activeTodolistsAt` into `TasksViewState`. Tasks from inactive todolists drop out of Combined view (matches schedule semantics). Add a "show inactive" toggle. *(Shipped — `evaluateActiveTodolistIds()` + `TasksUiState.activeTodolistIds`/`showInactive`/`visibleTasks()`; bound in `MainActivity` LaunchedEffect.)*
 - [x] **2.1.D.2** Source rail for tasks (mirror of 2.1.B.2). One chip per todolist; long-press → list-settings sheet (priority, active-windows, active-hours, mode). *(Shipped — `TaskSourceRail` composable + stub `TaskListSettingsSheet`. Full per-list settings sheet deferred to follow-on after 2.1.B's `CalendarSettingsSheet` lands; stub matches brief.)*
