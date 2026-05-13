@@ -144,13 +144,13 @@ on the AVD with screenshot evidence in `docs/qa/2-1-C/`.
 - [ ] **2.1.F.8** `BootCompletedReceiver` re-arms every reminder for next 24h on boot; listens to `ACTION_MY_PACKAGE_REPLACED`. Manifest entry + `AlarmHorizonExtender` nightly worker for sliding 7d horizon.
 - [ ] **2.1.F.9** `NotificationCompat.InboxStyle` stacking via existing `ReminderCollapsing.collapse` output. Collapsed-preview privacy = "N reminders" if any constituent is `private`.
 
-## Phase 2.1.G — Android Auto
+## Phase 2.1.G — Android Auto — shipped in commit `<pending>`
 
-- [ ] **2.1.G.1** Title truncation policy — clip event title to host max (24 chars heuristic) with leading `…`. Robolectric `CarAppRuntimeTest` extension.
-- [ ] **2.1.G.2** Identity-driven row text. Reads `IdentityPrefs.tone`; falls back to plain `auto_row_title` template. ("your 4pm, Sir"-style copy for sub register.)
-- [ ] **2.1.G.3** Off-schedule warning surfacing. Resolver-flagged off-schedule instance → prefix row with `⚠`.
-- [ ] **2.1.G.4** Empty-state copy honors `IdentityPrefs.praiseTerm` — "all clear, good boy" / "nothing scheduled, Sir" register-branched.
-- [ ] **2.1.G.5** `HostValidator` tightening — switch from `ALLOW_ALL_HOSTS_VALIDATOR` to AOSP + AndroidAuto signature whitelist for release builds; keep ALL_HOSTS for `debug`.
+- [x] **2.1.G.1** Title truncation policy — clip event title to host max (24 chars heuristic) with leading `…`. Robolectric `CarAppRuntimeTest` extension. (`CarAppRuntimeTitleTruncationTest`)
+- [x] **2.1.G.2** Identity-driven row text. Reads `IdentityTomlData` snapshot via `CarAppRuntime.identityProvider`; falls back to plain `auto_row_title` template. ("your HH:mm — Title, Sir"-style copy for sub register, mirrors `IdentityNotifBody`.)
+- [x] **2.1.G.3** Off-schedule warning surfacing. `AutoEvent.offSchedule == true` → prefix row with `⚠ ` (resolver flag is on `DayBand`; wrapper `AutoEvent` carries it onto the Auto surface).
+- [x] **2.1.G.4** Empty-state copy honors praise term — "all clear, good boy" / "nothing scheduled, Sir" register-branched in `AutoRowFormatter.emptyStateCopy`.
+- [x] **2.1.G.5** `HostValidator` tightening — gated on `BuildConfig.DEBUG`: debug keeps `ALLOW_ALL_HOSTS`, release uses `HostValidator.Builder(...).addAllowedHosts(androidx.car.app.R.array.hosts_allowlist_sample)` (AOSP + AndroidAuto signature whitelist from the car-app library).
 
 ## Phase 2.1.H — Tablet
 

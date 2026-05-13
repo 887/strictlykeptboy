@@ -287,7 +287,7 @@ class MainActivity : ComponentActivity() {
                             // one-off events (via `graph.todayEventSource`).
                             val fromEvents =
                                 com.eight87.strictlykeptboy.ui.tasks.FromEventsProjector.project(
-                                    instances = graph.todayEventSource.eventsForToday(),
+                                    instances = graph.todayEventSource.eventsForToday().map { it.instance },
                                     calendarsById = snap.calendars.associateBy { it.ref.id },
                                 )
                             // Merge: keep non-FromEvents tasks the caller

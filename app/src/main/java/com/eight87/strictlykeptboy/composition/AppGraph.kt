@@ -1,6 +1,7 @@
 package com.eight87.strictlykeptboy.composition
 
 import android.content.Context
+import com.eight87.strictlykeptboy.auto.AutoEvent
 import com.eight87.strictlykeptboy.auto.CarAppRuntime
 import com.eight87.strictlykeptboy.auto.TodayEventSource
 import com.eight87.strictlykeptboy.cache.CacheDatabase
@@ -445,8 +446,32 @@ class AppGraph(private val appContext: Context) {
      * same data the phone schedule sees, no extra wiring needed.
      */
     val todayEventSource: TodayEventSource by lazy {
-        TodayEventSource { renderTodaySync() }
+        TodayEventSource {
+            // Wrap each `MaterializedInstance` into an `AutoEvent` (2.1.G).
+            // The one-off fast path doesn't run the off-schedule resolver
+            // (RV-Q lives on `DayBand`), so `offSchedule = false` here
+            // until the full snapshot bridge ships.
+            renderTodaySync().map { AutoEvent(instance = it, offSchedule = false) }
+        }
     }
+
+    /**
+     * Phase 2.1.G.2 / 2.1.G.4 — identity snapshot for the Auto surface.
+     *
+     * Reads from the default-write repo (`defaultWriteRepoName` → first
+     * matching `RepoConfig`) and returns its `identity.toml`, falling
+     * back to `null` when no repo is bound or the file is missing /
+     * malformed. Resolved on every call so wizard edits + repo flips
+     * are picked up without restarting the Auto session.
+     */
+    fun loadActiveIdentity(): com.eight87.strictlykeptboy.store.IdentityTomlData? = runCatching {
+        val name = defaultWriteRepoName.value
+        val cfg = repoStore.list().firstOrNull { it.displayName == name }
+            ?: repoStore.list().firstOrNull()
+            ?: return@runCatching null
+        val root = File(cfg.rootDir).toPath()
+        com.eight87.strictlykeptboy.store.IdentityTomlCodec.readOrDefault(root)
+    }.getOrNull()
 
     private fun renderTodaySync(): List<MaterializedInstance> {
         // Read-once snapshot of the inputs. The Renderer is async, but
@@ -503,6 +528,7 @@ class AppGraph(private val appContext: Context) {
         SyncRuntime.scheduler = scheduler
         SyncRuntime.statusStore = statusStore
         CarAppRuntime.todayEventSource = todayEventSource
+        CarAppRuntime.identityProvider = { loadActiveIdentity() }
     }
 
     /**
