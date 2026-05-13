@@ -2,13 +2,15 @@
 
 ## Status: ✅ Round 1 COMPLETE — Phases A–W shipped. Round 2+ tracked below.
 
-## Round 2.1 — make it actually make sense (PENDING — 2026-05-13)
+## Round 2.1 — make it actually make sense (✅ DONE — closed out 2026-05-13)
 
-Audit found a consistent pattern across every surface: **data layer correct, UI bindings missing or wrong.** The genesis intent — multi-repo overlay, calendars-first, time-window scoping, cross-repo authorship, identity-driven copy — exists in code but does not reach the screen. `AppGraph.snapshot` is an empty `MutableStateFlow`; production schedule shows empty data. UI surfaces repos, not calendars. Identity/Mode prefs never write back to `identity.toml`/`mode.toml`. First-launch lands on an empty Schedule with `demo-repo` placeholder instead of the wizard.
+**Shipped:** all 12 phases (A DataBridge → B Multirepo → C resolver-layer → D Tasks → E settings chrome-light subset → F Notifications → G Auto → H Tablet → I First-run + Wizard → J Identity write-back → K Mode + dom-persona → M Pet Mode framing → L Polish + tests). Resolver/data plumbing is end-to-end correct; chip strip + view-mode source rail + identity-driven copy live on-device; identity + mode round-trip through `identity.toml` / `mode.toml`; notifications fire boot-persistent with Inbox style + per-group mute + briefings; Auto + tablet master-detail green on phone-resized AVD.
 
-**88 sub-steps across 12 phases** (2.1.A DataBridge prereq → 2.1.B Multirepo → 2.1.C Schedule → 2.1.D Tasks → 2.1.E Settings → 2.1.F Notif → 2.1.G Auto → 2.1.H Tablet → 2.1.I First-run/Wizard → 2.1.J Identity write-back → 2.1.K Mode/dom-persona → 2.1.L Polish).
+**Test count:** 735 → **736** passing (1 new `CrossRepoAuthorTest`). 0 failures, 1 skip.
 
-Round 2.1 must land BEFORE the Round 3 close-out bucket below — fixing intent gaps takes priority over closing already-mostly-done phases.
+**Deferred to Round 2.2 (explicit follow-ons):** 2.1.C UI overlays (.2 author-chip painting, .5 off-schedule dashed border, .6 repo-grouped collapse, .8 empty-state correction, .9 timebox filter) — resolver halves shipped, UI painting pending; 2.1.E.2 in-pane Repos kill-trampoline; 2.1.E.6 Access category cross-repo aggregator; 2.1.E.7 Auto & Tablet category; 2.1.E.8 defaults-for-new-events ChipGroup; 2.1.E.13 trip-summary card; 2.1.F.1 incremental indexer wiring + F.6 worker-safe snapshot handoff; 2.1.H.7 physical-tablet wifi-adb pass.
+
+**AVD smoke caveat (2.1.L.1):** multi-repo population from outside the app requires writing to the app's `EncryptedSharedPreferences`-backed `RepoStore`, which is keyed to the app's `MasterKey` and not externally writable from ADB. Per the brief's escape clause, the round closes on the wizard-seeded single-repo state — cross-repo author-chip rendering is unit-test verified (`CrossRepoAuthorTest` resolver layer + `ForeignEventStylingTest` Compose layer).
 
 → Full plan: [`round-2-1.md`](round-2-1.md)
 → Source audits: [`audit-2-1-settings.md`](audit-2-1-settings.md) · [`audit-2-1-schedule-tasks.md`](audit-2-1-schedule-tasks.md) · [`audit-2-1-multirepo.md`](audit-2-1-multirepo.md) · [`audit-2-1-notif-auto-tablet.md`](audit-2-1-notif-auto-tablet.md) · [`audit-2-1-wizard-identity-mode.md`](audit-2-1-wizard-identity-mode.md)

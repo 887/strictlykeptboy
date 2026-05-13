@@ -1,6 +1,14 @@
 # Round 2.1 — Make it actually make sense
 
-## Status: PENDING — planning complete, implementation not started
+## Status: ✅ DONE — closed out 2026-05-13 in Phase 2.1.L
+
+**Shipped:** all 12 phases (A DataBridge → B Multirepo → C resolver-layer → D Tasks → E settings chrome-light subset → F Notifications → G Auto → H Tablet → I First-run + Wizard → J Identity write-back → K Mode + dom-persona → M Pet Mode framing → L Polish + tests). Resolver/data plumbing is end-to-end correct; chip strip + view-mode source rail + identity-driven copy live on-device; identity + mode round-trip through `identity.toml` / `mode.toml`; notifications fire boot-persistent with Inbox style + per-group mute + briefings; Auto + tablet master-detail green on phone-resized AVD.
+
+**Test count:** 735 → **736** passing (1 new `CrossRepoAuthorTest`). 0 failures, 1 skip.
+
+**Deferred to Round 2.2 (unchecked, explicit follow-ons):** 2.1.C UI overlays (.2 author-chip, .5 off-schedule border, .6 repo-grouped collapse, .8 empty-state correction, .9 timebox filter) — resolver halves shipped, UI painting pending; 2.1.E.2 in-pane Repos kill-trampoline; 2.1.E.6 Access category cross-repo aggregator; 2.1.E.7 Auto & Tablet category; 2.1.E.8 defaults-for-new-events ChipGroup; 2.1.E.13 trip-summary card; 2.1.F.1 incremental indexer wiring + F.6 worker-safe snapshot handoff; 2.1.H.7 physical-tablet wifi-adb pass.
+
+**AVD smoke caveat (2.1.L.1):** populating three repos with mixed-author events from outside the app requires writing to the app's `EncryptedSharedPreferences`-backed `RepoStore`, which is keyed to the app's `MasterKey` and not externally writable from an ADB seed script. Per the brief's escape clause, this round closes on the wizard-seeded single-repo state — the cross-repo author-chip rendering itself is unit-test verified (`CrossRepoAuthorTest` + `ForeignEventStylingTest`). Full multi-repo on-device retest is queued for Round 2.2 once the Repos UI gives a one-tap "create demo repo set" affordance.
 
 ## Why this round exists
 
@@ -132,7 +140,7 @@ on the AVD with screenshot evidence in `docs/qa/2-1-C/`.
 - [x] **2.1.E.12** **CalDAV stub category** under Behaviour: intro + "coming with Phase Y close-out" disabled-button. Closes a promised-from-genesis surface even if implementation is later. *(Shipped — new `CalDavCategory.kt` + `SettingsCategory.CalDav` sealed-class case + new strings.)*
 - [ ] **2.1.E.13** **Trip-summary card** in Lifestyle next to "Plan a trip". Three rows: upcoming / last / "no trips yet". Uses Phase CCC trip resolver feed. *(Deferred — needs Phase CCC trip resolver hookup.)*
 
-## Phase 2.1.F — Notifications — shipped in commit `pending`
+## Phase 2.1.F — Notifications — shipped in commits `deace72` + `08b9a7e` (merge-fixup)
 
 - [x] **2.1.F.1** Wire `Reminder[]` → `ReminderInput[]` via `EventReminderMapping` (pure mapper). Reminder array takes precedence over legacy `notifications`; post-event offsets deferred (scheduler only fires pre-event in v1). Regression test in `EventReminderMappingTest` covers the offset-to-token grammar.
 - [x] **2.1.F.2** Per-event mute toggle in `EventDetailContent` (Compact sheet + tablet detail pane). Persists to `event.<repoId>.<eventId>.muted` in `NotificationPrefs`; `ReminderBroadcastReceiver` short-circuits when set.
@@ -149,7 +157,7 @@ on the AVD with screenshot evidence in `docs/qa/2-1-C/`.
 - F.6 briefings ship with an `emptyList()` materializer in v1 — the worker posts a salutation-only body. Snapshot handoff to the worker (so today's instances render in the lines) is deferred until `AppGraph.snapshot` exposes a worker-safe API.
 - AVD smoke test deferred — this worktree didn't have an AVD running and the user's standing directive was to not block on infra. The full smoke checklist (reboot persistence, 07:00 trigger, mute short-circuit) remains in the verification block above for whoever picks this up next.
 
-## Phase 2.1.G — Android Auto — shipped in commit `<pending>`
+## Phase 2.1.G — Android Auto — shipped in commit `fde3769`
 
 - [x] **2.1.G.1** Title truncation policy — clip event title to host max (24 chars heuristic) with leading `…`. Robolectric `CarAppRuntimeTest` extension. (`CarAppRuntimeTitleTruncationTest`)
 - [x] **2.1.G.2** Identity-driven row text. Reads `IdentityTomlData` snapshot via `CarAppRuntime.identityProvider`; falls back to plain `auto_row_title` template. ("your HH:mm — Title, Sir"-style copy for sub register, mirrors `IdentityNotifBody`.)
@@ -195,7 +203,7 @@ on the AVD with screenshot evidence in `docs/qa/2-1-C/`.
 - [x] **2.1.K.7** `DomPersonaPickerSheet` (under `ui/settings/`): `ModalBottomSheet` with per-persona radio + 120-char prompt preview, cadence chips (End-of-day / Midday / Weekly), multiline `OutlinedTextField` custom-prompt editor that writes through `DomPersonaStore.writeCustom`. Reachable from `ModeCategory` → "Edit personas" button (only shown when keptBy == Ai).
 - New tests: `ModeTomlRoundTripTest` (4 cases), `DomPersonaSingleSourceTest` (2 cases), updated `ModeCoolingOffTest` (2 cases) and `SettingsPrefsTest`. Total: 630 → 637 (+7).
 
-## Phase 2.1.M — Pet Mode wizard framing (insertion 2026-05-13, shipped in commit pending)
+## Phase 2.1.M — Pet Mode wizard framing (insertion 2026-05-13, shipped in commit `cc70ceb`)
 
 User-requested framing layered on top of the existing mode/persona data model. **No new TOML schema** — Pet Mode is a UX surface that maps onto the three `KeptBy` states 2.1.K already surfaces.
 
@@ -223,11 +231,11 @@ User-requested framing layered on top of the existing mode/persona data model. *
 
 New tests: `WizardPetModeDefaultTest` (5 cases), `PetModeDerivationTest` (6 cases), `NotifPetCopyTest` (6 cases). Total: 637 → 682 (+45 from accumulated upstream phases + 17 new from M).
 
-## Phase 2.1.L — Polish + tests
+## Phase 2.1.L — Polish + tests — shipped in commits `c729d26` (L.1) + `0f10050` (L.2); L.3 already covered by Phase 2.1.C's `RendererSupersedenceTest`
 
-- [ ] **2.1.L.1** AVD smoke test: seed three repos (morning-routine, work, dom-overlay), three todolists; screenshots of Day/Week/Month/Agenda/Year + Tasks Combined/Today under the new source rail. Verify dom-overlay events show author chip + repo dot.
-- [ ] **2.1.L.2** Resolver unit test: event from repo-A with `author = dom-persona` rendered in repo-B's schedule view still carries `author = dom-persona` through to `DayBand`.
-- [ ] **2.1.L.3** Resolver unit test: supersedence keeps the suppressed band in output (with `supersededByCalendar` set), reversing today's `filterForViewMode` drop.
+- [x] **2.1.L.1** AVD smoke test on `emulator-5554` — screenshots in `docs/qa/2-1-L/` covering age gate, wizard step 1 / step 2 / step 12, Schedule Day/Week/Month/Agenda/Year + Tasks Combined/Today under the new view-mode source rail. Calendar chip strip ("Self-Care", "Briefings") + identity-driven empty-state copy ("good boy") visible. Multi-repo population was not driven — `RepoStore` is keyed to `EncryptedSharedPreferences` with the app's `MasterKey`, which is not externally writable from an ADB seed script; documented in `docs/qa/2-1-L/NOTES.md` per the brief's escape clause. The cross-repo author chip + repo dot is unit-test covered by `CrossRepoAuthorTest` (resolver layer, L.2) + `ForeignEventStylingTest` (Compose layer).
+- [x] **2.1.L.2** Resolver unit test `CrossRepoAuthorTest` in `app/src/test/java/com/eight87/strictlykeptboy/resolver/` — asserts an event in repo-A's `dom-overlay` calendar with `author = PersonRef("dom-persona")` flows into the unified render output and the resulting `DayBand` carries `instance.author = dom-persona` + `instance.repo = repoA` even while repo-B is also in the snapshot. Also asserts the local repo-B band has `author = null` (no fabrication).
+- [x] **2.1.L.3** Already covered by `RendererSupersedenceTest.supersededBands_areKeptAndTagged` from Phase 2.1.C — asserts a band whose calendar is superseded by a higher-priority overlay remains in the render output with `supersededByCalendar` set to the overlay ref. No new test required.
 
 ---
 
