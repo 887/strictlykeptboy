@@ -2,6 +2,7 @@ package com.eight87.strictlykeptboy.resolver
 
 import com.eight87.strictlykeptboy.git.RepoConfig
 import com.eight87.strictlykeptboy.git.RepoStore
+import com.eight87.strictlykeptboy.store.CalendarActivityConfig
 import com.eight87.strictlykeptboy.store.EntityPath
 import com.eight87.strictlykeptboy.store.RoutineCalendarConfig
 import com.eight87.strictlykeptboy.store.SupersedenceConfig
@@ -39,16 +40,11 @@ import kotlinx.coroutines.flow.stateIn
  * yet) are still listed — `CalendarFilterChipStrip` (2.1.B.2) must show
  * them so the user can author into them.
  *
- * **Schema availability note (deviation flagged):** the existing TOML
- * codecs cover `name`, `priority`, `supersedes`, `routine.active_toggle`.
- * They do **not** carry `active_windows`, `active_hours`, or
- * `color_seed` (per the brief: "every field you need already exists in
- * `RoutineCalendarConfig` / `SupersedenceConfig`"; in practice only a
- * subset does). This registry surfaces what's available and leaves the
- * other fields at resolver-defaults (empty / null). The
- * `CalendarSettingsSheet` (2.1.B.4) is therefore deferred until those
- * three TOML keys are added in a follow-on commit — the constraint
- * "don't extend the schema" was honoured.
+ * **Schema extension (Round 2.1.B):** `active_windows`, `active_hours`,
+ * and `color_seed` are read through the sibling [CalendarActivityConfig]
+ * codec, alongside the existing [RoutineCalendarConfig] +
+ * [SupersedenceConfig] reads. Back-compat: legacy `calendar.toml` files
+ * without the new keys yield empty defaults.
  *
  * Reactivity: combines `RepoStore.state` with the synthesized snapshot
  * `StateFlow<RepoSnapshot>` and re-reads disk on every emission. File
@@ -135,6 +131,7 @@ class CalendarRegistry(
                 priority = table.getInt("priority") ?: DEFAULT_PRIORITY,
                 routine = RoutineCalendarConfig.read(table),
                 supersedence = SupersedenceConfig.read(table, hostCalendarId = calendarId),
+                activity = CalendarActivityConfig.read(table),
                 emoji = table.getString("emoji"),
                 tzId = table.getString("tz_id")?.let {
                     runCatching { java.time.ZoneId.of(it) }.getOrNull()
@@ -156,13 +153,21 @@ class CalendarRegistry(
             displayName = parsed.displayName,
             priority = parsed.priority,
         )
+        val activeWindows = parsed.activity.activeWindows.map { r ->
+            DateRange(start = r.from, endInclusive = r.to)
+        }
+        val activeHours = parsed.activity.activeHours.map { h ->
+            HourRange(day = h.day, from = h.from, to = h.to)
+        }
         return base.copy(
             displayName = parsed.displayName,
             priority = parsed.priority,
             activeToggle = parsed.routine.activeToggle,
+            activeWindows = activeWindows.ifEmpty { base.activeWindows },
+            activeHours = activeHours.ifEmpty { base.activeHours },
             supersedes = parsed.supersedence.supersedes.map { CalendarRef(it) },
             tzId = parsed.tzId ?: base.tzId,
-            colorSeed = base.colorSeed ?: repoColorFallback,
+            colorSeed = parsed.activity.colorSeed ?: base.colorSeed ?: repoColorFallback,
         )
     }
 
@@ -172,6 +177,7 @@ class CalendarRegistry(
         val priority: Int,
         val routine: RoutineCalendarConfig,
         val supersedence: SupersedenceConfig,
+        val activity: CalendarActivityConfig,
         val emoji: String?,
         val tzId: java.time.ZoneId?,
     )

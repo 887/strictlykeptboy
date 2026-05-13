@@ -150,6 +150,61 @@ class CalendarRegistryTest {
         scope.cancel()
     }
 
+    @Test fun overlaysActiveWindowsHoursAndColorSeed() = runBlocking {
+        val repoRoot = tmp.newFolder("repo-c").toPath()
+        repoStore.add(
+            RepoConfig(
+                repoId = "repo-c",
+                displayName = "repo c",
+                rootDir = repoRoot.toString(),
+                authorIdentity = AuthorIdentity("Bat", "bat@example.com"),
+            ),
+        )
+        writeCalendarToml(
+            repoRoot, "cal-work",
+            """
+            schema_version = 1
+            id = "cal-work"
+            name = "Work"
+            priority = 600
+            color_seed = 4900691
+
+            [[active_windows]]
+            from = 2026-06-01
+            to = 2026-06-30
+
+            [[active_hours]]
+            day = "MON"
+            from = "09:00"
+            to = "17:00"
+            [[active_hours]]
+            day = "FRI"
+            from = "09:00"
+            to = "13:00"
+            """.trimIndent(),
+        )
+        val synthesizedSnap = MutableStateFlow(
+            RepoSnapshot(
+                repos = listOf(RepoSnapshot.RepoEntry(RepoRef("repo-c"), null)),
+                calendars = emptyList(),
+                todolists = emptyList(),
+            ),
+        )
+        val scope = CoroutineScope(Dispatchers.Unconfined + SupervisorJob())
+        val reg = CalendarRegistry(repoStore, synthesizedSnap, scope)
+        val cals = withTimeout(5_000) { reg.state.first { it.isNotEmpty() } }
+        val cal = cals.first { it.ref.id == "cal-work" }
+        assertEquals(4900691, cal.colorSeed)
+        assertEquals(1, cal.activeWindows.size)
+        assertEquals(java.time.LocalDate.of(2026, 6, 1), cal.activeWindows[0].start)
+        assertEquals(java.time.LocalDate.of(2026, 6, 30), cal.activeWindows[0].endInclusive)
+        assertEquals(2, cal.activeHours.size)
+        assertEquals(java.time.DayOfWeek.MONDAY, cal.activeHours[0].day)
+        assertEquals(java.time.LocalTime.of(9, 0), cal.activeHours[0].from)
+        assertEquals(java.time.LocalTime.of(17, 0), cal.activeHours[0].to)
+        scope.cancel()
+    }
+
     @Test fun emptyRepoSetEmitsEmpty() = runBlocking {
         val synthesizedSnap = MutableStateFlow(
             RepoSnapshot(emptyList(), emptyList(), emptyList()),
