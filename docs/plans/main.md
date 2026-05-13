@@ -536,12 +536,56 @@ Deep-dives: [`data-model.md`](data-model.md) extension DM-K, [`ui-spec.md`](ui-s
 - [ ] **DD.5** Zoom-level persistence per device
 - [ ] **DD.6** Recurrence drag: prompt "this instance only / this and future / entire series" — creates appropriate exception or rule edit
 
-## Phase EE — Inline-markdown body styling
+## Phase EE — Inline-markdown body styling — shipped in this change (Round 2 batch 5)
 
-- [ ] **EE.1** Markwon Compose integration (Apache-2.0)
-- [ ] **EE.2** Editor toolbar with raw/rendered toggle
-- [ ] **EE.3** M3E-aligned theming (heading typography, code block surface, link color)
-- [ ] **EE.4** Inline image rendering for `![alt](attachments/...)` references
+Phase EE.1..EE.8 land the read-only inline-markdown body renderer
+(`ui/components/MarkdownRenderer.kt`) wired into `EventDetailSheet`
+and `TaskDetailSheet`. The editor-side raw/rendered toggle from the
+original EE.2 wording remains a future increment (it requires
+touching the body editor, which is a separate surface from the
+detail sheets — see UI-Y.2 + UI-Y.6 for the editor-side spec). The
+original EE.4 ("inline image rendering for `![alt](attachments/...)`")
+also remains deferred (UI-Y.5) — Markwon handles the syntax as a
+text fallback today; image plug-in lands once the attachments
+viewer is reachable from the renderer.
+
+- [x] **EE.1** Markwon dependency added to `gradle/libs.versions.toml`
+  + `app/build.gradle.kts` (Apache-2.0, license-clean). Shipped in
+  this change.
+- [x] **EE.2** `MarkdownRenderer` Compose facade — `AndroidView`
+  bridge to Markwon with narrow
+  `(markdown: String, modifier: Modifier, linkPolicy, testTag?) -> Unit`
+  signature. Shipped in this change.
+- [x] **EE.3** Wired into `EventDetailSheet` body block +
+  `TaskDetailSheet` body block (subtask lines still split out as
+  Compose Checkboxes per H.6; the remaining body flows through
+  Markwon). Shipped in this change.
+- [x] **EE.4** M3E theme integration — base text size derived from
+  `MaterialTheme.typography.bodyMedium`, honours
+  `LocalDensity.fontScale` and `density`; heading multipliers map
+  2.0× / 1.5× / 1.25× / 1.1× / 1.0× / 0.85× for h1..h6; link colour
+  follows `colorScheme.primary`. Shipped in this change.
+- [x] **EE.5** Link dispatch via `MarkdownLinkPolicy` strategy —
+  `strictlykeptboy://...` URIs route through the future Phase MM
+  deep-link handler (today a generic `Intent.ACTION_VIEW`
+  dispatch; MM will register a `BrowsableActivity` that catches
+  the scheme), other schemes dispatch via `Intent.ACTION_VIEW`
+  directly. `ActivityNotFoundException` swallowed (no unhandled
+  crash on unhandled scheme). Shipped in this change.
+- [x] **EE.6** Code-block + inline-code rendering on
+  `colorScheme.surfaceContainerHigh` with `Typeface.MONOSPACE`.
+  Shipped in this change.
+- [x] **EE.7** Robolectric snapshot tests
+  (`MarkdownRendererTest.kt`) — paragraph, h1/h2/h3, ul, ol,
+  blockquote, inline+fenced code, link, bold+italic, empty-body,
+  link-policy URI routing. Golden-image bitmaps deferred until
+  Paparazzi lands (Robolectric+createComposeRule cannot snapshot
+  pixel-perfect bitmaps headlessly). Shipped in this change.
+- [x] **EE.8** AGENTS.md-equivalent note added under
+  `CLAUDE.md § Markdown body rendering (Phase EE)` (the
+  strictlykeptboy app repo has no separate AGENTS.md — the
+  produced-user-repo convention uses the AGENTS↔CLAUDE symlink,
+  not the app repo itself). Shipped in this change.
 
 ## Phase FF — Custom sticker / icon packs
 

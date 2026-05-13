@@ -202,6 +202,23 @@ Subagents working on this repo run in worktrees (or inline if the change is smal
 
 The user has standing authorization to autonomously work through Round 1 (Phases A–W) with opus subagents; see `~/.claude/projects/-home-laragana-workspace/memory/project_strictlykeptboy_autonomous_mode.md` if available.
 
+## Markdown body rendering (Phase EE)
+
+Event + task bodies are stored as CommonMark Markdown in the
+`<entity>.md` frontmatter file body and **rendered inline** in the
+detail sheets via `noties/Markwon` (Apache-2.0). Agents writing
+events / tasks into a user's calendar repo can use any CommonMark
+feature — paragraphs, ATX headings (`#`..`######`), bullet + numbered
+lists, blockquotes, fenced + inline code, links, bold / italic /
+strikethrough — and trust that the strictlykeptboy app will display
+it M3E-themed (bodyMedium scale + font-scale + density-scale, code
+on `surfaceContainerHigh`, primary-tinted links). Link taps follow
+`MarkdownLinkPolicy` — `strictlykeptboy://...` URIs route through the
+Phase MM deep-link handler when MM ships; everything else dispatches
+via `Intent.ACTION_VIEW`. Inline images (`![alt](attachments/...)`)
+are deferred to UI-Y.5; today the syntax round-trips through Markwon
+as a text-only fallback when the attachment isn't resolvable.
+
 ## Translations
 
 User-facing copy goes through `app/src/main/res/values/strings.xml`
