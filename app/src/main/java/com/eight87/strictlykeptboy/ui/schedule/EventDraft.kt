@@ -22,6 +22,14 @@ data class EventDraft(
     val private: Boolean = false,
     val recurrence: RecurrencePreset = RecurrencePreset.Once,
     val customRRule: String = "",
+    /**
+     * Phase 2.1.D.7 — when a draft was opened from a long-press
+     * "Schedule as timebox" on a task, this carries the source task's
+     * id so [EventCreateController] can write the reciprocal link back
+     * into [com.eight87.strictlykeptboy.ui.tasks.TasksViewState] on
+     * commit. Empty = unlinked.
+     */
+    val relatedTaskId: String = "",
 )
 
 enum class RecurrencePreset { Once, Daily, Weekly, Monthly, Custom }

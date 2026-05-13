@@ -27,6 +27,9 @@ fun TaskTodayView(
     onOpen: (TaskItem) -> Unit,
     modifier: Modifier = Modifier,
     today: LocalDate = LocalDate.now(),
+    onLongPress: (TaskItem) -> Unit = {},
+    multiRepo: Boolean = false,
+    activeRepoOwner: String = "",
 ) {
     val forToday = tasks.forToday(today)
     if (forToday.isEmpty()) {
@@ -55,19 +58,40 @@ fun TaskTodayView(
         if (dated.isNotEmpty()) {
             sectionHeader(labelToday)
             items(dated, key = { it.id }) { task ->
-                TaskRow(item = task, onToggleDone = { onToggleDone(task) }, onClick = { onOpen(task) })
+                TaskRow(
+                    item = task,
+                    onToggleDone = { onToggleDone(task) },
+                    onClick = { onOpen(task) },
+                    onLongClick = { onLongPress(task) },
+                    multiRepo = multiRepo,
+                    activeRepoOwner = activeRepoOwner,
+                )
             }
         }
         if (fromEvents.isNotEmpty()) {
             sectionHeader(labelFromEvents)
             items(fromEvents, key = { it.id }) { task ->
-                TaskRow(item = task, onToggleDone = { onToggleDone(task) }, onClick = { onOpen(task) })
+                TaskRow(
+                    item = task,
+                    onToggleDone = { onToggleDone(task) },
+                    onClick = { onOpen(task) },
+                    onLongClick = { onLongPress(task) },
+                    multiRepo = multiRepo,
+                    activeRepoOwner = activeRepoOwner,
+                )
             }
         }
         if (pinned.isNotEmpty()) {
             sectionHeader(labelPinned)
             items(pinned, key = { it.id }) { task ->
-                TaskRow(item = task, onToggleDone = { onToggleDone(task) }, onClick = { onOpen(task) })
+                TaskRow(
+                    item = task,
+                    onToggleDone = { onToggleDone(task) },
+                    onClick = { onOpen(task) },
+                    onLongClick = { onLongPress(task) },
+                    multiRepo = multiRepo,
+                    activeRepoOwner = activeRepoOwner,
+                )
             }
         }
     }

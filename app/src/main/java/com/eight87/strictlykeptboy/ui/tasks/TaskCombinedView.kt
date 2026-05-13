@@ -26,6 +26,9 @@ fun TaskCombinedView(
     onToggleDone: (TaskItem) -> Unit,
     onOpen: (TaskItem) -> Unit,
     modifier: Modifier = Modifier,
+    onLongPress: (TaskItem) -> Unit = {},
+    multiRepo: Boolean = false,
+    activeRepoOwner: String = "",
 ) {
     val sorted = tasks.sortedForCombined()
     if (sorted.isEmpty()) {
@@ -47,6 +50,9 @@ fun TaskCombinedView(
                 item = task,
                 onToggleDone = { onToggleDone(task) },
                 onClick = { onOpen(task) },
+                onLongClick = { onLongPress(task) },
+                multiRepo = multiRepo,
+                activeRepoOwner = activeRepoOwner,
             )
         }
         if (done.isNotEmpty()) {

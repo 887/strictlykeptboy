@@ -58,6 +58,46 @@ class EventCreateController(
     private var shippedTemplates: List<TemplateEntry> = emptyList()
     private var pendingTemplate: AtomicTemplate? = null
 
+    /**
+     * Phase 2.1.D.7 — listener invoked when a draft carrying
+     * `relatedTaskId` lands as a committed event. Receives the
+     * (taskId, eventId, start) triple; the caller updates the matching
+     * `TaskItem.linkedEventId`/`linkedEventStart`. Optional: no-op by
+     * default so existing tests + composition wiring stay untouched.
+     */
+    var onTaskLinked: (taskId: String, eventId: String, start: OffsetDateTime) -> Unit =
+        { _, _, _ -> }
+
+    /**
+     * Phase 2.1.D.7 — opens the create sheet pre-populated with a
+     * task's title + a `relatedTaskId` field. On confirm,
+     * [onTaskLinked] fires so callers can mutate the originating
+     * task's `linkedEventId`.
+     */
+    fun openSheetForTask(
+        taskId: String,
+        taskTitle: String,
+        defaultStart: OffsetDateTime = OffsetDateTime.now().plusMinutes(15),
+    ) {
+        val cals = calendarOptionsProvider()
+        val draft = EventDraft(
+            title = taskTitle,
+            start = defaultStart,
+            end = defaultStart.plusMinutes(30),
+            calendarId = cals.firstOrNull()?.id ?: "",
+            relatedTaskId = taskId,
+        )
+        if (shippedTemplates.isEmpty()) loadShippedTemplates()
+        _state.value = EventCreateSheetState(
+            tab = EventCreateTab.FreeForm,
+            draft = draft,
+            calendars = cals,
+            templateEntries = shippedTemplates,
+            neutralMode = neutralModeProvider(),
+        )
+        _sheetOpen.value = true
+    }
+
     fun openSheet(defaultStart: OffsetDateTime = OffsetDateTime.now().plusMinutes(15)) {
         val cals = calendarOptionsProvider()
         val draft = EventDraft(
@@ -186,6 +226,12 @@ class EventCreateController(
         val author = cfg.authorIdentity.name
         val event = DraftToEvent.mint(draft = draft, author = author)
         writeEvent(cfg, event, commitMessage = "add event \"${event.title}\"")
+        // Phase 2.1.D.7 — reciprocal link back from this event to its
+        // originating task. Fires synchronously off the UI thread; the
+        // write itself is dispatched onto Dispatchers.IO above.
+        if (draft.relatedTaskId.isNotEmpty()) {
+            onTaskLinked(draft.relatedTaskId, event.header.id, draft.start)
+        }
         closeSheet()
     }
 

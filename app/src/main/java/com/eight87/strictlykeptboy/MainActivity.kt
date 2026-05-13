@@ -25,6 +25,7 @@ import java.io.File
 import com.eight87.strictlykeptboy.theme.StrictlyKeptBoyTheme
 import com.eight87.strictlykeptboy.ui.scaffold.SkbAppShell
 import com.eight87.strictlykeptboy.ui.schedule.ScheduleViewState
+import com.eight87.strictlykeptboy.ui.tasks.TasksViewState
 import com.eight87.strictlykeptboy.ui.together.TogetherViewModel
 import com.eight87.strictlykeptboy.ui.wizard.AgeGateScreen
 import com.eight87.strictlykeptboy.ui.wizard.WizardScaffolder
@@ -242,6 +243,57 @@ class MainActivity : ComponentActivity() {
                             initialTab = graph.viewModePrefs.selected.value,
                         )
                     }
+                    // Phase 2.1.D.1 — TasksViewState bound to the resolver.
+                    // Re-evaluates active-todolist IDs whenever the snapshot
+                    // changes. Also pumps multiRepo / activeRepoOwner from
+                    // the repo store + active write target. Owned here (not
+                    // hoisted) so SkbAppShell can keep its remember-default.
+                    val tasksViewState = remember { TasksViewState() }
+                    androidx.compose.runtime.LaunchedEffect(Unit) {
+                        val evaluator = com.eight87.strictlykeptboy.resolver.ActiveSetEvaluator()
+                        kotlinx.coroutines.flow.combine(
+                            graph.snapshot,
+                            graph.defaultWriteRepoName,
+                            graph.repoStore.state,
+                        ) { snap, writeName, repos ->
+                            Triple(snap, writeName, repos)
+                        }.collect { (snap, writeName, repos) ->
+                            val ids = com.eight87.strictlykeptboy.ui.tasks.evaluateActiveTodolistIds(
+                                evaluator,
+                                snap,
+                            )
+                            val activeRepo = repos.firstOrNull { it.displayName == writeName }
+                                ?: repos.firstOrNull()
+                            val owner = activeRepo?.authorIdentity?.name.orEmpty()
+                            val cur = tasksViewState.state.value
+                            // Phase 2.1.D.8 — synthesize FromEvents tasks
+                            // from today's MaterializedInstances. Today's
+                            // wiring is best-effort: we don't have a live
+                            // resolver fold here yet, so use today's
+                            // one-off events (via `graph.todayEventSource`).
+                            val fromEvents =
+                                com.eight87.strictlykeptboy.ui.tasks.FromEventsProjector.project(
+                                    instances = graph.todayEventSource.eventsForToday(),
+                                    calendarsById = snap.calendars.associateBy { it.ref.id },
+                                )
+                            // Merge: keep non-FromEvents tasks the caller
+                            // pushed in via `set/addTask`; replace the
+                            // FromEvents slice with the freshly projected
+                            // set. This is the producer the brief noted is
+                            // missing for the `TaskSource.FromEvents` enum.
+                            val nonFromEvents = cur.tasks.filter {
+                                it.source != com.eight87.strictlykeptboy.ui.tasks.TaskSource.FromEvents
+                            }
+                            tasksViewState.set(
+                                cur.copy(
+                                    tasks = nonFromEvents + fromEvents,
+                                    activeTodolistIds = ids,
+                                    multiRepo = repos.size > 1,
+                                    activeRepoOwner = owner,
+                                ),
+                            )
+                        }
+                    }
                     val togetherVm = remember(scope) {
                         TogetherViewModel(
                             scope = scope,
@@ -279,6 +331,7 @@ class MainActivity : ComponentActivity() {
                     // outcome is observed. Falls back to a toast if no repo.
                     var pendingShareRepo by remember { mutableStateOf<RepoConfig?>(null) }
                     SkbAppShell(
+                        tasksState = tasksViewState,
                         activeRepoNameFlow = graph.defaultWriteRepoName,
                         activeIconKindFlow = graph.activeRepoIconKind,
                         wizardEntryRequest = graph.wizardEntryRequest,

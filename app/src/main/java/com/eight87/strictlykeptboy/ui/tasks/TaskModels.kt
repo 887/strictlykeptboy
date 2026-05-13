@@ -1,7 +1,21 @@
 package com.eight87.strictlykeptboy.ui.tasks
 
 import androidx.compose.runtime.Immutable
+import com.eight87.strictlykeptboy.resolver.DateRange
+import com.eight87.strictlykeptboy.resolver.HourRange
+import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
+import java.time.ZonedDateTime
+
+/**
+ * Phase 2.1.D.6 — priority bump applied to a task whose todolist's
+ * `activeHours` covers the current instant. Genesis-prompt rationale:
+ * "work todolist items become higher priority during work hours". The
+ * bump applies in `sortedForCombined` only, not to the stored priority.
+ */
+const val ACTIVE_HOURS_PRIORITY_BUMP = 50
 
 /**
  * Phase H — UI-only task models.
@@ -27,6 +41,18 @@ data class TodolistInfo(
     val colorSeed: String = "",
     val mode: TodolistMode = TodolistMode.Standard,
     val priority: Int = 0,
+    /**
+     * Phase 2.1.D.1 — `false` excludes this todolist's tasks from the
+     * Combined view unless the show-inactive toggle is set. Defaults to
+     * `true` so existing callers / fixtures stay green.
+     */
+    val active: Boolean = true,
+    /** Phase 2.1.D.6 — active-windows mirror of `TodolistMeta.activeWindows`. */
+    val activeWindows: List<DateRange> = emptyList(),
+    /** Phase 2.1.D.6 — active-hours mirror of `TodolistMeta.activeHours`. */
+    val activeHours: List<HourRange> = emptyList(),
+    /** Phase 2.1.D.6 — tz used to evaluate `activeHours`. */
+    val tzId: ZoneId = ZoneId.systemDefault(),
 )
 
 @Immutable
@@ -46,6 +72,13 @@ data class TaskItem(
     val attachments: List<TaskAttachment> = emptyList(),
     /** Source classification (for Today's three-section grouping). */
     val source: TaskSource = TaskSource.Other,
+    /**
+     * Phase 2.1.D.7 — linked timebox event id (when the user picked
+     * "Schedule as timebox" on this task). Empty = unlinked.
+     */
+    val linkedEventId: String = "",
+    /** Display-only — the linked timebox's start for the inline chip. */
+    val linkedEventStart: ZonedDateTime? = null,
 ) {
     val isOverdue: Boolean get() = !done && due != null && due.isBefore(LocalDate.now())
 }
@@ -59,8 +92,50 @@ data class TaskAttachment(
     val target: String,
 )
 
-/** Public sort used by Combined/Per-list: overdue → due asc → priority desc → title. */
-fun List<TaskItem>.sortedForCombined(today: LocalDate = LocalDate.now()): List<TaskItem> {
+/**
+ * Phase 2.1.D.6 — returns `true` iff [list].activeHours is non-empty and
+ * contains [at]'s day-of-week + local time (in [list].tzId). Empty
+ * `activeHours` means "always" — not a "boost" trigger.
+ */
+internal fun TodolistInfo.isInsideActiveHours(at: ZonedDateTime): Boolean {
+    if (activeHours.isEmpty()) return false
+    val local = at.withZoneSameInstant(tzId)
+    val dow = local.dayOfWeek
+    val t = local.toLocalTime()
+    return activeHours.any { h -> matchesHour(h, dow, t) }
+}
+
+private fun matchesHour(h: HourRange, dow: DayOfWeek, t: LocalTime): Boolean = when {
+    h.to == h.from -> false
+    h.to.isAfter(h.from) ->
+        h.day == dow && !t.isBefore(h.from) && t.isBefore(h.to)
+    else -> {
+        // midnight rollover
+        (h.day == dow && !t.isBefore(h.from)) ||
+            (h.day == dow.minus(1) && t.isBefore(h.to))
+    }
+}
+
+/**
+ * Phase 2.1.D.5 / D.6 — effective priority used by Combined sort:
+ * task's own priority + its todolist's priority + active-hours bump.
+ */
+internal fun TaskItem.effectivePriority(now: ZonedDateTime): Int {
+    val bump = if (todolist.isInsideActiveHours(now)) ACTIVE_HOURS_PRIORITY_BUMP else 0
+    return priority + todolist.priority + bump
+}
+
+/**
+ * Public sort used by Combined/Per-list: overdue → due asc →
+ * effective priority desc → title.
+ *
+ * `effectivePriority` folds in `todolist.priority` (D.5) plus the
+ * active-hours bump (D.6).
+ */
+fun List<TaskItem>.sortedForCombined(
+    today: LocalDate = LocalDate.now(),
+    now: ZonedDateTime = ZonedDateTime.now(),
+): List<TaskItem> {
     val (active, done) = partition { !it.done }
     val activeSorted = active.sortedWith(
         compareBy<TaskItem> {
@@ -72,7 +147,7 @@ fun List<TaskItem>.sortedForCombined(today: LocalDate = LocalDate.now()): List<T
             }
         }
             .thenBy { it.due ?: LocalDate.MAX }
-            .thenByDescending { it.priority }
+            .thenByDescending { it.effectivePriority(now) }
             .thenBy { it.title.lowercase() },
     )
     val doneSorted = done.sortedByDescending { it.doneAt ?: LocalDate.MIN }

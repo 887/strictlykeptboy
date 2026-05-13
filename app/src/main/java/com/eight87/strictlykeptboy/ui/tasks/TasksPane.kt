@@ -45,6 +45,13 @@ fun TasksPane(
     modifier: Modifier = Modifier,
     selectedTab: TaskViewTab? = null,
     onSelectTab: (TaskViewTab) -> Unit = {},
+    /**
+     * Phase 2.1.D.7 — invoked when the user long-presses a task and
+     * chooses "Schedule as timebox" from the context menu. Receiver
+     * (MainActivity) opens `EventCreateController.openSheet` pre-loaded
+     * with the task title + relatedTaskId.
+     */
+    onScheduleAsTimebox: (TaskItem) -> Unit = {},
 ) {
     val widthClass = LocalWindowWidthSizeClass.current
     // Nav-swap polish: when the shell owns the rail it hoists `selectedTab`
@@ -59,8 +66,13 @@ fun TasksPane(
     var selectedListId by remember { mutableStateOf<String?>(null) }
     var openTask by remember { mutableStateOf<TaskItem?>(null) }
     var quickAddOpen by remember { mutableStateOf(false) }
+    // Phase 2.1.D.2 — long-press list settings sheet (stub).
+    var settingsListInfo by remember { mutableStateOf<TodolistInfo?>(null) }
+    // Phase 2.1.D.7 — long-press-task context menu state.
+    var longPressTask by remember { mutableStateOf<TaskItem?>(null) }
 
     val uiState by state.state.collectAsState()
+    val visibleTasks = remember(uiState) { uiState.visibleTasks() }
 
     // Shopping mode: when a selected list is tagged shopping, auto-route
     // the shopping view per H.4.
@@ -87,24 +99,48 @@ fun TasksPane(
                         modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp),
                     )
                 }
+                // Phase 2.1.D.2 — source rail above the view.
+                if (effectiveTab == TaskViewTab.Combined ||
+                    effectiveTab == TaskViewTab.Today ||
+                    effectiveTab == TaskViewTab.Standing
+                ) {
+                    TaskSourceRail(
+                        todolists = uiState.todolists,
+                        hiddenTodolistIds = uiState.hiddenTodolistIds,
+                        showInactive = uiState.showInactive,
+                        activeTodolistIds = uiState.activeTodolistIds,
+                        onToggleList = { state.toggleListVisibility(it) },
+                        onSetShowInactive = { state.setShowInactive(it) },
+                        onLongPressList = { settingsListInfo = it },
+                    )
+                }
                 when (effectiveTab) {
                     TaskViewTab.Combined -> TaskCombinedView(
-                        tasks = uiState.tasks,
+                        tasks = visibleTasks,
                         onToggleDone = { state.toggleDone(it.id) },
                         onOpen = { openTask = it },
+                        onLongPress = { longPressTask = it },
+                        multiRepo = uiState.multiRepo,
+                        activeRepoOwner = uiState.activeRepoOwner,
                     )
                     TaskViewTab.Today -> TaskTodayView(
-                        tasks = uiState.tasks,
+                        tasks = visibleTasks,
                         onToggleDone = { state.toggleDone(it.id) },
                         onOpen = { openTask = it },
+                        onLongPress = { longPressTask = it },
+                        multiRepo = uiState.multiRepo,
+                        activeRepoOwner = uiState.activeRepoOwner,
                     )
                     TaskViewTab.PerList -> TaskPerListView(
-                        tasks = uiState.tasks,
+                        tasks = visibleTasks,
                         todolists = uiState.todolists,
+                        activeTodolistIds = uiState.activeTodolistIds,
                         selectedListId = selectedListId,
                         onSelectList = { selectedListId = it },
                         onToggleDone = { state.toggleDone(it.id) },
                         onOpen = { openTask = it },
+                        multiRepo = uiState.multiRepo,
+                        activeRepoOwner = uiState.activeRepoOwner,
                     )
                     TaskViewTab.Shopping -> TaskShoppingView(
                         tasks = if (selectedListId != null) uiState.tasks.filter { it.todolist.id == selectedListId }
@@ -112,7 +148,7 @@ fun TasksPane(
                         onToggleDone = { state.toggleDone(it.id) },
                     )
                     TaskViewTab.Standing -> TaskStandingView(
-                        tasks = uiState.tasks,
+                        tasks = visibleTasks,
                         onToggleDone = { state.toggleDone(it.id) },
                         onOpen = { openTask = it },
                         onPinToday = { task, pin -> state.pinStanding(task.id, pin) },
@@ -171,6 +207,26 @@ fun TasksPane(
         }
     }
 
+    // Phase 2.1.D.2 — long-press list-settings stub.
+    settingsListInfo?.let { info ->
+        TaskListSettingsSheet(
+            list = info,
+            onDismiss = { settingsListInfo = null },
+        )
+    }
+
+    // Phase 2.1.D.7 — long-press-task context menu.
+    longPressTask?.let { task ->
+        TaskLongPressMenu(
+            task = task,
+            onDismiss = { longPressTask = null },
+            onScheduleAsTimebox = {
+                onScheduleAsTimebox(task)
+                longPressTask = null
+            },
+        )
+    }
+
     if (quickAddOpen) {
         val initialTarget = uiState.todolists.firstOrNull {
             it.id == selectedListId
@@ -192,3 +248,39 @@ data class TaskQuickAddRequest(
     val title: String,
     val target: QuickAddTarget,
 )
+
+const val TestTagTaskLongPressMenu = "TaskLongPressMenu"
+const val TestTagScheduleAsTimebox = "ScheduleAsTimebox"
+
+/**
+ * Phase 2.1.D.7 — long-press task context menu. For now contains just
+ * "Schedule as timebox". More actions land later.
+ */
+@androidx.compose.runtime.Composable
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+private fun TaskLongPressMenu(
+    task: TaskItem,
+    onDismiss: () -> Unit,
+    onScheduleAsTimebox: () -> Unit,
+) {
+    val sheet = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheet,
+        modifier = Modifier.testTag(TestTagTaskLongPressMenu),
+    ) {
+        androidx.compose.foundation.layout.Column(modifier = Modifier.padding(16.dp)) {
+            androidx.compose.material3.Text(
+                text = task.title,
+                style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(bottom = 12.dp),
+            )
+            androidx.compose.material3.TextButton(
+                onClick = onScheduleAsTimebox,
+                modifier = Modifier.testTag(TestTagScheduleAsTimebox),
+            ) {
+                androidx.compose.material3.Text("Schedule as timebox")
+            }
+        }
+    }
+}

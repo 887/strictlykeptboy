@@ -367,6 +367,24 @@ private fun SkbAppShellContent(
                             selectedTab = tasksTab,
                             onSelectTab = { tasksTab = it },
                             onWriteTask = onWriteTask,
+                            // Phase 2.1.D.7 — long-press → schedule-as-timebox
+                            // routes through the existing EventCreateController.
+                            // No-op when no controller is wired (tests, previews).
+                            onScheduleAsTimebox = { task ->
+                                eventCreateController?.let { ctl ->
+                                    ctl.onTaskLinked = { taskId, eventId, start ->
+                                        tasksState.linkToEvent(
+                                            taskId = taskId,
+                                            eventId = eventId,
+                                            start = start.atZoneSameInstant(java.time.ZoneId.systemDefault()),
+                                        )
+                                    }
+                                    ctl.openSheetForTask(
+                                        taskId = task.id,
+                                        taskTitle = task.title,
+                                    )
+                                }
+                            },
                         )
                         TopDestination.Together -> if (togetherViewModel != null) {
                             TogetherPane(vm = togetherViewModel, neutralMode = neutralMode)

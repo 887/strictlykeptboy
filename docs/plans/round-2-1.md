@@ -95,17 +95,17 @@ Wires the indexer to `AppGraph.snapshot` + `AppGraph.sources`. Without this, eve
 - [ ] **2.1.C.8** Empty-state copy correction. Three states: (a) no repos configured, (b) repos configured but every calendar inactive, (c) all calendars active but no events in range. Distinct CTA each.
 - [ ] **2.1.C.9** Timebox view stops treating every event as a timebox. Filter to `CalendarKind.Timebox`; regular events go to a secondary "scheduled events on top of your time blocks" section below.
 
-## Phase 2.1.D — Tasks
+## Phase 2.1.D — Tasks — shipped in commit `<pending>`
 
-- [ ] **2.1.D.1** Wire `ActiveSetEvaluator.activeTodolistsAt` into `TasksViewState`. Tasks from inactive todolists drop out of Combined view (matches schedule semantics). Add a "show inactive" toggle.
-- [ ] **2.1.D.2** Source rail for tasks (mirror of 2.1.B.2). One chip per todolist; long-press → list-settings sheet (priority, active-windows, active-hours, mode).
-- [ ] **2.1.D.3** Render `TaskItem.author` in `TaskRow` — same visual as 2.1.C.2.
-- [ ] **2.1.D.4** Render `TodolistInfo.repoId` as a tiny repo dot on `TaskRow`. Suppress when only one repo configured.
-- [ ] **2.1.D.5** Apply `TodolistInfo.priority` in `sortedForCombined` — high-priority lists' tasks float to the top.
-- [ ] **2.1.D.6** Time-window-scoped priority bump. Inside `activeHours` → effective priority boost (+50). Matches "work todolist items become higher priority during work hours" from genesis.
-- [ ] **2.1.D.7** Tasks ↔ timebox integration. Long-press task → "Schedule as timebox" opens `EventCreateController.openSheet` pre-populated with title + `relatedTaskId`. Linked timebox time renders as inline chip on the task row.
-- [ ] **2.1.D.8** Reciprocal "spawned-from-event" tasks. `SourcesPublisher` (2.1.A.2) projects recurring chore events into `TaskItem(source = TaskSource.FromEvents)` so they land in `forToday`. Today the enum value exists but no producer writes it.
-- [ ] **2.1.D.9** Per-list view shows active-window / active-hours summary at top, plus "this list is currently inactive" banner when evaluator says so.
+- [x] **2.1.D.1** Wire `ActiveSetEvaluator.activeTodolistsAt` into `TasksViewState`. Tasks from inactive todolists drop out of Combined view (matches schedule semantics). Add a "show inactive" toggle. *(Shipped — `evaluateActiveTodolistIds()` + `TasksUiState.activeTodolistIds`/`showInactive`/`visibleTasks()`; bound in `MainActivity` LaunchedEffect.)*
+- [x] **2.1.D.2** Source rail for tasks (mirror of 2.1.B.2). One chip per todolist; long-press → list-settings sheet (priority, active-windows, active-hours, mode). *(Shipped — `TaskSourceRail` composable + stub `TaskListSettingsSheet`. Full per-list settings sheet deferred to follow-on after 2.1.B's `CalendarSettingsSheet` lands; stub matches brief.)*
+- [x] **2.1.D.3** Render `TaskItem.author` in `TaskRow` — same visual as 2.1.C.2. *(Shipped — 16-dp `AuthorBubble` with initials, suppressed when `author == activeRepoOwner`.)*
+- [x] **2.1.D.4** Render `TodolistInfo.repoId` as a tiny repo dot on `TaskRow`. Suppress when only one repo configured. *(Shipped — 8-dp `RepoDot` gated by `TasksUiState.multiRepo`.)*
+- [x] **2.1.D.5** Apply `TodolistInfo.priority` in `sortedForCombined` — high-priority lists' tasks float to the top. *(Shipped — `effectivePriority` = `priority + todolist.priority + activeHoursBump`.)*
+- [x] **2.1.D.6** Time-window-scoped priority bump. Inside `activeHours` → effective priority boost (+50). Matches "work todolist items become higher priority during work hours" from genesis. *(Shipped — `ACTIVE_HOURS_PRIORITY_BUMP = 50` constant; `TodolistInfo.isInsideActiveHours`.)*
+- [x] **2.1.D.7** Tasks ↔ timebox integration. Long-press task → "Schedule as timebox" opens `EventCreateController.openSheet` pre-populated with title + `relatedTaskId`. Linked timebox time renders as inline chip on the task row. *(Shipped — `EventDraft.relatedTaskId`, `EventCreateController.openSheetForTask` + `onTaskLinked` callback, `TaskRow` linked-timebox chip.)*
+- [x] **2.1.D.8** Reciprocal "spawned-from-event" tasks. `SourcesPublisher` (2.1.A.2) projects recurring chore events into `TaskItem(source = TaskSource.FromEvents)` so they land in `forToday`. Today the enum value exists but no producer writes it. *(Shipped — `FromEventsProjector.project()` consumes `todayEventSource.eventsForToday()`; producer wired in `MainActivity` binder.)*
+- [x] **2.1.D.9** Per-list view shows active-window / active-hours summary at top, plus "this list is currently inactive" banner when evaluator says so. *(Shipped — `TaskPerListView` renders `formatActiveSummary` + inactive-banner via `isCurrentlyInactive`.)*
 
 ## Phase 2.1.E — Settings restructure — partial; E.3/E.4/E.5/E.9/E.10/E.11/E.12 shipped in commit `699f13f`
 
