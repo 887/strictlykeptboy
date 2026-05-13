@@ -58,12 +58,17 @@ fun ScheduleDayView(
     onAddAt: (LocalTime) -> Unit = {},
     onBandTap: (DayBand) -> Unit = {},
     isToday: Boolean = date == LocalDate.now(),
+    /** Phase CCC.10 / HV-G.3 — opens the trip wizard from the empty-state CTA. */
+    onPlanTrip: (() -> Unit)? = null,
 ) {
     val day = schedule?.days?.firstOrNull { it.date == date }
     val bands = day?.bands.orEmpty()
 
     if (bands.isEmpty()) {
-        EmptyScheduleState(modifier = modifier.fillMaxSize().testTag(TestTagDayEmpty))
+        EmptyScheduleState(
+            modifier = modifier.fillMaxSize().testTag(TestTagDayEmpty),
+            onPlanTrip = onPlanTrip,
+        )
         return
     }
 

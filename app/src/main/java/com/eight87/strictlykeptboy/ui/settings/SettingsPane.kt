@@ -142,6 +142,8 @@ data class SettingsAccess(
     val activeAvatarSpecies: String = "bat",
     val modePrefs: ModePrefs? = null,
     val onOpenWizardAtRoles: () -> Unit = {},
+    /** Phase CCC.10 / HV-G.1 — Settings → Lifestyle → Plan a trip entry-point. */
+    val onPlanTrip: () -> Unit = {},
     val onApplyTemplate: (String) -> Unit = {},
     val onSaveCustomTemplateUrl: (String) -> Unit = {},
     val onOpenLicenses: () -> Unit = {},
@@ -472,6 +474,7 @@ private fun SettingsCategoryContent(
             )
             SettingsCategory.Lifestyle -> LifestyleCategory(
                 onOpenWizardAtRoles = access.onOpenWizardAtRoles,
+                onPlanTrip = access.onPlanTrip,
             )
             SettingsCategory.Identity -> access.identityPrefs?.let { p ->
                 IdentityCategory(prefs = p)

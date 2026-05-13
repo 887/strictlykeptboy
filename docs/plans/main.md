@@ -873,22 +873,24 @@ Round-2 partial close-out: BBB.1, BBB.2, BBB.5, BBB.7, BBB.8, BBB.9, BBB.14 (ove
 
 ---
 
-## Phase CCC — Quick-trip wizard + entry-points + sticker beats
+## Phase CCC — Quick-trip wizard + entry-points + sticker beats — compact cut shipped in commit d0c6c41
 
 Source draft: [`draft-household-travel-vacation.md`](draft-household-travel-vacation.md) phases HV-F (vacation wizard), HV-G (entry-points), HV-H (sticker beats). Cross-references: Phase K (lifestyle wizard — sibling, NOT first-launch), Phase CCC's wizard reuses LW-K's bat-mascot sticker pipeline, [`ui-spec.md`](ui-spec.md) UI-OO.
 
-- [ ] **CCC.1** Compose nav-graph per HV-F.1: 6 screens + confirm modal, `TripDraft` state backed by Room until commit. See UI-OO.
-- [ ] **CCC.2** Screen 1 — Trip basics per HV-F.2 (name, start/end dates, destination with offline-only autocomplete, travel mode flight/train/car/boat/none). Sticker: `trip-suitcase-waving`.
-- [ ] **CCC.3** Screen 2 — Travel-prep cadence per HV-F.3 (HV-B back-fill preview with per-row toggles + lead-offset edit; conditional gating on visa.required etc.). Sticker: `flight-paw-prints`.
-- [ ] **CCC.4** Screen 3 — Flight details per HV-F.4 (conditional on mode=flight; multi-leg list with IATA codes; per-leg international toggle adjusts buffer). Sticker: `flight-paw-prints`.
-- [ ] **CCC.5** Screen 4 — Vacation-daily anchors per HV-F.5 (HV-D toggles + relax-cadence + meal-anchor + pack-kink-kit gate). Sticker: `beach-loungin-with-cage-still-on` (neutral variant `beach-loungin`).
+**Compact-cut scope (shipped):** 4-screen wizard (Basics → Transport → Anchors → Confirm), `TripScaffolder` materialization of HV-B/HV-C/HV-D templates, three entry-points (Settings → Lifestyle, FAB long-press, Schedule empty-state), sticker-key registry with neutral-variant swap. Full-spec follow-ups: HV-F.6 supersedence picker (CCC.6), HV-F.7 mini-month preview (CCC.7), HV-F.9/10 edit-in-flight + cancel-trip (CCC.9), HV-G.2 calendar-detail "+ overlay from template" (part of CCC.10), HV-H.7 SVG/PNG sticker assets (CCC.11 assets-only), HV-I.7 Compose UI path-coverage tests (CCC.12 UI tests).
+
+- [x] **CCC.1** Compose nav-graph per HV-F.1 — compact 4-screen sequence + back/discard handling (`TripWizardNavHost`). In-memory `TripDraft` (Room-backed persistence is the full-spec follow-up). See UI-OO.
+- [x] **CCC.2** Screen 1 — Trip basics per HV-F.2 (name, start/end dates, destination free-text, traveler count). Sticker: `trip-suitcase-waving`. Offline-autocomplete is the full-spec follow-up.
+- [ ] **CCC.3** Screen 2 — Travel-prep cadence per HV-F.3 (HV-B back-fill preview with per-row toggles + lead-offset edit; conditional gating on visa.required etc.). Sticker: `flight-paw-prints`. _Compact cut materializes via the simplified default-filter in `TripScaffolder.eligibleForCompactCut`._
+- [ ] **CCC.4** Screen 3 — Flight details per HV-F.4 (conditional on mode=flight; multi-leg list with IATA codes; per-leg international toggle adjusts buffer). Sticker: `flight-paw-prints`. _Compact cut renders the transport-mode radio on Screen 2 and uses a single default leg in materialization._
+- [x] **CCC.5** Screen 4 — Vacation-daily anchors per HV-F.5 — compact toggles (include daily, pack kink kit). Sticker: `beach-loungin-with-cage-still-on` (neutral variant `beach-loungin`). Per-anchor cadence-relax + meal-anchor radio are the full-spec follow-ups.
 - [ ] **CCC.6** Screen 5 — Supersedence picker per HV-F.6 (per-calendar pause toggle defaults; nonSuperseable calendars visually locked; per-event "keep this on" override list materializes `overrides/` files). Sticker: `supersedence-snooze-toggle`.
-- [ ] **CCC.7** Screen 6 — Confirm per HV-F.7 (mini-month preview with greyed-strikethrough superseded events; re-edit hop-back). Sticker: `confirm-tail-flick` + `good-boy-stays-good-boy-on-vacation` (neutral `staying-on-track`).
-- [ ] **CCC.8** Materialization per HV-F.8: new `calendars/cal-trip-<uuidv7>/` with `supersedes` + `superseded_during`; HV-B events as one-off files; HV-C per-leg events; HV-D recurring rule bounded by trip window; `overrides/` files; single atomic commit.
+- [ ] **CCC.7** Screen 6 — Confirm per HV-F.7 (mini-month preview with greyed-strikethrough superseded events; re-edit hop-back). Sticker: `confirm-tail-flick` + `good-boy-stays-good-boy-on-vacation` (neutral `staying-on-track`). _Compact cut renders a text summary card + reassurance line._
+- [x] **CCC.8** Materialization per HV-F.8 — `TripScaffolder` writes `calendars/cal-trip-<uuidv7>/calendar.toml` with trip metadata, HV-B prep events back-filled from `lead_offset_days`, HV-C flight events when mode=flight, HV-D vacation-daily recurring rules bounded by `RRULE UNTIL`. Single atomic commit. Supersedence arrays + override files are the full-spec follow-ups (CCC.6).
 - [ ] **CCC.9** Edit-in-flight + cancel-trip per HV-F.9 / HV-F.10 (rehydrate `TripDraft` from existing `cal-trip-<id>/`; diff-commit; cancel deletes the calendar dir + overrides atomically).
-- [ ] **CCC.10** Entry-points per HV-G: Settings → "+ Plan a trip" (between Calendars and Sharing); Calendar-detail → "+ overlay from template"; Now-card empty-state "no plans today — want to plan a trip?" (ONLY in-card promotion).
-- [ ] **CCC.11** Sticker beats per HV-H: 6 new bat-mascot beats added to LW-K's sprite sheet (`trip-suitcase-waving`, `flight-paw-prints`, `beach-loungin-with-cage-still-on` + neutral `beach-loungin`, `supersedence-snooze-toggle`, `confirm-tail-flick`, `good-boy-stays-good-boy-on-vacation` + neutral `staying-on-track`). 64/128/256 export sizes per LW-K pipeline.
-- [ ] **CCC.12** Tests per HV-I.4 / HV-I.5 / HV-I.7 / HV-I.8 (back-fill math, flight-day timeline math, Compose UI path-coverage incl. cancel + edit-in-flight + override-write, sticker neutral-swap screenshot test).
+- [x] **CCC.10** Entry-points per HV-G — shipped: Settings → Lifestyle → "+ Plan a trip" (HV-G.1, wired via `SettingsAccess.onPlanTrip`), FAB long-press → "Plan a trip" (covers the same affordance HV-G.3 anchors around), Now-card empty-state "No plans today — want to plan a trip?" (HV-G.3, `EmptyScheduleState`). HV-G.2 calendar-detail "+ overlay from template" is the full-spec follow-up.
+- [x] **CCC.11** Sticker beats per HV-H — locked-key registry in `TripStickerBeats`: `trip-suitcase-waving`, `flight-paw-prints`, `beach-loungin-with-cage-still-on` + neutral `beach-loungin`, `confirm-tail-flick` + neutral `staying-on-track`. Resolver-aware swap honours neutral-mode per D.66. HV-H.7 SVG-with-PNG-fallback assets at 64/128/256 sizes are the assets-only follow-up.
+- [x] **CCC.12** Tests per HV-I.4 / HV-I.5 — `TripScaffolderTest`: back-fill math (passport-validity at T-42 produces a May event for a June 12 start), flight-day materialization (Flight emits flight events, Car does not), `RRULE UNTIL` bound to trip end, incomplete-draft rejection. `TripDraftTest`: 6 validation cases. `TripStickerBeatsTest`: every screen has a beat; neutral-variants registered. HV-I.7 Compose UI path-coverage is the follow-up.
 
 ---
 

@@ -321,6 +321,28 @@ class MainActivity : ComponentActivity() {
                                 Unit
                             }
                         },
+                        // Phase CCC.8 — trip-overlay materializer. Writes a
+                        // `cal-trip-<uuidv7>/` overlay into the active repo and
+                        // commits atomically. Falls back to no-op (Result.failure)
+                        // if no active repo exists yet.
+                        onTripMaterialize = { tripDraft ->
+                            runCatching {
+                                val activeName = graph.activeRepoName.value
+                                val cfg = graph.repoStore.list().firstOrNull { it.displayName == activeName }
+                                    ?: graph.repoStore.list().firstOrNull()
+                                    ?: error("no active repo — run the lifestyle wizard first")
+                                com.eight87.strictlykeptboy.ui.trip.TripScaffolder.materialize(
+                                    repoRoot = java.io.File(cfg.rootDir),
+                                    draft = tripDraft,
+                                    assets = com.eight87.strictlykeptboy.ui.trip.TripScaffolder.AssetReader { path ->
+                                        assets.open(path)
+                                    },
+                                    author = cfg.authorIdentity,
+                                    repoId = cfg.repoId,
+                                )
+                                Unit
+                            }
+                        },
                     )
                 }
             }
