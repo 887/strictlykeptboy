@@ -29,6 +29,21 @@ data class ShareLink(
     val expiryIso: String? = null,
     val sourceLabel: String? = null,
     val backLink: String? = null,
+    /**
+     * Phase RR.1 / RR.4 — when true, the recipient should write
+     * `write_back_target = "<repo-fingerprint>"` into its `references.toml`
+     * entry for this share. Signals "sender invites feedback writes back
+     * to its entries" (per YY.8 / FB-H). Pure data; the recipient-side
+     * accept flow honours it.
+     */
+    val allowWriteBack: Boolean = false,
+    /**
+     * Phase RR.5 — sender-asserted one-shot token marker. The fragment
+     * carries the actual credential; this top-level flag is the
+     * agent-readable "this link was generated as single-use, the sender
+     * has noted it as consumed" signal. Encoded as `single_use=true`.
+     */
+    val singleUseToken: Boolean = false,
 ) {
     init {
         require(urls.isNotEmpty()) { "ShareLink must carry at least one url" }
@@ -60,6 +75,8 @@ object ShareLinkCodec {
             link.expiryIso?.let { add("expiry" to it) }
             link.sourceLabel?.let { add("name" to it) }
             link.backLink?.let { add("back" to it) }
+            if (link.allowWriteBack) add("writeback" to "true")
+            if (link.singleUseToken) add("single_use" to "true")
         }
         params.joinTo(sb, separator = "&") { (k, v) -> "$k=${enc(v)}" }
         return sb.toString()
@@ -84,6 +101,8 @@ object ShareLinkCodec {
         val expiry = pairs.firstOrNull { it.first == "expiry" }?.second
         val name = pairs.firstOrNull { it.first == "name" }?.second
         val back = pairs.firstOrNull { it.first == "back" }?.second
+        val writeBack = pairs.firstOrNull { it.first == "writeback" }?.second == "true"
+        val singleUse = pairs.firstOrNull { it.first == "single_use" }?.second == "true"
         return ShareLink(
             urls = urls,
             mode = mode,
@@ -91,6 +110,8 @@ object ShareLinkCodec {
             expiryIso = expiry,
             sourceLabel = name,
             backLink = back,
+            allowWriteBack = writeBack,
+            singleUseToken = singleUse,
         )
     }
 

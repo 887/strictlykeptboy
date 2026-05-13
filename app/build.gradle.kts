@@ -216,6 +216,9 @@ dependencies {
   implementation(libs.markwon.html)
   implementation(libs.markwon.linkify)
 
+  // Phase RR — ZXing core for QR code generation in the share sheet (Apache-2.0).
+  implementation(libs.zxing.core)
+
   // Local tests
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)

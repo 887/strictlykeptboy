@@ -5,9 +5,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -38,9 +41,13 @@ const val TestTagShareExpiryNone = "Share-Expiry-None"
 const val TestTagShareExpiry7 = "Share-Expiry-7d"
 const val TestTagShareExpiry30 = "Share-Expiry-30d"
 const val TestTagShareIncludeMirrors = "Share-IncludeMirrors"
+const val TestTagShareAllowWriteBack = "Share-AllowWriteBack"
+const val TestTagShareSingleUse = "Share-SingleUse"
 const val TestTagShareLinkField = "Share-LinkField"
 const val TestTagShareCopy = "Share-Copy"
 const val TestTagShareSend = "Share-Send"
+const val TestTagShareQrPreview = "Share-QrPreview"
+const val TestTagShareSingleUseNote = "Share-SingleUseNote"
 
 /**
  * Phase O.1 — share-this-repo bottom sheet.
@@ -77,6 +84,8 @@ internal fun ShareSheetContent(
     var mode by remember { mutableStateOf(ShareMode.ReadOnly) }
     var expiry by remember { mutableStateOf<ShareLinkGenerator.Expiry>(ShareLinkGenerator.Expiry.None) }
     var includeMirrors by remember { mutableStateOf(false) }
+    var allowWriteBack by remember { mutableStateOf(false) }
+    var singleUse by remember { mutableStateOf(false) }
 
     val link = ShareLinkGenerator.buildUri(
         repo = repo,
@@ -84,6 +93,8 @@ internal fun ShareSheetContent(
             mode = mode,
             expiry = expiry,
             includeMirrorRemotes = includeMirrors,
+            allowWriteBack = allowWriteBack,
+            singleUseToken = singleUse,
         ),
     )
 
@@ -178,6 +189,55 @@ internal fun ShareSheetContent(
                 modifier = Modifier.testTag(TestTagShareSend),
             ) { Text(stringResource(R.string.share_send)) }
         }
+
+        // Phase RR.1 — write-back toggle (sender authorises feedback writes).
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(
+                stringResource(R.string.share_allow_write_back),
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Checkbox(
+                checked = allowWriteBack,
+                onCheckedChange = { allowWriteBack = it },
+                modifier = Modifier.testTag(TestTagShareAllowWriteBack),
+            )
+        }
+        // Phase RR.5 — single-use toggle.
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(
+                stringResource(R.string.share_single_use_token),
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Checkbox(
+                checked = singleUse,
+                onCheckedChange = { singleUse = it },
+                modifier = Modifier.testTag(TestTagShareSingleUse),
+            )
+        }
+        if (singleUse) {
+            Text(
+                stringResource(R.string.share_link_copied_single_use),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.testTag(TestTagShareSingleUseNote),
+            )
+        }
+
+        // Phase RR.2 — QR preview of the link (Apache-2.0 ZXing).
+        SharedRepoQrPreview(
+            content = link,
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(TestTagShareQrPreview),
+        )
     }
 }
 

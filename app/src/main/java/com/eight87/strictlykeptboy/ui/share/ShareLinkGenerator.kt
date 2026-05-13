@@ -19,6 +19,19 @@ object ShareLinkGenerator {
         val calendarId: String? = null,
         val sourceLabel: String? = null,
         val backLink: String? = null,
+        /**
+         * Phase RR.1 — sender authorises feedback writes back to its
+         * entries. Sets [ShareLink.allowWriteBack] on the produced link
+         * which the recipient side translates into a `write_back_target`
+         * entry in its `references.toml` (per YY.8).
+         */
+        val allowWriteBack: Boolean = false,
+        /**
+         * Phase RR.5 — flag this share as single-use. The "Link copied,
+         * single-use ✓" surface in `ShareSheet` reads this flag and the
+         * sender-side token-wipe note is appended to the UI.
+         */
+        val singleUseToken: Boolean = false,
     )
 
     /** Expiry policy — sealed so callers can't smuggle invalid combinations. */
@@ -52,6 +65,8 @@ object ShareLinkGenerator {
             expiryIso = expiry,
             sourceLabel = policy.sourceLabel ?: repo.displayName,
             backLink = policy.backLink,
+            allowWriteBack = policy.allowWriteBack,
+            singleUseToken = policy.singleUseToken,
         )
     }
 

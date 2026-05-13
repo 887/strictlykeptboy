@@ -50,6 +50,10 @@ dav4jvm = "2.2.1"
 # bridged into Compose via AndroidView in `ui/components/MarkdownRenderer.kt`.
 markwon = "4.6.2"
 
+# Phase RR — QR code generation for share-link sheet.
+# ZXing core, Apache-2.0. Pure-Java QR encoder; no Android deps.
+zxing = "3.5.3"
+
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidxActivity" }
@@ -118,6 +122,9 @@ markwon-ext-strikethrough = { module = "io.noties.markwon:ext-strikethrough", ve
 markwon-ext-tables = { module = "io.noties.markwon:ext-tables", version.ref = "markwon" }
 markwon-html = { module = "io.noties.markwon:html", version.ref = "markwon" }
 markwon-linkify = { module = "io.noties.markwon:linkify", version.ref = "markwon" }
+
+# Phase RR — ZXing core (Apache-2.0). Pure-Java QR encoder.
+zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }
