@@ -62,16 +62,16 @@ Round 2.1 fixed the wiring (data layer correct, UI bindings live), but two thing
 - [ ] **2.2.B.6** Migrate existing wizard tests: `WizardModeDefaultTest` → `WizardLifestyleCardTest` (assert each card maps to expected 4-tuple). Delete `WizardPetModeDefaultTest` (subsumed). Existing `WizardAtomDtstartTest` + `WizardInvertedAtomTest` stay (different concern). `FirstLaunchRoutingTest` stays.
 - [ ] **2.2.B.7** AVD smoke: wipe data, run wizard, verify the new Lifestyle screen shows 6 cards, default = "Pet, kept by AI dom" for fresh start, picking each card auto-progresses to the next screen + final `mode.toml` / `identity.toml` match the table in D-2.2.c. Screenshots to `docs/qa/2-2-B/`.
 
-## Phase 2.2.C — Schedule UI overlays (deferred from 2.1.C)
+## Phase 2.2.C — Schedule UI overlays (deferred from 2.1.C) — shipped in commits 009c52d, 65fca27, e28b869, 238382b
 
-- [ ] **2.2.C.2** Author chip on the band itself. 16-dp avatar bubble (initials or sticker ref from `identity.toml`) in top-right of Day/Week/Agenda bands when `band.instance.author != null` AND `isForeignBand(band, defaultWriteRepoName)`. Skip on Month.
-- [ ] **2.2.C.1-paint** Per-calendar color seed actually paints. 4-dp left stripe in Day, full-fill (reduced chroma) in Week, chip background-tint in Month, dot in Year heat-map legend. (Resolver-layer pipe already in place from 2.1.C.1.)
-- [ ] **2.2.C.3-paint** Kind glyph actually paints. Hourglass for `CalendarKind.Timebox`, calendar dot for `Regular`. Pipe `kind` from band through to view renderers.
-- [ ] **2.2.C.4-paint** Superseded-band painting. `band.supersededByCalendar != null` → render with `alpha = 0.35f` + strikethrough + leaf glyph. Tap → detail sheet's "Paused by `<name>`" line (2.1.C.7 already shipped that text — just needs the visual treatment to land).
-- [ ] **2.2.C.5** Off-schedule treatment. `band.offSchedule == true` → dashed border + small warning glyph.
-- [ ] **2.2.C.6** Repo-grouped collapse. Month/Year overflow toggle re-colors chips by repo + count badge per repo in source rail.
-- [ ] **2.2.C.8** Empty-state copy correction. Three states: (a) no repos configured, (b) repos configured but every calendar inactive, (c) all calendars active but no events. Distinct CTA each.
-- [ ] **2.2.C.9** Timebox view filter. `ScheduleTimeboxView` filters to `CalendarKind.Timebox` only; regular events go to a secondary "scheduled events on top of your time blocks" section below.
+- [x] **2.2.C.2** Author chip on the band itself. 16-dp avatar bubble (initials or sticker ref from `identity.toml`) in top-right of Day/Week/Agenda bands when `band.instance.author != null` AND `isForeignBand(band, defaultWriteRepoName)`. Skip on Month.
+- [x] **2.2.C.1-paint** Per-calendar color seed actually paints. 4-dp left stripe in Day, full-fill (reduced chroma) in Week, chip background-tint in Month, dot in Year heat-map legend. (Resolver-layer pipe already in place from 2.1.C.1.)
+- [x] **2.2.C.3-paint** Kind glyph actually paints. Hourglass for `CalendarKind.Timebox`, calendar dot for `Regular`. Pipe `kind` from band through to view renderers.
+- [x] **2.2.C.4-paint** Superseded-band painting. `band.supersededByCalendar != null` → render with `alpha = 0.35f` + strikethrough + leaf glyph. Tap → detail sheet's "Paused by `<name>`" line (2.1.C.7 already shipped that text — just needs the visual treatment to land).
+- [x] **2.2.C.5** Off-schedule treatment. `band.offSchedule == true` → dashed border + small warning glyph.
+- [x] **2.2.C.6** Repo-grouped collapse. Month/Year overflow toggle re-colors chips by repo + count badge per repo in source rail. (Pref + Month re-color shipped; top-bar overflow menu wiring deferred to host — Month view accepts a `groupByRepo` param so hosts can flip it from `ScheduleViewModePrefs.groupByRepo`.)
+- [x] **2.2.C.8** Empty-state copy correction. Three states: (a) no repos configured, (b) repos configured but every calendar inactive, (c) all calendars active but no events. Distinct CTA each. (Pure selector `selectEmptyKind` + composable accepts `kind` + per-state CTAs; host wiring of repo/cal counts deferred.)
+- [x] **2.2.C.9** Timebox view filter. `ScheduleTimeboxView` filters to `CalendarKind.Timebox` only; regular events go to a secondary "scheduled events on top of your time blocks" section below.
 
 ## Phase 2.2.D — Settings completion (deferred from 2.1.E)
 
