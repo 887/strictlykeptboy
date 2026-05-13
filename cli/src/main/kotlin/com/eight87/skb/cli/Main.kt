@@ -1,9 +1,13 @@
 package com.eight87.skb.cli
 
 import com.eight87.skb.cli.commands.CalGroup
+import com.eight87.skb.cli.commands.DomGroup
 import com.eight87.skb.cli.commands.EventGroup
 import com.eight87.skb.cli.commands.HelpCommand
+import com.eight87.skb.cli.commands.IdentityGroup
+import com.eight87.skb.cli.commands.ModeGroup
 import com.eight87.skb.cli.commands.RepoGroup
+import com.eight87.skb.cli.commands.ReviewGroup
 import com.eight87.skb.cli.commands.TaskGroup
 import com.eight87.skb.cli.feedback.CommentGroup
 import com.eight87.skb.cli.feedback.ReactGroup
@@ -116,6 +120,10 @@ fun main(args: Array<String>) {
     RepoRegistryGroup(ctxOf),
     RefSetWriteBackCommand(ctxOf),
     RefGroup(ctxOf),
+    ModeGroup(ctxOf),
+    IdentityGroup(ctxOf),
+    DomGroup(ctxOf),
+    ReviewGroup(ctxOf),
     HelpCommand(ctxOf),
   )
 
