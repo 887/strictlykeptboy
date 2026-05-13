@@ -433,7 +433,7 @@ Deep-dive: [`sync-engine.md`](sync-engine.md) extension phases SE-Q+, [`notifica
 
 Y.1..Y.7 (the autonomous-subagent slice covering `PULL_ONLY` (Y.4),
 `TWO_WAY`/`BIDI` (Y.5+Y.6), and shared conflict resolution (Y.7))
-shipped in commit `<pending>`. Y.5 `PUSH_ONLY`-only mode is folded into
+shipped in commit `f129058`. Y.5 `PUSH_ONLY`-only mode is folded into
 the BIDI codepath (push side runs alone when `mode == PUSH_ONLY`);
 Y.8..Y.12 (CLI subcommands, per-mirror interval UI, RFC6578
 sync-token, mirror-source attribution chip, AGENTS.md note) remain
