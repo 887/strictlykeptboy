@@ -163,12 +163,12 @@ Wires the indexer to `AppGraph.snapshot` + `AppGraph.sources`. Without this, eve
 - [ ] **2.1.I.6** Tag inverted-default atoms (`brush-teeth`, `meds-am`/`pm`, `shower`, `feed-am`/`pm`) with `inverted = true` in emitted `RecurrenceRule` per Phase XX inversion model.
 - [ ] **2.1.I.7** `activeRepoName` default `"demo-repo"` → `""`; shell renders empty top-bar instead of stale label.
 
-## Phase 2.1.J — Identity write-back
+## Phase 2.1.J — Identity write-back — shipped in commits `ae40605` (J.2), `7ff1130` (J.1+J.4), `5ae05db` (J.3)
 
-- [ ] **2.1.J.1** `IdentityPrefs` becomes thin cache over active repo's `identity.toml`. `IdentityPrefs.update` becomes async — debounces write through `IdentityTomlCodec.write` to `<activeRepo.rootDir>/identity.toml`, then `GitRepoRegistry.get(repoId).commitAll("identity: update")`. UI keeps instant feedback. Active-repo switch reloads from disk.
-- [ ] **2.1.J.2** Add missing `IdentityTomlData` fields for wizard-driven keys (`alignment`, `lifestyle`, `praise.alt_terms`) so the wizard's text-concat appendix at `WizardScaffolder.kt:200-216` becomes a clean codec-driven write. Same byte format on disk.
-- [ ] **2.1.J.3** (Implements 2.1.F.5 prerequisite.) `NotificationPrefs.bodyFor` + `BriefingRenderer` consume `IdentityTomlCodec.readOrDefault(activeRepoRoot)`.
-- [ ] **2.1.J.4** Strictly-kept review-feed hook: identity edit commit in strictly-kept mode fires `ReviewFeedWriter.writeReviewableChange` with `IdentityEdit` family path.
+- [x] **2.1.J.1** `IdentityPrefs` becomes thin cache over active repo's `identity.toml`. `IdentityPrefs.update` becomes async — debounces write through `IdentityTomlCodec.write` to `<activeRepo.rootDir>/identity.toml`, then `GitRepoRegistry.get(repoId).commitAll("identity: update")`. UI keeps instant feedback. Active-repo switch reloads from disk.
+- [x] **2.1.J.2** Add missing `IdentityTomlData` fields for wizard-driven keys (`alignment`, `lifestyle`, `praise.alt_terms`) so the wizard's text-concat appendix at `WizardScaffolder.kt:200-216` becomes a clean codec-driven write. Same byte format on disk. Back-compat readers added for legacy `[honorific]` / `[emoji]` / `[praise.alternates]` shapes.
+- [x] **2.1.J.3** (Implements 2.1.F.5 prerequisite.) `IdentityNotifBody.bodyFor` consumes `IdentityTomlCodec.readOrDefault(activeRepoRoot)`; `ReminderBroadcastReceiver` wired register-aware with `private = true` collapse to generic copy. `briefingSalutation()` API ready for 2.1.F.6 wiring.
+- [x] **2.1.J.4** Strictly-kept review-feed hook: identity edit commit in strictly-kept mode fires `ReviewFeedWriter.writeReviewableChange` with `IdentityEdit` family path. `AppGraph.bindIdentityToActiveRepo(repoId)` is the composition-root entry point.
 
 ## Phase 2.1.K — Mode + dom-persona
 

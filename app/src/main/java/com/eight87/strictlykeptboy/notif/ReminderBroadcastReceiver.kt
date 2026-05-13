@@ -75,10 +75,20 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
             )
         }
 
+        // Phase 2.1.J.3 / DDD.11 — register-aware body. `private = true`
+        // collapses to the generic role-pre line so praise/honorific can
+        // never leak onto a lockscreen preview.
+        val identity = if (priv) null else IdentityNotifBody.loadFor(context, repoId)
+        val identityBody = IdentityNotifBody.bodyFor(
+            identity = identity,
+            title = title,
+            privateEvent = priv,
+        )
+        val contentText = identityBody.ifBlank { context.getString(R.string.notif_event_role_pre) }
         val notif = NotificationCompat.Builder(context, NotificationChannels.EVENTS)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(displayTitle)
-            .setContentText(context.getString(R.string.notif_event_role_pre))
+            .setContentText(contentText)
             .setContentIntent(openPi)
             .setAutoCancel(true)
             .apply { if (priv) setPublicVersion(publicVersion) }
