@@ -33,10 +33,12 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.resolver.DayBand
 import com.eight87.strictlykeptboy.resolver.RenderedSchedule
+import com.eight87.strictlykeptboy.ui.share.isForeignBand
 import kotlinx.coroutines.delay
 import java.time.LocalDate
 import java.time.LocalTime
@@ -66,6 +68,8 @@ fun ScheduleWeekView(
     onBandTap: (DayBand) -> Unit = {},
     onSwipeWeek: (Int) -> Unit = {},
     today: LocalDate = LocalDate.now(),
+    /** Round 2.2.C.2 — default-write repo for `isForeignBand`. Empty = chip suppressed. */
+    defaultWriteRepoId: String = "",
 ) {
     val days = (0..6).map { weekStart.plusDays(it.toLong()) }
     val bandsByDate: Map<LocalDate, List<DayBand>> =
@@ -138,6 +142,7 @@ fun ScheduleWeekView(
                         bands = bandsByDate[d].orEmpty(),
                         isToday = d == today,
                         onBandTap = onBandTap,
+                        defaultWriteRepoId = defaultWriteRepoId,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
                     )
                 }
@@ -167,6 +172,7 @@ private fun DayColumn(
     bands: List<DayBand>,
     isToday: Boolean,
     onBandTap: (DayBand) -> Unit,
+    defaultWriteRepoId: String,
     modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(
@@ -196,24 +202,75 @@ private fun DayColumn(
             val topDp = HourHeight * minutesFromMidnight(start) / 60f
             val heightDp = HourHeight * durationMinutes(start, end).coerceAtLeast(15f) / 60f
 
-            Surface(
-                onClick = { onBandTap(band) },
-                color = MaterialTheme.colorScheme.surfaceContainer,
-                shape = RoundedCornerShape(8.dp),
+            val isSuperseded = band.supersededByCalendar != null
+            val isOffSchedule = band.offSchedule
+            val seedColor = colorForSeed(band.accentColorSeed)
+            // Week view uses chroma-reduced full fill per spec.
+            val fillColor = if (seedColor == Color.Unspecified) {
+                MaterialTheme.colorScheme.surfaceContainer
+            } else {
+                seedColor.copy(alpha = 0.6f)
+            }
+            val effectiveFill = if (isSuperseded) fillColor.copy(alpha = fillColor.alpha * 0.35f) else fillColor
+            val authorId = band.instance.author?.id
+            val showAuthorChip = authorId != null &&
+                isForeignBand(band.instance.repo.id, defaultWriteRepoId)
+
+            Box(
                 modifier = Modifier
                     .offset(x = laneOffsetX, y = topDp)
                     .width((laneWidth - 2.dp).coerceAtLeast(8.dp))
                     .height(heightDp)
-                    .padding(1.dp)
-                    .testTag("$TestTagWeekBand-${band.instance.instanceId}"),
+                    .padding(1.dp),
             ) {
-                Text(
-                    text = band.instance.title,
-                    style = MaterialTheme.typography.labelSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-                )
+                Surface(
+                    onClick = { onBandTap(band) },
+                    color = effectiveFill,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .testTag("$TestTagWeekBand-${band.instance.instanceId}"),
+                ) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                        ) {
+                            BandKindGlyph(kind = band.kind)
+                            if (isSuperseded) {
+                                androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(2.dp))
+                                BandSupersededGlyph()
+                            }
+                            if (isOffSchedule) {
+                                androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(2.dp))
+                                BandOffScheduleGlyph()
+                            }
+                            androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(3.dp))
+                            Text(
+                                text = band.instance.title,
+                                style = MaterialTheme.typography.labelSmall,
+                                textDecoration = if (isSuperseded) TextDecoration.LineThrough else null,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                        if (showAuthorChip) {
+                            BandAuthorChip(
+                                authorId = authorId!!,
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(2.dp),
+                            )
+                        }
+                    }
+                }
+                if (isOffSchedule) {
+                    BandDashedBorder(
+                        color = MaterialTheme.colorScheme.error,
+                        cornerRadiusDp = 8.dp,
+                    )
+                }
             }
         }
 

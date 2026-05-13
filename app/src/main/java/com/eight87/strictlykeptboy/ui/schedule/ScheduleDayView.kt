@@ -32,10 +32,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.resolver.DayBand
 import com.eight87.strictlykeptboy.resolver.RenderedSchedule
+import com.eight87.strictlykeptboy.ui.share.isForeignBand
 import kotlinx.coroutines.delay
 import java.time.LocalDate
 import java.time.LocalTime
@@ -60,6 +62,8 @@ fun ScheduleDayView(
     isToday: Boolean = date == LocalDate.now(),
     /** Phase CCC.10 / HV-G.3 — opens the trip wizard from the empty-state CTA. */
     onPlanTrip: (() -> Unit)? = null,
+    /** Round 2.2.C.2 — default-write repo for `isForeignBand`. Empty = chip suppressed. */
+    defaultWriteRepoId: String = "",
 ) {
     val day = schedule?.days?.firstOrNull { it.date == date }
     val bands = day?.bands.orEmpty()
@@ -82,7 +86,7 @@ fun ScheduleDayView(
         HourGutter()
         Box(modifier = Modifier.fillMaxWidth().height(HourHeight * 24)) {
             HourLines(onTapHour = { hr -> onAddAt(LocalTime.of(hr, 0)) })
-            BandsLayer(bands = bands, onBandTap = onBandTap)
+            BandsLayer(bands = bands, onBandTap = onBandTap, defaultWriteRepoId = defaultWriteRepoId)
             if (isToday) NowLine()
         }
     }
@@ -122,7 +126,11 @@ private fun HourLines(onTapHour: (Int) -> Unit) {
 }
 
 @Composable
-private fun BandsLayer(bands: List<DayBand>, onBandTap: (DayBand) -> Unit) {
+private fun BandsLayer(
+    bands: List<DayBand>,
+    onBandTap: (DayBand) -> Unit,
+    defaultWriteRepoId: String,
+) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val widthPx = maxWidth
         bands.forEach { band ->
@@ -134,31 +142,79 @@ private fun BandsLayer(bands: List<DayBand>, onBandTap: (DayBand) -> Unit) {
             val topDp = HourHeight * minutesFromMidnight(start) / 60f
             val heightDp = HourHeight * durationMinutes(start, end).coerceAtLeast(15f) / 60f
 
-            Surface(
-                onClick = { onBandTap(band) },
-                color = MaterialTheme.colorScheme.surfaceContainer,
-                shape = RoundedCornerShape(12.dp),
+            val isSuperseded = band.supersededByCalendar != null
+            val isOffSchedule = band.offSchedule
+            val bandAlpha = if (isSuperseded) 0.35f else 1f
+            val authorId = band.instance.author?.id
+            val showAuthorChip = authorId != null &&
+                isForeignBand(band.instance.repo.id, defaultWriteRepoId)
+
+            Box(
                 modifier = Modifier
                     .offset(x = laneOffsetX, y = topDp)
                     .width(laneWidth - 4.dp)
                     .height(heightDp)
-                    .padding(2.dp)
-                    .testTag("$TestTagDayBand-${band.instance.instanceId}"),
+                    .padding(2.dp),
             ) {
-                Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
-                    Text(
-                        text = band.instance.title,
-                        style = MaterialTheme.typography.titleSmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = "%02d:%02d–%02d:%02d".format(
-                            start.hour, start.minute, end.hour, end.minute,
-                        ),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                Surface(
+                    onClick = { onBandTap(band) },
+                    color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = bandAlpha),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .testTag("$TestTagDayBand-${band.instance.instanceId}"),
+                ) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        // 4-dp left color stripe (2.2.C.1-paint)
+                        BandLeftStripe(seed = band.accentColorSeed)
+
+                        Column(modifier = Modifier.padding(start = 10.dp, end = 8.dp, top = 4.dp, bottom = 4.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                // Kind glyph (2.2.C.3-paint)
+                                BandKindGlyph(kind = band.kind)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                // Superseded leaf glyph (2.2.C.4-paint)
+                                if (isSuperseded) {
+                                    BandSupersededGlyph()
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                }
+                                // Off-schedule warning glyph (2.2.C.5)
+                                if (isOffSchedule) {
+                                    BandOffScheduleGlyph()
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                }
+                                Text(
+                                    text = band.instance.title,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    textDecoration = if (isSuperseded) TextDecoration.LineThrough else null,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                            Text(
+                                text = "%02d:%02d–%02d:%02d".format(
+                                    start.hour, start.minute, end.hour, end.minute,
+                                ),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+
+                        // Author chip — top-right (2.2.C.2)
+                        if (showAuthorChip) {
+                            BandAuthorChip(
+                                authorId = authorId!!,
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(4.dp),
+                            )
+                        }
+                    }
+                }
+                // Dashed border for off-schedule bands (2.2.C.5)
+                if (isOffSchedule) {
+                    BandDashedBorder(color = MaterialTheme.colorScheme.error)
                 }
             }
         }
