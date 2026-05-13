@@ -53,6 +53,7 @@ internal object Factories {
         priorityOverride: Int? = null,
         repo: String = "r1",
         busy: Boolean = true,
+        author: PersonRef? = null,
     ) = EventInput(
         ref = EventRef(id),
         calendar = CalendarRef(cal),
@@ -62,6 +63,7 @@ internal object Factories {
         end = zdt(end, tz),
         priorityOverride = priorityOverride,
         isBusy = busy,
+        author = author,
     )
 
     fun rule(
