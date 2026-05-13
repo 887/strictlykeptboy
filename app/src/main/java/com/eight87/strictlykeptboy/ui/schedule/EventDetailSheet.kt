@@ -66,6 +66,13 @@ const val TestTagEventDetailEdit = "EventDetailEdit"
 /** Phase 2.1.F.2 — per-event mute toggle. */
 const val TestTagEventDetailMute = "EventDetailMute"
 
+// 2.1.C.7 — source-section test tags
+const val TestTagEventDetailSource = "EventDetailSource"
+const val TestTagEventDetailSourceRepo = "EventDetailSourceRepo"
+const val TestTagEventDetailSourceKind = "EventDetailSourceKind"
+const val TestTagEventDetailSourceAuthor = "EventDetailSourceAuthor"
+const val TestTagEventDetailSupersededNote = "EventDetailSupersededNote"
+
 /**
  * Phase G.7 — modal bottom sheet that surfaces an event's full content.
  *
@@ -112,6 +119,8 @@ fun EventDetailContent(
     onEdit: () -> Unit = {},
     attachments: List<AttachmentRef> = emptyList(),
     calendarName: String? = null,
+    repoName: String? = null,
+    supersededByName: String? = null,
     notificationPrefs: NotificationPrefs? = null,
     modifier: Modifier = Modifier,
 ) {
