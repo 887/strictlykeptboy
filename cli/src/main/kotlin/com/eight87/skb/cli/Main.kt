@@ -17,6 +17,7 @@ import com.eight87.skb.cli.template.TemplateGroup
 import com.eight87.skb.cli.override.OverrideGroup
 import com.eight87.skb.cli.attachment.AttachGroup
 import com.eight87.skb.cli.reminder.ReminderGroup
+import com.eight87.skb.cli.ref.RefGroup
 import com.eight87.skb.cli.core.CliContext
 import com.eight87.skb.cli.core.CliError
 import com.eight87.skb.cli.core.ExitCode
@@ -114,6 +115,7 @@ fun main(args: Array<String>) {
     RepoFingerprintCommand(ctxOf),
     RepoRegistryGroup(ctxOf),
     RefSetWriteBackCommand(ctxOf),
+    RefGroup(ctxOf),
     HelpCommand(ctxOf),
   )
 

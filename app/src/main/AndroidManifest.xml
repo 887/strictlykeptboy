@@ -34,6 +34,27 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="strictlykeptboy" android:host="share" />
             </intent-filter>
+
+            <!-- Phase MM.1 — per-entity custom-scheme deep links. -->
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="strictlykeptboy" android:host="event" />
+                <data android:scheme="strictlykeptboy" android:host="task" />
+                <data android:scheme="strictlykeptboy" android:host="repo" />
+                <data android:scheme="strictlykeptboy" android:host="bonus" />
+                <data android:scheme="strictlykeptboy" android:host="review" />
+            </intent-filter>
+
+            <!-- Phase MM.3 — universal-link variant for SMS/email-friendly delivery. -->
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="strictlykeptboy.app" android:pathPrefix="/link/" />
+                <data android:scheme="http" android:host="strictlykeptboy.app" android:pathPrefix="/link/" />
+            </intent-filter>
         </activity>
 
         <service
