@@ -115,9 +115,9 @@ class AppGraph(private val appContext: Context) {
     /** Phase WW.2 — composite store: user packs first, then bundled defaults. */
     val packStore: CompositePackStore by lazy {
         CompositePackStore(
-            sources = listOf(
-                userPackLoader.loadAll(),
-                assetPackLoader.loadAll(),
+            sourceFactories = listOf(
+                { userPackLoader.loadAll() },
+                { assetPackLoader.loadAll() },
             ),
         )
     }
