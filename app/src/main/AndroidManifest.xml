@@ -65,6 +65,11 @@
         <receiver
             android:name=".notif.AtomicEventReceiver"
             android:exported="false" />
+
+        <!-- Phase XX.9 / AT-I — sub-beat boundary alarms. -->
+        <receiver
+            android:name=".notif.SubbeatBoundaryReceiver"
+            android:exported="false" />
     </application>
 
 </manifest>

@@ -5,6 +5,8 @@ import com.eight87.skb.cli.commands.EventGroup
 import com.eight87.skb.cli.commands.HelpCommand
 import com.eight87.skb.cli.commands.RepoGroup
 import com.eight87.skb.cli.commands.TaskGroup
+import com.eight87.skb.cli.routine.RoutineGroup
+import com.eight87.skb.cli.routine.StreakCommand
 import com.eight87.skb.cli.core.CliContext
 import com.eight87.skb.cli.core.CliError
 import com.eight87.skb.cli.core.ExitCode
@@ -90,6 +92,8 @@ fun main(args: Array<String>) {
     TaskGroup(ctxOf),
     CalGroup(ctxOf),
     RepoGroup(ctxOf),
+    RoutineGroup(ctxOf),
+    StreakCommand(ctxOf),
     HelpCommand(ctxOf),
   )
 

@@ -91,6 +91,14 @@ data class Event(
     val priorityOverride: Int? = null,
     val externalUid: String? = null,
     val private: Boolean = false,
+    /** Phase XX.8 / AT-H.3 audit: routine id this event was materialized from. */
+    val materializedFrom: String? = null,
+    /** Phase XX.8 / AT-H.3 audit: source routine-calendar template event id. */
+    val materializedSourceEvent: String? = null,
+    /** Phase XX.8 / AT-H.3 audit: ISO timestamp of materialization (shared across the batch — undo-group key). */
+    val materializedAt: String? = null,
+    /** Phase XX.9 / AT-I.1 inline `[[subbeat]]` array preserved verbatim across materialization. */
+    val subbeats: List<AtomicTemplateSubbeat> = emptyList(),
     val body: String = "",
 ) : TypedEntity {
     override val schemaVersion: Int get() = header.schemaVersion
@@ -115,6 +123,24 @@ data class Event(
         t.putInt("priority_override", priorityOverride)
         t.putString("external_uid", externalUid)
         if (private) t.putBool("private", true)
+        // Phase XX.8 / AT-H.3 — additive audit fields. Resolver ignores
+        // them; they exist for `skb routine undo <materialized-at>` and
+        // for surfacing "where did this event come from?" in the UI.
+        materializedFrom?.let { t.putString("materialized_from", it) }
+        materializedSourceEvent?.let { t.putString("materialized_source_event", it) }
+        materializedAt?.let { t.putString("materialized_at", it) }
+        // Phase XX.9 / AT-I.1 — inline sub-beat array. Stored as an
+        // array-of-tables under the key `subbeat` (matches DM-M /
+        // template format; the TOML codec emits `[[subbeat]]`).
+        if (subbeats.isNotEmpty()) {
+            t.aotables["subbeat"] = subbeats.map { sb ->
+                TomlTable().apply {
+                    putString("label", sb.label)
+                    putInt("duration_seconds", sb.durationSeconds)
+                    sb.stickerId?.let { putString("sticker_id", it) }
+                }
+            }.toMutableList()
+        }
         return FrontmatterDoc(t, body)
     }
 
@@ -137,6 +163,16 @@ data class Event(
                 priorityOverride = t.getInt("priority_override"),
                 externalUid = t.getString("external_uid"),
                 private = t.getBool("private") ?: false,
+                materializedFrom = t.getString("materialized_from"),
+                materializedSourceEvent = t.getString("materialized_source_event"),
+                materializedAt = t.getString("materialized_at"),
+                subbeats = t.aotables["subbeat"]?.map { sb ->
+                    AtomicTemplateSubbeat(
+                        label = sb.getString("label") ?: error("subbeat missing label"),
+                        durationSeconds = sb.getInt("duration_seconds") ?: error("subbeat missing duration_seconds"),
+                        stickerId = sb.getString("sticker_id"),
+                    )
+                } ?: emptyList(),
                 body = doc.body,
             )
         }

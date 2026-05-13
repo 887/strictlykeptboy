@@ -35,6 +35,7 @@ object DeviationActionWriter {
         eventId: String,
         kind: String,
         targetRoot: File = defaultRepoRoot(context, repoId),
+        subbeatsCompleted: List<String> = emptyList(),
         onComplete: () -> Unit = {},
     ) {
         scope.launch {
@@ -53,6 +54,7 @@ object DeviationActionWriter {
                     devKind = kind,
                     at = now,
                     note = null,
+                    subbeatsCompleted = subbeatsCompleted,
                 )
                 EntityWriter.write(targetRoot, deviation)
             }
