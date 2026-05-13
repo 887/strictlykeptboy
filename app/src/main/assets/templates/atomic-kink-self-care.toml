@@ -1,0 +1,90 @@
+# Phase XX.5 / AT-E — atomic kink self-care template (LOCKED content
+# per draft-atomic-activities.md). `neutral_safe = false` so the
+# wizard (Agent 5) filters this template out when neutral mode is on.
+# Every entry carries `tags = ["kink"]`; per-entry sticker IDs and
+# titles are user-renameable downstream — lockscreen notifications
+# surface only the user-authored title (K-2 + AT-C.2).
+
+schema_version = 1
+template_id = "atomic-kink-self-care"
+display_name = "Atomic kink self-care"
+category = "self-care"
+neutral_safe = false
+
+[[entry]]
+id = "cage-check"
+title = "Cage check"
+duration_minutes = 2
+sticker_id = "cage"
+default_cadence = "configurable"
+default_times = ["08:00", "14:00", "22:00"]
+tags = ["kink"]
+
+[[entry]]
+id = "plug-check"
+title = "Plug check"
+duration_minutes = 5
+sticker_id = "plug"
+default_cadence = "configurable"
+default_times = ["09:00", "21:00"]
+tags = ["kink"]
+
+[[entry]]
+id = "posture-check"
+title = "Posture check"
+duration_minutes = 1
+sticker_id = "posture"
+default_cadence = "hourly-waking"
+tags = ["kink"]
+
+[[entry]]
+id = "collar-check"
+title = "Collar check"
+duration_minutes = 2
+sticker_id = "collar"
+default_cadence = "daily"
+default_times = ["08:00"]
+tags = ["kink"]
+
+[[entry]]
+id = "edge-and-stop"
+title = "Edge and stop"
+duration_minutes = 10
+sticker_id = "edge"
+default_cadence = "configurable"
+default_times = ["22:30"]
+tags = ["kink"]
+
+[[entry]]
+id = "kegels"
+title = "Kegels"
+duration_minutes = 5
+sticker_id = "kegel"
+default_cadence = "daily"
+default_times = ["07:30"]
+tags = ["kink"]
+[[entry.subbeat]]
+label = "Slow squeezes (10 reps)"
+duration_seconds = 90
+[[entry.subbeat]]
+label = "Fast pulses (20 reps)"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "Hold (30s x 3)"
+duration_seconds = 150
+
+[[entry]]
+id = "pubes-grooming"
+title = "Pubes grooming"
+duration_minutes = 10
+sticker_id = "trim"
+default_cadence = "every-14-days"
+tags = ["kink"]
+
+[[entry]]
+id = "body-grooming"
+title = "Body grooming"
+duration_minutes = 15
+sticker_id = "trim"
+default_cadence = "weekly"
+tags = ["kink"]

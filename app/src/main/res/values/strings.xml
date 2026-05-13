@@ -465,6 +465,14 @@
     <string name="notif_channel_events_atomic_desc">Start + end nudges for atomic activities (brush teeth, posture, etc.).</string>
     <string name="notif_action_i_did_it">I did it</string>
 
+    <!-- Phase XX.9 / AT-I — sub-beat boundary buzz -->
+    <string name="notif_action_skip_ahead">Skip ahead</string>
+    <string name="notif_subbeat_index_body">%1$d/%2$d</string>
+
+    <!-- Phase XX.10 / AT-J — streak counter -->
+    <string name="settings_notif_show_streak_title">Show streak counts</string>
+    <string name="settings_notif_show_streak_desc">Tiny number badge on event tiles. Off hides every streak globally.</string>
+
     <!-- Phase M.4 — sync result notifications -->
     <string name="notif_sync_success">Synced %1$d repos · %2$s</string>
     <string name="notif_sync_conflict_title">Sync conflict</string>

@@ -97,6 +97,16 @@ class NotificationPrefs internal constructor(private val prefs: SharedPreference
         _state.value = loadAll()
     }
 
+    // --- Phase XX.10 / AT-J.4 — global streak-count visibility toggle --------
+
+    /** Default ON per AT-J.4. */
+    fun isStreakCountsEnabled(): Boolean = prefs.getBoolean(KEY_STREAK_COUNTS, true)
+
+    fun setStreakCountsEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_STREAK_COUNTS, enabled).apply()
+        _state.value = loadAll()
+    }
+
     private fun channelKey(channelId: String, suffix: String) = "channel.$channelId.$suffix"
     private fun calKey(repoId: String, calendarId: String, suffix: String) =
         "cal.$repoId.$calendarId.$suffix"
@@ -107,6 +117,7 @@ class NotificationPrefs internal constructor(private val prefs: SharedPreference
     companion object {
         private const val PREFS_FILE = "notification_prefs_v1"
         private const val KEY_BRIEFINGS_MASTER = "briefings.master.enabled"
+        private const val KEY_STREAK_COUNTS = "streak.counts.enabled"
 
         fun open(context: Context): NotificationPrefs {
             val prefs = context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE)
