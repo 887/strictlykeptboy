@@ -2,6 +2,17 @@
 
 ## Status: ✅ Round 1 COMPLETE — Phases A–W shipped. Round 2+ tracked below.
 
+## Round 2.1 — make it actually make sense (PENDING — 2026-05-13)
+
+Audit found a consistent pattern across every surface: **data layer correct, UI bindings missing or wrong.** The genesis intent — multi-repo overlay, calendars-first, time-window scoping, cross-repo authorship, identity-driven copy — exists in code but does not reach the screen. `AppGraph.snapshot` is an empty `MutableStateFlow`; production schedule shows empty data. UI surfaces repos, not calendars. Identity/Mode prefs never write back to `identity.toml`/`mode.toml`. First-launch lands on an empty Schedule with `demo-repo` placeholder instead of the wizard.
+
+**88 sub-steps across 12 phases** (2.1.A DataBridge prereq → 2.1.B Multirepo → 2.1.C Schedule → 2.1.D Tasks → 2.1.E Settings → 2.1.F Notif → 2.1.G Auto → 2.1.H Tablet → 2.1.I First-run/Wizard → 2.1.J Identity write-back → 2.1.K Mode/dom-persona → 2.1.L Polish).
+
+Round 2.1 must land BEFORE the Round 3 close-out bucket below — fixing intent gaps takes priority over closing already-mostly-done phases.
+
+→ Full plan: [`round-2-1.md`](round-2-1.md)
+→ Source audits: [`audit-2-1-settings.md`](audit-2-1-settings.md) · [`audit-2-1-schedule-tasks.md`](audit-2-1-schedule-tasks.md) · [`audit-2-1-multirepo.md`](audit-2-1-multirepo.md) · [`audit-2-1-notif-auto-tablet.md`](audit-2-1-notif-auto-tablet.md) · [`audit-2-1-wizard-identity-mode.md`](audit-2-1-wizard-identity-mode.md)
+
 ## Round 2 closeout summary (audit 2026-05-13)
 
 **Sub-step counts (post-cleanup sweep):**
