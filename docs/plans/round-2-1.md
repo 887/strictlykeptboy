@@ -107,7 +107,7 @@ Wires the indexer to `AppGraph.snapshot` + `AppGraph.sources`. Without this, eve
 - [ ] **2.1.D.8** Reciprocal "spawned-from-event" tasks. `SourcesPublisher` (2.1.A.2) projects recurring chore events into `TaskItem(source = TaskSource.FromEvents)` so they land in `forToday`. Today the enum value exists but no producer writes it.
 - [ ] **2.1.D.9** Per-list view shows active-window / active-hours summary at top, plus "this list is currently inactive" banner when evaluator says so.
 
-## Phase 2.1.E — Settings restructure — partial; E.3/E.4/E.5/E.9/E.10/E.11/E.12 shipped (see commit hash below)
+## Phase 2.1.E — Settings restructure — partial; E.3/E.4/E.5/E.9/E.10/E.11/E.12 shipped in commit `699f13f`
 
 **Status:** the chrome-light subset shipped in this branch. E.2 (Repos in-pane + ImportExport sub-card) is deferred because the trampoline kill requires re-routing master-detail navigation through `RepoSettingsScreen` (477 LOC) — non-trivial wiring that warrants its own commit pass. E.6 (Access category) is deferred pending a `ShareLink` aggregator across repos. E.7 (Auto & Tablet) is deferred — new `AutoTabletPrefs` class + AppGraph wiring is its own atomic change. E.8 (defaults-for-new-events ChipGroup) is deferred — needs a re-read of `NotificationsCategory` lead-time array and a new dialog. E.13 (trip-summary card) is deferred pending a Phase CCC trip resolver hookup. E.1 is owned by 2.1.B as flagged in the brief.
 
