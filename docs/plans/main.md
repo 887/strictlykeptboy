@@ -222,10 +222,10 @@ Deep-dive: [`draft-lifestyle-wizard.md`](draft-lifestyle-wizard.md) phases LW-A 
 
 **RETIRED** — superseded by Phase K (lifestyle wizard); demo content concept retired in favor of materialized starting state per D.54. See [`draft-lifestyle-wizard.md`](draft-lifestyle-wizard.md). The wizard's scaffold output IS the user's canonical first-run data, not seed/sample/demo data. `demo-sub` / `demo-dom` repo seeds are not shipped.
 
-- [ ] ~~**L.1** `demo-sub` repo seed — full SFW-kinky-coded sub schedule + tasks~~
-- [ ] ~~**L.2** `demo-dom` repo seed — Dom's calendar with check-in events that overlay~~
-- [ ] ~~**L.3** Demo mode flag: spins up local clones (no remote push) with both repos preloaded~~
-- [ ] ~~**L.4** "Exit demo mode" path: option to keep demo data as a real local repo or discard~~
+- [~] ~~**L.1** `demo-sub` repo seed — full SFW-kinky-coded sub schedule + tasks~~
+- [~] ~~**L.2** `demo-dom` repo seed — Dom's calendar with check-in events that overlay~~
+- [~] ~~**L.3** Demo mode flag: spins up local clones (no remote push) with both repos preloaded~~
+- [~] ~~**L.4** "Exit demo mode" path: option to keep demo data as a real local repo or discard~~
 
 ---
 
@@ -396,13 +396,13 @@ Cross-references for Round 2:
 
 Every Round 2+ phase (X onwards) ships with the SOLID self-check baked in. Before any subagent ticks a phase's last sub-step, it MUST run this checklist against the diff and report results in the completion message. This is enforced by the dispatching contract (`CLAUDE.md` § Subagent dispatching) and the standing audit at [`refactor-solid.md`](refactor-solid.md).
 
-- [ ] **SOLID.S** Single Responsibility — every new / modified file has one reason to change. Files past 500 LOC flagged in the report; past 800 LOC split before declaring done unless explicitly justified.
-- [ ] **SOLID.O** Open/Closed — branching done via sealed types + exhaustive `when`, not `enum + when-chain` growing across consumers. New variant = new file, not edit-5-sites.
-- [ ] **SOLID.L** Liskov — no `NotImplementedError` / deferred-bind in production paths; sealed-variant contracts honoured totally.
-- [ ] **SOLID.I** Interface Segregation — composables / ViewModels take the narrowest interface that satisfies the need (e.g. `DayEventSource` one-method, not the whole `CacheDatabase`).
-- [ ] **SOLID.D** Dependency Inversion — concrete classes (Room DAOs, JGit wrappers, OkHttp clients, EncryptedSharedPreferences) live behind interfaces; composition root (`MainActivity` → future `AppGraph`) is the only wiring site.
-- [ ] **SOLID.AVD** AVD smoke — UI-affecting phases run the canonical install + screencap loop per `CLAUDE.md` § Test loop. Unit-tests alone are insufficient evidence for UI work.
-- [ ] **SOLID.LOC** Report LOC of every new file > 200 LOC in the phase completion message. Append to the `refactor-solid.md` audit table when relevant.
+- **SOLID.S** Single Responsibility — every new / modified file has one reason to change. Files past 500 LOC flagged in the report; past 800 LOC split before declaring done unless explicitly justified.
+- **SOLID.O** Open/Closed — branching done via sealed types + exhaustive `when`, not `enum + when-chain` growing across consumers. New variant = new file, not edit-5-sites.
+- **SOLID.L** Liskov — no `NotImplementedError` / deferred-bind in production paths; sealed-variant contracts honoured totally.
+- **SOLID.I** Interface Segregation — composables / ViewModels take the narrowest interface that satisfies the need (e.g. `DayEventSource` one-method, not the whole `CacheDatabase`).
+- **SOLID.D** Dependency Inversion — concrete classes (Room DAOs, JGit wrappers, OkHttp clients, EncryptedSharedPreferences) live behind interfaces; composition root (`MainActivity` → future `AppGraph`) is the only wiring site.
+- **SOLID.AVD** AVD smoke — UI-affecting phases run the canonical install + screencap loop per `CLAUDE.md` § Test loop. Unit-tests alone are insufficient evidence for UI work.
+- **SOLID.LOC** Report LOC of every new file > 200 LOC in the phase completion message. Append to the `refactor-solid.md` audit table when relevant.
 
 Findings that don't block the current phase but warrant follow-up land in [`refactor-solid.md`](refactor-solid.md) as new F-numbered entries.
 
