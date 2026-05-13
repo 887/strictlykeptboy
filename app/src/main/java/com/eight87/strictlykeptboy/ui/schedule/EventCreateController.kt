@@ -100,10 +100,18 @@ class EventCreateController(
 
     fun openSheet(defaultStart: OffsetDateTime = OffsetDateTime.now().plusMinutes(15)) {
         val cals = calendarOptionsProvider()
+        // Round 2.1.B.10 — prefer last-used calendar for the active repo
+        // over the legacy `RepoConfig.defaultCalendarId` hard binding.
+        val activeRepoId = activeRepoProvider()?.repoId
+        val lastUsed = activeRepoId?.let { prefs.lastUsedCalendar(it) }
+        val initialCalendarId = lastUsed
+            ?.takeIf { id -> cals.any { it.id == id } }
+            ?: cals.firstOrNull()?.id
+            ?: ""
         val draft = EventDraft(
             start = defaultStart,
             end = defaultStart.plusMinutes(30),
-            calendarId = cals.firstOrNull()?.id ?: "",
+            calendarId = initialCalendarId,
         )
         if (shippedTemplates.isEmpty()) loadShippedTemplates()
         _state.value = EventCreateSheetState(
@@ -246,7 +254,11 @@ class EventCreateController(
         val event = TemplateMaterializer.materialize(
             template = tpl,
             start = start,
-            calendarId = s.draft.calendarId.ifBlank { cfg.defaultCalendarId.orEmpty() },
+            calendarId = s.draft.calendarId.ifBlank {
+                // Round 2.1.B.10 — prefer last-used over the deprecated
+                // RepoConfig.defaultCalendarId binding.
+                prefs.lastUsedCalendar(cfg.repoId) ?: cfg.defaultCalendarId.orEmpty()
+            },
             author = author,
         )
         writeEvent(cfg, event, commitMessage = "add event from template \"${tpl.templateId}\"")
@@ -261,6 +273,11 @@ class EventCreateController(
                 val repo = openRepo(cfg)
                 repo?.commitAll(commitMessage)
                 _lastWritten.value = UndoPayload(event = event, repoId = cfg.repoId)
+                // Round 2.1.B.10 — record last-used calendar for this
+                // repo so the next openSheet() preselects it.
+                if (event.calendarId.isNotBlank()) {
+                    prefs.setLastUsedCalendar(cfg.repoId, event.calendarId)
+                }
             }
         }
     }

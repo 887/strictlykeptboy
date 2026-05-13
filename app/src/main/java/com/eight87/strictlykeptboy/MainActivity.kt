@@ -398,6 +398,8 @@ class MainActivity : ComponentActivity() {
                             notificationPrefs = graph.notificationPrefs,
                             calendarVisibility = graph.calendarVisibility,
                             todolistVisibility = graph.todolistVisibility,
+                            calendarsFlow = graph.calendarRegistry.state,
+                            onEditCalendar = { meta -> pendingCalendarEdit = meta },
                             identityPrefs = graph.identityPrefs,
                             appearancePrefs = graph.appearancePrefs,
                             neutralPrefs = graph.neutralModePrefs,

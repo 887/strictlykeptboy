@@ -143,6 +143,14 @@ data class SettingsAccess(
     val notificationPrefs: NotificationPrefs? = null,
     val calendarVisibility: CalendarVisibilityPrefs? = null,
     val todolistVisibility: CalendarVisibilityPrefs? = null,
+    /**
+     * Round 2.1.B.11 — cross-repo calendars feed. When set, the
+     * Calendars settings category renders the master list across all
+     * repos via `CalendarsCategoryMaster`.
+     */
+    val calendarsFlow: kotlinx.coroutines.flow.StateFlow<List<com.eight87.strictlykeptboy.resolver.CalendarMeta>>? = null,
+    /** Row-tap → open CalendarSettingsSheet. */
+    val onEditCalendar: (com.eight87.strictlykeptboy.resolver.CalendarMeta) -> Unit = {},
     val templateIds: List<String> = emptyList(),
     val identityPrefs: IdentityPrefs? = null,
     val appearancePrefs: AppearancePrefs? = null,
@@ -511,8 +519,17 @@ private fun SettingsCategoryContent(
                 NotificationsCategory(prefs = p)
             } ?: DiagnosticMissingPrefBanner(category, "notificationPrefs")
             SettingsCategory.Calendars -> access.calendarVisibility?.let { p ->
-                CalendarsCategory(prefs = p)
-            } ?: DiagnosticMissingPrefBanner(category, "calendarVisibility")
+                val flow = access.calendarsFlow
+                if (flow != null) {
+                    com.eight87.strictlykeptboy.ui.settings.categories.CalendarsCategoryMaster(
+                        prefs = p,
+                        calendarsFlow = flow,
+                        onEditCalendar = access.onEditCalendar,
+                    )
+                } else {
+                    CalendarsCategory(prefs = p)
+                }
+            } ?: CategoryPlaceholder(stringResource(category.labelRes))
             SettingsCategory.Todolists -> access.todolistVisibility?.let { p ->
                 TodolistsCategory(prefs = p)
             } ?: DiagnosticMissingPrefBanner(category, "todolistVisibility")

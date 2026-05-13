@@ -37,6 +37,7 @@ import com.eight87.strictlykeptboy.ui.settings.ModePrefs
 import com.eight87.strictlykeptboy.ui.settings.SyncSettingsPrefs
 import com.eight87.strictlykeptboy.ui.together.BusySource
 import com.eight87.strictlykeptboy.ui.together.CommonTimeFinderPort
+import com.eight87.strictlykeptboy.ui.together.TogetherCalendarOption
 import com.eight87.strictlykeptboy.ui.together.TogetherRepoOption
 import com.eight87.strictlykeptboy.ui.wizard.AgeGatePrefs
 import com.eight87.strictlykeptboy.ui.wizard.NeutralModePrefs
@@ -364,6 +365,30 @@ class AppGraph(private val appContext: Context) {
             synthesizedSnapshot = snapshot,
             scope = appScope,
         )
+    }
+
+    /**
+     * Round 2.1.B.9 — Together picker options at the calendar grain.
+     * Derived from [calendarRegistry]: every active calendar across
+     * every repo gets its own option; the source repo's display name
+     * is the subtitle.
+     */
+    @Suppress("OPT_IN_USAGE")
+    val togetherCalendarOptions: StateFlow<List<TogetherCalendarOption>> by lazy {
+        kotlinx.coroutines.flow.combine(
+            calendarRegistry.state,
+            repoStore.state,
+        ) { cals, repos ->
+            val repoLabels = repos.associate { it.repoId to it.displayName }
+            cals.map { cal ->
+                TogetherCalendarOption(
+                    calendarId = cal.ref.id,
+                    repoId = cal.repo.id,
+                    displayName = cal.displayName,
+                    repoLabel = repoLabels[cal.repo.id] ?: cal.repo.id,
+                )
+            }
+        }.stateIn(GlobalScope, SharingStarted.Eagerly, emptyList())
     }
 
     /** Phase N — Together repo options (id + label) derived from RepoStore. */

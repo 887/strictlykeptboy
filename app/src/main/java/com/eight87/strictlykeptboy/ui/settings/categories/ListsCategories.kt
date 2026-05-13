@@ -23,9 +23,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.clickable
 import com.eight87.strictlykeptboy.R
+import com.eight87.strictlykeptboy.resolver.CalendarMeta
 import com.eight87.strictlykeptboy.ui.settings.CalendarVisibilityPrefs
 import com.eight87.strictlykeptboy.ui.settings.ListKind
+import kotlinx.coroutines.flow.StateFlow
 
 const val TestTagCatCalendars = "Cat-Calendars"
 const val TestTagCatTodolists = "Cat-Todolists"
@@ -40,6 +43,89 @@ fun CalendarsCategory(prefs: CalendarVisibilityPrefs, modifier: Modifier = Modif
         prefs = prefs,
         modifier = modifier,
     )
+}
+
+/**
+ * Round 2.1.B.11 / 2.1.E.1 — calendars master list across all repos.
+ *
+ * Cross-repo `CalendarMeta` list with: (a) show-on-schedule visibility
+ * switch, (b) reorder priority buttons, (c) row-tap to open
+ * [com.eight87.strictlykeptboy.ui.calendars.CalendarSettingsSheet] via
+ * [onEditCalendar]. Per-repo `RepoSettingsScreen` keeps repo-level
+ * concerns only; calendar selection lives here.
+ */
+@Composable
+fun CalendarsCategoryMaster(
+    prefs: CalendarVisibilityPrefs,
+    calendarsFlow: StateFlow<List<CalendarMeta>>,
+    onEditCalendar: (CalendarMeta) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val calendars by calendarsFlow.collectAsState()
+    val visibility by prefs.state.collectAsState()
+    val visMap = visibility.ordered.associateBy { it.repoId to it.id }
+    CategorySurface(
+        testTag = TestTagCatCalendars,
+        title = stringResource(R.string.settings_category_calendars),
+        modifier = modifier,
+    ) {
+        if (calendars.isEmpty()) {
+            Text(
+                stringResource(R.string.settings_lists_empty, stringResource(R.string.settings_lists_calendars_word)),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            return@CategorySurface
+        }
+        SectionLabel(stringResource(R.string.settings_lists_visibility_title))
+        calendars.forEach { cal ->
+            val key = cal.repo.id to cal.ref.id
+            val visible = visMap[key]?.visible ?: true
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clickable { onEditCalendar(cal) }
+                    .padding(vertical = 6.dp)
+                    .testTag("$TestTagCatCalendars-Row-${cal.repo.id}-${cal.ref.id}"),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(cal.displayName, style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        "repo: ${cal.repo.id}  •  priority ${cal.priority}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = visible,
+                    onCheckedChange = { v ->
+                        prefs.setVisible(id = cal.ref.id, visible = v, repoId = cal.repo.id)
+                    },
+                    modifier = Modifier.testTag("$TestTagCatCalendars-Vis-${cal.repo.id}-${cal.ref.id}"),
+                )
+                IconButton(
+                    onClick = { prefs.moveUp(cal.ref.id, cal.repo.id) },
+                    modifier = Modifier.testTag("$TestTagCatCalendars-Up-${cal.repo.id}-${cal.ref.id}"),
+                ) {
+                    Icon(
+                        Icons.Filled.ArrowUpward,
+                        contentDescription = stringResource(R.string.settings_lists_move_up),
+                    )
+                }
+                IconButton(
+                    onClick = { prefs.moveDown(cal.ref.id, cal.repo.id) },
+                    modifier = Modifier.testTag("$TestTagCatCalendars-Down-${cal.repo.id}-${cal.ref.id}"),
+                ) {
+                    Icon(
+                        Icons.Filled.ArrowDownward,
+                        contentDescription = stringResource(R.string.settings_lists_move_down),
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+    }
 }
 
 /** Phase S.6 — Todolists category. Same shape as Calendars. */

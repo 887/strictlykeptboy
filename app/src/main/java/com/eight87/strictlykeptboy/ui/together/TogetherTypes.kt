@@ -28,6 +28,22 @@ data class TogetherRepoOption(
     val displayName: String,
 )
 
+/**
+ * Round 2.1.B.9 — per-calendar Together picker.
+ *
+ * Multirepo / calendars-first picks the unit of free-time slicing at
+ * the calendar level (not the repo level). A calendar-keyed option
+ * carries `repoId` so the [BusySource] can resolve the right backing
+ * GitRepo. The display label includes the source repo as subtitle in
+ * the picker UI.
+ */
+data class TogetherCalendarOption(
+    val calendarId: String,
+    val repoId: String,
+    val displayName: String,
+    val repoLabel: String,
+)
+
 /** Form-bound state for the input section. */
 data class TogetherInputState(
     val selectedRepoIds: Set<String> = emptySet(),
