@@ -17,6 +17,9 @@ import com.eight87.strictlykeptboy.store.StandingTask
 import com.eight87.strictlykeptboy.store.Task
 import com.eight87.strictlykeptboy.store.TypedEntity
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.withContext
 import org.eclipse.jgit.lib.ObjectId
 import java.io.File
@@ -42,6 +45,21 @@ class Indexer(private val db: CacheDatabase) {
         const val CURRENT_SCHEMA_VERSION = 1
         private const val BATCH = 500
     }
+
+    /**
+     * Phase 2.2.E.1 — post-commit pulse. Every event that lands in the
+     * cache (full scan or incremental rescan) is emitted here so
+     * subscribers — today, the event-reminder arming bridge — can react
+     * to *foreground* commits, not just the boot/horizon-slide
+     * `AlarmHorizonExtenderWorker` re-arm cycle.
+     *
+     * Replay = 0 because subscribers wire up at process start; buffer
+     * of 64 covers a multi-event batch (template materialization,
+     * import) without dropping. Dropping on overflow is acceptable —
+     * the next incremental scan will re-emit anyway.
+     */
+    private val _commits = MutableSharedFlow<EventCommit>(replay = 0, extraBufferCapacity = 64)
+    val commits: SharedFlow<EventCommit> = _commits.asSharedFlow()
 
     /**
      * Wipe + repopulate the cache for [repoId] from the working tree.
@@ -196,6 +214,17 @@ class Indexer(private val db: CacheDatabase) {
         }
         if (errors.isNotEmpty()) db.indexErrors().upsertAll(errors)
 
+        // Phase 2.2.E.1 — emit post-commit events so the reminder arming
+        // bridge can re-arm AlarmManager alarms for foreground commits.
+        // We pass the absolute on-disk path so subscribers can re-read
+        // the frontmatter for the `[[reminder]]` array without holding
+        // a Room handle. Best-effort emit — dropping a pulse never
+        // corrupts state (the next scan re-emits).
+        events.forEach { (event, rel) ->
+            val absolute = rootPath.resolve(rel)
+            _commits.tryEmit(EventCommit(repoId = repoId, event = event, sourcePath = absolute))
+        }
+
         val touched = events.size + tasks.size + standing.size + rules.size +
             exceptions.size + deviations.size + overrides.size + journal.size + identities.size
         return IndexStats(touched = touched, deleted = 0, failed = errors.size)
@@ -255,3 +284,16 @@ class Indexer(private val db: CacheDatabase) {
 }
 
 data class IndexStats(val touched: Int, val deleted: Int, val failed: Int)
+
+/**
+ * Phase 2.2.E.1 — one emission per Event that landed in the cache via
+ * [Indexer.fullScan] or [Indexer.incrementalScan]. Carries the absolute
+ * on-disk path so subscribers can re-read frontmatter (the `[[reminder]]`
+ * array isn't projected into the Room schema today — Phase NS-C.3
+ * snapshots-at-schedule-time keeps reminder fields off the cache).
+ */
+data class EventCommit(
+    val repoId: String,
+    val event: com.eight87.strictlykeptboy.store.Event,
+    val sourcePath: Path,
+)

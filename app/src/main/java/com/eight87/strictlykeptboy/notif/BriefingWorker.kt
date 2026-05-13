@@ -43,14 +43,25 @@ class BriefingWorker(
         if (!prefs.isBriefingsEnabled()) return Result.success()
         if (!prefs.isChannelEnabled(NotificationChannels.BRIEFINGS)) return Result.success()
 
-        // For v1 the worker posts a salutation-driven briefing without an
-        // instance list. The composer + WorkManager + master-toggle path
-        // is the deliverable here; materialization handoff is wired in a
-        // follow-up once the AppGraph snapshot exposes a worker-safe API.
+        // Phase 2.2.E.6 — pull the live materialized snapshot via the
+        // parked [BriefingRuntime] handle (CarAppRuntime parked-handle
+        // pattern). When the source / identityProvider hasn't been
+        // populated yet (worker fires before the phone-app process has
+        // booted — rare in practice), we fall through to the original
+        // salutation-only placeholder so the user still sees the brief.
+        val zone = java.time.ZoneId.systemDefault()
+        val targetDate = when (slot) {
+            BriefingComposer.Slot.Morning -> java.time.LocalDate.now(zone)
+            BriefingComposer.Slot.Evening -> java.time.LocalDate.now(zone).plusDays(1L)
+        }
+        val source = BriefingRuntime.source
+        val identity = BriefingRuntime.identityProvider?.invoke()
+        val instances = source?.instancesForDate(targetDate, zone) ?: emptyList()
         val briefing = BriefingComposer.compose(
             slot = slot,
-            instances = emptyList(),
-            identity = null,
+            instances = instances,
+            identity = identity,
+            zone = zone,
         )
 
         val style = NotificationCompat.InboxStyle()

@@ -18,6 +18,8 @@ import com.eight87.strictlykeptboy.git.GitRepo
 import com.eight87.strictlykeptboy.git.GitRepoRegistry
 import com.eight87.strictlykeptboy.git.RepoStore
 import com.eight87.strictlykeptboy.git.auth.SecretsStore
+import com.eight87.strictlykeptboy.notif.BriefingRuntime
+import com.eight87.strictlykeptboy.notif.BriefingSource
 import com.eight87.strictlykeptboy.notif.SyncEventNotificationBridge
 import com.eight87.strictlykeptboy.resolver.CommonTimeFinder
 import com.eight87.strictlykeptboy.resolver.DateRange
@@ -544,6 +546,44 @@ class AppGraph(private val appContext: Context) {
         SyncRuntime.statusStore = statusStore
         CarAppRuntime.todayEventSource = todayEventSource
         CarAppRuntime.identityProvider = { loadActiveIdentity() }
+        // Phase 2.2.E.6 — parked-handle for BriefingWorker. Mirrors the
+        // CarAppRuntime contract: a narrow source the worker collects
+        // against on every fire, plus a lazy identity provider so wizard
+        // edits + repo flips are picked up without restarting the worker.
+        BriefingRuntime.source = briefingSource
+        BriefingRuntime.identityProvider = { loadActiveIdentity() }
+    }
+
+    /**
+     * Phase 2.2.E.6 — narrow [BriefingSource] adapter on the AppGraph's
+     * live snapshot. Returns materialized one-off events that overlap
+     * the requested date in the requested zone. Recurrence-rule
+     * instances flow through this same path once the full Renderer is
+     * wired into the snapshot (see [renderTodaySync]).
+     */
+    val briefingSource: BriefingSource by lazy {
+        BriefingSource { date, zone ->
+            val src = sources.value
+            src.events
+                .asSequence()
+                .filter { evt -> evt.start.withZoneSameInstant(zone).toLocalDate() == date }
+                .map { evt ->
+                    MaterializedInstance(
+                        source = com.eight87.strictlykeptboy.resolver.InstanceSource.OneOff(evt.ref),
+                        calendar = evt.calendar,
+                        repo = evt.repo,
+                        originalStart = evt.start,
+                        originalEnd = evt.end,
+                        effectiveStart = evt.start,
+                        effectiveEnd = evt.end,
+                        title = evt.title,
+                        body = evt.body,
+                        emoji = evt.emoji,
+                        isAllDay = evt.isAllDay,
+                    )
+                }
+                .toList()
+        }
     }
 
     /**
