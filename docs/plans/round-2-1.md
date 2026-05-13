@@ -152,15 +152,15 @@ on the AVD with screenshot evidence in `docs/qa/2-1-C/`.
 - [x] **2.1.G.4** Empty-state copy honors praise term — "all clear, good boy" / "nothing scheduled, Sir" register-branched in `AutoRowFormatter.emptyStateCopy`.
 - [x] **2.1.G.5** `HostValidator` tightening — gated on `BuildConfig.DEBUG`: debug keeps `ALLOW_ALL_HOSTS`, release uses `HostValidator.Builder(...).addAllowedHosts(androidx.car.app.R.array.hosts_allowlist_sample)` (AOSP + AndroidAuto signature whitelist from the car-app library).
 
-## Phase 2.1.H — Tablet
+## Phase 2.1.H — Tablet — shipped in commit `8df98bb`
 
-- [ ] **2.1.H.1** Wizard pane two-column on Medium/Expanded — current step left (38%), live identity-driven preview right (62%). Reuses `MasterDetailLayout`.
-- [ ] **2.1.H.2** Together-finder two-column — input form left, ranked free-slot list right. Closes part of N.3.
-- [ ] **2.1.H.3** Repos master-detail — repos list left, selected repo's remotes + identity + mode editor right.
-- [ ] **2.1.H.4** Import/export two-column — file picker / validation left, preview right.
-- [ ] **2.1.H.5** Notifications category two-column on Expanded — per-channel rows left, per-category lead-times + per-calendar group toggles right.
-- [ ] **2.1.H.6** `scripts/start-tablet-avd.sh` — codify 10" tablet AVD profile (pixel_tablet, 1600×2560 mdpi 160dpi). Add `--tablet` flag to start script. Update CLAUDE.md test loop to call out dual-target requirement.
-- [ ] **2.1.H.7** Verification pass on real tablet (wifi-adb) for every R-touched screen + every 2.1.H sub-step. Screenshots into `docs/qa/tablet-2-1/`.
+- [x] **2.1.H.1** Wizard pane two-column on Medium/Expanded — current step left (38%), live identity-driven preview right (62%). Reuses `MasterDetailLayout`.
+- [x] **2.1.H.2** Together-finder two-column — input form left, ranked free-slot list right.
+- [x] **2.1.H.3** Repos master-detail — repos list left, selected repo's remotes + identity + mode editor right.
+- [x] **2.1.H.4** Import/export two-column — file picker / validation left, preview right. `ImportPreviewContent` extracted from sheet for embed.
+- [x] **2.1.H.5** Notifications category two-column on Expanded — per-channel rows left, per-category lead-times + per-calendar group toggles right.
+- [x] **2.1.H.6** `scripts/start-tablet-avd.sh` + `--tablet` flag on `start-avd.sh`. `CLAUDE.md` updated with dual-target requirement.
+- [ ] **2.1.H.7** Real-tablet wifi-adb verification — deferred to user. AVD simulation (phone resized 1600×2560 / 160dpi) screenshots in `docs/qa/2-1-H/`.
 
 ## Phase 2.1.I — First-run + Wizard — shipped in commit `ecc86be`
 

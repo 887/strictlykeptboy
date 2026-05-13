@@ -48,7 +48,12 @@ import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.ui.a11y.labelString
 import com.eight87.strictlykeptboy.ui.a11y.taglineString
+import com.eight87.strictlykeptboy.ui.adaptive.LocalWindowWidthSizeClass
+import com.eight87.strictlykeptboy.ui.adaptive.MasterDetailLayout
+import com.eight87.strictlykeptboy.ui.adaptive.isTwoPane
 import kotlinx.coroutines.launch
+
+const val TestTagWizardPreviewPane = "Wizard-PreviewPane"
 
 // Test tags
 const val TestTagWizard = "Wizard"
@@ -141,6 +146,7 @@ fun WizardNavHost(
     var scaffoldProgress by remember { mutableStateOf(ScaffoldProgress.Idle) }
     var scaffoldError by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val widthClass = LocalWindowWidthSizeClass.current
 
     fun goNext() {
         val idx = SCREEN_ORDER.indexOf(current)
@@ -184,8 +190,9 @@ fun WizardNavHost(
         ProgressRow(currentIndex = SCREEN_ORDER.indexOf(current), total = SCREEN_ORDER.size)
         Spacer(Modifier.height(4.dp))
 
+        val stepContent: @Composable () -> Unit = {
         Column(
-            modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             BatMascotSticker(screen = current)
@@ -261,6 +268,27 @@ fun WizardNavHost(
                     },
                     onSkip = onFinish,
                 )
+            }
+        }
+        }
+
+        // H.1 — two-pane on Medium/Expanded: step on the left, identity-driven
+        // preview on the right. Compact keeps the single-column flow (preview
+        // already lives inline inside IdentityScreen + DoneScreen there).
+        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            if (widthClass.isTwoPane()) {
+                MasterDetailLayout(
+                    widthClass = widthClass,
+                    master = stepContent,
+                    detail = {
+                        WizardIdentityPreviewPane(
+                            draft = draft,
+                            screen = current,
+                        )
+                    },
+                )
+            } else {
+                stepContent()
             }
         }
 
@@ -973,6 +1001,100 @@ private fun ShareWithDomScreen(
 }
 
 // --- Small helpers -------------------------------------------------------------
+
+/**
+ * Phase 2.1.H.1 — read-only identity-driven live preview that sits in the
+ * detail pane on Medium/Expanded widths. Mirrors the inline preview cards
+ * inside [IdentityScreen] + [DoneScreen] but stays visible across every
+ * wizard step so tablet users see their choices accumulate. No edits
+ * happen here — the step forms on the left own state.
+ */
+@Composable
+private fun WizardIdentityPreviewPane(draft: WizardDraft, screen: WizardScreen) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp)
+            .testTag(TestTagWizardPreviewPane),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(
+            stringResource(R.string.wizard_identity_preview_label),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        val honoraryPrefix = if (draft.honorific != Honorific.None) {
+            "${draft.honorific.labelString()}, "
+        } else ""
+        val praiseDefault = stringResource(R.string.wizard_identity_praise_default)
+        val praise = draft.praiseTerms.firstOrNull() ?: praiseDefault
+        val emoji = when (draft.emojiDensity) {
+            EmojiDensity.Off -> ""
+            EmojiDensity.Light -> " ✓"
+            EmojiDensity.Medium -> " ✓ ;3"
+            EmojiDensity.Heavy -> " ✓ ;3 ✨"
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            ),
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    stringResource(R.string.wizard_identity_preview_line, honoraryPrefix, praise, emoji),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+        }
+
+        // Summary of choices so far, regardless of which screen we're on.
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    "Species: ${draft.species.labelString()}",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Text(
+                    "Alignment: ${draft.alignment.labelString()}",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                if (draft.honorific != Honorific.None) {
+                    Text(
+                        "Honorific: ${draft.honorific.labelString()}",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                Text(
+                    "Tone: ${draft.tone.labelString()}",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                if (draft.praiseTerms.isNotEmpty()) {
+                    Text(
+                        "Praise: ${draft.praiseTerms.joinToString(", ")}",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                if (draft.roles.isNotEmpty()) {
+                    val roleLabels = draft.roles.map { it.labelString() }
+                    Text(
+                        "Roles: ${roleLabels.joinToString(", ")}",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+        }
+
+        Text(
+            "Step: ${screen.name}",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
 
 @Composable
 private fun WrappingChipRow(content: @Composable () -> Unit) {

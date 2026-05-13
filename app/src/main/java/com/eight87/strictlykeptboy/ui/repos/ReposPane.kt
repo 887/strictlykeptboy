@@ -33,7 +33,12 @@ import com.eight87.strictlykeptboy.git.RepoStore
 import com.eight87.strictlykeptboy.git.Uuid7
 import com.eight87.strictlykeptboy.git.auth.PatCredential
 import com.eight87.strictlykeptboy.git.auth.SecretsStore
+import com.eight87.strictlykeptboy.ui.adaptive.LocalWindowWidthSizeClass
+import com.eight87.strictlykeptboy.ui.adaptive.MasterDetailLayout
+import com.eight87.strictlykeptboy.ui.adaptive.isTwoPane
 import kotlinx.coroutines.launch
+
+const val TestTagReposPaneDetailEmpty = "ReposPane-DetailEmpty"
 
 const val TestTagReposPane = "ReposPane"
 const val TestTagReposPaneUnifiedToggle = "ReposPane-UnifiedToggle"
@@ -67,6 +72,78 @@ fun ReposPane(
     val context = androidx.compose.ui.platform.LocalContext.current
     val unified by state.unifiedView.collectAsState()
     val scope = rememberCoroutineScope()
+    val widthClass = LocalWindowWidthSizeClass.current
+
+    // Phase 2.1.H.3 — on Medium/Expanded, render List as the master pane
+    // and whatever sub-mode is active as the detail pane. List stays
+    // visible at all times so users can hop between repos without
+    // popping back through navigation. Compact falls through to the
+    // existing single-pane mode-switch (unchanged contract).
+    if (widthClass.isTwoPane()) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .testTag(TestTagReposPane)
+                .padding(12.dp),
+        ) {
+            MasterDetailLayout(
+                widthClass = widthClass,
+                master = {
+                    ReposList(
+                        repos = repos,
+                        activeRepoId = activeRepoId,
+                        unified = unified,
+                        state = state,
+                        onSetUnified = { state.setUnifiedView(it) },
+                        onSelect = { repoId ->
+                            state.setActive(repoId)
+                            mode = Mode.Settings(repoId)
+                        },
+                        onAddRepo = { mode = Mode.Add },
+                        onOpenSettings = { repoId -> mode = Mode.Settings(repoId) },
+                        onOpenTogether = onOpenTogether,
+                        onOpenWizard = onOpenWizard,
+                    )
+                },
+                detail = {
+                    ReposDetailPane(
+                        mode = mode,
+                        repos = repos,
+                        state = state,
+                        secretsStore = secretsStore,
+                        scope = scope,
+                        onModeChange = { mode = it },
+                        onShowShare = { showShareSheetForRepo = it },
+                    )
+                },
+            )
+            // Share sheet host shared with compact branch below.
+            showShareSheetForRepo?.let { rid ->
+                val shareRepo = repos.firstOrNull { it.repoId == rid }
+                if (shareRepo != null) {
+                    com.eight87.strictlykeptboy.ui.share.ShareSheet(
+                        repo = shareRepo,
+                        onDismiss = { showShareSheetForRepo = null },
+                        onCopy = { link ->
+                            val cm = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
+                                as android.content.ClipboardManager
+                            cm.setPrimaryClip(android.content.ClipData.newPlainText("share link", link))
+                        },
+                        onSend = { link ->
+                            val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(android.content.Intent.EXTRA_TEXT, link)
+                            }
+                            context.startActivity(android.content.Intent.createChooser(send, null))
+                        },
+                    )
+                } else {
+                    showShareSheetForRepo = null
+                }
+            }
+        }
+        return
+    }
 
     Box(
         modifier = modifier
@@ -317,4 +394,136 @@ private sealed interface Mode {
     object Add : Mode
     data class Settings(val repoId: String) : Mode
     data class Identities(val repoId: String) : Mode
+}
+
+/**
+ * Phase 2.1.H.3 — detail pane on tablet. Renders Settings / Identities /
+ * Add depending on [mode]; falls back to an empty-state hint when the
+ * user hasn't selected a repo yet.
+ *
+ * Hoisted out of [ReposPane] so the compact (single-pane) branch and the
+ * tablet (master-detail) branch can both delegate to the same per-mode
+ * navigation without duplicating the long `onUpdate` / `onRemoveRepo`
+ * lambda set.
+ */
+@Composable
+private fun ReposDetailPane(
+    mode: Mode,
+    repos: List<RepoConfig>,
+    state: ReposViewState,
+    secretsStore: SecretsStore?,
+    scope: kotlinx.coroutines.CoroutineScope,
+    onModeChange: (Mode) -> Unit,
+    onShowShare: (String) -> Unit,
+) {
+    when (mode) {
+        Mode.List -> Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .testTag(TestTagReposPaneDetailEmpty)
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                stringResource(R.string.repos_select_hint_title),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                stringResource(R.string.repos_select_hint_body),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+        Mode.Add -> AddRepoNavHost(
+            onCancel = { onModeChange(Mode.List) },
+            onFinish = { result ->
+                scope.launch {
+                    when (result) {
+                        is AddRepoResult.LocalOnly -> {
+                            val cfg = result.toRepoConfig(rootDir = "/tmp/${Uuid7.generate()}")
+                            state.store.add(cfg)
+                            state.setActive(cfg.repoId)
+                        }
+                        is AddRepoResult.Remote -> {
+                            val cfg = result.toRepoConfig(rootDir = "/tmp/${Uuid7.generate()}")
+                            state.store.add(cfg)
+                            state.setActive(cfg.repoId)
+                            if (result.pat != null) {
+                                secretsStore?.storePat(
+                                    cfg.repoId,
+                                    cfg.primaryRemote!!,
+                                    result.pat,
+                                )
+                            }
+                            if (result.oauthToken != null) {
+                                secretsStore?.storeOAuthToken(
+                                    cfg.repoId,
+                                    cfg.primaryRemote!!,
+                                    result.oauthToken,
+                                )
+                            }
+                        }
+                    }
+                    onModeChange(Mode.List)
+                }
+            },
+        )
+        is Mode.Settings -> {
+            val repo = repos.firstOrNull { it.repoId == mode.repoId }
+            if (repo == null) {
+                onModeChange(Mode.List)
+            } else {
+                RepoSettingsScreen(
+                    repo = repo,
+                    onBack = { onModeChange(Mode.List) },
+                    onUpdate = { newCfg ->
+                        scope.launch { state.store.update(newCfg) }
+                    },
+                    onAddRemote = { onModeChange(Mode.Add) },
+                    onRemoveRemote = { name ->
+                        scope.launch { state.store.removeRemote(repo.repoId, name) }
+                    },
+                    onSetPrimaryRemote = { name ->
+                        scope.launch { state.store.setPrimary(repo.repoId, name) }
+                    },
+                    onRemoveRepo = { deleteLocal ->
+                        scope.launch {
+                            state.store.remove(repo.repoId)
+                            secretsStore?.clearForRepo(repo.repoId)
+                            if (deleteLocal) {
+                                runCatching {
+                                    java.io.File(repo.rootDir).deleteRecursively()
+                                }
+                            }
+                            onModeChange(Mode.List)
+                        }
+                    },
+                    onOpenIdentities = { onModeChange(Mode.Identities(repo.repoId)) },
+                    onShareRepo = { onShowShare(repo.repoId) },
+                    onToggleRemoteReadOnly = { name, value ->
+                        scope.launch {
+                            val current = state.store.get(repo.repoId) ?: return@launch
+                            val updated = current.copy(
+                                remotes = current.remotes.map { rb ->
+                                    if (rb.name == name) rb.copy(treatAsReadOnly = value) else rb
+                                },
+                            )
+                            state.store.update(updated)
+                        }
+                    },
+                )
+            }
+        }
+        is Mode.Identities -> {
+            val repo = repos.firstOrNull { it.repoId == mode.repoId }
+            if (repo == null) {
+                onModeChange(Mode.List)
+            } else {
+                IdentitiesScreen(
+                    repo = repo,
+                    onBack = { onModeChange(Mode.Settings(repo.repoId)) },
+                )
+            }
+        }
+    }
 }

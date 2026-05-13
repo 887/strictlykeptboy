@@ -40,10 +40,25 @@ fun ImportPreviewSheet(
         sheetState = sheetState,
         modifier = Modifier.testTag(TestTagImportPreviewSheet),
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
+        ImportPreviewContent(preview = preview, onConfirm = onConfirm, onCancel = onCancel)
+    }
+}
+
+/**
+ * Phase 2.1.H.4 — inline preview content, hoisted out of the bottom-sheet
+ * shell so the tablet master-detail layout can render the same preview
+ * inside the right pane without ModalBottomSheet's scrim taking over.
+ */
+@Composable
+fun ImportPreviewContent(
+    preview: IcsParseReport,
+    onConfirm: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
             Text(
                 text = stringResource(R.string.import_preview_title),
                 style = MaterialTheme.typography.titleLarge,
@@ -81,5 +96,4 @@ fun ImportPreviewSheet(
             }
             Spacer(Modifier.height(8.dp))
         }
-    }
 }

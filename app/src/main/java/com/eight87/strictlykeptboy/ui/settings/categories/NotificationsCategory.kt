@@ -27,6 +27,8 @@ import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.notif.NotificationChannels
 import com.eight87.strictlykeptboy.notif.NotificationPrefs
+import com.eight87.strictlykeptboy.ui.adaptive.LocalWindowWidthSizeClass
+import com.eight87.strictlykeptboy.ui.adaptive.WindowWidthSizeClass
 
 const val TestTagCatNotifications = "Cat-Notifications"
 
@@ -38,8 +40,45 @@ const val TestTagCatNotifications = "Cat-Notifications"
  * single outer verticalScroll keeps Compose layout happy (only one
  * vertical-scroll ancestor allowed).
  */
+const val TestTagCatNotificationsChannelsPane = "Cat-Notifications-ChannelsPane"
+const val TestTagCatNotificationsLeadsPane = "Cat-Notifications-LeadsPane"
+
 @Composable
 fun NotificationsCategory(prefs: NotificationPrefs, modifier: Modifier = Modifier) {
+    val widthClass = LocalWindowWidthSizeClass.current
+    // Phase 2.1.H.5 — only Expanded (≥840dp) splits into two columns;
+    // Medium tablets in portrait keep the single-column flow because the
+    // SettingsPane already consumes the master pane at that breakpoint
+    // (the category's *own* sub-layout would force three columns).
+    if (widthClass is WindowWidthSizeClass.Expanded) {
+        Row(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(16.dp)
+                .testTag(TestTagCatNotifications),
+        ) {
+            // Left — per-channel rows.
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+                    .testTag(TestTagCatNotificationsChannelsPane),
+            ) {
+                NotificationsChannelsBlock(prefs)
+            }
+            HorizontalDividerVertical()
+            // Right — lead times + briefings master.
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+                    .testTag(TestTagCatNotificationsLeadsPane),
+            ) {
+                NotificationsLeadsBlock(prefs)
+            }
+        }
+        return
+    }
     Column(
         modifier
             .fillMaxSize()
@@ -47,46 +86,61 @@ fun NotificationsCategory(prefs: NotificationPrefs, modifier: Modifier = Modifie
             .padding(16.dp)
             .testTag(TestTagCatNotifications),
     ) {
-        Text(
-            stringResource(R.string.settings_category_notifications),
-            style = MaterialTheme.typography.headlineSmall,
-        )
-        Spacer(Modifier.height(12.dp))
-
-        var briefingsOn by remember { mutableStateOf(prefs.isBriefingsEnabled()) }
-        ToggleRow(
-            label = stringResource(R.string.settings_notif_briefings_master),
-            checked = briefingsOn,
-            onCheckedChange = { briefingsOn = it; prefs.setBriefingsEnabled(it) },
-            testTag = "$TestTagCatNotifications-BriefingsMaster",
-        )
-        Text(
-            stringResource(R.string.settings_notif_briefings_blurb),
-            style = MaterialTheme.typography.bodySmall,
-        )
-        Spacer(Modifier.height(12.dp))
-        HorizontalDivider()
-        SectionLabel(stringResource(R.string.settings_notif_lead_section))
-        LeadTimeRow(prefs, "medical", R.string.settings_notif_lead_medical)
-        LeadTimeRow(prefs, "flight", R.string.settings_notif_lead_flight)
-        LeadTimeRow(prefs, "household", R.string.settings_notif_lead_household)
-        LeadTimeRow(prefs, "general", R.string.settings_notif_lead_general)
+        NotificationsLeadsBlock(prefs)
         Spacer(Modifier.height(16.dp))
         HorizontalDivider()
-
-        // Inline the per-channel surface here to avoid nested verticalScroll.
-        Text(
-            stringResource(R.string.settings_notifications_title),
-            style = MaterialTheme.typography.titleLarge,
-        )
-        Spacer(Modifier.height(8.dp))
-        ChannelRow(prefs, NotificationChannels.EVENTS, R.string.notif_channel_events_name)
-        ChannelRow(prefs, NotificationChannels.TASKS, R.string.notif_channel_tasks_name)
-        ChannelRow(prefs, NotificationChannels.BRIEFINGS, R.string.notif_channel_briefings_name)
-        ChannelRow(prefs, NotificationChannels.SYNC, R.string.notif_channel_sync_name)
-        ChannelRow(prefs, NotificationChannels.ERRORS, R.string.notif_channel_errors_name)
-        ChannelRow(prefs, NotificationChannels.FOREGROUND, R.string.notif_channel_foreground_name)
+        NotificationsChannelsBlock(prefs)
     }
+}
+
+@Composable
+private fun NotificationsLeadsBlock(prefs: NotificationPrefs) {
+    Text(
+        stringResource(R.string.settings_category_notifications),
+        style = MaterialTheme.typography.headlineSmall,
+    )
+    Spacer(Modifier.height(12.dp))
+
+    var briefingsOn by remember { mutableStateOf(prefs.isBriefingsEnabled()) }
+    ToggleRow(
+        label = stringResource(R.string.settings_notif_briefings_master),
+        checked = briefingsOn,
+        onCheckedChange = { briefingsOn = it; prefs.setBriefingsEnabled(it) },
+        testTag = "$TestTagCatNotifications-BriefingsMaster",
+    )
+    Text(
+        stringResource(R.string.settings_notif_briefings_blurb),
+        style = MaterialTheme.typography.bodySmall,
+    )
+    Spacer(Modifier.height(12.dp))
+    HorizontalDivider()
+    SectionLabel(stringResource(R.string.settings_notif_lead_section))
+    LeadTimeRow(prefs, "medical", R.string.settings_notif_lead_medical)
+    LeadTimeRow(prefs, "flight", R.string.settings_notif_lead_flight)
+    LeadTimeRow(prefs, "household", R.string.settings_notif_lead_household)
+    LeadTimeRow(prefs, "general", R.string.settings_notif_lead_general)
+}
+
+@Composable
+private fun NotificationsChannelsBlock(prefs: NotificationPrefs) {
+    Text(
+        stringResource(R.string.settings_notifications_title),
+        style = MaterialTheme.typography.titleLarge,
+    )
+    Spacer(Modifier.height(8.dp))
+    ChannelRow(prefs, NotificationChannels.EVENTS, R.string.notif_channel_events_name)
+    ChannelRow(prefs, NotificationChannels.TASKS, R.string.notif_channel_tasks_name)
+    ChannelRow(prefs, NotificationChannels.BRIEFINGS, R.string.notif_channel_briefings_name)
+    ChannelRow(prefs, NotificationChannels.SYNC, R.string.notif_channel_sync_name)
+    ChannelRow(prefs, NotificationChannels.ERRORS, R.string.notif_channel_errors_name)
+    ChannelRow(prefs, NotificationChannels.FOREGROUND, R.string.notif_channel_foreground_name)
+}
+
+@Composable
+private fun HorizontalDividerVertical() {
+    androidx.compose.material3.VerticalDivider(
+        modifier = Modifier.padding(horizontal = 12.dp),
+    )
 }
 
 @Composable

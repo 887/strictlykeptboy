@@ -265,7 +265,9 @@ The `.github/workflows/release.yml` fallback is **tag-only and self-disabling**:
 
 When a phase asks for a release, the happy path is `--gh-release --install` against the connected AVD / wifi-adb phone.
 
-`scripts/start-avd.sh` boots the headless `medium_phone` AVD and (optionally) attaches scrcpy for mirroring; `--no-mirror` for headless-only, `--kill` to stop.
+`scripts/start-avd.sh` boots the headless `medium_phone` AVD and (optionally) attaches scrcpy for mirroring; `--no-mirror` for headless-only, `--kill` to stop. Pass `--tablet` (or call `scripts/start-tablet-avd.sh` directly) to boot the 10" `pixel_tablet` AVD (1600×2560 mdpi 160dpi) instead — required for Round 2.1.H two-pane verification.
+
+**Dual-target requirement (Round 2.1.H):** UI work that touches surfaces with `WindowSizeClass` adaptation (Schedule, Tasks, Settings, Wizard, Together, Repos, Import/Export, Notifications) MUST be smoke-tested on both `medium_phone` *and* `pixel_tablet` AVDs. If only the phone AVD is up, simulate the tablet via `adb shell wm size 1600x2560 && adb shell wm density 160` (reset with `adb shell wm size reset && adb shell wm density reset`).
 
 ## Open-source licenses
 

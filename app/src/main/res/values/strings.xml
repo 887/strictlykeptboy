@@ -282,6 +282,8 @@
     <string name="repos_unified_off">Only the active repo\'s data renders</string>
     <string name="repos_empty_title">No repositories yet</string>
     <string name="repos_empty_hint">Tap + Add repo below to create your first.</string>
+    <string name="repos_select_hint_title">Select a repo</string>
+    <string name="repos_select_hint_body">Pick a repo from the list to view its remotes, identity, and mode.</string>
 
     <!-- Repo switcher dropdown -->
     <string name="repo_switcher_add">Add repo</string>
@@ -585,6 +587,8 @@
     <string name="import_export_title">Import / export</string>
     <string name="import_export_subtitle">iCal (.ics) — per-repo import + export. Pick a repo to import into, or export its calendars to .ics.</string>
     <string name="import_export_empty">No repos yet. Add a repo from the Repos rail first.</string>
+    <string name="import_export_detail_empty_title">Pick an import file</string>
+    <string name="import_export_detail_empty_body">Choose an .ics file on the left to preview the events that will be imported here.</string>
     <string name="import_action">Import .ics</string>
     <string name="export_action">Export .ics</string>
     <string name="import_preview_title">Import preview</string>
