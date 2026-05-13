@@ -183,6 +183,32 @@ Wires the indexer to `AppGraph.snapshot` + `AppGraph.sources`. Without this, eve
 - [x] **2.1.K.7** `DomPersonaPickerSheet` (under `ui/settings/`): `ModalBottomSheet` with per-persona radio + 120-char prompt preview, cadence chips (End-of-day / Midday / Weekly), multiline `OutlinedTextField` custom-prompt editor that writes through `DomPersonaStore.writeCustom`. Reachable from `ModeCategory` → "Edit personas" button (only shown when keptBy == Ai).
 - New tests: `ModeTomlRoundTripTest` (4 cases), `DomPersonaSingleSourceTest` (2 cases), updated `ModeCoolingOffTest` (2 cases) and `SettingsPrefsTest`. Total: 630 → 637 (+7).
 
+## Phase 2.1.M — Pet Mode wizard framing (insertion 2026-05-13)
+
+User-requested framing layered on top of the existing mode/persona data model. **No new TOML schema** — Pet Mode is a UX surface that maps onto the three `KeptBy` states 2.1.K already surfaces.
+
+**Mapping:**
+
+| Wizard label                          | Underlying `mode.toml` state                                            |
+|---------------------------------------|--------------------------------------------------------------------------|
+| "I keep myself"                       | `mode = strictly-kept` + `dom_persona ∈ DomPersonaStore.BUILTINS` (AI)   |
+| "Someone keeps me"                    | `mode = strictly-kept` + `write_back_target != null` + `dom_persona = null` (human) |
+| "I keep myself, no AI"                | `mode = self-keep` (disciplined self-tracker, no AI dom)                |
+| "Not a pet right now"                 | `mode = free`                                                            |
+
+**D-2.1.k — Pet Mode is the wizard's framing for what 2.1.K's `KeptBy` already encodes.** The single-vs-partnered split lives on the same screen as the four options; the wizard surfaces "pet" as the primary identity question because that's how the user thinks about their lifestyle setup.
+
+- [ ] **2.1.M.1** Rebrand the wizard's Mode screen (`ModeScreen` shipped in 2.1.I.3) to "Pet Mode". Replace the four `WizardModePick` chips with four labelled cards: "I keep myself" / "Someone keeps me" / "I keep myself (no AI)" / "Not a pet right now". Each card carries a one-line subtitle ("AI keeps you on track — your dom is a persona you pick" / "Your partner keeps you — they'll get a share link" / "You hold yourself accountable, no AI dom" / "Plain calendar app — no kept-mode"). Keep the underlying `WizardModePick` enum + emitted `mode.toml` unchanged.
+- [ ] **2.1.M.2** Pet-Mode defaults per alignment (replaces the simpler default in 2.1.I.3):
+  - **Submissive** alone → "I keep myself" pre-selected (AI dom).
+  - **Submissive** with partner (later question, see M.5) → "Someone keeps me" pre-selected.
+  - **Switch** → "Not a pet right now" pre-selected; user can opt in.
+  - **Dominant / UnalignedPrivate** → "Not a pet right now" pre-selected.
+- [ ] **2.1.M.3** Settings → Mode category becomes "Pet Mode" in user-facing copy. The KeptBy three-radio (shipped 2.1.K.3) gets relabelled to the four Pet Mode options. Test tags + sealed-class names unchanged.
+- [ ] **2.1.M.4** Optional inline "Do you have a partner?" follow-up checkbox on the Pet Mode wizard screen — only shown when alignment ∈ {Submissive, Switch}. Defaults off for Submissive (single is the genesis case). When ticked, flips default to "Someone keeps me" and lands on the existing Share-with-dom screen (2.1.I.4) at Done.
+- [ ] **2.1.M.5** Praise/notification copy uses pet-mode-aware register **when set**. New `IdentityNotifBody.bodyForPet(...)` variant (or extend the existing `bodyFor`) reads a derived `petMode: PetMode` from `mode.toml` + `dom_persona` and tunes phrasing: "your 4pm walk, good boy" for self-pet, "your 4pm — Sir wants you ready" for partnered-pet, falls back to neutral when `mode = free`. `private = true` still wins.
+- [ ] **2.1.M.6** Strings + AVD smoke. Wipe data, run wizard end-to-end with Submissive alignment, verify Pet Mode screen renders four cards, default = "I keep myself", finish wizard, open Settings → Pet Mode, confirm KeptBy radio reflects the choice + commits to `mode.toml`. Screenshots to `docs/qa/2-1-M/`.
+
 ## Phase 2.1.L — Polish + tests
 
 - [ ] **2.1.L.1** AVD smoke test: seed three repos (morning-routine, work, dom-overlay), three todolists; screenshots of Day/Week/Month/Agenda/Year + Tasks Combined/Today under the new source rail. Verify dom-overlay events show author chip + repo dot.
