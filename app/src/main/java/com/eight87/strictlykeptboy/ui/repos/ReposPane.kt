@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material3.HorizontalDivider
@@ -65,6 +66,11 @@ fun ReposPane(
     onOpenTogether: () -> Unit = {},
     onOpenWizard: () -> Unit = {},
     /**
+     * Round 2.4 — global app settings cog. Lives in the Repos header row
+     * since the user explicitly moved it there from the top-bar.
+     */
+    onOpenAppSettings: () -> Unit = {},
+    /**
      * Round 2.3.A.3 — per-repo sync trigger surfaced inside each repo
      * card row. Null falls back to the in-pane default which dispatches
      * `SyncService.startSyncRepo(context, repoId)`.
@@ -117,6 +123,7 @@ fun ReposPane(
                         onOpenSettings = { repoId -> mode = Mode.Settings(repoId) },
                         onOpenTogether = onOpenTogether,
                         onOpenWizard = onOpenWizard,
+                        onOpenAppSettings = onOpenAppSettings,
                         onSyncRepo = resolvedOnSyncRepo,
                     )
                 },
@@ -311,6 +318,7 @@ private fun ReposList(
     onOpenSettings: (String) -> Unit,
     onOpenTogether: () -> Unit,
     onOpenWizard: () -> Unit,
+    onOpenAppSettings: () -> Unit = {},
     onSyncRepo: (String) -> Unit = {},
 ) {
     Column(
@@ -349,6 +357,18 @@ private fun ReposList(
                 androidx.compose.material3.Icon(
                     imageVector = Icons.Filled.Add,
                     contentDescription = "Set up a new account",
+                )
+            }
+            // Round 2.4 — global app settings cog. Moved from the top-bar
+            // into the Repos header per user direction. Per-repo settings
+            // still open via row-tap → Mode.Settings(repoId) above.
+            androidx.compose.material3.IconButton(
+                onClick = onOpenAppSettings,
+                modifier = Modifier.testTag("ReposAppSettings"),
+            ) {
+                androidx.compose.material3.Icon(
+                    imageVector = Icons.Filled.Settings,
+                    contentDescription = "App settings",
                 )
             }
         }

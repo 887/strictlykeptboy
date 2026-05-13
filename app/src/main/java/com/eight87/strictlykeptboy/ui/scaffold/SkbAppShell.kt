@@ -424,6 +424,7 @@ private fun SkbAppShellContent(
                                 secretsStore = secretsStore,
                                 onOpenTogether = { selected = TopDestination.Together },
                                 onOpenWizard = { selected = TopDestination.Wizard },
+                                onOpenAppSettings = { selected = TopDestination.Settings },
                             )
                         } else {
                             PlaceholderScreen(stringResource(R.string.scaffold_dest_repos))
