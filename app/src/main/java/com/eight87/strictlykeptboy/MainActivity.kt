@@ -173,6 +173,10 @@ class MainActivity : ComponentActivity() {
             }
             androidx.compose.runtime.CompositionLocalProvider(
                 com.eight87.strictlykeptboy.avatar.LocalAvatarResolver provides graph.avatarResolver,
+                com.eight87.strictlykeptboy.ui.repos.LocalAvatarPackPrefs provides graph.avatarPackPrefs,
+                com.eight87.strictlykeptboy.ui.repos.LocalPackStore provides graph.packStore,
+                com.eight87.strictlykeptboy.ui.repos.LocalAssetPackLoader provides graph.assetPackLoader,
+                com.eight87.strictlykeptboy.ui.repos.LocalUserPackLoader provides graph.userPackLoader,
             ) {
             StrictlyKeptBoyTheme(
                 themeMode = appearance.themeMode,

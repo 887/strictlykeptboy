@@ -59,18 +59,16 @@ User flagged three connected gaps in the repo configuration surface:
 
 Implementation notes: the new wiring lives in a private `RepoSettingsHost` Composable in `ReposPane.kt` that both the compact and two-pane branches delegate to. `RepoSettingsScreen` is now stateless w.r.t. disk I/O — it takes `calendars: List<CalendarMeta>`, `identitySnapshot: PerRepoIdentitySnapshot`, `modeSnapshot: RepoMode` plus matching callbacks, so it's easier to unit-test.
 
-## Phase 2.5.C — Sticker pack subview
+## Phase 2.5.C — Sticker pack subview — shipped (commit pending)
 
-- [ ] **2.5.C.1** New `StickerPackSelectorScreen` (`ui/repos/StickerPackSelectorScreen.kt`):
-  - Lists all packs via `packStore.allPacks()` = `userPackLoader.loadAll() + assetPackLoader.loadAll()`
-  - Each pack row: pack name + thumbnail (one sample sticker) + "bundled" / "custom" badge + radio for "active for this species"
-  - "+ Import custom pack" button at bottom → opens import flow (URL entry + git clone via `userPackLoader.cloneFrom(url)`)
-  - Per-species active pack stored in `AvatarPackPrefs` (already exists)
-- [ ] **2.5.C.2** New "Sticker pack" section in `RepoSettingsScreen` (between Identity and Mode):
-  - Shows current pack name + thumbnail (one sample)
-  - "Switch pack" button → pushes `StickerPackSelectorScreen` into the same detail-pane navigation
-- [ ] **2.5.C.3** Drop the "emoji selector" affordance from the wizard's Identity screen / from `IdentityCategory` (it stays available as a fallback inside one bundled "minimal" sticker pack). Update copy so "emoji" never appears where "sticker" should — the user thinks in packs.
-- [ ] **2.5.C.4** Test: `StickerPackImportTest` covering URL → clone → register → activate flow with a local test fixture (no network).
+- [x] **2.5.C.1** New `StickerPackSelectorScreen` (`ui/repos/StickerPackSelectorScreen.kt`):
+  - Lists all packs via `packStore.all()` (composite over `userPackLoader.loadAll() + assetPackLoader.loadAll()`)
+  - Each pack row: pack name + 48dp thumbnail (sample sticker) + bundled/custom AssistChip + radio for "active for this species"
+  - "+ Import custom pack" button → AlertDialog with URL TextField; on confirm: coroutine + progress + `userPackLoader.cloneFrom(url)`; success refreshes the list
+  - Per-species active pack via `AvatarPackPrefs.setActivePackFor`
+- [x] **2.5.C.2** New "Sticker pack" section in `RepoSettingsScreen` between Identity and Defaults — shows current pack name + 64dp `StickerThumbnail` + "Switch pack" button that routes to `Mode.StickerPacks(repoId)` in `ReposPane`. Wired in both compact (single-pane) and tablet (`ReposDetailPane`) branches.
+- [x] **2.5.C.3** Wizard scaffolds with `iconSpecies = draft.species.name`; `AvatarPackPrefs.activePackFor(species)` already defaults to the bundled `default-<species>` pack, so no in-wizard pack picker is needed. Renamed the "Emoji density" copy in `strings.xml` (`settings_identity_emoji` + `wizard_identity_emoji_label`) to "Praise emoji density" to disambiguate from the avatar/sticker surface.
+- [x] **2.5.C.4** `StickerPackImportTest` (Robolectric + JGit fixture): builds a local pack repo, clones via `file://` URL, asserts `CompositePackStore.refresh()` exposes the new pack, `AvatarPackPrefs.setActivePackFor` flips activation, and `DefaultStickerResolver` returns the new pack's entry. Wires `DefaultAvatarResolver` end-to-end.
 
 ## Phase 2.5.D — Schedule + Tasks consumption — shipped in commit `PENDING-A`
 

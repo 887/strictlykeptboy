@@ -203,7 +203,7 @@
     <string name="settings_identity_pronouns_extra">Extra pronoun sets (comma separated)</string>
     <string name="settings_identity_honorific">Honorific</string>
     <string name="settings_identity_tone">Tone register</string>
-    <string name="settings_identity_emoji">Emoji density</string>
+    <string name="settings_identity_emoji">Praise emoji density</string>
     <string name="settings_identity_tone_soft">Soft</string>
     <string name="settings_identity_tone_neutral">Neutral</string>
     <string name="settings_identity_tone_formal">Formal</string>
@@ -457,7 +457,7 @@
     <string name="wizard_identity_pronouns_label">Pronouns:</string>
     <string name="wizard_identity_honorific_label">Honorific:</string>
     <string name="wizard_identity_tone_label">Tone register:</string>
-    <string name="wizard_identity_emoji_label">Emoji density:</string>
+    <string name="wizard_identity_emoji_label">Praise emoji density (stickers are configured in Repo settings):</string>
     <string name="wizard_identity_preview_label">Preview</string>
     <string name="wizard_identity_preview_line">%1$syou did it — %2$s.%3$s</string>
     <string name="wizard_identity_praise_default">good boy</string>

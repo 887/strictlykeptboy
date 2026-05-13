@@ -117,6 +117,7 @@ fun RepoSettingsScreen(
     onSetPrimaryRemote: (RemoteName) -> Unit,
     onRemoveRepo: (deleteLocalClone: Boolean) -> Unit,
     onOpenIdentities: () -> Unit,
+    onOpenStickerPack: () -> Unit = {},
     onShareRepo: () -> Unit = {},
     onToggleRemoteReadOnly: (RemoteName, Boolean) -> Unit = { _, _ -> },
     /** Phase ZZ.D — names of mirror remotes currently showing divergence from primary. */

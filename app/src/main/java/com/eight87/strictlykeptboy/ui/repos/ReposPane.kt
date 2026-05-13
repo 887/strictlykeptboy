@@ -267,6 +267,10 @@ fun ReposPane(
                     )
                 }
             }
+            is Mode.StickerPacks -> {
+                val repo = repos.firstOrNull { it.repoId == m.repoId }
+                StickerPacksHost(repo = repo, onBack = { mode = Mode.Settings(m.repoId) }, fallback = { mode = Mode.List })
+            }
         }
 
         // Phase O.1 — share bottom sheet host.
@@ -409,6 +413,7 @@ private sealed interface Mode {
     object Add : Mode
     data class Settings(val repoId: String) : Mode
     data class Identities(val repoId: String) : Mode
+    data class StickerPacks(val repoId: String) : Mode
 }
 
 /**
@@ -511,6 +516,14 @@ private fun ReposDetailPane(
                     onBack = { onModeChange(Mode.Settings(repo.repoId)) },
                 )
             }
+        }
+        is Mode.StickerPacks -> {
+            val repo = repos.firstOrNull { it.repoId == mode.repoId }
+            StickerPacksHost(
+                repo = repo,
+                onBack = { onModeChange(Mode.Settings(mode.repoId)) },
+                fallback = { onModeChange(Mode.List) },
+            )
         }
     }
 }
