@@ -23,15 +23,15 @@
 
 → Full plan: [`round-2-2.md`](round-2-2.md)
 
-## Round 2.3 — top-bar consolidation (PENDING — 2026-05-14)
+## Round 2.3 — top-bar consolidation (✅ DONE — 2026-05-14)
 
 User feedback on screenshots: the destination buttons currently occupy row 2; `kept` mode pill and sync icon sit in row 1 alongside title + avatar. Wanted: ONE row only. Mode + sync are per-repo state, not global app-bar concerns — they move into ReposPane.
 
-- **2.3.A.1** Move `Schedule` / `Tasks` / `Reviews` destination buttons from the second row INTO the top-bar action row (`ShellTopBar`), placed to the left of the bat avatar. Drop the second-row container entirely.
-- **2.3.A.2** Remove the `kept` mode pill (`ModePill`) from `ShellTopBar`. Render it instead inside `ReposPane` next to each repo card as a per-repo badge.
-- **2.3.A.3** Remove the global sync `IconButton` from `ShellTopBar`. Render a per-repo sync icon inside each repo card row in `ReposPane`.
-- **2.3.A.4** Verify destination buttons fit on a single row alongside title + avatar on Compact width (1080dp baseline). On narrower phones, the title can elide before the action-row icons; never let the action-row icons clip.
-- **2.3.A.5** AVD smoke verify the top-bar is one row deep; ReposPane shows per-repo mode badge + per-repo sync icon. Update `AppShellNavigationSwapTest` if test-tag positions move.
+- [x] **2.3.A.1** Move `Schedule` / `Tasks` / `Reviews` destination buttons from the second row INTO the top-bar action row (`ShellTopBar`), placed to the left of the bat avatar. Drop the second-row container entirely.
+- [x] **2.3.A.2** Remove the `kept` mode pill (`ModePill`) from `ShellTopBar`. Render it instead inside `ReposPane` next to each repo card as a per-repo badge (new `RepoModeBadge` in `RepoSwitcherDropdown.kt`, reads `mode.toml` via `ModeTomlCodec.readOrDefault`).
+- [x] **2.3.A.3** Remove the global sync `IconButton` from `ShellTopBar`. Render a per-repo sync icon inside each repo card row in `ReposPane` (wired to `SyncService.startSyncRepo(context, repoId)`; suppressed for local-only repos).
+- [x] **2.3.A.4** Verify destination buttons fit on a single row alongside title + avatar on Compact width (1080dp baseline). Title elides with `…` via `overflow = TextOverflow.Ellipsis` while taking `weight(1f)`; action-row icons never clip.
+- [x] **2.3.A.5** AVD smoke verified on `emulator-5554` (1080×2400). Screenshots in `docs/qa/2-3/`. `AppShellNavigationSwapTest` did not need updates — `TestTagShellDestPrefix` tags are preserved on the relocated destination buttons.
 
 **Sub-step counts (post-cleanup sweep):**
 

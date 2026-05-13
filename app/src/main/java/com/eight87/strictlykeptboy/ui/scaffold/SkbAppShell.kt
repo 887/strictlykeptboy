@@ -519,84 +519,62 @@ private fun ShellTopBar(
             .windowInsetsPadding(WindowInsets.statusBars.union(WindowInsets.displayCutout))
             .testTag(TestTagShellTopBar),
     ) {
-        // Tonearmboy-shape: big title left + small icon actions right + sync.
-        // The big stacked destination buttons are gone; destinations live
-        // as tiny IconButtons in the action row. Bat + settings-gear move to
-        // the BOTTOM of the left rail (see RailColumn). See user direction
-        // 2026-05-13 (tonearmboy parity ask).
-        // Two-row top bar: row 1 carries the title + mode pill + sync + the
-        // bat avatar; row 2 carries the destination icon-buttons in a
-        // horizontally-scrollable strip so all 7 destinations stay reachable
-        // on Compact (1080dp) width without colliding with the avatar.
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+        // Round 2.3.A.1 — single-row top bar. Destination icon-buttons
+        // (read surfaces only: Schedule / Tasks / Reviews) are inlined
+        // into the action row to the right of the title, alongside the
+        // bat avatar. Mode + sync are no longer global concerns — they
+        // moved into ReposPane as per-repo state (Round 2.3.A.2 / .A.3).
+        // The `modePrefs` + `onSyncClick` params remain on the function
+        // signature (null-allowed) to avoid breaking call-sites, but
+        // they no longer render anything here.
+        val topBarDestinations = listOf(
+            TopDestination.Schedule,
+            TopDestination.Tasks,
+            TopDestination.Reviews,
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f),
-                    maxLines = 1,
-                )
-                if (unifiedView) {
-                    androidx.compose.material3.AssistChip(
-                        onClick = {},
-                        label = {
-                            Text(
-                                "Unified",
-                                style = MaterialTheme.typography.labelSmall,
-                            )
-                        },
-                        modifier = Modifier.testTag("ShellTopBar-UnifiedChip"),
-                    )
-                }
-                // Phase DDD.12 — always-visible mode pill in chrome. Long-press
-                // → transition modal with typed-confirmation gate (D.86). Only
-                // renders when ModePrefs is wired (tests / previews omit it).
-                if (modePrefs != null) {
-                    ModePill(prefs = modePrefs)
-                }
-                SyncButton(onClick = onSyncClick)
-                IdentityAvatar(
-                    onClick = onRepoSwitcherClick,
-                    iconKind = activeIconKind,
-                    sizeDp = 40,
-                )
-            }
-            // Phase 2.2.A.1: top-bar icon row is filtered to READ surfaces
-            // only — Schedule + Tasks + Reviews. The full `TopDestination`
-            // enum stays at 7 cases (so the existing routing paths from the
-            // bat avatar / Repos "+" / `wizardEntryRequest` / Settings gear
-            // continue to compile + work), but Wizard / Together / Repos /
-            // Settings are NOT rendered as icon-buttons in this row anymore.
-            // Restores the pre-Round-2.1 layout (user direction 2026-05-13:
-            // "Together/Wizard demoted to inside ReposPane" + "Settings/
-            // Repos/Together/Wizard filtered out of icon-button row").
-            val topBarDestinations = listOf(
-                TopDestination.Schedule,
-                TopDestination.Tasks,
-                TopDestination.Reviews,
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                topBarDestinations.forEach { dest ->
-                    DestinationButton(
-                        dest = dest,
-                        selected = dest == selectedDest,
-                        onClick = { onSelectDest(dest) },
-                    )
-                }
+            if (unifiedView) {
+                androidx.compose.material3.AssistChip(
+                    onClick = {},
+                    label = {
+                        Text(
+                            "Unified",
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                    },
+                    modifier = Modifier.testTag("ShellTopBar-UnifiedChip"),
+                )
             }
+            topBarDestinations.forEach { dest ->
+                DestinationButton(
+                    dest = dest,
+                    selected = dest == selectedDest,
+                    onClick = { onSelectDest(dest) },
+                )
+            }
+            IdentityAvatar(
+                onClick = onRepoSwitcherClick,
+                iconKind = activeIconKind,
+                sizeDp = 40,
+            )
+            // Keep params referenced so an accidental removal of either
+            // ModePill/SyncButton call-site doesn't silently lose meaning.
+            @Suppress("UNUSED_EXPRESSION") modePrefs
+            @Suppress("UNUSED_EXPRESSION") onSyncClick
         }
     }
 }

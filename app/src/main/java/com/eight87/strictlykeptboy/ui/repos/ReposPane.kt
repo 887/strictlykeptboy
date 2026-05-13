@@ -64,6 +64,12 @@ fun ReposPane(
     modifier: Modifier = Modifier,
     onOpenTogether: () -> Unit = {},
     onOpenWizard: () -> Unit = {},
+    /**
+     * Round 2.3.A.3 — per-repo sync trigger surfaced inside each repo
+     * card row. Null falls back to the in-pane default which dispatches
+     * `SyncService.startSyncRepo(context, repoId)`.
+     */
+    onSyncRepo: ((String) -> Unit)? = null,
 ) {
     var mode by remember { mutableStateOf<Mode>(Mode.List) }
     val repos by state.repos.collectAsState()
@@ -73,6 +79,14 @@ fun ReposPane(
     val unified by state.unifiedView.collectAsState()
     val scope = rememberCoroutineScope()
     val widthClass = LocalWindowWidthSizeClass.current
+
+    // Round 2.3.A.3 — default per-repo sync dispatch: call the existing
+    // SyncService entrypoint for the given repo. Callers can override via
+    // [onSyncRepo] for tests / previews.
+    val resolvedOnSyncRepo: (String) -> Unit = onSyncRepo
+        ?: { repoId ->
+            com.eight87.strictlykeptboy.sync.SyncService.startSyncRepo(context, repoId)
+        }
 
     // Phase 2.1.H.3 — on Medium/Expanded, render List as the master pane
     // and whatever sub-mode is active as the detail pane. List stays
@@ -103,6 +117,7 @@ fun ReposPane(
                         onOpenSettings = { repoId -> mode = Mode.Settings(repoId) },
                         onOpenTogether = onOpenTogether,
                         onOpenWizard = onOpenWizard,
+                        onSyncRepo = resolvedOnSyncRepo,
                     )
                 },
                 detail = {
@@ -163,6 +178,7 @@ fun ReposPane(
                 onOpenSettings = { repoId -> mode = Mode.Settings(repoId) },
                 onOpenTogether = onOpenTogether,
                 onOpenWizard = onOpenWizard,
+                onSyncRepo = resolvedOnSyncRepo,
             )
             Mode.Add -> AddRepoNavHost(
                 onCancel = { mode = Mode.List },
@@ -295,6 +311,7 @@ private fun ReposList(
     onOpenSettings: (String) -> Unit,
     onOpenTogether: () -> Unit,
     onOpenWizard: () -> Unit,
+    onSyncRepo: (String) -> Unit = {},
 ) {
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -380,6 +397,7 @@ private fun ReposList(
             onSelect = onSelect,
             onAddRepo = onAddRepo,
             onOpenSettings = onOpenSettings,
+            onSyncRepo = onSyncRepo,
             modifier = Modifier.fillMaxWidth().testTag(TestTagReposPaneSwitcher),
         )
     }
