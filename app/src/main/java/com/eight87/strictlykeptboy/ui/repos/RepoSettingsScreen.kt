@@ -83,6 +83,10 @@ fun RepoSettingsScreen(
     onOpenIdentities: () -> Unit,
     onShareRepo: () -> Unit = {},
     onToggleRemoteReadOnly: (RemoteName, Boolean) -> Unit = { _, _ -> },
+    /** Phase ZZ.D — names of mirror remotes currently showing divergence from primary. */
+    divergedMirrors: Set<RemoteName> = emptySet(),
+    /** Phase ZZ.E — names of mirror remotes whose last push lagged the primary. */
+    partialPushDegradedMirrors: Set<RemoteName> = emptySet(),
     modifier: Modifier = Modifier,
 ) {
     var draft by remember(repo) { mutableStateOf(repo) }
@@ -248,6 +252,12 @@ fun RepoSettingsScreen(
             if (repo.remotes.any { it.effectiveReadOnly }) {
                 com.eight87.strictlykeptboy.ui.share.ReadOnlyBanner()
             }
+            // Phase ZZ.D — per-mirror yellow divergence banner.
+            divergedMirrors.forEach { mirror ->
+                val label = repo.remotes.firstOrNull { it.name == mirror }?.displayName
+                    ?: mirror.value
+                com.eight87.strictlykeptboy.ui.share.MirrorDivergenceBanner(mirrorLabel = label)
+            }
             if (repo.remotes.isEmpty()) {
                 Text(
                     stringResource(R.string.repo_settings_no_remotes),
@@ -263,6 +273,7 @@ fun RepoSettingsScreen(
                         binding = binding,
                         isPrimary = binding.name == repo.primaryRemote,
                         lastSyncedAt = repo.lastSyncedAt,
+                        partialPushDegraded = binding.name in partialPushDegradedMirrors,
                         onRemove = { onRemoveRemote(binding.name) },
                         onSetPrimary = { onSetPrimaryRemote(binding.name) },
                         onToggleReadOnly = { v -> onToggleRemoteReadOnly(binding.name, v) },
@@ -387,6 +398,7 @@ private fun RemoteRow(
     onRemove: () -> Unit,
     onSetPrimary: () -> Unit,
     onToggleReadOnly: (Boolean) -> Unit = {},
+    partialPushDegraded: Boolean = false,
 ) {
     Card(
         modifier = Modifier
@@ -422,6 +434,11 @@ private fun RemoteRow(
                 stringResource(R.string.repo_settings_last_synced, syncedSummary),
                 style = MaterialTheme.typography.bodySmall,
             )
+            if (partialPushDegraded) {
+                com.eight87.strictlykeptboy.ui.share.PartialPushDegradedDot(
+                    mirrorLabel = binding.displayName ?: binding.name.value,
+                )
+            }
             // Phase O.3 — per-remote "Treat as read-only" toggle.
             Row(
                 verticalAlignment = Alignment.CenterVertically,

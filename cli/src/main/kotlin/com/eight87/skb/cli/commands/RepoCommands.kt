@@ -14,6 +14,7 @@ import com.eight87.skb.cli.core.Uuid7
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.arguments.argument
+import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
@@ -27,6 +28,8 @@ class RepoGroup(private val ctxOf: () -> CliContext) : CliktCommand(name = "repo
   override fun run() = Unit
 }
 
+// RemoteGroup is defined in com.eight87.skb.cli.repo.RemoteCommands.
+
 private class RepoInit(val ctxOf: () -> CliContext) : CliktCommand(name = "init") {
   val pathArg by argument("path")
   val name by option("--name")
@@ -35,6 +38,14 @@ private class RepoInit(val ctxOf: () -> CliContext) : CliktCommand(name = "init"
   val defaultTz by option("--default-tz")
   val authorName by option("--author-name")
   val authorEmail by option("--author-email")
+  /**
+   * Phase ZZ.H / MO-H — `skb repo init --local` makes the no-origin path
+   * first-class. With this flag we skip any remote config (no `remotes.toml`
+   * is created) but everything else is identical — including the git init +
+   * initial commit, so the user can `git remote add origin <url>` later
+   * without rewriting history (per ZZ.G grow-into-remote path).
+   */
+  val local by option("--local", help = "create a no-origin repo (no remotes configured)").flag()
 
   override fun run() {
     val ctx = ctxOf()
@@ -76,6 +87,9 @@ private class RepoInit(val ctxOf: () -> CliContext) : CliktCommand(name = "init"
     Files.createDirectories(target.resolve("identities"))
     Files.createDirectories(target.resolve("calendars"))
     Files.createDirectories(target.resolve("todolists"))
+
+    // Phase ZZ.A.4 — committed repo-id under .strictlykeptboy/repo-id.
+    AtomicWriter.writeUtf8(target.resolve(".strictlykeptboy/repo-id"), repoId + "\n")
 
     // .strictlykeptboy/schema.toml + repo.toml
     AtomicWriter.writeUtf8(
@@ -163,6 +177,7 @@ private class RepoInit(val ctxOf: () -> CliContext) : CliktCommand(name = "init"
     emitHuman(
       buildString {
         appendLine("✓ initialized repo at $target")
+        if (local) appendLine("  scope:         local-only (no remotes)")
         appendLine("  repo id:       $repoId")
         appendLine("  identity:      $idDisplayName ($identityId)")
         seededCalIds.forEach { (n, i) -> appendLine("  calendar:      $n ($i)") }
@@ -180,6 +195,7 @@ private class RepoInit(val ctxOf: () -> CliContext) : CliktCommand(name = "init"
           put("repo_name", JsonPrimitive(repoName))
           put("identity_id", JsonPrimitive(identityId))
           put("default_tz", JsonPrimitive(tz))
+          put("local_only", JsonPrimitive(local))
           put(
             "seeded",
             buildJsonObject {

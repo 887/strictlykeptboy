@@ -534,6 +534,11 @@
     <string name="read_only_banner_message">Your changes will sync if write access is restored. Currently in read-only mode.</string>
     <string name="read_only_treat_as_read_only">Treat as read-only</string>
 
+    <!-- Phase ZZ.D — mirror divergence banner -->
+    <string name="mirror_divergence_banner">Mirror %1$s has commits the primary doesn\'t. Your local copy stays on the primary.</string>
+    <!-- Phase ZZ.E — partial-push degraded dot -->
+    <string name="partial_push_degraded_dot">Mirror %1$s lagging — will retry in background.</string>
+
     <!-- Phase O.4 — foreign-event chip -->
     <string name="foreign_event_chip_from">from %1$s</string>
     <string name="foreign_event_open_in_source">Open in source app</string>

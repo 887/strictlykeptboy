@@ -113,4 +113,16 @@ data class RemoteSyncStatus(
     val lastSyncedAt: Long? = null,
     val lastErrorMessage: String? = null,
     val readOnlyDetected: Boolean = false,
+    /**
+     * Phase ZZ.D — true when this non-primary remote was last observed with
+     * commits absent from the primary remote. Soft yellow-banner signal;
+     * never an error.
+     */
+    val mirrorDiverged: Boolean = false,
+    /**
+     * Phase ZZ.E — true when a primary push succeeded but this remote's
+     * push failed during the same sync pass. The local commit is shipped
+     * (primary has it); this mirror enters retry. Small dot, never red.
+     */
+    val partialPushDegraded: Boolean = false,
 )

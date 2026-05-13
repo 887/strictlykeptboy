@@ -38,8 +38,8 @@ import java.io.File
 class GitRepo internal constructor(
     val rootDir: File,
     val repoId: String,
-    val remotes: List<RemoteBinding>,
-    val primaryRemote: RemoteName?,
+    remotes: List<RemoteBinding>,
+    primaryRemote: RemoteName?,
     val authorIdentity: AuthorIdentity,
     val defaultBranch: String,
     private val credentialResolver: CredentialResolver,
@@ -47,6 +47,15 @@ class GitRepo internal constructor(
 ) {
     private val mutex = Mutex()
     private val repository: Repository = git.repository
+
+    @Volatile
+    private var _remotes: List<RemoteBinding> = remotes
+    @Volatile
+    private var _primaryRemote: RemoteName? = primaryRemote
+
+    /** Snapshot of currently-configured remotes. Mutated by [addRemote] / [removeRemote] / [renameRemote] / [setPrimaryRemote]. */
+    val remotes: List<RemoteBinding> get() = _remotes
+    val primaryRemote: RemoteName? get() = _primaryRemote
 
     init {
         require(remotes.isEmpty() == (primaryRemote == null)) {
@@ -57,6 +66,104 @@ class GitRepo internal constructor(
                 "primaryRemote $primaryRemote is not in remotes list"
             }
         }
+    }
+
+    /**
+     * Phase ZZ.B — return a snapshot of remotes. JGit config is the on-disk
+     * source of truth; this returns the in-memory cache populated by add /
+     * remove / rename. Use only after construction.
+     */
+    fun listRemotes(): List<RemoteBinding> = _remotes
+
+    /**
+     * Phase ZZ.B — add a remote to the on-disk JGit config + update the
+     * in-memory list. If this is the first remote added to a previously
+     * no-origin repo, it becomes [primaryRemote].
+     *
+     * Throws [IllegalArgumentException] if [binding.name] is reserved
+     * (`HEAD`) or already present.
+     */
+    suspend fun addRemote(binding: RemoteBinding) = withLock {
+        require(binding.name.value != "HEAD") { "'HEAD' is reserved" }
+        require(_remotes.none { it.name == binding.name }) {
+            "remote ${binding.name} already exists"
+        }
+        git.remoteAdd()
+            .setName(binding.name.value)
+            .setUri(org.eclipse.jgit.transport.URIish(binding.url))
+            .call()
+        _remotes = _remotes + binding
+        if (_primaryRemote == null) _primaryRemote = binding.name
+    }
+
+    /**
+     * Phase ZZ.B — remove a remote from the on-disk JGit config + the in-memory list.
+     * If the removed remote was primary, the next remote (by add-order) becomes
+     * primary; if no remotes remain, [primaryRemote] becomes `null`.
+     */
+    suspend fun removeRemote(name: RemoteName) = withLock {
+        require(_remotes.any { it.name == name }) {
+            "remote $name is not configured on this repo"
+        }
+        git.remoteRemove().setRemoteName(name.value).call()
+        val updated = _remotes.filterNot { it.name == name }
+        _remotes = updated
+        _primaryRemote = when {
+            updated.isEmpty() -> null
+            _primaryRemote == name -> updated.first().name
+            else -> _primaryRemote
+        }
+    }
+
+    /**
+     * Phase ZZ.B — rename a remote in both on-disk JGit config + in-memory list.
+     * `HEAD` is reserved. If the renamed remote was primary, the primary
+     * pointer is updated to track the new name.
+     */
+    suspend fun renameRemote(from: RemoteName, to: RemoteName) = withLock {
+        require(to.value != "HEAD") { "'HEAD' is reserved" }
+        require(_remotes.any { it.name == from }) {
+            "remote $from is not configured on this repo"
+        }
+        require(_remotes.none { it.name == to }) {
+            "remote $to already exists"
+        }
+        // JGit's high-level API has no remoteRename; mutate the underlying
+        // repository config directly. We copy every `remote.<from>.*` key
+        // to `remote.<to>.*`, then unset the old section. JGit's config
+        // honours this idiomatically; subsequent fetch/push find the new name.
+        val cfg = repository.config
+        val sub = from.value
+        for (key in cfg.getNames("remote", sub).toList()) {
+            val values = cfg.getStringList("remote", sub, key)
+            cfg.setStringList("remote", to.value, key, values.toList())
+        }
+        cfg.unsetSection("remote", sub)
+        cfg.save()
+        _remotes = _remotes.map { if (it.name == from) it.copy(name = to) else it }
+        if (_primaryRemote == from) _primaryRemote = to
+    }
+
+    /**
+     * Phase ZZ.E — adjust per-remote push policy. The policy is in-memory
+     * here; the caller is responsible for persisting via `RepoStore.update`.
+     */
+    suspend fun setPushPolicy(name: RemoteName, policy: PushPolicy) = withLock {
+        require(_remotes.any { it.name == name }) {
+            "remote $name is not configured on this repo"
+        }
+        _remotes = _remotes.map { if (it.name == name) it.copy(pushPolicy = policy) else it }
+    }
+
+    /**
+     * Phase ZZ.A — pick a different remote as primary. Must already be in
+     * [remotes]. Persistence is the caller's responsibility.
+     */
+    suspend fun setPrimaryRemote(name: RemoteName) = withLock {
+        require(_remotes.any { it.name == name }) {
+            "remote $name is not configured on this repo"
+        }
+        _primaryRemote = name
     }
 
     suspend fun headSha(): ObjectId? = withLock {
@@ -482,6 +589,7 @@ class GitRepo internal constructor(
                 .setInitialBranch(defaultBranch)
                 .call()
             applyRemotes(git, remotes)
+            writeRepoIdFile(rootDir, repoId)
             GitRepo(rootDir, repoId, remotes, primaryRemote, authorIdentity, defaultBranch, credentialResolver, git)
         }
 
@@ -500,6 +608,7 @@ class GitRepo internal constructor(
                 .setDirectory(rootDir)
                 .setInitialBranch(defaultBranch)
                 .call()
+            writeRepoIdFile(rootDir, repoId)
             GitRepo(rootDir, repoId, emptyList(), null, authorIdentity, defaultBranch, CredentialResolver.NoopResolver, git)
         }
 
@@ -520,8 +629,34 @@ class GitRepo internal constructor(
             credentialResolver.resolve(repoId, primaryBinding).configure(cmd)
             val git = cmd.call()
             applyRemotes(git, additionalRemotes)
+            writeRepoIdFile(rootDir, repoId)
             val remotes = listOf(primaryBinding) + additionalRemotes
             GitRepo(rootDir, repoId, remotes, primaryBinding.name, authorIdentity, defaultBranch, credentialResolver, git)
+        }
+
+        /**
+         * Phase ZZ.A.4 — repo-id is committed at `.strictlykeptboy/repo-id`
+         * so every device that has this repo sees the same value. Idempotent;
+         * if the file already exists with a non-blank value, leave it.
+         */
+        private fun writeRepoIdFile(rootDir: File, repoId: String) {
+            val dir = File(rootDir, ".strictlykeptboy")
+            dir.mkdirs()
+            val file = File(dir, "repo-id")
+            if (!file.exists() || file.readText().trim().isBlank()) {
+                file.writeText(repoId + "\n")
+            }
+        }
+
+        /**
+         * Phase ZZ.A.4 — read the repo-id from disk if present. Returns null
+         * for repos predating this convention; callers can fall back to the
+         * per-device RepoConfig.repoId.
+         */
+        fun readRepoIdFile(rootDir: File): String? {
+            val file = File(rootDir, ".strictlykeptboy/repo-id")
+            if (!file.isFile) return null
+            return file.readText().trim().ifBlank { null }
         }
 
         private fun applyRemotes(git: Git, remotes: List<RemoteBinding>) {

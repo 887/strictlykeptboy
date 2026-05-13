@@ -98,6 +98,31 @@ class RepoStore internal constructor(
         update(existing.copy(remotes = updatedRemotes, primaryRemote = updatedPrimary))
     }
 
+    suspend fun renameRemote(repoId: String, from: RemoteName, to: RemoteName) {
+        val existing = get(repoId) ?: error("repo $repoId not in store")
+        require(to.value != "HEAD") { "'HEAD' is a reserved ref name" }
+        require(existing.remotes.any { it.name == from }) {
+            "remote $from is not configured on repo $repoId"
+        }
+        require(existing.remotes.none { it.name == to }) {
+            "remote $to already exists on repo $repoId"
+        }
+        val updatedRemotes = existing.remotes.map { if (it.name == from) it.copy(name = to) else it }
+        val updatedPrimary = if (existing.primaryRemote == from) to else existing.primaryRemote
+        update(existing.copy(remotes = updatedRemotes, primaryRemote = updatedPrimary))
+    }
+
+    suspend fun setPushPolicy(repoId: String, name: RemoteName, policy: PushPolicy) {
+        val existing = get(repoId) ?: error("repo $repoId not in store")
+        require(existing.remotes.any { it.name == name }) {
+            "remote $name is not configured on repo $repoId"
+        }
+        val updatedRemotes = existing.remotes.map {
+            if (it.name == name) it.copy(pushPolicy = policy) else it
+        }
+        update(existing.copy(remotes = updatedRemotes))
+    }
+
     suspend fun setPrimary(repoId: String, name: RemoteName) {
         val existing = get(repoId) ?: error("repo $repoId not in store")
         require(existing.remotes.any { it.name == name }) {

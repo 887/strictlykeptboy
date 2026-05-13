@@ -228,8 +228,25 @@ class SyncScheduler(
                     }
                     is PushResult.PartiallySuccess -> {
                         push.pushed.forEach { outcomes[it] = RemoteOutcome.Pushed }
+                        val primaryShipped = primary != null && primary in push.pushed
                         push.failed.forEach { (name, err) ->
                             outcomes[name] = RemoteOutcome.Failed(err)
+                            // ZZ.E.3 — primary shipped, mirror failed → partialPushDegraded soft signal.
+                            if (primaryShipped && name != primary) {
+                                statusStore.updateRemote(cfg.repoId, name) {
+                                    it.copy(partialPushDegraded = true, lastErrorMessage = errorMessage(err))
+                                }
+                            }
+                        }
+                        // Clear the degraded flag for any mirror that successfully pushed.
+                        if (primaryShipped) {
+                            push.pushed.forEach { name ->
+                                if (name != primary) {
+                                    statusStore.updateRemote(cfg.repoId, name) {
+                                        it.copy(partialPushDegraded = false)
+                                    }
+                                }
+                            }
                         }
                     }
                     is PushResult.Failed -> {
@@ -248,8 +265,13 @@ class SyncScheduler(
         if (primary != null) {
             for ((remoteName, result) in fetched) {
                 if (remoteName == primary) continue
-                if (result is FetchResult.Success && result.updatedRefs.isNotEmpty()) {
+                val diverged = result is FetchResult.Success && result.updatedRefs.isNotEmpty()
+                if (diverged) {
                     events.emit(SyncEvent.MirrorDivergence(cfg.repoId, remoteName, primary))
+                }
+                // Persist divergence flag so the banner can survive process death.
+                statusStore.updateRemote(cfg.repoId, remoteName) {
+                    it.copy(mirrorDiverged = diverged)
                 }
             }
         }
