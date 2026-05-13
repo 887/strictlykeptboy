@@ -61,10 +61,12 @@ class SettingsNavigationTest {
         }
     }
 
+    // 2.1.E.5 — Identities stub retired; folded into Identity → Signing
+    // sub-section. 2.1.E.12 — CalDAV stub category added under Behaviour.
     private val allCategoryTags = listOf(
-        "Repos", "Identities", "Sync", "Notifications",
+        "Repos", "Sync", "Notifications",
         "Calendars", "Todolists", "Templates", "Lifestyle",
-        "Identity", "Appearance", "About", "Mode",
+        "Identity", "Appearance", "About", "Mode", "CalDav",
     )
 
     @Test fun compact_routes_each_category_to_stacked_content() {

@@ -75,7 +75,8 @@
     <string name="settings_search_placeholder">Search settings</string>
     <string name="settings_category_mode">Mode</string>
     <string name="settings_category_notifications">Notifications</string>
-    <string name="settings_category_repos">Repos</string>
+    <!-- 2.1.E.3 — user-facing copy renamed to "Accounts"; testTag stays "Repos". -->
+    <string name="settings_category_repos">Accounts</string>
     <string name="settings_category_about">About</string>
     <string name="settings_category_placeholder">This section ships in a later phase.</string>
     <string name="settings_about_app_name">strictlykeptboy</string>
@@ -100,7 +101,7 @@
     <string name="settings_section_content">Content</string>
     <string name="settings_section_lifestyle">Lifestyle</string>
     <string name="settings_section_app">App</string>
-    <string name="settings_subtitle_repos">Manage repos, identities and import/export.</string>
+    <string name="settings_subtitle_repos">Manage accounts, identities and import/export.</string>
     <string name="settings_subtitle_authors">Per-repo authors used for commits.</string>
     <string name="settings_subtitle_sync">Auto-sync, conflict resolution, schedule.</string>
     <string name="settings_subtitle_notifications">Reminders, do-not-disturb, channels.</string>
@@ -114,8 +115,8 @@
     <string name="settings_subtitle_mode">Free vs strictly-kept.</string>
 
     <!-- S.1 Repos navigation tile -->
-    <string name="settings_repos_intro">Manage repos, identities and import/export. Tap a repo to open its settings.</string>
-    <string name="settings_repos_open_full">Open repo list</string>
+    <string name="settings_repos_intro">Manage accounts, identities and import/export. Tap an account to open its settings.</string>
+    <string name="settings_repos_open_full">Open account list</string>
 
     <!-- S.2 Identities (per-repo, placeholder until signed commits) -->
     <string name="settings_identities_intro">Per-repo identity comes from identity.toml in each repo.</string>
@@ -890,4 +891,28 @@
     <string name="widget_countdown_tomorrow">tomorrow</string>
     <string name="widget_countdown_today">today</string>
     <string name="widget_countdown_past_due">%1$d days ago</string>
+
+    <!-- Phase 2.1.E — Settings restructure -->
+    <!-- 2.1.E.4 — Neutral mode relocates to Lifestyle; Appearance keeps a deeplink chip. -->
+    <string name="settings_appearance_neutral_moved_blurb">Neutral mode now lives in Lifestyle — it is a content-mode switch, not a visual one.</string>
+    <string name="settings_appearance_neutral_open_lifestyle">Open Lifestyle → Neutral mode</string>
+    <string name="settings_lifestyle_neutral_section">Neutral mode</string>
+    <string name="settings_lifestyle_neutral_blurb">Hide kink role + templates (K-3). Per-event private flag is independent.</string>
+
+    <!-- 2.1.E.5 — Identity sub-sections after Identities retirement. -->
+    <string name="settings_identity_section_persona">My persona</string>
+    <string name="settings_identity_section_signing">Signing and authors</string>
+    <string name="settings_identity_signing_blurb">GPG and SSH key import for signed commits lands in Phase GG. Per-repo author overrides live in each account.</string>
+    <string name="settings_identity_signing_gpg_disabled">Import GPG key (Phase GG)</string>
+    <string name="settings_identity_signing_ssh_disabled">Import SSH key (Phase GG)</string>
+
+    <!-- 2.1.E.10 — Diagnostic banner replacing silent CategoryPlaceholder. -->
+    <string name="settings_diagnostic_missing_pref_title">%1$s is missing its preferences handle</string>
+    <string name="settings_diagnostic_missing_pref_body">The %1$s category requires the %2$s preference to be wired into SettingsAccess. Check logcat tag SettingsAccess.</string>
+
+    <!-- 2.1.E.12 — CalDAV stub category. -->
+    <string name="settings_category_caldav">CalDAV</string>
+    <string name="settings_subtitle_caldav">Two-way calendar sync (Phase Y).</string>
+    <string name="settings_caldav_intro">Two-way CalDAV mirror is on the roadmap. Phase Y closes this out — until then, this surface is a placeholder.</string>
+    <string name="settings_caldav_coming">Coming with Phase Y close-out</string>
 </resources>

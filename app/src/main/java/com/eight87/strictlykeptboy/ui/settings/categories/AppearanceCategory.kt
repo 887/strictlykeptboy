@@ -83,6 +83,10 @@ fun AppearanceCategory(
     avatarPackPrefs: AvatarPackPrefs? = null,
     packStore: CompositePackStore? = null,
     activeSpecies: String = "bat",
+    // 2.1.E.4 — Neutral mode toggle moved to Lifestyle. Appearance keeps
+    // a deeplink chip here so the search index ("neutral" / "kink")
+    // still surfaces a hit and the user lands at the new home.
+    onJumpToLifestyleNeutral: () -> Unit = {},
 ) {
     val state by prefs.state.collectAsState()
     var query by remember { mutableStateOf("") }
@@ -239,17 +243,34 @@ fun AppearanceCategory(
         }
 
         if (showNeutral) {
+            // 2.1.E.4 — Neutral mode lives in Lifestyle now. Keep a row here
+            // so search hits for "neutral"/"kink" still land somewhere
+            // useful; the row deeplinks back to the Lifestyle category.
             SectionHeader(stringResource(R.string.settings_appearance_section_neutral))
             CategoryCard {
-                var neutralOn by remember { mutableStateOf(neutral.isEnabled()) }
-                ToggleRowM3(
-                    icon = Icons.Outlined.VisibilityOff,
-                    tint = MaterialTheme.colorScheme.tertiary,
-                    label = stringResource(R.string.settings_appearance_neutral_mode),
-                    subtitle = stringResource(R.string.settings_appearance_neutral_mode_blurb),
-                    checked = neutralOn,
-                    onCheckedChange = { neutralOn = it; neutral.setEnabled(it) },
-                    testTag = "$TestTagCatAppearance-Neutral",
+                ListItem(
+                    headlineContent = {
+                        Text(stringResource(R.string.settings_appearance_neutral_mode))
+                    },
+                    supportingContent = {
+                        Text(
+                            stringResource(R.string.settings_appearance_neutral_moved_blurb),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
+                    leadingContent = {
+                        LeadingBadge(Icons.Outlined.VisibilityOff, MaterialTheme.colorScheme.tertiary)
+                    },
+                    trailingContent = {
+                        androidx.compose.material3.TextButton(
+                            onClick = onJumpToLifestyleNeutral,
+                            modifier = Modifier.testTag("$TestTagCatAppearance-NeutralDeeplink"),
+                        ) {
+                            Text(stringResource(R.string.settings_appearance_neutral_open_lifestyle))
+                        }
+                    },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                 )
             }
         }

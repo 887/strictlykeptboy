@@ -27,7 +27,6 @@ import androidx.compose.material.icons.filled.FolderShared
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.PeopleAlt
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sync
@@ -68,7 +67,7 @@ import com.eight87.strictlykeptboy.ui.import_export.ImportExportViewState
 import com.eight87.strictlykeptboy.ui.settings.categories.AboutCategory
 import com.eight87.strictlykeptboy.ui.settings.categories.AppearanceCategory
 import com.eight87.strictlykeptboy.ui.settings.categories.CalendarsCategory
-import com.eight87.strictlykeptboy.ui.settings.categories.IdentitiesCategory
+import com.eight87.strictlykeptboy.ui.settings.categories.CalDavCategory
 import com.eight87.strictlykeptboy.ui.settings.categories.IdentityCategory
 import com.eight87.strictlykeptboy.ui.settings.categories.LifestyleCategory
 import com.eight87.strictlykeptboy.ui.settings.categories.ModeCategory
@@ -92,9 +91,19 @@ const val TestTagSettingsBack = "SettingsBack"
  * S surfaces. Adding a category = adding a sealed-class case, not
  * extending a `when (it)` chain.
  */
-sealed class SettingsCategory(val labelRes: Int, val testTag: String) {
+/**
+ * @param labelRes title shown in the category list + content header
+ * @param testTag stable id for tests (DO NOT translate)
+ * @param searchKeywordRes keyword string-resource ids indexed by the
+ *   outer settings search (2.1.E.9). Each resource may contain a
+ *   comma-separated keyword list. Empty list = label + subtitle only.
+ */
+sealed class SettingsCategory(
+    val labelRes: Int,
+    val testTag: String,
+    val searchKeywordRes: List<Int> = emptyList(),
+) {
     object Repos : SettingsCategory(R.string.settings_category_repos, "Repos")
-    object Identities : SettingsCategory(R.string.settings_category_identity, "Identities")
     object Sync : SettingsCategory(R.string.settings_category_sync, "Sync")
     object Notifications : SettingsCategory(R.string.settings_category_notifications, "Notifications")
     object Calendars : SettingsCategory(R.string.settings_category_calendars, "Calendars")
@@ -105,12 +114,14 @@ sealed class SettingsCategory(val labelRes: Int, val testTag: String) {
     object Appearance : SettingsCategory(R.string.settings_category_appearance, "Appearance")
     object About : SettingsCategory(R.string.settings_category_about, "About")
     object Mode : SettingsCategory(R.string.settings_category_mode, "Mode")
+    /** 2.1.E.12 — CalDAV stub category, sits under Behaviour. */
+    object CalDav : SettingsCategory(R.string.settings_category_caldav, "CalDav")
 
     companion object {
         val all: List<SettingsCategory> by lazy {
             listOf(
-                Repos, Identities, Sync, Notifications, Calendars, Todolists,
-                Templates, Lifestyle, Identity, Appearance, About, Mode,
+                Repos, Sync, Notifications, Calendars, Todolists,
+                Templates, Lifestyle, Identity, Appearance, About, Mode, CalDav,
             )
         }
 
@@ -188,6 +199,10 @@ fun SettingsPane(
                 selectedTag = SettingsCategory.Identity.testTag
                 compactPushed = true
             },
+            onJumpToLifestyle = {
+                selectedTag = SettingsCategory.Lifestyle.testTag
+                compactPushed = true
+            },
         )
     }
 
@@ -243,6 +258,26 @@ private data class CategoryMeta(
     val iconTint: androidx.compose.ui.graphics.Color,
 )
 
+/**
+ * Non-composable subtitle lookup for outer-search indexing (2.1.E.9).
+ * Mirrors `metaFor` but does not depend on `MaterialTheme`, so it can
+ * be called from `remember { … }` blocks.
+ */
+private fun subtitleResFor(cat: SettingsCategory): Int = when (cat) {
+    SettingsCategory.Appearance -> R.string.settings_subtitle_appearance
+    SettingsCategory.Repos -> R.string.settings_subtitle_repos
+    SettingsCategory.Calendars -> R.string.settings_subtitle_calendars
+    SettingsCategory.Todolists -> R.string.settings_subtitle_todolists
+    SettingsCategory.Templates -> R.string.settings_subtitle_templates
+    SettingsCategory.Sync -> R.string.settings_subtitle_sync
+    SettingsCategory.Notifications -> R.string.settings_subtitle_notifications
+    SettingsCategory.Mode -> R.string.settings_subtitle_mode
+    SettingsCategory.Lifestyle -> R.string.settings_subtitle_lifestyle
+    SettingsCategory.Identity -> R.string.settings_subtitle_identity
+    SettingsCategory.About -> R.string.settings_subtitle_about
+    SettingsCategory.CalDav -> R.string.settings_subtitle_caldav
+}
+
 @Composable
 private fun metaFor(cat: SettingsCategory): CategoryMeta {
     val cs = MaterialTheme.colorScheme
@@ -251,8 +286,8 @@ private fun metaFor(cat: SettingsCategory): CategoryMeta {
             CategoryMeta(Icons.Filled.Palette, R.string.settings_subtitle_appearance, cs.tertiary)
         SettingsCategory.Repos ->
             CategoryMeta(Icons.Filled.FolderShared, R.string.settings_subtitle_repos, cs.primary)
-        SettingsCategory.Identities ->
-            CategoryMeta(Icons.Filled.PeopleAlt, R.string.settings_subtitle_authors, cs.secondary)
+        SettingsCategory.CalDav ->
+            CategoryMeta(Icons.Filled.Sync, R.string.settings_subtitle_caldav, cs.tertiary)
         SettingsCategory.Calendars ->
             CategoryMeta(Icons.Filled.CalendarMonth, R.string.settings_subtitle_calendars, cs.primary)
         SettingsCategory.Todolists ->
@@ -281,22 +316,24 @@ private val sections: List<SettingsSection> = listOf(
         R.string.settings_section_appearance_header,
         listOf(SettingsCategory.Appearance),
     ),
+    // 2.1.E.5 — Identities stub retired; Identity promoted with sub-sections (see IdentityCategory).
     SettingsSection(
         R.string.settings_section_library,
         listOf(
             SettingsCategory.Repos,
-            SettingsCategory.Identities,
             SettingsCategory.Calendars,
             SettingsCategory.Todolists,
             SettingsCategory.Templates,
         ),
     ),
+    // 2.1.E.12 — CalDAV stub category lives under Behaviour.
     SettingsSection(
         R.string.settings_section_behaviour,
         listOf(
             SettingsCategory.Sync,
             SettingsCategory.Notifications,
             SettingsCategory.Mode,
+            SettingsCategory.CalDav,
         ),
     ),
     SettingsSection(
@@ -318,10 +355,22 @@ private fun SettingsCategoryList(
     onSelect: (SettingsCategory) -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
+    // 2.1.E.9 — index label + subtitle + per-category searchKeywordRes
+    // (mirrors AppearanceCategory's pattern). Drops the testTag-substring
+    // fallback so the user typing "neutral" or "tablet" gets sensible hits.
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     val visibleSections = remember(query) {
-        if (query.isBlank()) sections
+        val q = query.trim().lowercase()
+        if (q.isEmpty()) sections
         else sections.mapNotNull { sec ->
-            val kept = sec.items.filter { it.testTag.contains(query, ignoreCase = true) }
+            val kept = sec.items.filter { cat ->
+                val label = ctx.getString(cat.labelRes).lowercase()
+                val subtitle = ctx.getString(subtitleResFor(cat)).lowercase()
+                val keywords = cat.searchKeywordRes
+                    .joinToString(" ") { ctx.getString(it) }
+                    .lowercase()
+                label.contains(q) || subtitle.contains(q) || keywords.contains(q)
+            }
             if (kept.isEmpty()) null else SettingsSection(sec.titleRes, kept)
         }
     }
@@ -442,6 +491,7 @@ private fun SettingsCategoryContent(
     onPickExportFile: (RepoConfig) -> Unit,
     access: SettingsAccess,
     onJumpToIdentity: () -> Unit,
+    onJumpToLifestyle: () -> Unit = {},
 ) {
     Box(modifier = Modifier.fillMaxSize().testTag(TestTagSettingsContent)) {
         when (category) {
@@ -451,34 +501,37 @@ private fun SettingsCategoryContent(
                 onPickExportFile = onPickExportFile,
                 onOpenReposList = access.onOpenReposList,
             )
-            SettingsCategory.Identities -> IdentitiesCategory(onOpenIdentity = onJumpToIdentity)
             SettingsCategory.Sync -> access.syncPrefs?.let { p ->
                 com.eight87.strictlykeptboy.ui.settings.categories.SyncCategory(
                     prefs = p,
                     statusStore = access.statusStore,
                 )
-            } ?: CategoryPlaceholder(stringResource(category.labelRes))
+            } ?: DiagnosticMissingPrefBanner(category, "syncPrefs")
             SettingsCategory.Notifications -> access.notificationPrefs?.let { p ->
                 NotificationsCategory(prefs = p)
-            } ?: CategoryPlaceholder(stringResource(category.labelRes))
+            } ?: DiagnosticMissingPrefBanner(category, "notificationPrefs")
             SettingsCategory.Calendars -> access.calendarVisibility?.let { p ->
                 CalendarsCategory(prefs = p)
-            } ?: CategoryPlaceholder(stringResource(category.labelRes))
+            } ?: DiagnosticMissingPrefBanner(category, "calendarVisibility")
             SettingsCategory.Todolists -> access.todolistVisibility?.let { p ->
                 TodolistsCategory(prefs = p)
-            } ?: CategoryPlaceholder(stringResource(category.labelRes))
+            } ?: DiagnosticMissingPrefBanner(category, "todolistVisibility")
             SettingsCategory.Templates -> TemplatesCategory(
                 templateIds = access.templateIds,
                 onApply = access.onApplyTemplate,
                 onSaveCustomUrl = access.onSaveCustomTemplateUrl,
             )
+            // 2.1.E.4 — Neutral mode toggle relocates to Lifestyle.
+            // 2.1.E.13 — Trip-summary card hook reserved (rendered as bare-CTA today).
             SettingsCategory.Lifestyle -> LifestyleCategory(
                 onOpenWizardAtRoles = access.onOpenWizardAtRoles,
                 onPlanTrip = access.onPlanTrip,
+                neutralPrefs = access.neutralPrefs,
             )
+            // 2.1.E.5 — IdentityCategory renders sub-sections ("My persona" + "Signing & authors").
             SettingsCategory.Identity -> access.identityPrefs?.let { p ->
                 IdentityCategory(prefs = p)
-            } ?: CategoryPlaceholder(stringResource(category.labelRes))
+            } ?: DiagnosticMissingPrefBanner(category, "identityPrefs")
             SettingsCategory.Appearance -> {
                 val ap = access.appearancePrefs
                 val np = access.neutralPrefs
@@ -489,9 +542,15 @@ private fun SettingsCategoryContent(
                         avatarPackPrefs = access.avatarPackPrefs,
                         packStore = access.packStore,
                         activeSpecies = access.activeAvatarSpecies,
+                        // 2.1.E.4 — surface a deeplink chip back to Lifestyle so
+                        // outer search still finds "neutral" / "kink" here.
+                        onJumpToLifestyleNeutral = onJumpToLifestyle,
                     )
                 } else {
-                    CategoryPlaceholder(stringResource(category.labelRes))
+                    DiagnosticMissingPrefBanner(
+                        category,
+                        if (ap == null) "appearancePrefs" else "neutralPrefs",
+                    )
                 }
             }
             SettingsCategory.About -> AboutCategory(
@@ -501,10 +560,46 @@ private fun SettingsCategoryContent(
             )
             SettingsCategory.Mode -> access.modePrefs?.let { p ->
                 ModeCategory(prefs = p)
-            } ?: CategoryPlaceholder(stringResource(category.labelRes))
+            } ?: DiagnosticMissingPrefBanner(category, "modePrefs")
+            // 2.1.E.12 — CalDAV stub category.
+            SettingsCategory.CalDav -> CalDavCategory()
         }
     }
 }
+
+/**
+ * 2.1.E.10 — Diagnostic banner replacing the silent
+ * `CategoryPlaceholder` for categories whose pref handle is null.
+ * Names the missing handle so the wire-up gap is obvious instead of
+ * looking identical to a feature with no content yet.
+ */
+@Composable
+private fun DiagnosticMissingPrefBanner(category: SettingsCategory, handleName: String) {
+    val label = stringResource(category.labelRes)
+    androidx.compose.runtime.SideEffect {
+        android.util.Log.w(
+            "SettingsAccess",
+            "Category ${category.testTag} ($label) rendered without its `$handleName` pref handle wired into SettingsAccess",
+        )
+    }
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            stringResource(R.string.settings_diagnostic_missing_pref_title, label),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.error,
+        )
+        Text(
+            stringResource(R.string.settings_diagnostic_missing_pref_body, label, handleName),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
 
 @Composable
 private fun CategoryPlaceholder(label: String) {

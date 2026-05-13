@@ -47,6 +47,12 @@ fun IdentityCategory(prefs: IdentityPrefs, modifier: Modifier = Modifier) {
         title = stringResource(R.string.settings_identity_title),
         modifier = modifier,
     ) {
+        // 2.1.E.5 — Sub-section: "My persona" (existing fields).
+        Text(
+            stringResource(R.string.settings_identity_section_persona),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Spacer(Modifier.height(8.dp))
         FieldRow(
             label = stringResource(R.string.settings_identity_praise),
             value = state.praise,
@@ -99,6 +105,38 @@ fun IdentityCategory(prefs: IdentityPrefs, modifier: Modifier = Modifier) {
         )
         Spacer(Modifier.height(8.dp))
         PreviewPanel(state)
+
+        // 2.1.E.5 — Sub-section: "Signing & authors" — absorbs the
+        // retired plural Identities stub. Disabled buttons until
+        // Phase GG lands signed commits.
+        Spacer(Modifier.height(16.dp))
+        HorizontalDivider()
+        Spacer(Modifier.height(12.dp))
+        Text(
+            stringResource(R.string.settings_identity_section_signing),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            stringResource(R.string.settings_identity_signing_blurb),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(8.dp))
+        TextButton(
+            onClick = {},
+            enabled = false,
+            modifier = Modifier.testTag("$TestTagCatIdentity-SignGpg"),
+        ) {
+            Text(stringResource(R.string.settings_identity_signing_gpg_disabled))
+        }
+        TextButton(
+            onClick = {},
+            enabled = false,
+            modifier = Modifier.testTag("$TestTagCatIdentity-SignSsh"),
+        ) {
+            Text(stringResource(R.string.settings_identity_signing_ssh_disabled))
+        }
     }
 }
 
