@@ -172,7 +172,7 @@ Wires the indexer to `AppGraph.snapshot` + `AppGraph.sources`. Without this, eve
 - [x] **2.1.J.3** (Implements 2.1.F.5 prerequisite.) `IdentityNotifBody.bodyFor` consumes `IdentityTomlCodec.readOrDefault(activeRepoRoot)`; `ReminderBroadcastReceiver` wired register-aware with `private = true` collapse to generic copy. `briefingSalutation()` API ready for 2.1.F.6 wiring.
 - [x] **2.1.J.4** Strictly-kept review-feed hook: identity edit commit in strictly-kept mode fires `ReviewFeedWriter.writeReviewableChange` with `IdentityEdit` family path. `AppGraph.bindIdentityToActiveRepo(repoId)` is the composition-root entry point.
 
-## Phase 2.1.K — Mode + dom-persona — shipped in commit `<pending>`
+## Phase 2.1.K — Mode + dom-persona — shipped in commit `434c680`
 
 - [x] **2.1.K.1** `ModePrefs` becomes thin cache over active repo's `mode.toml`. Same model as 2.1.J.1. Active-repo switch reloads via `ModeTomlCodec.readOrDefault`. `AppGraph.bindModeToActiveRepo(repoId)` added as composition-root sibling of `bindIdentityToActiveRepo`; MainActivity wires a LaunchedEffect on `defaultWriteRepoName` so both prefs rebind on active-repo flips. `ModePrefs.update` is now debounced (500ms) write-back with mutex serialization; `flushWriteBack()` test seam.
 - [x] **2.1.K.2** `AppMode` extended with `SelfKeep` to mirror on-disk `RepoMode.SelfKeep`. `ModePill` + `ModeCategory` exhaustive-when updated. `ModeState.keptBy` derived field.
