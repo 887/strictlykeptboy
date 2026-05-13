@@ -22,15 +22,26 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
+import com.eight87.strictlykeptboy.ui.theming.RepoIcon
+import com.eight87.strictlykeptboy.ui.theming.RepoIconKind
 
 const val TestTagRepoSwitcher = "RepoSwitcherChip"
+const val TestTagRepoSwitcherLeading = "RepoSwitcherChip-Leading"
 
-/** UI-B.2 — repo switcher chip. */
+/**
+ * UI-B.2 — repo switcher chip.
+ *
+ * Phase WW: optional [leadingIconKind] renders a 28dp species-sticker
+ * (or emoji / initials) on the left, making the chip itself a presence
+ * indicator for the active repo's avatar. Omit for surfaces that
+ * already render the avatar elsewhere.
+ */
 @Composable
 fun RepoSwitcherChip(
     activeRepoName: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    leadingIconKind: RepoIconKind? = null,
 ) {
     val cd = stringResource(R.string.cd_repo_switcher_active, activeRepoName)
     Surface(
@@ -45,9 +56,19 @@ fun RepoSwitcherChip(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            modifier = Modifier.padding(start = 12.dp, end = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.padding(
+                start = if (leadingIconKind != null) 6.dp else 12.dp,
+                end = 8.dp,
+            ),
         ) {
+            if (leadingIconKind != null) {
+                RepoIcon(
+                    kind = leadingIconKind,
+                    sizeDp = 28.dp,
+                    modifier = Modifier.testTag(TestTagRepoSwitcherLeading),
+                )
+            }
             Text(
                 text = activeRepoName,
                 style = MaterialTheme.typography.titleMedium,

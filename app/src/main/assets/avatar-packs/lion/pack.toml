@@ -1,0 +1,15 @@
+# Phase WW.1 — bundled default lion sticker pack scaffold (D.65 / D.64).
+# Artwork lands in a follow-up; the AvatarResolver falls back to the
+# bundled R.drawable.about_bat whenever a referenced file is absent.
+schema_version = 1
+name = "Default Lion"
+species = "lion"
+author = "eight87"
+license = "Apache-2.0"
+style = "flat"
+
+[[sticker]]
+activity_id = "idle"
+file = "idle.webp"
+tags = ["idle", "neutral"]
+animated = false

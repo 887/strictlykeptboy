@@ -141,23 +141,20 @@ private fun RepoRow(
     }
 }
 
+/**
+ * Phase WW — repo-row circular icon. Delegates to the sealed
+ * [com.eight87.strictlykeptboy.ui.theming.RepoIcon] so species-stickers
+ * render via the avatar resolver chain (D.66) the same way the top-bar
+ * avatar does. Falls back to emoji / initials when iconSpecies is unset.
+ */
 @Composable
 internal fun RepoCircle(repo: RepoConfig, modifier: Modifier = Modifier) {
-    val seedColor = repo.colorSeed?.let { Color(it.toLong() or 0xFF000000L) }
-        ?: MaterialTheme.colorScheme.primaryContainer
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = modifier
-            .clip(CircleShape)
-            .background(seedColor),
-    ) {
-        val text = repo.iconEmoji ?: repo.displayName.firstOrNull()?.uppercase().orEmpty()
-        Text(
-            text = text,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
-        )
-    }
+    val kind = repo.toIconKind()
+    com.eight87.strictlykeptboy.ui.theming.RepoIcon(
+        kind = kind,
+        modifier = modifier,
+        sizeDp = 36.dp,
+    )
 }
 
 @Composable

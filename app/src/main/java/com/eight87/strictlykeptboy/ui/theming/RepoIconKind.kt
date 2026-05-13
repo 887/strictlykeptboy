@@ -158,30 +158,44 @@ private fun badgeBackground(kind: RepoIconKind): Color = when (kind) {
 }
 
 /**
- * Render a species sticker. Until Phase WW ships the bitmap pipeline:
- * `bat` → `R.drawable.about_bat` (the scene mascot art); other species →
- * single-letter monogram on the species seed colour. When WW lands this
- * composable resolves the per-species bitmap from the active pack.
+ * Render a species sticker via the Phase WW [com.eight87.strictlykeptboy.avatar.AvatarResolver].
+ *
+ * Pulled from `LocalAvatarResolver`; falls back to a single-letter
+ * monogram on the species seed colour when the resolver returns the
+ * bat-fallback drawable for a non-bat species (artwork hasn't shipped
+ * yet for the species and the bundled drawable is bat-themed).
  */
 @Composable
 private fun StickerBadge(species: String, sizeDp: Dp) {
-    when (species.lowercase()) {
-        "bat" -> Image(
-            painter = androidx.compose.ui.res.painterResource(
-                com.eight87.strictlykeptboy.R.drawable.about_bat,
-            ),
-            contentDescription = null,
-            alignment = Alignment.Center,
-            // ContentScale.Fit preserves the bat scene's framing — the head
-            // + calendar-sign reads clearly at 28dp. Crop would zoom past
-            // the recognisable bat face (user-noted: "cute bat" matters).
-        )
-        else -> Text(
-            text = species.first().uppercaseChar().toString(),
-            color = Color.White,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = (sizeDp.value * 0.40f).sp,
-        )
+    val resolver = com.eight87.strictlykeptboy.avatar.LocalAvatarResolver.current
+    val resolved = remember(species, resolver) {
+        resolver.resolve(species = species)
+    }
+    when (resolved) {
+        is com.eight87.strictlykeptboy.avatar.AvatarResolver.Resolved.BitmapHit -> {
+            Image(
+                bitmap = resolved.bitmap.asImageBitmap(),
+                contentDescription = null,
+                modifier = Modifier.size(sizeDp).clip(CircleShape),
+                contentScale = ContentScale.Crop,
+            )
+        }
+        is com.eight87.strictlykeptboy.avatar.AvatarResolver.Resolved.DrawableFallback -> {
+            if (species.lowercase() == "bat") {
+                Image(
+                    painter = androidx.compose.ui.res.painterResource(resolved.drawableRes),
+                    contentDescription = null,
+                    alignment = Alignment.Center,
+                )
+            } else {
+                Text(
+                    text = species.first().uppercaseChar().toString(),
+                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = (sizeDp.value * 0.40f).sp,
+                )
+            }
+        }
     }
 }
 

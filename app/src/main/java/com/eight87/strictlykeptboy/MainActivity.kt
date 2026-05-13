@@ -160,6 +160,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             val appearance by graph.appearancePrefs.state.collectAsState()
             var ageOk by remember { mutableStateOf(graph.ageGatePrefs.isConfirmed()) }
+            androidx.compose.runtime.CompositionLocalProvider(
+                com.eight87.strictlykeptboy.avatar.LocalAvatarResolver provides graph.avatarResolver,
+            ) {
             StrictlyKeptBoyTheme(
                 themeMode = appearance.themeMode,
                 densityScale = appearance.densityScale,
@@ -229,6 +232,9 @@ class MainActivity : ComponentActivity() {
                             appearancePrefs = graph.appearancePrefs,
                             neutralPrefs = graph.neutralModePrefs,
                             modePrefs = graph.modePrefs,
+                            // Phase WW.5 — sticker pack picker access.
+                            avatarPackPrefs = graph.avatarPackPrefs,
+                            packStore = graph.packStore,
                             templateIds = listOf(
                                 "atomic-medical",
                                 "atomic-flight",
@@ -292,6 +298,7 @@ class MainActivity : ComponentActivity() {
                         },
                     )
                 }
+            }
             }
         }
         } finally {

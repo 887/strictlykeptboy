@@ -136,6 +136,10 @@ data class SettingsAccess(
     val identityPrefs: IdentityPrefs? = null,
     val appearancePrefs: AppearancePrefs? = null,
     val neutralPrefs: NeutralModePrefs? = null,
+    // Phase WW.5 — sticker pack picker (Settings → Appearance).
+    val avatarPackPrefs: com.eight87.strictlykeptboy.avatar.AvatarPackPrefs? = null,
+    val packStore: com.eight87.strictlykeptboy.avatar.CompositePackStore? = null,
+    val activeAvatarSpecies: String = "bat",
     val modePrefs: ModePrefs? = null,
     val onOpenWizardAtRoles: () -> Unit = {},
     val onApplyTemplate: (String) -> Unit = {},
@@ -476,7 +480,13 @@ private fun SettingsCategoryContent(
                 val ap = access.appearancePrefs
                 val np = access.neutralPrefs
                 if (ap != null && np != null) {
-                    AppearanceCategory(prefs = ap, neutral = np)
+                    AppearanceCategory(
+                        prefs = ap,
+                        neutral = np,
+                        avatarPackPrefs = access.avatarPackPrefs,
+                        packStore = access.packStore,
+                        activeSpecies = access.activeAvatarSpecies,
+                    )
                 } else {
                     CategoryPlaceholder(stringResource(category.labelRes))
                 }

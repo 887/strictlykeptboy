@@ -1,0 +1,64 @@
+# Phase WW.1 — bundled default bat sticker pack (D.65 / D.66).
+#
+# Bat is the app default + wizard guide species (D.64), and is the
+# guaranteed last-rung fallback in the StickerResolver chain.
+#
+# Sticker artwork files are intentionally absent from this initial
+# manifest; the AvatarResolver falls back to R.drawable.about_bat
+# whenever a referenced file fails to decode. Real WebP @ 512×512
+# artwork lands in a follow-up artwork drop tracked under WW.1.
+
+schema_version = 1
+name = "Default Bat"
+species = "bat"
+author = "eight87"
+license = "Apache-2.0"
+style = "flat"
+
+[[sticker]]
+activity_id = "idle"
+file = "idle.webp"
+tags = ["idle", "neutral"]
+animated = false
+
+[[sticker]]
+activity_id = "workout"
+file = "workout.webp"
+tags = ["workout", "neutral"]
+animated = false
+
+[[sticker]]
+activity_id = "meal"
+file = "meal.webp"
+tags = ["meal", "neutral"]
+animated = false
+
+[[sticker]]
+activity_id = "hygiene"
+file = "hygiene.webp"
+tags = ["hygiene", "neutral"]
+animated = false
+
+[[sticker]]
+activity_id = "study"
+file = "study.webp"
+tags = ["study", "neutral"]
+animated = false
+
+[[sticker]]
+activity_id = "work"
+file = "work.webp"
+tags = ["work", "neutral"]
+animated = false
+
+[[sticker]]
+activity_id = "rest"
+file = "rest.webp"
+tags = ["rest", "neutral"]
+animated = false
+
+[[sticker]]
+activity_id = "posture"
+file = "posture.webp"
+tags = ["posture", "neutral"]
+animated = false

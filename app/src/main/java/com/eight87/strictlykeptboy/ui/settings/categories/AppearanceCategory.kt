@@ -55,8 +55,13 @@ import com.eight87.strictlykeptboy.theme.AppearancePrefs
 import com.eight87.strictlykeptboy.theme.DensityScale
 import com.eight87.strictlykeptboy.theme.ThemeMode
 import com.eight87.strictlykeptboy.ui.wizard.NeutralModePrefs
+import com.eight87.strictlykeptboy.avatar.AvatarPackPrefs
+import com.eight87.strictlykeptboy.avatar.CompositePackStore
+import com.eight87.strictlykeptboy.avatar.StickerPack
 
 const val TestTagCatAppearance = "Cat-Appearance"
+const val TestTagCatAppearanceStickerSection = "Cat-Appearance-StickerSection"
+const val TestTagCatAppearanceStickerPackChip = "Cat-Appearance-StickerPackChip"
 
 /**
  * Look and Feel — tonearmboy-parity grouped-card layout with inline
@@ -75,6 +80,9 @@ fun AppearanceCategory(
     prefs: AppearancePrefs,
     neutral: NeutralModePrefs,
     modifier: Modifier = Modifier,
+    avatarPackPrefs: AvatarPackPrefs? = null,
+    packStore: CompositePackStore? = null,
+    activeSpecies: String = "bat",
 ) {
     val state by prefs.state.collectAsState()
     var query by remember { mutableStateOf("") }
@@ -95,8 +103,11 @@ fun AppearanceCategory(
     val showNeutral = matches(
         "neutral", "kink", "role", "templates", "discreet", "privacy", "hide",
     )
+    val showStickers = (avatarPackPrefs != null && packStore != null) && matches(
+        "sticker", "pack", "avatar", "animal", "species", "bat", "fox", "tiger", "lion", "wolf", "bunny", "cat",
+    )
 
-    val nothingMatched = !showTheme && !showDensity && !showFontScale && !showNeutral
+    val nothingMatched = !showTheme && !showDensity && !showFontScale && !showNeutral && !showStickers
 
     Column(
         modifier = modifier
@@ -242,7 +253,79 @@ fun AppearanceCategory(
                 )
             }
         }
+        if (showStickers && avatarPackPrefs != null && packStore != null) {
+            StickerPackSection(
+                packStore = packStore,
+                prefs = avatarPackPrefs,
+                species = activeSpecies,
+                neutralOn = neutral.isEnabled(),
+            )
+        }
         Spacer(Modifier.height(24.dp))
+    }
+}
+
+/**
+ * Phase WW.5 — Settings → Appearance → Sticker pack picker.
+ *
+ * Lists every pack the [CompositePackStore] knows about that matches
+ * the current [species]; the user picks one to activate. When neutral-
+ * mode is on, displays a small hint that the resolver applies the
+ * neutral-tag filter on top of the chosen pack.
+ */
+@Composable
+private fun StickerPackSection(
+    packStore: CompositePackStore,
+    prefs: AvatarPackPrefs,
+    species: String,
+    neutralOn: Boolean,
+) {
+    val all = remember(packStore, species) {
+        packStore.all().filter { it.species.equals(species, ignoreCase = true) }
+    }
+    var active by remember(species) { mutableStateOf(prefs.activePackFor(species)) }
+    SectionHeader(stringResource(R.string.settings_appearance_section_stickers))
+    CategoryCard {
+        PickerRow(
+            icon = Icons.Outlined.Palette,
+            tint = MaterialTheme.colorScheme.primary,
+            label = stringResource(R.string.settings_appearance_sticker_pack),
+            subtitle = stringResource(R.string.settings_appearance_sticker_pack_subtitle),
+        ) {
+            if (all.isEmpty()) {
+                Text(
+                    stringResource(R.string.settings_appearance_sticker_pack_none),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                Column(modifier = Modifier.testTag(TestTagCatAppearanceStickerSection)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        all.forEach { p: StickerPack ->
+                            FilterChip(
+                                selected = p.packId == active,
+                                onClick = {
+                                    active = p.packId
+                                    prefs.setActivePackFor(species, p.packId)
+                                },
+                                label = { Text(p.name) },
+                                modifier = Modifier
+                                    .padding(end = 6.dp)
+                                    .testTag("$TestTagCatAppearanceStickerPackChip-${p.packId}"),
+                            )
+                        }
+                    }
+                    if (neutralOn) {
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            stringResource(R.string.settings_appearance_sticker_pack_neutral_locked),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
