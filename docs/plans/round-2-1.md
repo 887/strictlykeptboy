@@ -153,7 +153,7 @@ Wires the indexer to `AppGraph.snapshot` + `AppGraph.sources`. Without this, eve
 - [ ] **2.1.H.6** `scripts/start-tablet-avd.sh` — codify 10" tablet AVD profile (pixel_tablet, 1600×2560 mdpi 160dpi). Add `--tablet` flag to start script. Update CLAUDE.md test loop to call out dual-target requirement.
 - [ ] **2.1.H.7** Verification pass on real tablet (wifi-adb) for every R-touched screen + every 2.1.H sub-step. Screenshots into `docs/qa/tablet-2-1/`.
 
-## Phase 2.1.I — First-run + Wizard — shipped in commit `PENDING-2-1-I`
+## Phase 2.1.I — First-run + Wizard — shipped in commit `ecc86be`
 
 - [x] **2.1.I.1** First-launch auto-route: in `MainActivity.kt:181` branch on `graph.repoStore.list().isEmpty()` after age gate and route directly to `WizardNavHost`. Top-level `firstLaunchDone` state in MainActivity, flipped to `true` after first scaffolding.
 - [x] **2.1.I.2** Fix `onOpenWizardAtRoles` (Phase K.12) to actually open the wizard. Hoist `wizardEntryRequest: MutableStateFlow<WizardScreen?>` in `AppGraph`; Lifestyle callback sets it; `SkbAppShell` observes and selects `TopDestination.Wizard` + `initialScreen`. Reset on finish.
