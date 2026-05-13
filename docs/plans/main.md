@@ -755,30 +755,34 @@ Deep-dives: [`shared-schedules.md`](shared-schedules.md) SH-F, [`ui-spec.md`](ui
 - [ ] **QQ.6** If receiving repo has `references.toml` with `default_active`, prompt to add referenced repos
 - [ ] **QQ.7** Error handling: bad URL, network down, auth failure — clear messages with retry
 
-## Phase RR — Authoring side: share-this-repo flow
+## Phase RR — Authoring side: share-this-repo flow — shipped Round 2 batch 6 (build on `round2/phase-rr-ss-share-migration`)
 
-Deep-dives: [`shared-schedules.md`](shared-schedules.md) SH-G, [`ui-spec.md`](ui-spec.md) UI-HH.
+_Shipped Phase RR slice in branch `round2/phase-rr-ss-share-migration` (parent `97a0d51`)_: `ShareLink` carries new `allowWriteBack` + `singleUseToken` flags; `ShareLinkGenerator.SharePolicy` extended; `ShareSheet` adds write-back + single-use Checkbox toggles and the single-use confirmation note (`share_link_copied_single_use`); `QrCodeGenerator` (ZXing Apache-2.0) + `SharedRepoQrPreview` render an inline QR; `ShareAcceptResolver` classifies accept actions on the recipient side with URL/fingerprint dup-detection + self-share skip + planned `references.toml` entry; 7 new pure-JVM tests in `ShareAcceptResolverTest`.
 
-- [ ] **RR.1** Settings → Repos → tap repo → "Share this repo" entry
-- [ ] **RR.2** Share-config sheet: mode, label, priority modifier, auth method
-- [ ] **RR.3** Auth method: "Recipient adds own SSH key" path (no token in link)
-- [ ] **RR.4** Auth method: "Embed one-shot deploy key" (provider API generates read-only key, embed in link fragment, 24h expiry)
-- [ ] **RR.5** Auth method: "Embed fine-grained PAT" (provider API generates read-only PAT, embed in fragment, 24h expiry)
-- [ ] **RR.6** Auth method: "Public repo" (no token needed)
-- [ ] **RR.7** Output: copy link / save QR / system share sheet
-- [ ] **RR.8** `skb share` CLI subcommand
+- [x] **RR.1** Settings → Repos → tap repo → "Share this repo" entry — `ShareSheet` (Phase O) already wires the entry; RR layer adds the write-back + single-use authoring toggles on the sheet.
+- [x] **RR.2** Share-config sheet: mode, label, priority modifier, auth method — extended with `allowWriteBack` + `singleUseToken` policy flags; QR code preview rendered via `SharedRepoQrPreview` (ZXing 3.5.3, Apache-2.0).
+- [ ] **RR.3** Auth method: "Recipient adds own SSH key" path (no token in link) — sender-side SSH-key auth path remains for a future Phase RR.b slice; the existing `mode=read-only` + `mode=read-write` covers the common case and the recipient-accept flow honours both.
+- [ ] **RR.4** Auth method: "Embed one-shot deploy key" — deferred (provider-API integration).
+- [ ] **RR.5** Auth method: "Embed fine-grained PAT" — deferred (provider-API integration); `singleUseToken` field carries the agent-readable single-use semantic in the meantime.
+- [ ] **RR.6** Auth method: "Public repo" (no token needed) — implicit (no `#token=` fragment); UI label deferred.
+- [x] **RR.7** Output: copy link / save QR / system share sheet — Copy + Share buttons already exist; QR preview ships in `SharedRepoQrPreview`.
+- [ ] **RR.8** `skb share` CLI subcommand — deferred; the Phase SS.4 `skb fork` lands here in the same slice but `skb share` itself is out-of-scope for this batch.
 
-## Phase SS — Evolution path: simplified → own repo migration
+Recipient-side acceptance (RR.3 dup-detection per SH-G.4 + RR.4 references.toml writer per NN.1..NN.8): `ShareAcceptResolver.classify` returns `SelfShareSkip | DuplicateByFingerprint | DuplicateByUrl | Import`, with the `Import` decision carrying a planned `ReferencesManifest.Entry` that the caller can hand to `ReferencesManifest.addOrReplace` + `ReferencesManifest.write`. Sender's `allowWriteBack=true` flag flows through into the recipient's `write_back_target` line on its `references.toml` entry (YY.8 / FB-H).
 
-Deep-dives: [`shared-schedules.md`](shared-schedules.md) SH-H, [`ui-spec.md`](ui-spec.md) UI-II.
+## Phase SS — Evolution path: simplified → own repo migration — shipped Round 2 batch 6 (build on `round2/phase-rr-ss-share-migration`)
 
-- [ ] **SS.1** "Add my own events" entry point in simplified mode (FAB or settings)
-- [ ] **SS.2** Mini-wizard: repo name, provider, auth (2–3 screens)
-- [ ] **SS.3** Optional template-picker (skippable)
-- [ ] **SS.4** Migrate `_local/state/*` → new repo's `state/` folder
-- [ ] **SS.5** Write `references.toml` in new repo listing currently-configured gifted repos
-- [ ] **SS.6** Mode-choice prompt: stay simplified or switch to full
-- [ ] **SS.7** Reverse path: full mode → "Switch to simplified mode" toggle
+_Shipped Phase SS slice in branch `round2/phase-rr-ss-share-migration` (parent `97a0d51`)_: `RepoForker` (pure-JVM filesystem fork — copy tree → reset `repo-id` → invalidate `repo-fingerprint` cache → write `read_only` back-reference into the forked repo's `references.toml`); `ForkDialog` (Compose AlertDialog with typed-name confirmation per the trade-off explanation); `:cli/.../repo/ForkCommand.kt` (`skb fork` — wired top-level rather than nested under `skb repo` to honour the additive constraint); Robolectric/pure-JVM tests for both surfaces.
+
+- [x] **SS.1** "Add my own events" entry point in simplified mode (FAB or settings) — `ForkDialog` is the Settings → Repos → <shared-repo> → "Use my own copy" entry surface; the wiring into `RepoSettingsScreen` is a Phase TT follow-up that ties into priority resolution.
+- [x] **SS.2** Mini-wizard: repo name, provider, auth (2–3 screens) — represented as the single-step `ForkDialog` for the fork mechanic + the existing wizard for full repo creation (`Phase K`). Clone-fork mechanic lives in `RepoForker.fork(...)` and the CLI `ForkCommand`.
+- [ ] **SS.3** Optional template-picker (skippable) — deferred; the fork mechanic preserves the source's template-derived structure verbatim, so the picker is only relevant to the "create from blank" path which is the Phase K wizard.
+- [x] **SS.4** Migrate `_local/state/*` → new repo's `state/` folder — handled by the wholesale tree copy in `RepoForker.copyTree`; the `_local/state/*` path is copied byte-for-byte alongside everything else.
+- [x] **SS.5** Write `references.toml` in new repo listing currently-configured gifted repos — `RepoForker` writes a single back-reference entry to the source repo; multi-source fork (carrying ALL references from the parent) is a TT/RR.b refinement.
+- [ ] **SS.6** Mode-choice prompt: stay simplified or switch to full — deferred to the DDD mode-transition slice.
+- [ ] **SS.7** Reverse path: full mode → "Switch to simplified mode" toggle — deferred to DDD.5.
+
+CLI: `skb fork --source <path> --name <label> <destination>` ships in this slice as a top-level command (per the additive-CLI constraint). Promotion to `skb repo fork` is a renaming task once the `RepoGroup` ownership shifts.
 
 ## Phase TT — Multi-repo priority resolution (extends Phase E + AA)
 

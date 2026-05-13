@@ -50,6 +50,7 @@ class ShareSheetTest {
         }
         composeRule.onNodeWithTag(TestTagShareLinkField, useUnmergedTree = true).assertExists()
         composeRule.onNodeWithTag(TestTagShareCopy, useUnmergedTree = true).performClick()
+        composeRule.waitForIdle()
         assertNotNull(copied)
         assertTrue("Got: $copied", copied!!.startsWith("strictlykeptboy://share?"))
         assertTrue(copied!!.contains("mode=read-only"))
@@ -67,8 +68,11 @@ class ShareSheetTest {
             }
         }
         composeRule.onNodeWithTag(TestTagShareCopy, useUnmergedTree = true).performClick()
+        composeRule.waitForIdle()
         composeRule.onNodeWithTag(TestTagShareExpiry7, useUnmergedTree = true).performClick()
+        composeRule.waitForIdle()
         composeRule.onNodeWithTag(TestTagShareCopy, useUnmergedTree = true).performClick()
+        composeRule.waitForIdle()
         assertTrue(seen.last().contains("expiry="))
     }
 

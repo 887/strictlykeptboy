@@ -832,4 +832,26 @@
     <!-- FAB long-press menu + schedule empty-state -->
     <string name="event_create_menu_plan_trip">Plan a trip</string>
     <string name="schedule_empty_plan_trip">No plans today — want to plan a trip?</string>
+
+    <!-- Phase RR — authoring-side share-this-repo flow -->
+    <string name="share_allow_write_back">Allow recipient to leave feedback on my entries</string>
+    <string name="share_single_use_token">Single-use link (token cleared after first accept)</string>
+    <string name="share_qr_label">Scan to receive</string>
+    <string name="share_link_copied_single_use">Link copied, single-use ✓</string>
+    <string name="share_link_copied">Link copied to clipboard</string>
+    <string name="share_duplicate_skipped">Already configured — skipped duplicate.</string>
+    <string name="share_self_share_skipped">That share points at this device\'s own repo — skipped.</string>
+
+    <!-- Phase SS — simplified → own repo migration -->
+    <string name="fork_dialog_title">Use my own copy</string>
+    <string name="fork_dialog_blurb">Make a local writable copy of this shared repo. After forking, the original stays as a reference — it will no longer auto-update. You can add your own entries to the copy.</string>
+    <string name="fork_dialog_tradeoff_will_change">What changes</string>
+    <string name="fork_dialog_tradeoff_no_auto_update">• Forked copy will no longer auto-update from the source.</string>
+    <string name="fork_dialog_tradeoff_own_entries">• You can add and edit your own entries.</string>
+    <string name="fork_dialog_tradeoff_reference">• The original is preserved as a read-only reference.</string>
+    <string name="fork_dialog_confirm_label">Type the repo name to confirm</string>
+    <string name="fork_dialog_confirm_button">Fork repo</string>
+    <string name="fork_dialog_cancel_button">Cancel</string>
+    <string name="fork_settings_entry">Use my own copy</string>
+
 </resources>

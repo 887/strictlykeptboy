@@ -14,6 +14,7 @@ import com.eight87.skb.cli.feedback.ReactGroup
 import com.eight87.skb.cli.feedback.RefSetWriteBackCommand
 import com.eight87.skb.cli.feedback.RepoFingerprintCommand
 import com.eight87.skb.cli.feedback.RepoRegistryGroup
+import com.eight87.skb.cli.repo.ForkCommand
 import com.eight87.skb.cli.repo.RemoteGroup
 import com.eight87.skb.cli.routine.RoutineGroup
 import com.eight87.skb.cli.routine.StreakCommand
@@ -107,6 +108,7 @@ fun main(args: Array<String>) {
     TaskGroup(ctxOf),
     CalGroup(ctxOf),
     RepoGroup(ctxOf),
+    ForkCommand(ctxOf),
     RemoteGroup(ctxOf),
     RoutineGroup(ctxOf),
     StreakCommand(ctxOf),
