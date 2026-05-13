@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.eight87.strictlykeptboy.cache.entities.DeviationRow
 import com.eight87.strictlykeptboy.cache.entities.EventFtsRow
+import com.eight87.strictlykeptboy.cache.entities.EventInstanceStateRow
 import com.eight87.strictlykeptboy.cache.entities.EventRow
 import com.eight87.strictlykeptboy.cache.entities.ExceptionRow
 import com.eight87.strictlykeptboy.cache.entities.IdentityRow
@@ -236,4 +237,40 @@ interface FtsDao {
 
     @Query("SELECT taskId FROM tasks_fts WHERE repoId = :repoId AND tasks_fts MATCH :query")
     suspend fun searchTaskIds(repoId: String, query: String): List<String>
+}
+
+/**
+ * Phase XX.2 / AT-B.4 / RV-R.4 — completion-state cache DAO.
+ *
+ * Storage layer for `CompletionState` per `(repoId, targetId,
+ * occurrenceDate)`. Indexers + the end-alarm receiver upsert here; the
+ * resolver / UI reads.
+ */
+@Dao
+interface EventInstanceStateDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(row: EventInstanceStateRow)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(rows: List<EventInstanceStateRow>)
+
+    @Query(
+        "SELECT * FROM event_instance_state WHERE repoId = :repoId " +
+            "AND targetId = :targetId AND occurrenceDate = :occurrenceDate",
+    )
+    suspend fun get(repoId: String, targetId: String, occurrenceDate: String): EventInstanceStateRow?
+
+    /** AT-B.4 (b): drop the cached row when a deviation file is written or removed. */
+    @Query(
+        "DELETE FROM event_instance_state WHERE repoId = :repoId " +
+            "AND targetId = :targetId AND occurrenceDate = :occurrenceDate",
+    )
+    suspend fun invalidate(repoId: String, targetId: String, occurrenceDate: String)
+
+    /** AT-B.4 (a): drop everything for a target whose underlying file changed. */
+    @Query("DELETE FROM event_instance_state WHERE repoId = :repoId AND targetId = :targetId")
+    suspend fun invalidateTarget(repoId: String, targetId: String)
+
+    @Query("DELETE FROM event_instance_state WHERE repoId = :repoId")
+    suspend fun deleteAllForRepo(repoId: String)
 }

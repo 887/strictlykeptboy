@@ -138,26 +138,7 @@ class OverlayResolver(
         inst: MaterializedInstance,
         deviations: List<DeviationInput>,
         now: ZonedDateTime,
-    ): CompletionState {
-        val targetId = when (val s = inst.source) {
-            is InstanceSource.OneOff -> s.eventId.id
-            is InstanceSource.RuleInstance -> s.ruleId.id
-        }
-        val day = inst.effectiveStart.toLocalDate()
-        val dev = deviations.firstOrNull { it.targetId == targetId && it.instanceDate == day }
-        if (dev != null) return when (dev.kind) {
-            "skipped" -> CompletionState.Skipped
-            "partial" -> CompletionState.PartiallyDone
-            "completed-early" -> CompletionState.CompletedEarly
-            "completed-late" -> CompletionState.CompletedLate
-            else -> CompletionState.Scheduled
-        }
-        return when {
-            now.isBefore(inst.effectiveStart) -> CompletionState.Scheduled
-            now.isBefore(inst.effectiveEnd) -> CompletionState.InProgress
-            else -> CompletionState.CompletedBySchedule
-        }
-    }
+    ): CompletionState = CompletionStateResolver.resolveFor(inst, deviations, now)
 
     private fun daysCovered(
         inst: MaterializedInstance,

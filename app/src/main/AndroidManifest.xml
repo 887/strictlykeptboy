@@ -60,6 +60,11 @@
         <receiver
             android:name=".notif.ReminderBroadcastReceiver"
             android:exported="false" />
+
+        <!-- Phase XX.3 / AT-C — atomic event start/end alarms. -->
+        <receiver
+            android:name=".notif.AtomicEventReceiver"
+            android:exported="false" />
     </application>
 
 </manifest>

@@ -7,6 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.sqlite.SQLiteDriver
 import com.eight87.strictlykeptboy.cache.dao.DeviationDao
 import com.eight87.strictlykeptboy.cache.dao.EventDao
+import com.eight87.strictlykeptboy.cache.dao.EventInstanceStateDao
 import com.eight87.strictlykeptboy.cache.dao.ExceptionDao
 import com.eight87.strictlykeptboy.cache.dao.FtsDao
 import com.eight87.strictlykeptboy.cache.dao.IdentityDao
@@ -19,6 +20,7 @@ import com.eight87.strictlykeptboy.cache.dao.StandingTaskDao
 import com.eight87.strictlykeptboy.cache.dao.TaskDao
 import com.eight87.strictlykeptboy.cache.entities.DeviationRow
 import com.eight87.strictlykeptboy.cache.entities.EventFtsRow
+import com.eight87.strictlykeptboy.cache.entities.EventInstanceStateRow
 import com.eight87.strictlykeptboy.cache.entities.EventRow
 import com.eight87.strictlykeptboy.cache.entities.ExceptionRow
 import com.eight87.strictlykeptboy.cache.entities.IdentityRow
@@ -57,10 +59,11 @@ import com.eight87.strictlykeptboy.cache.entities.TaskRow
         IdentityRow::class,
         RepoStateRow::class,
         IndexErrorRow::class,
+        EventInstanceStateRow::class,
         EventFtsRow::class,
         TaskFtsRow::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = false,
 )
 abstract class CacheDatabase : RoomDatabase() {
@@ -70,6 +73,7 @@ abstract class CacheDatabase : RoomDatabase() {
     abstract fun recurrenceRules(): RecurrenceRuleDao
     abstract fun exceptions(): ExceptionDao
     abstract fun deviations(): DeviationDao
+    abstract fun eventInstanceState(): EventInstanceStateDao
     abstract fun overrides(): OverrideDao
     abstract fun journal(): JournalDao
     abstract fun identities(): IdentityDao
@@ -84,7 +88,7 @@ abstract class CacheDatabase : RoomDatabase() {
             context.applicationContext,
             CacheDatabase::class.java,
             DB_NAME,
-        ).fallbackToDestructiveMigration(false).build()
+        ).fallbackToDestructiveMigration(true).build()
 
         fun openInMemory(context: Context): CacheDatabase = Room.inMemoryDatabaseBuilder(
             context.applicationContext,

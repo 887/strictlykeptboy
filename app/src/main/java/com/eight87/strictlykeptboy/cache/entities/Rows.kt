@@ -167,6 +167,33 @@ data class RepoStateRow(
     val updatedAtEpochMs: Long,
 )
 
+/**
+ * Phase XX.2 / AT-B.4 / RV-R.4 — cached completion-state per resolver
+ * instance. Derived column; rebuilt by the render pass on demand. The
+ * [completionState] value is the `.name` of [CompletionState] for
+ * compactness + Room-driver friendliness.
+ *
+ * Invalidation triggers (caller-enforced per AT-B.4):
+ *   (a) underlying file changes (indexer pass deletes affected rows),
+ *   (b) deviation file for the (target, date) added/removed,
+ *   (c) `now` crosses event.start / event.end (per-event AlarmManager
+ *       state-tick from XX.3 — the end-alarm receiver writes the
+ *       `CompletedBySchedule` row here).
+ */
+@Entity(
+    tableName = "event_instance_state",
+    primaryKeys = ["repoId", "targetId", "occurrenceDate"],
+)
+data class EventInstanceStateRow(
+    val repoId: String,
+    val targetId: String,
+    /** ISO yyyy-MM-dd, in the event's local zone. */
+    val occurrenceDate: String,
+    /** [CompletionState.name]. */
+    val completionState: String,
+    val updatedAtEpochMs: Long,
+)
+
 /** ParseResult.Failed surface — per repo, per file. */
 @Entity(tableName = "index_errors", primaryKeys = ["repoId", "sourcePath"])
 data class IndexErrorRow(

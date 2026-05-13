@@ -14,7 +14,7 @@ import org.robolectric.annotation.Config
 @Config(sdk = [26])
 class NotificationChannelRegistrationTest {
 
-    @Test fun allSixChannelsRegistered() {
+    @Test fun allChannelsRegistered() {
         val ctx = ApplicationProvider.getApplicationContext<Context>()
         NotificationChannels.registerAll(ctx)
 
@@ -31,6 +31,8 @@ class NotificationChannelRegistrationTest {
         val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         assertEquals(NotificationManager.IMPORTANCE_DEFAULT,
             nm.getNotificationChannel(NotificationChannels.EVENTS).importance)
+        assertEquals(NotificationManager.IMPORTANCE_HIGH,
+            nm.getNotificationChannel(NotificationChannels.EVENTS_ATOMIC).importance)
         assertEquals(NotificationManager.IMPORTANCE_DEFAULT,
             nm.getNotificationChannel(NotificationChannels.TASKS).importance)
         assertEquals(NotificationManager.IMPORTANCE_LOW,
@@ -48,7 +50,10 @@ class NotificationChannelRegistrationTest {
         NotificationChannels.registerAll(ctx)
         NotificationChannels.registerAll(ctx) // should not throw
         val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        // All 6 channels still present.
-        assertEquals(6, NotificationChannels.ALL.count { nm.getNotificationChannel(it) != null })
+        // All channels still present after a re-register pass.
+        assertEquals(
+            NotificationChannels.ALL.size,
+            NotificationChannels.ALL.count { nm.getNotificationChannel(it) != null },
+        )
     }
 }

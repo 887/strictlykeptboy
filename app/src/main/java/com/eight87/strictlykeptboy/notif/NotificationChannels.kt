@@ -22,6 +22,7 @@ object NotificationChannels {
     const val GROUP_MAIN = "skb_main"
 
     const val EVENTS = "skb.events"
+    const val EVENTS_ATOMIC = "skb.events.atomic"
     const val TASKS = "skb.tasks"
     const val BRIEFINGS = "skb.briefings"
     const val SYNC = "skb.sync"
@@ -29,8 +30,8 @@ object NotificationChannels {
     /** Foreground service uses this channel. Kept in sync with [SyncService.NOTIF_CHANNEL]. */
     const val FOREGROUND = "skb.service"
 
-    /** All six channel ids in order — used by the registration test. */
-    val ALL: List<String> = listOf(EVENTS, TASKS, BRIEFINGS, SYNC, ERRORS, FOREGROUND)
+    /** All channel ids in order — used by the registration test. */
+    val ALL: List<String> = listOf(EVENTS, EVENTS_ATOMIC, TASKS, BRIEFINGS, SYNC, ERRORS, FOREGROUND)
 
     /**
      * Register the group + all channels. Safe to call repeatedly.
@@ -47,6 +48,18 @@ object NotificationChannels {
                 R.string.notif_channel_events_name,
                 R.string.notif_channel_events_desc,
                 NotificationManager.IMPORTANCE_DEFAULT,
+                lockscreen = NotificationCompatVisibility.PUBLIC,
+                showBadge = true,
+                vibrate = true,
+            ),
+            // Phase XX.3 / AT-C.1 — separate channel so user can downgrade
+            // atomic-activity nudges without losing event reminders.
+            // IMPORTANCE_HIGH for lockscreen-visible buzz per AT-C.1.
+            channel(
+                context, EVENTS_ATOMIC,
+                R.string.notif_channel_events_atomic_name,
+                R.string.notif_channel_events_atomic_desc,
+                NotificationManager.IMPORTANCE_HIGH,
                 lockscreen = NotificationCompatVisibility.PUBLIC,
                 showBadge = true,
                 vibrate = true,

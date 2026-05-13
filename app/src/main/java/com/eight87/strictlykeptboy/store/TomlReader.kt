@@ -79,7 +79,11 @@ object TomlReader {
         var cur = root
         for (j in 0 until parts.size - 1) {
             val name = parts[j]
-            cur = cur.sections.getOrPut(name) { TomlTable() }
+            // Walk into the current-most array-of-tables element if one
+            // exists (e.g. `[[entry.subbeat]]` attaches to the LATEST
+            // `[[entry]]`). Falls back to sections for plain `[a.b]`.
+            val aoChild = cur.aotables[name]?.lastOrNull()
+            cur = aoChild ?: cur.sections.getOrPut(name) { TomlTable() }
         }
         val leafName = parts.last()
         val leaf = if (asArrayOfTables) {

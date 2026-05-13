@@ -1,0 +1,106 @@
+# Phase XX.4 / AT-D — atomic self-care template (LOCKED content per
+# draft-atomic-activities.md). Shipped as an asset; the wizard reads
+# this file to seed atomic events into the user's repo. `neutral_safe`
+# means the entries appear under both neutral and kink modes (none are
+# tagged `kink`).
+
+schema_version = 1
+template_id = "atomic-self-care"
+display_name = "Atomic self-care"
+category = "self-care"
+neutral_safe = true
+
+[[entry]]
+id = "brush-teeth"
+title = "Brush teeth"
+duration_minutes = 5
+sticker_id = "tooth"
+category = "self-care"
+default_cadence = "twice-daily"
+default_times = ["07:00", "22:00"]
+[[entry.subbeat]]
+label = "Upper-left molars"
+duration_seconds = 25
+sticker_id = "brush-upper-left"
+[[entry.subbeat]]
+label = "Upper-right molars"
+duration_seconds = 25
+sticker_id = "brush-upper-right"
+[[entry.subbeat]]
+label = "Lower-left molars"
+duration_seconds = 25
+sticker_id = "brush-lower-left"
+[[entry.subbeat]]
+label = "Lower-right molars"
+duration_seconds = 25
+sticker_id = "brush-lower-right"
+[[entry.subbeat]]
+label = "Fronts (top)"
+duration_seconds = 25
+sticker_id = "brush-fronts-top"
+[[entry.subbeat]]
+label = "Fronts (bottom)"
+duration_seconds = 25
+sticker_id = "brush-fronts-bottom"
+[[entry.subbeat]]
+label = "Tongue + spit-out wrap-up"
+duration_seconds = 50
+sticker_id = "brush-wrapup"
+
+[[entry]]
+id = "shower"
+title = "Shower"
+duration_minutes = 10
+sticker_id = "shower"
+default_cadence = "daily"
+
+[[entry]]
+id = "shave-face"
+title = "Shave (face)"
+duration_minutes = 5
+sticker_id = "razor"
+default_cadence = "biweekly"
+
+[[entry]]
+id = "shave-pubes"
+title = "Shave (pubic)"
+duration_minutes = 10
+sticker_id = "razor"
+default_cadence = "every-14-days"
+# NOT "kink" — neutral hygiene per AT-D.3 LOCKED.
+tags = ["intimate-care"]
+
+[[entry]]
+id = "hair"
+title = "Hair"
+duration_minutes = 5
+sticker_id = "comb"
+default_cadence = "daily"
+
+[[entry]]
+id = "skincare"
+title = "Skincare"
+duration_minutes = 3
+sticker_id = "skincare"
+default_cadence = "twice-daily"
+
+[[entry]]
+id = "deodorant"
+title = "Deodorant"
+duration_minutes = 1
+sticker_id = "deodorant"
+default_cadence = "daily"
+
+[[entry]]
+id = "nail-care"
+title = "Nail care"
+duration_minutes = 5
+sticker_id = "nail"
+default_cadence = "weekly"
+
+[[entry]]
+id = "ear-clean"
+title = "Ear clean"
+duration_minutes = 3
+sticker_id = "ear"
+default_cadence = "weekly"

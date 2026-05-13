@@ -460,6 +460,11 @@
     <string name="notif_action_i_didnt">I didn\'t</string>
     <string name="notif_action_partial">Partial</string>
 
+    <!-- Phase XX.3 / AT-C — atomic events channel + actions -->
+    <string name="notif_channel_events_atomic_name">Atomic activities</string>
+    <string name="notif_channel_events_atomic_desc">Start + end nudges for atomic activities (brush teeth, posture, etc.).</string>
+    <string name="notif_action_i_did_it">I did it</string>
+
     <!-- Phase M.4 — sync result notifications -->
     <string name="notif_sync_success">Synced %1$d repos · %2$s</string>
     <string name="notif_sync_conflict_title">Sync conflict</string>
