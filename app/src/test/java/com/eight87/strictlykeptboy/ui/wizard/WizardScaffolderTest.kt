@@ -96,7 +96,11 @@ class WizardScaffolderTest {
         )
         val idToml = String(Files.readAllBytes(outcome.rootDir.toPath().resolve("identity.toml")), Charsets.UTF_8)
         assertTrue("primary praise term", idToml.contains("good kitten"))
-        assertTrue("alternates section", idToml.contains("[praise.alternates]"))
+        // Phase 2.1.J.2 — canonical key is `alt_terms` under `[praise]`,
+        // matching IdentityTomlCodec. The pre-2.1.J text-concat appendix
+        // wrote `[praise.alternates]` — the codec is now the single
+        // writer, so the canonical key is the assertion.
+        assertTrue("alt_terms array present", idToml.contains("alt_terms"))
         assertTrue("alternate term present", idToml.contains("sweet thing"))
     }
 }

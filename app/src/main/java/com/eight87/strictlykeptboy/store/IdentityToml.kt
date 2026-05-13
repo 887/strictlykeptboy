@@ -26,6 +26,17 @@ data class IdentityTomlData(
     val honorificForDom: String = "Sir",
     val toneRegister: String = "soft-kinky",
     val emojiDensity: String = "medium",
+    /**
+     * Phase 2.1.J.2 — wizard-driven alignment id (e.g. `submissive`,
+     * `dominant`, `switch`, `unaligned-private`). `null` when omitted
+     * from disk (LockedDefaults emits no `[alignment]` section).
+     */
+    val alignment: String? = null,
+    /**
+     * Phase 2.1.J.2 — wizard-driven lifestyle id (e.g. `single-strict`,
+     * `partnered-free`). `null` when omitted from disk.
+     */
+    val lifestyle: String? = null,
 ) {
     init {
         require(praiseTerm.isNotBlank()) { "praise.term must not be blank (DM-Y.5)" }
@@ -90,6 +101,14 @@ object IdentityTomlCodec {
                 putString("emoji_density", data.emojiDensity)
             }
             sections["tone"] = tone
+            // Phase 2.1.J.2 — wizard fields. Omit sections entirely when
+            // null so LockedDefaults still round-trips byte-stably.
+            if (data.alignment != null) {
+                sections["alignment"] = TomlTable().apply { putString("value", data.alignment) }
+            }
+            if (data.lifestyle != null) {
+                sections["lifestyle"] = TomlTable().apply { putString("value", data.lifestyle) }
+            }
         }
         return TomlWriter.emit(t)
     }
@@ -102,7 +121,12 @@ object IdentityTomlCodec {
         val term = praise.getString("term")
             ?: error("identity.toml missing praise.term (DM-Y.5)")
         require(term.isNotBlank()) { "praise.term must not be blank (DM-Y.5)" }
-        val altTerms = praise.getStringArray("alt_terms") ?: emptyList()
+        // Canonical key is `praise.alt_terms = [...]`. Back-compat: pre-2.1.J
+        // wizard appendices wrote `[praise.alternates] terms = [...]` — accept
+        // either when reading so existing on-disk repos still parse.
+        val altTerms = praise.getStringArray("alt_terms")
+            ?: praise.sections["alternates"]?.getStringArray("terms")
+            ?: emptyList()
 
         val pron = table.sections["pronouns"]
             ?: error("identity.toml missing [pronouns] (DM-Y.5)")
@@ -121,10 +145,22 @@ object IdentityTomlCodec {
             )
         } ?: emptyList()
 
-        val hon = table.sections["honorific_for_dom"]?.getString("term") ?: "Sir"
+        // Honorific: canonical section is `[honorific_for_dom]`. Back-compat
+        // also accepts the bare `[honorific]` section that pre-2.1.J wizard
+        // appendices wrote (DDD.11 / Phase 2.1.J.2).
+        val hon = table.sections["honorific_for_dom"]?.getString("term")
+            ?: table.sections["honorific"]?.getString("term")
+            ?: "Sir"
         val toneSection = table.sections["tone"]
         val toneReg = toneSection?.getString("register") ?: "soft-kinky"
-        val emoji = toneSection?.getString("emoji_density") ?: "medium"
+        // emoji_density: canonical key on `[tone]`; back-compat accepts
+        // the bare `[emoji] density = ...` shape from the old appendix.
+        val emoji = toneSection?.getString("emoji_density")
+            ?: table.sections["emoji"]?.getString("density")
+            ?: "medium"
+
+        val alignment = table.sections["alignment"]?.getString("value")
+        val lifestyle = table.sections["lifestyle"]?.getString("value")
 
         return IdentityTomlData(
             schemaVersion = schema,
@@ -135,6 +171,8 @@ object IdentityTomlCodec {
             honorificForDom = hon,
             toneRegister = toneReg,
             emojiDensity = emoji,
+            alignment = alignment,
+            lifestyle = lifestyle,
         )
     }
 

@@ -5,6 +5,9 @@ import com.eight87.strictlykeptboy.git.GitRepo
 import com.eight87.strictlykeptboy.git.Uuid7
 import com.eight87.strictlykeptboy.store.EntityHeader
 import com.eight87.strictlykeptboy.store.EntityWriter
+import com.eight87.strictlykeptboy.store.IdentityPronouns
+import com.eight87.strictlykeptboy.store.IdentityTomlCodec
+import com.eight87.strictlykeptboy.store.IdentityTomlData
 import com.eight87.strictlykeptboy.store.RecurrenceRule
 import com.eight87.strictlykeptboy.store.RepoBootstrap
 import com.eight87.strictlykeptboy.store.StandingTask
@@ -196,24 +199,32 @@ object WizardScaffolder {
             EntityWriter.write(rootDir, task)
         }
 
-        // Identity.toml — extend with honorific / tone / emoji density that
-        // RepoBootstrap doesn't yet know about (D.83 surface).
-        val idTomlPath = rootDir.toPath().resolve("identity.toml")
-        val extra = buildString {
-            append("\n[honorific]\nterm = \"${normalized.honorific.label}\"\n")
-            append("\n[tone]\nregister = \"${normalized.tone.id}\"\n")
-            append("\n[emoji]\ndensity = \"${normalized.emojiDensity.id}\"\n")
-            if (normalized.praiseTerms.size > 1) {
-                val csv = normalized.praiseTerms.joinToString(", ") { "\"$it\"" }
-                append("\n[praise.alternates]\nterms = [$csv]\n")
-            }
-            append("\n[alignment]\nvalue = \"${normalized.alignment.id}\"\n")
-            append("\n[lifestyle]\nvalue = \"${normalized.lifestyle.id}\"\n")
-        }
-        Files.write(
-            idTomlPath,
-            (String(Files.readAllBytes(idTomlPath), Charsets.UTF_8) + extra).toByteArray(StandardCharsets.UTF_8),
+        // Identity.toml — Phase 2.1.J.2: replace the legacy text-concat
+        // appendix with a single codec-driven write so the on-disk format
+        // matches IdentityTomlCodec exactly (and so Settings edits can
+        // round-trip via the same codec). RepoBootstrap wrote primary
+        // praise term + pronouns; we now overwrite with the full draft.
+        val firstAlt = normalized.praiseTerms.firstOrNull() ?: "good boy"
+        val alts = if (normalized.praiseTerms.size > 1) {
+            normalized.praiseTerms.drop(1)
+        } else emptyList()
+        val honorificTerm = normalized.honorific.label
+        val identityData = IdentityTomlData(
+            praiseTerm = firstAlt,
+            altTerms = alts,
+            pronouns = IdentityPronouns(
+                subject = normalized.pronouns.subject,
+                obj = normalized.pronouns.obj,
+                possessive = normalized.pronouns.possessive,
+                reflexive = normalized.pronouns.reflexive,
+            ),
+            honorificForDom = honorificTerm.ifBlank { "Sir" },
+            toneRegister = normalized.tone.id,
+            emojiDensity = normalized.emojiDensity.id,
+            alignment = normalized.alignment.id,
+            lifestyle = normalized.lifestyle.id,
         )
+        IdentityTomlCodec.write(rootDir.toPath(), identityData)
 
         // Step 5 — git init (phone-only for v1; remote paths land in a follow-up
         // once OAuth client IDs are registered).
