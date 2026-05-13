@@ -300,6 +300,40 @@ fun ReposPane(
     }
 }
 
+/**
+ * Round 2.5.C — sticker pack host. Reads composition-locals provided by
+ * MainActivity to instantiate [StickerPackSelectorScreen]. Falls back to
+ * [fallback] when the active repo doesn't resolve or required deps are
+ * not wired (e.g. preview / tests without AppGraph).
+ */
+@Composable
+private fun StickerPacksHost(
+    repo: RepoConfig?,
+    onBack: () -> Unit,
+    fallback: () -> Unit,
+) {
+    val packPrefs = LocalAvatarPackPrefs.current
+    val packStore = LocalPackStore.current
+    val assetLoader = LocalAssetPackLoader.current
+    val userLoader = LocalUserPackLoader.current
+    if (repo == null || packPrefs == null || packStore == null || assetLoader == null || userLoader == null) {
+        androidx.compose.runtime.LaunchedEffect(Unit) { fallback() }
+        return
+    }
+    // Species derived from repo's identity.toml in a future iteration;
+    // for now use the wizard-scaffold default of "bat" until per-repo
+    // species resolution lands (see plan 2.5.C deferral note).
+    val species = "bat"
+    StickerPackSelectorScreen(
+        species = species,
+        packStore = packStore,
+        assetPackLoader = assetLoader,
+        userPackLoader = userLoader,
+        packPrefs = packPrefs,
+        onBack = onBack,
+    )
+}
+
 @Composable
 private fun ReposList(
     repos: List<RepoConfig>,
