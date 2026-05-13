@@ -431,6 +431,14 @@ Scaffold shipped (X.2, X.3, partial X.5) — Clikt + fat-jar + POSIX wrapper smo
 
 Deep-dive: [`sync-engine.md`](sync-engine.md) extension phases SE-Q+, [`notifications-sharing-import.md`](notifications-sharing-import.md) extension phases NS-L+.
 
+Y.1..Y.7 (the autonomous-subagent slice covering `PULL_ONLY` (Y.4),
+`TWO_WAY`/`BIDI` (Y.5+Y.6), and shared conflict resolution (Y.7))
+shipped in commit `f129058`. Y.5 `PUSH_ONLY`-only mode is folded into
+the BIDI codepath (push side runs alone when `mode == PUSH_ONLY`);
+Y.8..Y.12 (CLI subcommands, per-mirror interval UI, RFC6578
+sync-token, mirror-source attribution chip, AGENTS.md note) remain
+open and tracked under SE-Q.10..SE-Q.18 in `sync-engine.md`.
+
 > **The critical property of Phase Y:** CalDAV events are **materialized
 > into the target git repo as Markdown-with-frontmatter files** under
 > `calendars/<target-calendar-id>/events/<yyyy>/<mm>/<event-id>.md`,
@@ -463,13 +471,13 @@ Three modes, picked per-mirror at setup time:
   the bridge reconciles. Uses the shared git-conflict UI when both
   sides changed the same event between syncs.
 
-- [ ] **Y.1** Add `ical4j` + `dav4jvm` deps; verify MPL-2.0 license-clean for our distribution
-- [ ] **Y.2** CalDAV discovery flow (well-known URL `/.well-known/caldav`, then PROPFIND for calendars); in-app setup wizard `Settings → Repos → <repo> → + Add CalDAV mirror` with provider-aware presets (Google / Microsoft 365 / Apple iCloud / Nextcloud / custom)
-- [ ] **Y.3** Server credential storage (alongside git creds in EncryptedSharedPreferences); OAuth Device Flow for Google + Microsoft; app-specific-password flow for Apple with clear in-UI instructions
-- [ ] **Y.4** `PULL_ONLY` mirror mode (CalDAV → repo) — events materialize as repo files under `calendars/<target-id>/events/...`; target calendar gets `mirror = { source = "caldav", direction = "pull" }` in its `calendar.toml` so the app refuses local edits; commits are made under a configurable identity (default: "CalDAV mirror <server-host>") so blame stays readable
-- [ ] **Y.5** `PUSH_ONLY` mode (repo → CalDAV) — repo files → CalDAV `VEVENT`s; tracks `imported_uid` on repo files to maintain identity across pushes
-- [ ] **Y.6** `BIDI` mode (full two-way, with conflict detection)
-- [ ] **Y.7** Conflict resolution shared with git conflict UI
+- [x] **Y.1** Add `ical4j` + `dav4jvm` deps; verify MPL-2.0 license-clean for our distribution — declared in `gradle/libs.versions.toml` with MPL-2.0 rationale comment per `decisions.md` "Round 2 allow list"; runtime wiring deferred to SE-Q.10+ in favour of a thin OkHttp-driven `CalDavHttp` (zero new dex pressure on the debug APK).
+- [x] **Y.2** CalDAV discovery flow (well-known URL `/.well-known/caldav`, then PROPFIND for calendars); in-app setup wizard `Settings → Repos → <repo> → + Add CalDAV mirror` with provider-aware presets (Google / Microsoft 365 / Apple iCloud / Nextcloud / custom) — `CalDavDiscovery` + `PropfindParser` + `AddMirrorViewModel` + `AddMirrorScreen` compose surface.
+- [x] **Y.3** Server credential storage (alongside git creds in EncryptedSharedPreferences); OAuth Device Flow for Google + Microsoft; app-specific-password flow for Apple with clear in-UI instructions — `CalDavSecretsStore` + `CalDavCredential` sealed type + `CalDavOAuthConfigs.google/microsoft` re-using `git/auth/DeviceFlowClient` (SE-D).
+- [x] **Y.4** `PULL_ONLY` mirror mode (CalDAV → repo) — events materialize as repo files under `calendars/<target-id>/events/...`; target calendar gets `mirror = { source = "caldav", direction = "pull" }` in its `calendar.toml` so the app refuses local edits; commits are made under a configurable identity (default: "CalDAV mirror <server-host>") so blame stays readable — `IcalRepoMapper` writes `[mirror]` TOML block + `CalDavMirrorWorker.doPull` commits via `MirrorFileSink.commit("caldav: pull …")`.
+- [x] **Y.5** `PUSH_ONLY` mode (repo → CalDAV) — repo files → CalDAV `VEVENT`s; tracks `imported_uid` on repo files to maintain identity across pushes — `CalDavMirrorWorker.doPush` (also reused by Y.6 BIDI); `external_uid` frontmatter slot is the join key.
+- [x] **Y.6** `BIDI` mode (full two-way, with conflict detection) — `CalDavMirrorWorker` BIDI branch chains `doPull` then `doPush`, plus `CalDavScheduler` adds per-server rate-limit (`minServerGapMs`) + per-mirror interval.
+- [x] **Y.7** Conflict resolution shared with git conflict UI — stale-ETag detection emits `CalDavSyncResult.Conflicted(hrefs)`; pluggable into the existing `sync/ConflictRegistry` shape (Phase SE-J) via `ConflictSource.CALDAV` (full UI parameterization tracked under SE-Q.14).
 - [ ] **Y.8** `skb caldav add|sync|remove|list` subcommands — covers all three modes; `--mode pull|push|bidi` flag at add-time
 - [ ] **Y.9** Per-CalDAV-mirror sync interval (default 30m for mirrors)
 - [ ] **Y.10** ETag- + CTag- + RFC6578 `sync-token`-based incremental change detection (avoid full re-pull)

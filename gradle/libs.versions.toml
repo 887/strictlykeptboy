@@ -40,6 +40,11 @@ libRecur = "0.17.1"
 # Phase Q — Android Auto (car-app library).
 carApp = "1.7.0"
 
+# Phase Y — CalDAV mirror (MPL-2.0 licensed; file-level copyleft only,
+# link-clean for our APK per decisions.md "MPL-2.0 is on the allowed list").
+ical4j = "4.0.4"
+dav4jvm = "2.2.1"
+
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidxActivity" }
@@ -90,6 +95,17 @@ lib-recur = { module = "org.dmfs:lib-recur", version.ref = "libRecur" }
 # Phase Q — Android Auto
 androidx-car-app = { module = "androidx.car.app:app", version.ref = "carApp" }
 androidx-car-app-testing = { module = "androidx.car.app:app-testing", version.ref = "carApp" }
+
+# Phase Y — CalDAV mirror.
+# Both libs are MPL-2.0 (file-level copyleft, link-clean for binary
+# distribution per decisions.md Round-2 license preamble + sync-engine
+# SE-Q "license-clean status"). ical4j parses iCalendar VEVENT/VTODO;
+# dav4jvm provides typed CalDAV/WebDAV PROPFIND/REPORT/PUT primitives.
+# At runtime we drive the network ourselves over OkHttp; the dav4jvm
+# dep is wired so future SE-Q.10+ work can adopt its REPORT/sync-token
+# helpers without another dep wave.
+ical4j-core = { module = "org.mnode.ical4j:ical4j", version.ref = "ical4j" }
+dav4jvm-core = { module = "com.github.bitfireAT:dav4jvm", version.ref = "dav4jvm" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }
