@@ -38,6 +38,7 @@ const val TestTagEventCreateFabMenu = "EventCreateFabMenu"
 const val TestTagEventCreateFabMenuNewEvent = "EventCreateFabMenuNewEvent"
 const val TestTagEventCreateFabMenuRoutine = "EventCreateFabMenuRoutine"
 const val TestTagEventCreateFabMenuIcs = "EventCreateFabMenuIcs"
+const val TestTagEventCreateFabMenuPlanTrip = "EventCreateFabMenuPlanTrip"
 
 /**
  * Phase FFF / EC-A — single FAB surface for adding to the schedule.
@@ -58,6 +59,8 @@ fun EventCreateFab(
     onClick: () -> Unit,
     onLongPressRoutine: () -> Unit = {},
     onLongPressIcs: () -> Unit = {},
+    /** Phase CCC.10 / HV-G.3 — opens the quick-trip wizard. */
+    onLongPressPlanTrip: () -> Unit = {},
     enabled: Boolean = true,
     expanded: Boolean = true,
     modifier: Modifier = Modifier,
@@ -126,6 +129,11 @@ fun EventCreateFab(
                 text = { Text(stringResource(R.string.event_create_menu_paste_ics)) },
                 onClick = { menuOpen = false; onLongPressIcs() },
                 modifier = Modifier.testTag(TestTagEventCreateFabMenuIcs),
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.event_create_menu_plan_trip)) },
+                onClick = { menuOpen = false; onLongPressPlanTrip() },
+                modifier = Modifier.testTag(TestTagEventCreateFabMenuPlanTrip),
             )
         }
     }

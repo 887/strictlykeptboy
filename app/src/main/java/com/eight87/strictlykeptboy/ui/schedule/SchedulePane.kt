@@ -52,6 +52,8 @@ fun SchedulePane(
     onSyncClick: () -> Unit = {},
     eventCreateController: EventCreateController? = null,
     eventCreateEnabled: Boolean = true,
+    /** Phase CCC.10 / HV-G.3 — opens the quick-trip wizard from the FAB long-press or schedule empty-state. */
+    onPlanTrip: () -> Unit = {},
 ) {
     androidx.compose.runtime.LaunchedEffect(state) {
         com.eight87.strictlykeptboy.perf.PerfTraceRecorder.begin(
@@ -82,6 +84,7 @@ fun SchedulePane(
                             onPersistTab = onPersistTab,
                             onSyncClick = onSyncClick,
                             onBandTap = { detailBand = it },
+                            onPlanTrip = onPlanTrip,
                         )
                     }
                 },
@@ -101,6 +104,7 @@ fun SchedulePane(
                     onPersistTab = onPersistTab,
                     onSyncClick = onSyncClick,
                     onBandTap = { detailBand = it },
+                    onPlanTrip = onPlanTrip,
                 )
             }
             detailBand?.let { band ->
@@ -121,6 +125,7 @@ fun SchedulePane(
                             .toOffsetDateTime(),
                     )
                 },
+                onLongPressPlanTrip = onPlanTrip,
                 enabled = eventCreateEnabled,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
@@ -154,6 +159,7 @@ private fun ScheduleMasterContent(
     onPersistTab: (ScheduleViewTab) -> Unit,
     onSyncClick: () -> Unit,
     onBandTap: (DayBand) -> Unit,
+    onPlanTrip: (() -> Unit)? = null,
 ) {
     val selectedTab by state.selectedTab.collectAsState()
     val date by state.date.collectAsState()
@@ -168,6 +174,7 @@ private fun ScheduleMasterContent(
                 schedule = rendered,
                 modifier = Modifier.fillMaxSize(),
                 onBandTap = onBandTap,
+                onPlanTrip = onPlanTrip,
             )
             ScheduleViewTab.Week -> {
                 val weekStart = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
@@ -195,6 +202,7 @@ private fun ScheduleMasterContent(
                 schedule = rendered,
                 modifier = Modifier.fillMaxSize(),
                 onBandTap = onBandTap,
+                onPlanTrip = onPlanTrip,
             )
             ScheduleViewTab.Year -> ScheduleYearView(
                 year = date.year,

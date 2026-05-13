@@ -51,12 +51,17 @@ fun ScheduleTimeboxView(
     schedule: RenderedSchedule?,
     modifier: Modifier = Modifier,
     onBandTap: (DayBand) -> Unit = {},
+    /** Phase CCC.10 / HV-G.3 — opens the trip wizard from the empty-state CTA. */
+    onPlanTrip: (() -> Unit)? = null,
 ) {
     val day = schedule?.days?.firstOrNull { it.date == date }
     val bands = day?.bands.orEmpty()
 
     if (bands.isEmpty()) {
-        EmptyScheduleState(modifier = modifier.fillMaxSize().testTag(TestTagTimeboxEmpty))
+        EmptyScheduleState(
+            modifier = modifier.fillMaxSize().testTag(TestTagTimeboxEmpty),
+            onPlanTrip = onPlanTrip,
+        )
         return
     }
 

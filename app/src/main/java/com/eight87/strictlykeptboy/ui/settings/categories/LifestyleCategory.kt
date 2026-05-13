@@ -17,11 +17,16 @@ const val TestTagCatLifestyle = "Cat-Lifestyle"
 /**
  * Phase S.8 — Lifestyle category.
  *
- * Replaces the retired Demo section (D.54). Single CTA that re-enters
- * the wizard at Screen 5 (Roles) per K.12 / LW-L.
+ * Replaces the retired Demo section (D.54). Two CTAs:
+ *  - Re-enter the lifestyle wizard at Screen 5 (Roles) per K.12 / LW-L.
+ *  - **Phase CCC.10 / HV-G.1**: "+ Plan a trip" launches the quick-trip wizard.
  */
 @Composable
-fun LifestyleCategory(onOpenWizardAtRoles: () -> Unit = {}, modifier: Modifier = Modifier) {
+fun LifestyleCategory(
+    onOpenWizardAtRoles: () -> Unit = {},
+    onPlanTrip: () -> Unit = {},
+    modifier: Modifier = Modifier,
+) {
     CategorySurface(
         testTag = TestTagCatLifestyle,
         title = stringResource(R.string.settings_lifestyle_title),
@@ -37,6 +42,18 @@ fun LifestyleCategory(onOpenWizardAtRoles: () -> Unit = {}, modifier: Modifier =
             modifier = Modifier.testTag("$TestTagCatLifestyle-OpenWizard"),
         ) {
             Text(stringResource(R.string.settings_lifestyle_open_wizard))
+        }
+        Spacer(Modifier.height(12.dp))
+        Text(
+            stringResource(R.string.settings_lifestyle_plan_trip_blurb),
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Spacer(Modifier.height(8.dp))
+        Button(
+            onClick = onPlanTrip,
+            modifier = Modifier.testTag("$TestTagCatLifestyle-PlanTrip"),
+        ) {
+            Text(stringResource(R.string.settings_lifestyle_plan_trip))
         }
     }
 }

@@ -79,6 +79,8 @@ import com.eight87.strictlykeptboy.ui.tasks.TasksPane
 import com.eight87.strictlykeptboy.ui.tasks.TasksViewState
 import com.eight87.strictlykeptboy.ui.together.TogetherPane
 import com.eight87.strictlykeptboy.ui.together.TogetherViewModel
+import com.eight87.strictlykeptboy.ui.trip.TripDraft
+import com.eight87.strictlykeptboy.ui.trip.TripWizardNavHost
 import com.eight87.strictlykeptboy.ui.wizard.WizardDraft
 import com.eight87.strictlykeptboy.ui.wizard.WizardNavHost
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -168,6 +170,8 @@ fun SkbAppShell(
     neutralMode: Boolean = false,
     onWizardScaffold: suspend (WizardDraft) -> Result<Unit> = { Result.success(Unit) },
     onWizardFinish: () -> Unit = {},
+    /** Phase CCC.8 — trip-wizard materializer (writes overlay calendar + commits). */
+    onTripMaterialize: suspend (TripDraft) -> Result<Unit> = { Result.success(Unit) },
     importExportState: ImportExportViewState? = null,
     onPickImportFile: (com.eight87.strictlykeptboy.git.RepoConfig) -> Unit = {},
     onPickExportFile: (com.eight87.strictlykeptboy.git.RepoConfig) -> Unit = {},
@@ -189,6 +193,7 @@ fun SkbAppShell(
             neutralMode = neutralMode,
             onWizardScaffold = onWizardScaffold,
             onWizardFinish = onWizardFinish,
+            onTripMaterialize = onTripMaterialize,
             importExportState = importExportState,
             onPickImportFile = onPickImportFile,
             onPickExportFile = onPickExportFile,
@@ -213,6 +218,7 @@ private fun SkbAppShellContent(
     neutralMode: Boolean,
     onWizardScaffold: suspend (WizardDraft) -> Result<Unit>,
     onWizardFinish: () -> Unit,
+    onTripMaterialize: suspend (TripDraft) -> Result<Unit>,
     importExportState: ImportExportViewState?,
     onPickImportFile: (com.eight87.strictlykeptboy.git.RepoConfig) -> Unit,
     onPickExportFile: (com.eight87.strictlykeptboy.git.RepoConfig) -> Unit,
@@ -265,6 +271,11 @@ private fun SkbAppShellContent(
         TopDestination.Settings -> emptyList()
     }
 
+    // Phase CCC — quick-trip wizard is an overlay (not a destination) so
+    // adding it doesn't invalidate the existing 6-destination test
+    // expectations or the top-bar visual budget.
+    var tripWizardOpen by rememberSaveable { mutableStateOf(false) }
+
     // Big top-left title = destination name ("Schedule" / "Tasks" / etc.).
     // The rail already shows the current view-mode (rotated "Day" / "Week"
     // / "Combined" / etc.), so duplicating it as the top-left title reads
@@ -311,6 +322,7 @@ private fun SkbAppShellContent(
                             state = scheduleState,
                             onSyncClick = onSyncClick,
                             eventCreateController = eventCreateController,
+                            onPlanTrip = { tripWizardOpen = true },
                         )
                         TopDestination.Tasks -> TasksPane(
                             activeRepoName = activeRepoName,
@@ -347,8 +359,26 @@ private fun SkbAppShellContent(
                             importExportState = importExportState,
                             onPickImportFile = onPickImportFile,
                             onPickExportFile = onPickExportFile,
-                            access = settingsAccess,
+                            access = settingsAccess.copy(
+                                // Phase CCC.10 — Settings → Lifestyle → Plan a trip.
+                                onPlanTrip = { tripWizardOpen = true },
+                            ),
                         )
+                    }
+                    // Phase CCC — overlay the trip wizard above the active pane
+                    // when open. Covers the full content area; back/cancel
+                    // dismisses without changing the active TopDestination.
+                    if (tripWizardOpen) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.background,
+                            modifier = Modifier.fillMaxSize().testTag("TripWizardOverlay"),
+                        ) {
+                            TripWizardNavHost(
+                                onFinish = { tripWizardOpen = false },
+                                onCancel = { tripWizardOpen = false },
+                                onMaterialize = onTripMaterialize,
+                            )
+                        }
                     }
                 }
             }

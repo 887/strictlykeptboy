@@ -604,6 +604,7 @@
     <string name="dest_together">Together</string>
     <string name="dest_repos">Repos</string>
     <string name="dest_wizard">Wizard</string>
+    <string name="dest_trip_wizard">Plan a trip</string>
     <string name="dest_settings">Settings</string>
     <!-- Per-destination content-description (TalkBack reads "navigate to X" cleanly). -->
     <string name="cd_dest_schedule">Schedule</string>
@@ -779,4 +780,56 @@
     <string name="event_create_overlap_schedule_anyway">Schedule anyway</string>
     <string name="event_create_overlap_pick_different">Pick a different time</string>
     <string name="event_create_overlap_cancel">Cancel</string>
+
+    <!-- Phase CCC — quick-trip wizard -->
+    <string name="trip_wizard_step_of">Step %1$d of %2$d</string>
+    <string name="cd_trip_wizard_mascot">Trip wizard sticker: %1$s</string>
+    <string name="trip_wizard_continue">Continue</string>
+    <string name="trip_wizard_back">Back</string>
+    <string name="trip_wizard_materialize">Plan trip</string>
+    <string name="trip_wizard_materializing">Writing your trip overlay…</string>
+    <string name="trip_wizard_materialize_failed">Couldn\'t materialize the trip. Try again?</string>
+
+    <string name="trip_wizard_discard_title">Discard this trip?</string>
+    <string name="trip_wizard_discard_body">Your draft will be lost. You can always plan a new one later.</string>
+    <string name="trip_wizard_discard_confirm">Discard</string>
+    <string name="trip_wizard_discard_keep">Keep editing</string>
+
+    <string name="trip_wizard_basics_title">Trip basics</string>
+    <string name="trip_wizard_name_label">Trip name</string>
+    <string name="trip_wizard_destination_label">Destination</string>
+    <string name="trip_wizard_start_date_label">Start date</string>
+    <string name="trip_wizard_end_date_label">End date</string>
+    <string name="trip_wizard_travelers_label">Travelers</string>
+    <string name="trip_wizard_date_format_hint">Date format: YYYY-MM-DD</string>
+
+    <string name="trip_wizard_transport_title">How are you getting there?</string>
+    <string name="trip_wizard_transport_flight">Flight</string>
+    <string name="trip_wizard_transport_train">Train</string>
+    <string name="trip_wizard_transport_car">Car</string>
+    <string name="trip_wizard_transport_boat">Boat</string>
+    <string name="trip_wizard_transport_none">None / unset</string>
+
+    <string name="trip_wizard_anchors_title">Daily anchors during the trip</string>
+    <string name="trip_wizard_anchors_include_daily">Include vacation-daily anchors</string>
+    <string name="trip_wizard_anchors_pack_kink_kit">Pack kink kit</string>
+    <string name="trip_wizard_anchors_hint">Daily anchors keep self-care running on a relaxed cadence while you\'re away.</string>
+
+    <string name="trip_wizard_confirm_title">Ready to materialize?</string>
+    <string name="trip_wizard_confirm_name">Trip: %1$s</string>
+    <string name="trip_wizard_confirm_destination">Destination: %1$s</string>
+    <string name="trip_wizard_confirm_window">From %1$s to %2$s (%3$d days)</string>
+    <string name="trip_wizard_confirm_transport">Transport: %1$s</string>
+    <string name="trip_wizard_confirm_travelers">Travelers: %1$d</string>
+    <string name="trip_wizard_confirm_daily_anchors">Vacation-daily anchors: %1$s</string>
+    <string name="trip_wizard_confirm_pack_kink_kit">Pack kink kit: %1$s</string>
+    <string name="trip_wizard_confirm_reassurance">good boy stays good boy on vacation — your routines stay on track.</string>
+
+    <!-- Settings → Lifestyle → Plan a trip entry-point -->
+    <string name="settings_lifestyle_plan_trip">+ Plan a trip</string>
+    <string name="settings_lifestyle_plan_trip_blurb">Materialize a trip overlay with travel-prep, flight-day, and vacation-daily anchors in one tap.</string>
+
+    <!-- FAB long-press menu + schedule empty-state -->
+    <string name="event_create_menu_plan_trip">Plan a trip</string>
+    <string name="schedule_empty_plan_trip">No plans today — want to plan a trip?</string>
 </resources>
