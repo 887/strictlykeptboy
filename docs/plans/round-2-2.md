@@ -1,6 +1,15 @@
 # Round 2.2 — Clean up the wizard metaphor + finish the 2.1 polish
 
-## Status: PENDING — planning complete, implementation not started
+## Status: ✅ DONE — closed out 2026-05-14
+
+**Shipped:** all 6 phases (A shell cleanup → B wizard metaphor unification → C Schedule UI overlays → D Settings completion → E Notification polish → F polish + release). Top-bar destination row restored to 3 read-surface buttons (Schedule/Tasks/Reviews); wizard goes 12→10 screens via collapse of Alignment+Lifestyle+Mode into a single six-card Lifestyle screen; Settings → Mode rebranded "Lifestyle" with six-radio parity. Schedule paints color stripes, kind glyphs, author chips, supersedence visual, off-schedule dashed border. Repos in-pane (no trampoline), Access category, Auto&Tablet category, defaults-for-new-events ChipGroup, trip-summary card all live. Foreground commits arm reminders incrementally; briefings render real today's-events via parked-handle pattern; `ReminderBroadcastReceiver` calls `bodyForPet` so the lockscreen carries pet-mode register.
+
+**Tests:** 736 → **773** passing, 0 failures.
+
+**Small deferreds (non-blocking):**
+- 2.2.C.6 overflow-menu UI surgery for group-by-repo toggle (pref shipped; menu pending)
+- 2.2.C.8 host wiring of `repoStore.list().size` + `calendarRegistry.size` + `CalendarVisibilityPrefs.active.count` into `SchedulePane` (selector + composable shipped, callers adopt as polish)
+- Settings sealed-case `SettingsCategory.Mode` label-collides with `SettingsCategory.Lifestyle` — both display as "Lifestyle"; future round may rename one.
 
 ## Why this round exists
 

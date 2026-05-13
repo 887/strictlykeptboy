@@ -15,6 +15,14 @@
 → Full plan: [`round-2-1.md`](round-2-1.md)
 → Source audits: [`audit-2-1-settings.md`](audit-2-1-settings.md) · [`audit-2-1-schedule-tasks.md`](audit-2-1-schedule-tasks.md) · [`audit-2-1-multirepo.md`](audit-2-1-multirepo.md) · [`audit-2-1-notif-auto-tablet.md`](audit-2-1-notif-auto-tablet.md) · [`audit-2-1-wizard-identity-mode.md`](audit-2-1-wizard-identity-mode.md)
 
+## Round 2.2 — wizard metaphor cleanup + main-shell regression fix + 2.1 deferreds (✅ DONE — closed out 2026-05-14)
+
+**Shipped:** all 6 phases (A shell cleanup → B wizard metaphor unification → C Schedule UI overlays → D Settings completion → E Notification polish → F polish + release). Top-bar destination row restored to 3 read-surface buttons (Schedule/Tasks/Reviews); wizard goes 12→10 screens via collapse of Alignment+Lifestyle+Mode into a single six-card Lifestyle screen ("pet" canonical metaphor). Schedule paints color stripes, kind glyphs, author chips, supersedence visual, off-schedule dashed border, three-state empty. Repos in-pane (trampoline killed), Access category, Auto&Tablet category, defaults-for-new-events ChipGroup, trip-summary card all live. Foreground commits arm reminders incrementally; briefings render real today's-events; `ReminderBroadcastReceiver` calls `bodyForPet`.
+
+**Test count:** 736 → **773** passing (+37 across 12 new test files). 0 failures.
+
+→ Full plan: [`round-2-2.md`](round-2-2.md)
+
 ## Round 2 closeout summary (audit 2026-05-13)
 
 **Sub-step counts (post-cleanup sweep):**
