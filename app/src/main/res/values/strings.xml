@@ -605,12 +605,14 @@
     <string name="dest_repos">Repos</string>
     <string name="dest_wizard">Wizard</string>
     <string name="dest_trip_wizard">Plan a trip</string>
+    <string name="dest_reviews">Reviews</string>
     <string name="dest_settings">Settings</string>
     <!-- Per-destination content-description (TalkBack reads "navigate to X" cleanly). -->
     <string name="cd_dest_schedule">Schedule</string>
     <string name="cd_dest_tasks">Tasks</string>
     <string name="cd_dest_repos">Repos</string>
     <string name="cd_dest_wizard">Wizard</string>
+    <string name="cd_dest_reviews">Reviews</string>
     <string name="cd_dest_settings">Settings</string>
 
     <!-- ScheduleViewTab labels. -->

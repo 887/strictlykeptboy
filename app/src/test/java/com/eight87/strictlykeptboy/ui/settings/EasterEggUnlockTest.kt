@@ -1,85 +1,51 @@
 package com.eight87.strictlykeptboy.ui.settings
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.size
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsNotDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.performClick
-import androidx.compose.ui.unit.dp
-import com.eight87.strictlykeptboy.theme.StrictlyKeptBoyTheme
-import com.eight87.strictlykeptboy.ui.settings.categories.ABOUT_EASTER_EGG_RESET_MS
-import com.eight87.strictlykeptboy.ui.settings.categories.ABOUT_EASTER_EGG_TAP_COUNT
-import com.eight87.strictlykeptboy.ui.settings.categories.AboutCategory
-import com.eight87.strictlykeptboy.ui.settings.categories.TestTagCatAbout
-import com.eight87.strictlykeptboy.ui.settings.categories.TestTagCatAboutEasterEgg
-import org.junit.Rule
+import com.eight87.strictlykeptboy.ui.settings.categories.EasterEggController
+import org.junit.Assert.assertEquals
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 
-@RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+/**
+ * Phase F46 cleanup — was a Compose UI test referencing
+ * `ABOUT_EASTER_EGG_*` compat-stub constants (7-tap / 2s window) that
+ * never matched the live [EasterEggController] (3-tap / 5s window).
+ *
+ * Rewritten to drive the controller directly with a synthetic clock —
+ * the controller is framework-free, so we don't need Robolectric +
+ * compose-rule to exercise it. The about-card tap wiring is already
+ * covered by the surrounding settings/category tests.
+ */
 class EasterEggUnlockTest {
-    @get:Rule val composeRule = createComposeRule()
-
-    private val versionTag = "$TestTagCatAbout-Version"
-
-    @Test fun `seven rapid taps unlock easter egg`() {
-        var fakeNow = 1_000L
-        composeRule.setContent {
-            StrictlyKeptBoyTheme {
-                Box(Modifier.size(width = 600.dp, height = 1200.dp)) {
-                    AboutCategory(nowMs = { fakeNow })
-                }
-            }
-        }
-        repeat(ABOUT_EASTER_EGG_TAP_COUNT) {
-            composeRule.onNodeWithTag(versionTag).performClick()
-            fakeNow += 100L
-        }
-        composeRule.onNodeWithTag(TestTagCatAboutEasterEgg).assertIsDisplayed()
+    @Test fun `three rapid taps reveal`() {
+        val ctrl = EasterEggController()
+        assertEquals(EasterEggController.Outcome.FirstPromptSnackbar, ctrl.tap(1_000L))
+        assertEquals(EasterEggController.Outcome.SecondPromptSnackbar, ctrl.tap(1_100L))
+        assertEquals(EasterEggController.Outcome.Reveal, ctrl.tap(1_200L))
     }
 
-    @Test fun `six taps do not unlock`() {
-        var fakeNow = 1_000L
-        composeRule.setContent {
-            StrictlyKeptBoyTheme {
-                Box(Modifier.size(width = 600.dp, height = 1200.dp)) {
-                    AboutCategory(nowMs = { fakeNow })
-                }
-            }
-        }
-        repeat(ABOUT_EASTER_EGG_TAP_COUNT - 1) {
-            composeRule.onNodeWithTag(versionTag).performClick()
-            fakeNow += 100L
-        }
-        composeRule.onNodeWithTag(TestTagCatAboutEasterEgg).assertIsNotDisplayed()
+    @Test fun `two taps do not reveal`() {
+        val ctrl = EasterEggController()
+        ctrl.tap(1_000L)
+        val out = ctrl.tap(1_100L)
+        assertEquals(EasterEggController.Outcome.SecondPromptSnackbar, out)
     }
 
-    @Test fun `gap of more than 2 seconds resets counter`() {
-        var fakeNow = 1_000L
-        composeRule.setContent {
-            StrictlyKeptBoyTheme {
-                Box(Modifier.size(width = 600.dp, height = 1200.dp)) {
-                    AboutCategory(nowMs = { fakeNow })
-                }
-            }
-        }
-        // 4 taps, then a long gap, then 4 more — should NOT trigger (would
-        // only trigger if counter is preserved across the gap).
-        repeat(4) {
-            composeRule.onNodeWithTag(versionTag).performClick()
-            fakeNow += 100L
-        }
-        fakeNow += ABOUT_EASTER_EGG_RESET_MS + 1L
-        repeat(4) {
-            composeRule.onNodeWithTag(versionTag).performClick()
-            fakeNow += 100L
-        }
-        composeRule.onNodeWithTag(TestTagCatAboutEasterEgg).assertIsNotDisplayed()
+    @Test fun `gap longer than window resets counter`() {
+        val ctrl = EasterEggController()
+        ctrl.tap(1_000L)
+        ctrl.tap(1_100L)
+        // Big gap — past DEFAULT_WINDOW_MILLIS (5_000L). Next tap should
+        // be treated as the FIRST tap of a fresh sequence.
+        val out = ctrl.tap(1_100L + EasterEggController.DEFAULT_WINDOW_MILLIS + 1L)
+        assertEquals(EasterEggController.Outcome.FirstPromptSnackbar, out)
+    }
+
+    @Test fun `reveal resets counter so next tap is first prompt again`() {
+        val ctrl = EasterEggController()
+        ctrl.tap(1_000L)
+        ctrl.tap(1_100L)
+        ctrl.tap(1_200L) // Reveal
+        // After Reveal the controller resets — the next tap should be
+        // treated as a fresh first-prompt.
+        assertEquals(EasterEggController.Outcome.FirstPromptSnackbar, ctrl.tap(1_300L))
     }
 }

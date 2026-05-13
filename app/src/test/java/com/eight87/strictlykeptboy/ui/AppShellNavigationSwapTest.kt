@@ -31,13 +31,17 @@ import org.robolectric.annotation.Config
 /**
  * Nav-swap polish — asserts the inverted layout.
  *
- *  - The top bar carries all six destinations (icon + label buttons on
- *    the right side).
+ *  - The top bar carries all SEVEN destinations as icon-only buttons
+ *    (Schedule / Tasks / Together / Repos / Wizard / Reviews / Settings).
+ *    Reviews was added in the Phase DDD.13 wiring round; the test loops
+ *    `TopDestination.entries` so future additions are picked up
+ *    automatically.
  *  - The left rail shows view-mode entries per the active destination.
  *  - Schedule rail has 5 entries (Day / Week / Month / Agenda / Year).
  *  - Tasks rail has 5 entries (Combined / Today / Per-list / Shopping /
  *    Standing).
- *  - Together / Repos / Wizard / Settings contribute zero rail entries.
+ *  - Together / Repos / Wizard / Reviews / Settings contribute zero
+ *    rail entries.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -64,10 +68,15 @@ class AppShellNavigationSwapTest {
         }
     }
 
-    @Test fun top_bar_carries_six_destination_buttons() {
+    @Test fun top_bar_carries_all_destination_buttons() {
         setShell()
         composeRule.onNodeWithTag(TestTagAppShell).assertExists()
         composeRule.onNodeWithTag(TestTagShellTopBar).assertExists()
+        // Pin the count to catch accidental TopDestination additions /
+        // removals — the Phase DDD.13 rail is 7 destinations.
+        assert(TopDestination.entries.size == 7) {
+            "Expected 7 TopDestination entries, got ${TopDestination.entries.size}"
+        }
         TopDestination.entries.forEach { dest ->
             composeRule
                 .onNodeWithTag("$TestTagShellDestPrefix${dest.name}")
