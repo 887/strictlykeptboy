@@ -1,0 +1,190 @@
+# Phase AAA.4 / HV-D — atomic-vacation-daily template.
+# vacation = lazy-slob risk zone. This template's job is to prevent
+# slob-drift without imposing the full home routine. the good-boy stays
+# a good-boy by doing the bare-essentials on schedule. routine calendars
+# are superseded for the trip window; THIS template runs in their place.
+
+schema_version = 1
+template_id = "atomic-vacation-daily"
+display_name = "Vacation daily"
+category = "self-care"
+neutral_safe = true
+
+# ── self-care anchors (HV-D.2) ───────────────────────────────────────
+
+[[entry]]
+id = "vacation-wake"
+title = "good boy wakes up"
+neutral_title = "Wake up (vacation cadence)"
+duration_minutes = 1
+sticker_id = "sunrise"
+default_cadence = "daily"
+default_times = ["09:00"]
+tags = ["self-care", "vacation"]
+
+[[entry]]
+id = "vacation-brush-teeth-am"
+title = "good boy brushes his teeth (morning)"
+neutral_title = "Brush teeth (morning)"
+duration_minutes = 5
+sticker_id = "tooth"
+default_cadence = "daily"
+default_times = ["09:15"]
+tags = ["self-care", "vacation"]
+
+[[entry]]
+id = "vacation-brush-teeth-pm"
+title = "good boy brushes his teeth (night)"
+neutral_title = "Brush teeth (night)"
+duration_minutes = 5
+sticker_id = "tooth"
+default_cadence = "daily"
+default_times = ["23:30"]
+tags = ["self-care", "vacation"]
+
+[[entry]]
+id = "vacation-shower"
+title = "good boy showers"
+neutral_title = "Shower"
+duration_minutes = 10
+sticker_id = "shower"
+default_cadence = "configurable"
+default_times = ["09:30"]
+tags = ["self-care", "vacation"]
+
+[[entry]]
+id = "vacation-grooming"
+title = "basic grooming"
+neutral_title = "Basic grooming (deodorant, hair, sunscreen)"
+duration_minutes = 5
+sticker_id = "comb"
+default_cadence = "daily"
+default_times = ["09:50"]
+tags = ["self-care", "vacation"]
+[[entry.subbeat]]
+label = "Deodorant"
+duration_seconds = 30
+[[entry.subbeat]]
+label = "Hair"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "Sunscreen (if beach/sunny)"
+duration_seconds = 90
+[[entry.subbeat]]
+label = "Skincare quick"
+duration_seconds = 60
+
+[[entry]]
+id = "vacation-hydrate-1"
+title = "hydrate"
+neutral_title = "Hydration check (mid-morning)"
+duration_minutes = 1
+sticker_id = "water-glass"
+default_cadence = "daily"
+default_times = ["11:00"]
+tags = ["self-care", "vacation"]
+
+[[entry]]
+id = "vacation-hydrate-2"
+title = "hydrate"
+neutral_title = "Hydration check (afternoon)"
+duration_minutes = 1
+sticker_id = "water-glass"
+default_cadence = "daily"
+default_times = ["15:00"]
+tags = ["self-care", "vacation"]
+
+[[entry]]
+id = "vacation-hydrate-3"
+title = "hydrate"
+neutral_title = "Hydration check (evening)"
+duration_minutes = 1
+sticker_id = "water-glass"
+default_cadence = "daily"
+default_times = ["19:00"]
+tags = ["self-care", "vacation"]
+
+[[entry]]
+id = "vacation-meal-anchor"
+title = "the one scheduled meal"
+neutral_title = "Scheduled meal anchor"
+duration_minutes = 30
+sticker_id = "plate"
+default_cadence = "daily"
+default_times = ["13:00"]
+tags = ["self-care", "vacation"]
+
+[[entry]]
+id = "vacation-movement"
+title = "movement anchor"
+neutral_title = "Walk 20m or stretch 10m"
+duration_minutes = 20
+sticker_id = "walking"
+default_cadence = "daily"
+default_times = ["10:30"]
+tags = ["self-care", "vacation"]
+
+[[entry]]
+id = "vacation-wind-down"
+title = "evening wind-down"
+neutral_title = "Evening wind-down"
+duration_minutes = 15
+sticker_id = "moon"
+default_cadence = "daily"
+default_times = ["23:00"]
+tags = ["self-care", "vacation"]
+[[entry.subbeat]]
+label = "Skincare"
+duration_seconds = 180
+[[entry.subbeat]]
+label = "Tomorrow-glance"
+duration_seconds = 180
+[[entry.subbeat]]
+label = "Phone down"
+duration_seconds = 60
+
+# ── kink-care anchors (HV-D.3) — privacy K-2 ─────────────────────────
+
+[[entry]]
+id = "vacation-cage-check"
+title = "cage check"
+neutral_title = "Cage check (vacation cadence)"
+duration_minutes = 2
+sticker_id = "cage"
+default_cadence = "daily"
+default_times = ["09:30"]
+privacy_flag = true
+tags = ["self-care", "vacation", "kink"]
+
+[[entry]]
+id = "vacation-plug-check"
+title = "plug check"
+neutral_title = "Plug check (vacation cadence)"
+duration_minutes = 5
+sticker_id = "plug"
+default_cadence = "daily"
+default_times = ["21:00"]
+privacy_flag = true
+tags = ["self-care", "vacation", "kink"]
+
+[[entry]]
+id = "vacation-posture-check"
+title = "posture check"
+neutral_title = "Posture check (vacation cadence)"
+duration_minutes = 1
+sticker_id = "posture"
+default_cadence = "daily"
+default_times = ["14:00"]
+privacy_flag = true
+tags = ["self-care", "vacation", "kink"]
+
+[[entry]]
+id = "vacation-collar-check"
+title = "collar check"
+neutral_title = "Collar check (vacation cadence)"
+duration_minutes = 1
+sticker_id = "collar"
+default_cadence = "daily"
+default_times = ["09:30"]
+privacy_flag = true
+tags = ["self-care", "vacation", "kink"]

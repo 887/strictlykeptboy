@@ -8,6 +8,7 @@ import com.eight87.strictlykeptboy.store.EntityWriter
 import com.eight87.strictlykeptboy.store.RecurrenceRule
 import com.eight87.strictlykeptboy.store.RepoBootstrap
 import com.eight87.strictlykeptboy.store.StandingTask
+import com.eight87.strictlykeptboy.store.TemplateOrigin
 import com.eight87.strictlykeptboy.store.TomlTable
 import com.eight87.strictlykeptboy.store.TomlWriter
 import kotlinx.coroutines.Dispatchers
@@ -151,8 +152,16 @@ object WizardScaffolder {
                     calendarId = calId,
                     tags = buildList {
                         add("template")
-                        add("template_origin:wizard")
-                        add("template_slot:${role.id}/$atomId")
+                        // Phase AAA: route through TemplateOrigin so the
+                        // re-run-from-Settings (LW-L) idempotency check
+                        // and the CLI `skb template reset` share format.
+                        addAll(
+                            TemplateOrigin.tagsFor(
+                                origin = TemplateOrigin.WIZARD,
+                                templateId = role.id,
+                                entryId = atomId,
+                            )
+                        )
                         if (role == RoleId.Kink) add("kink")
                     },
                     emoji = role.emoji,

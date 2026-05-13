@@ -1,0 +1,175 @@
+# Phase AAA.3 / HV-C — atomic-flight-day template.
+# 19 parameterized entries per flight leg. Domestic/international toggle
+# adjusts pre-airport buffer (120/180 min) at materialization time.
+
+schema_version = 1
+template_id = "atomic-flight-day"
+display_name = "Flight day"
+category = "travel"
+neutral_safe = true
+parameterized = true
+
+[[entry]]
+id = "online-checkin-window"
+title = "online check-in (24h)"
+neutral_title = "Online check-in window opens"
+offset_minutes_from_departure = -1440
+duration_minutes = 10
+sticker_id = "checkin"
+tags = ["flight"]
+
+[[entry]]
+id = "flight-pre-alarm"
+title = "wake-up alarm"
+neutral_title = "Wake-up alarm (flight day)"
+duration_minutes = 1
+sticker_id = "alarm"
+tags = ["flight"]
+
+[[entry]]
+id = "transport-to-airport"
+title = "transport to airport"
+neutral_title = "Travel to airport"
+duration_minutes = 45
+sticker_id = "taxi"
+tags = ["flight"]
+
+[[entry]]
+id = "airport-arrive"
+title = "arrive at airport"
+neutral_title = "Arrive at airport"
+duration_minutes = 5
+sticker_id = "airport"
+tags = ["flight"]
+
+[[entry]]
+id = "bag-drop"
+title = "bag drop / kiosk check-in"
+neutral_title = "Bag drop / kiosk check-in"
+duration_minutes = 20
+sticker_id = "bag-drop"
+tags = ["flight"]
+
+[[entry]]
+id = "security"
+title = "security"
+neutral_title = "Security screening"
+duration_minutes = 30
+sticker_id = "security"
+tags = ["flight"]
+
+[[entry]]
+id = "gate-find"
+title = "find the gate"
+neutral_title = "Locate gate"
+duration_minutes = 10
+sticker_id = "gate"
+tags = ["flight"]
+
+[[entry]]
+id = "pre-board-toilet"
+title = "last bathroom before boarding"
+neutral_title = "Pre-board bathroom"
+offset_minutes_from_departure = -50
+duration_minutes = 5
+sticker_id = "toilet"
+tags = ["flight"]
+
+[[entry]]
+id = "pre-board-water-refill"
+title = "refill water bottle past security"
+neutral_title = "Refill water bottle (past security)"
+offset_minutes_from_departure = -45
+duration_minutes = 5
+sticker_id = "water-fountain"
+tags = ["flight"]
+
+[[entry]]
+id = "pre-board-food"
+title = "last food"
+neutral_title = "Last food before boarding"
+offset_minutes_from_departure = -40
+duration_minutes = 15
+sticker_id = "snack"
+tags = ["flight"]
+
+[[entry]]
+id = "pre-board-call"
+title = "last call home"
+neutral_title = "Last call home"
+offset_minutes_from_departure = -30
+duration_minutes = 5
+sticker_id = "phone-call"
+tags = ["flight"]
+
+[[entry]]
+id = "boarding"
+title = "boarding"
+neutral_title = "Boarding"
+offset_minutes_from_departure = -30
+duration_minutes = 25
+sticker_id = "boarding"
+tags = ["flight"]
+
+[[entry]]
+id = "in-flight"
+title = "in-flight (sleep / movie / work)"
+neutral_title = "In flight"
+offset_minutes_from_departure = 0
+duration_minutes = 120
+sticker_id = "plane"
+tags = ["flight"]
+
+[[entry]]
+id = "landing"
+title = "landing"
+neutral_title = "Landing"
+offset_minutes_from_arrival = -15
+duration_minutes = 15
+sticker_id = "plane-land"
+tags = ["flight"]
+
+[[entry]]
+id = "immigration"
+title = "immigration / customs"
+neutral_title = "Immigration / customs"
+offset_minutes_from_arrival = 10
+duration_minutes = 30
+sticker_id = "passport-stamp"
+tags = ["flight"]
+
+[[entry]]
+id = "baggage-claim"
+title = "baggage claim"
+neutral_title = "Baggage claim"
+offset_minutes_from_arrival = 30
+duration_minutes = 25
+sticker_id = "luggage"
+tags = ["flight"]
+
+[[entry]]
+id = "ground-to-accommodation"
+title = "ground transport to accommodation"
+neutral_title = "Ground transport to accommodation"
+offset_minutes_from_arrival = 60
+duration_minutes = 30
+sticker_id = "taxi"
+tags = ["flight"]
+
+[[entry]]
+id = "accommodation-checkin"
+title = "accommodation check-in"
+neutral_title = "Check in at accommodation"
+offset_minutes_from_arrival = 90
+duration_minutes = 20
+sticker_id = "hotel-checkin"
+tags = ["flight"]
+
+[[entry]]
+id = "first-day-decompress"
+title = "decompress / unpack"
+neutral_title = "Decompress, unpack, water, snack"
+offset_minutes_from_arrival = 120
+duration_minutes = 60
+sticker_id = "decompress"
+tags = ["flight"]

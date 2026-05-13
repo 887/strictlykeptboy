@@ -1,0 +1,714 @@
+# Phase AAA.2 / HV-B — atomic-travel-prep template.
+# 52 entries across 7 lead-time tiers. Parameterized by TripDraft;
+# wizard back-fills `trip.start_date - lead_offset_days` per entry.
+
+schema_version = 1
+template_id = "atomic-travel-prep"
+display_name = "Travel prep"
+category = "travel"
+neutral_safe = true
+parameterized = true
+
+# ── documents (T-42 / T-35) ──────────────────────────────────────────
+
+[[entry]]
+id = "passport-validity"
+title = "check passport validity"
+neutral_title = "Check passport validity (6+ months past return)"
+lead_offset_days = 42
+duration_minutes = 10
+sticker_id = "passport"
+tags = ["travel", "documents"]
+
+[[entry]]
+id = "passport-renew-trigger"
+title = "renew passport (if needed)"
+neutral_title = "Start passport renewal (only if expiring soon)"
+lead_offset_days = 42
+duration_minutes = 120
+sticker_id = "passport-renew"
+tags = ["travel", "documents"]
+
+[[entry]]
+id = "visa-check"
+title = "check visa requirements"
+neutral_title = "Check visa requirements for destination"
+lead_offset_days = 42
+duration_minutes = 15
+sticker_id = "visa"
+tags = ["travel", "documents"]
+
+[[entry]]
+id = "visa-apply"
+title = "apply for visa"
+neutral_title = "Apply for visa (if required)"
+lead_offset_days = 42
+duration_minutes = 60
+sticker_id = "visa-stamp"
+tags = ["travel", "documents"]
+
+[[entry]]
+id = "vaccination-check"
+title = "vaccination check"
+neutral_title = "Check destination vaccination requirements"
+lead_offset_days = 42
+duration_minutes = 15
+sticker_id = "vaccine"
+tags = ["travel", "health"]
+
+[[entry]]
+id = "travel-insurance"
+title = "buy travel insurance"
+neutral_title = "Purchase travel insurance"
+lead_offset_days = 35
+duration_minutes = 30
+sticker_id = "insurance"
+tags = ["travel", "documents"]
+
+[[entry]]
+id = "idp"
+title = "international driving permit"
+neutral_title = "Get international driving permit (if driving)"
+lead_offset_days = 35
+duration_minutes = 45
+sticker_id = "driver-license"
+tags = ["travel", "documents"]
+
+# ── logistics (T-28..T-14) ───────────────────────────────────────────
+
+[[entry]]
+id = "book-flights"
+title = "book flights"
+neutral_title = "Book flights"
+lead_offset_days = 28
+duration_minutes = 45
+sticker_id = "plane-ticket"
+tags = ["travel", "logistics"]
+
+[[entry]]
+id = "book-accommodation"
+title = "book accommodation"
+neutral_title = "Book accommodation"
+lead_offset_days = 28
+duration_minutes = 30
+sticker_id = "hotel"
+tags = ["travel", "logistics"]
+
+[[entry]]
+id = "book-ground-transport"
+title = "book ground transport"
+neutral_title = "Book ground transport at destination"
+lead_offset_days = 21
+duration_minutes = 20
+sticker_id = "car"
+tags = ["travel", "logistics"]
+
+[[entry]]
+id = "book-activities"
+title = "book activities / tours"
+neutral_title = "Book activities and tours"
+lead_offset_days = 21
+duration_minutes = 30
+sticker_id = "ticket"
+tags = ["travel", "logistics"]
+
+[[entry]]
+id = "restaurant-reservations"
+title = "restaurant reservations"
+neutral_title = "Make restaurant reservations"
+lead_offset_days = 14
+duration_minutes = 20
+sticker_id = "fork-knife"
+tags = ["travel", "logistics"]
+
+# ── money (T-14) ─────────────────────────────────────────────────────
+
+[[entry]]
+id = "currency-exchange"
+title = "order foreign cash"
+neutral_title = "Exchange currency / order foreign cash"
+lead_offset_days = 14
+duration_minutes = 20
+sticker_id = "cash"
+tags = ["travel", "money"]
+
+[[entry]]
+id = "bank-notify"
+title = "notify bank of travel"
+neutral_title = "Notify bank of travel dates"
+lead_offset_days = 14
+duration_minutes = 10
+sticker_id = "bank"
+tags = ["travel", "money"]
+
+[[entry]]
+id = "card-test"
+title = "verify cards work abroad"
+neutral_title = "Verify debit/credit cards work abroad"
+lead_offset_days = 14
+duration_minutes = 10
+sticker_id = "card"
+tags = ["travel", "money"]
+
+[[entry]]
+id = "sim-or-roaming"
+title = "travel SIM / roaming plan"
+neutral_title = "Buy travel SIM or enable roaming plan"
+lead_offset_days = 14
+duration_minutes = 15
+sticker_id = "sim"
+tags = ["travel", "money"]
+
+# ── health (T-7) ─────────────────────────────────────────────────────
+
+[[entry]]
+id = "med-refill"
+title = "refill meds for trip"
+neutral_title = "Refill prescriptions (trip + buffer)"
+lead_offset_days = 7
+duration_minutes = 30
+sticker_id = "pill"
+tags = ["travel", "health", "nonSuperseable"]
+
+[[entry]]
+id = "first-aid-kit"
+title = "pack first-aid kit"
+neutral_title = "Assemble first-aid kit"
+lead_offset_days = 7
+duration_minutes = 20
+sticker_id = "first-aid"
+tags = ["travel", "health"]
+
+[[entry]]
+id = "rx-paperwork"
+title = "prescription paperwork for customs"
+neutral_title = "Prepare prescription paperwork for customs"
+lead_offset_days = 7
+duration_minutes = 15
+sticker_id = "paperwork"
+tags = ["travel", "health"]
+
+[[entry]]
+id = "vaccine-booster"
+title = "vaccine booster"
+neutral_title = "Get vaccine booster (if required)"
+lead_offset_days = 7
+duration_minutes = 45
+sticker_id = "vaccine"
+tags = ["travel", "health"]
+
+[[entry]]
+id = "sunscreen-pack"
+title = "buy sunscreen"
+neutral_title = "Buy sunscreen"
+lead_offset_days = 7
+duration_minutes = 10
+sticker_id = "sunscreen"
+tags = ["travel", "health"]
+
+[[entry]]
+id = "bug-spray-pack"
+title = "buy bug spray"
+neutral_title = "Buy bug repellent"
+lead_offset_days = 7
+duration_minutes = 10
+sticker_id = "bug"
+tags = ["travel", "health"]
+
+# ── logistics confirm (T-3 / T-2 / T-1) ──────────────────────────────
+
+[[entry]]
+id = "boarding-passes"
+title = "print/download boarding passes"
+neutral_title = "Download / print boarding passes"
+lead_offset_days = 3
+duration_minutes = 10
+sticker_id = "boarding-pass"
+tags = ["travel", "logistics"]
+
+[[entry]]
+id = "online-checkin"
+title = "online check-in (24h window)"
+neutral_title = "Online check-in"
+lead_offset_days = 1
+duration_minutes = 10
+sticker_id = "checkin"
+tags = ["travel", "logistics"]
+
+[[entry]]
+id = "screenshot-accommodation"
+title = "screenshot accommodation address"
+neutral_title = "Screenshot accommodation address + offline"
+lead_offset_days = 3
+duration_minutes = 5
+sticker_id = "screenshot"
+tags = ["travel", "logistics"]
+
+[[entry]]
+id = "offline-maps"
+title = "download offline maps"
+neutral_title = "Download offline maps for destination"
+lead_offset_days = 3
+duration_minutes = 10
+sticker_id = "map"
+tags = ["travel", "logistics"]
+
+[[entry]]
+id = "entertainment-download"
+title = "download travel entertainment"
+neutral_title = "Download podcasts / shows / books"
+lead_offset_days = 3
+duration_minutes = 20
+sticker_id = "headphones"
+tags = ["travel", "logistics"]
+
+[[entry]]
+id = "power-bank-charge"
+title = "charge power bank"
+neutral_title = "Charge power bank fully"
+lead_offset_days = 2
+duration_minutes = 5
+sticker_id = "power-bank"
+tags = ["travel", "logistics"]
+
+[[entry]]
+id = "weather-check"
+title = "weather check"
+neutral_title = "Check destination weather forecast"
+lead_offset_days = 2
+duration_minutes = 5
+sticker_id = "weather"
+tags = ["travel", "logistics"]
+
+# ── pack (T-2) ───────────────────────────────────────────────────────
+
+[[entry]]
+id = "pack-documents"
+title = "good boy packs his documents"
+neutral_title = "Pack travel documents"
+lead_offset_days = 2
+duration_minutes = 10
+sticker_id = "doc-folder"
+tags = ["travel", "pack"]
+[[entry.subbeat]]
+label = "Passport"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "Tickets / boarding passes"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "Accommodation booking printout"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "Travel insurance card"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "Emergency-contact card"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "Visa / vaccination paperwork"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "Driver's license / IDP"
+duration_seconds = 60
+
+[[entry]]
+id = "pack-toiletries"
+title = "good boy packs his toiletries"
+neutral_title = "Pack toiletries"
+lead_offset_days = 2
+duration_minutes = 15
+sticker_id = "toiletry-bag"
+tags = ["travel", "pack"]
+[[entry.subbeat]]
+label = "Toothbrush"
+duration_seconds = 30
+[[entry.subbeat]]
+label = "Toothpaste"
+duration_seconds = 30
+[[entry.subbeat]]
+label = "Floss"
+duration_seconds = 30
+[[entry.subbeat]]
+label = "Deodorant"
+duration_seconds = 30
+[[entry.subbeat]]
+label = "Sunscreen"
+duration_seconds = 30
+[[entry.subbeat]]
+label = "Razor + blades"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "Shampoo (if skeptical of hotel)"
+duration_seconds = 30
+[[entry.subbeat]]
+label = "Contact lenses + solution"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "Period products (if relevant)"
+duration_seconds = 30
+[[entry.subbeat]]
+label = "Condoms + lube (if relevant)"
+duration_seconds = 30
+
+[[entry]]
+id = "pack-medication"
+title = "good boy packs his meds"
+neutral_title = "Pack medication"
+lead_offset_days = 2
+duration_minutes = 10
+sticker_id = "pill-pack"
+tags = ["travel", "pack", "health", "nonSuperseable"]
+
+[[entry]]
+id = "pack-clothes"
+title = "good boy packs his clothes"
+neutral_title = "Pack clothes"
+lead_offset_days = 2
+duration_minutes = 30
+sticker_id = "suitcase-clothes"
+tags = ["travel", "pack"]
+[[entry.subbeat]]
+label = "Underwear (nights+2 count)"
+duration_seconds = 180
+[[entry.subbeat]]
+label = "Socks (nights+2 count)"
+duration_seconds = 180
+[[entry.subbeat]]
+label = "Shirts (nights count)"
+duration_seconds = 240
+[[entry.subbeat]]
+label = "Pants (nights/2 + 1)"
+duration_seconds = 180
+[[entry.subbeat]]
+label = "Dresses (if relevant)"
+duration_seconds = 180
+[[entry.subbeat]]
+label = "Swimwear (if relevant)"
+duration_seconds = 120
+[[entry.subbeat]]
+label = "Sleepwear"
+duration_seconds = 120
+[[entry.subbeat]]
+label = "Outerwear / layer"
+duration_seconds = 120
+[[entry.subbeat]]
+label = "Formal set (if relevant)"
+duration_seconds = 240
+
+[[entry]]
+id = "pack-shoes"
+title = "good boy packs his shoes"
+neutral_title = "Pack shoes"
+lead_offset_days = 2
+duration_minutes = 10
+sticker_id = "shoe-pair"
+tags = ["travel", "pack"]
+[[entry.subbeat]]
+label = "Walking shoes"
+duration_seconds = 120
+[[entry.subbeat]]
+label = "Formal shoes (if relevant)"
+duration_seconds = 120
+[[entry.subbeat]]
+label = "Sandals (if relevant)"
+duration_seconds = 120
+[[entry.subbeat]]
+label = "Slippers"
+duration_seconds = 120
+
+[[entry]]
+id = "pack-tech"
+title = "good boy packs his tech"
+neutral_title = "Pack electronics"
+lead_offset_days = 2
+duration_minutes = 15
+sticker_id = "laptop"
+tags = ["travel", "pack"]
+[[entry.subbeat]]
+label = "Phone charger"
+duration_seconds = 30
+[[entry.subbeat]]
+label = "Laptop + charger"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "Adapters for destination"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "Headphones"
+duration_seconds = 30
+[[entry.subbeat]]
+label = "Power bank"
+duration_seconds = 30
+[[entry.subbeat]]
+label = "Camera + charger + SD card"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "Kindle / book"
+duration_seconds = 30
+
+[[entry]]
+id = "pack-misc"
+title = "good boy packs the misc kit"
+neutral_title = "Pack miscellaneous items"
+lead_offset_days = 2
+duration_minutes = 10
+sticker_id = "misc"
+tags = ["travel", "pack"]
+[[entry.subbeat]]
+label = "Sunglasses"
+duration_seconds = 30
+[[entry.subbeat]]
+label = "Hat"
+duration_seconds = 30
+[[entry.subbeat]]
+label = "Reusable water bottle (empty for security)"
+duration_seconds = 30
+[[entry.subbeat]]
+label = "Snacks"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "Eye mask"
+duration_seconds = 30
+[[entry.subbeat]]
+label = "Neck pillow"
+duration_seconds = 30
+[[entry.subbeat]]
+label = "Earplugs"
+duration_seconds = 30
+
+[[entry]]
+id = "pack-kink-kit"
+title = "good boy packs his kit"
+neutral_title = "Pack personal items (private)"
+lead_offset_days = 2
+duration_minutes = 15
+sticker_id = "kit"
+privacy_flag = true
+tags = ["travel", "pack", "kink"]
+[[entry.subbeat]]
+label = "Cage"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "Collar"
+duration_seconds = 30
+[[entry.subbeat]]
+label = "Plug + cleaning supplies"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "Lube"
+duration_seconds = 30
+[[entry.subbeat]]
+label = "Toys (discreet bag)"
+duration_seconds = 120
+[[entry.subbeat]]
+label = "Restraints (soft only if crossing borders)"
+duration_seconds = 60
+[[entry.subbeat]]
+label = "Leash (discreet)"
+duration_seconds = 30
+[[entry.subbeat]]
+label = "Customs-awareness review for destination"
+duration_seconds = 60
+
+# ── house-leave (T-1) ────────────────────────────────────────────────
+
+[[entry]]
+id = "mail-pause"
+title = "pause the mail"
+neutral_title = "Pause mail delivery / arrange pickup"
+lead_offset_days = 1
+duration_minutes = 10
+sticker_id = "mailbox-paused"
+tags = ["travel", "house"]
+
+[[entry]]
+id = "plants-water-extra"
+title = "extra water for the plants"
+neutral_title = "Water plants thoroughly OR arrange sitter"
+lead_offset_days = 1
+duration_minutes = 15
+sticker_id = "watering-can"
+tags = ["travel", "house"]
+
+[[entry]]
+id = "trash-out-pre-trip"
+title = "take out all trash before leaving"
+neutral_title = "Take out trash before trip"
+lead_offset_days = 1
+duration_minutes = 10
+sticker_id = "trash-bag"
+tags = ["travel", "house"]
+
+[[entry]]
+id = "fridge-empty-perishables"
+title = "empty fridge perishables"
+neutral_title = "Empty perishables from fridge"
+lead_offset_days = 1
+duration_minutes = 10
+sticker_id = "fridge"
+tags = ["travel", "house"]
+
+[[entry]]
+id = "thermostat-set"
+title = "set the thermostat"
+neutral_title = "Set thermostat to away-mode"
+lead_offset_days = 1
+duration_minutes = 2
+sticker_id = "thermostat"
+tags = ["travel", "house"]
+
+[[entry]]
+id = "windows-lock"
+title = "lock all windows"
+neutral_title = "Lock all windows"
+lead_offset_days = 1
+duration_minutes = 5
+sticker_id = "window-shut"
+tags = ["travel", "house"]
+
+[[entry]]
+id = "away-mode-lights"
+title = "set away-mode lights"
+neutral_title = "Configure smart-light away-mode"
+lead_offset_days = 1
+duration_minutes = 5
+sticker_id = "lights"
+tags = ["travel", "house"]
+
+[[entry]]
+id = "key-handoff"
+title = "hand keys to sitter"
+neutral_title = "Hand keys to sitter / neighbor"
+lead_offset_days = 1
+duration_minutes = 10
+sticker_id = "keys-handoff"
+tags = ["travel", "house"]
+
+[[entry]]
+id = "devices-charge"
+title = "charge all devices overnight"
+neutral_title = "Charge all devices"
+lead_offset_days = 1
+duration_minutes = 5
+sticker_id = "battery-full"
+tags = ["travel", "logistics"]
+
+[[entry]]
+id = "alarm-set"
+title = "set the wake-up alarm"
+neutral_title = "Set wake-up alarm for departure"
+lead_offset_days = 1
+duration_minutes = 2
+sticker_id = "alarm"
+tags = ["travel", "logistics"]
+
+[[entry]]
+id = "travel-outfit-prep"
+title = "lay out travel outfit"
+neutral_title = "Lay out travel outfit"
+lead_offset_days = 1
+duration_minutes = 5
+sticker_id = "outfit"
+tags = ["travel", "pack"]
+
+# ── departure (T-0) ──────────────────────────────────────────────────
+
+[[entry]]
+id = "departure-passport-check"
+title = "final passport check"
+neutral_title = "Final passport check"
+lead_offset_days = 0
+duration_minutes = 1
+sticker_id = "passport"
+tags = ["travel", "departure"]
+
+[[entry]]
+id = "departure-ticket-check"
+title = "final ticket check"
+neutral_title = "Final ticket / booking check"
+lead_offset_days = 0
+duration_minutes = 1
+sticker_id = "ticket"
+tags = ["travel", "departure"]
+
+[[entry]]
+id = "departure-breakfast"
+title = "light breakfast"
+neutral_title = "Light breakfast"
+lead_offset_days = 0
+duration_minutes = 15
+sticker_id = "breakfast"
+tags = ["travel", "departure"]
+
+[[entry]]
+id = "departure-water-bottle"
+title = "empty water bottle (for security)"
+neutral_title = "Empty water bottle before security"
+lead_offset_days = 0
+duration_minutes = 1
+sticker_id = "bottle-empty"
+tags = ["travel", "departure"]
+
+[[entry]]
+id = "departure-outfit-on"
+title = "travel outfit on"
+neutral_title = "Put on travel outfit"
+lead_offset_days = 0
+duration_minutes = 5
+sticker_id = "outfit-on"
+tags = ["travel", "departure"]
+
+[[entry]]
+id = "departure-last-bathroom"
+title = "last bathroom at home"
+neutral_title = "Last home bathroom"
+lead_offset_days = 0
+duration_minutes = 5
+sticker_id = "toilet"
+tags = ["travel", "departure"]
+
+[[entry]]
+id = "departure-garbage-final"
+title = "final garbage out"
+neutral_title = "Take out final garbage"
+lead_offset_days = 0
+duration_minutes = 5
+sticker_id = "trash-bag"
+tags = ["travel", "departure"]
+
+[[entry]]
+id = "departure-lights-off"
+title = "lights off"
+neutral_title = "Turn off all lights"
+lead_offset_days = 0
+duration_minutes = 1
+sticker_id = "lights-off"
+tags = ["travel", "departure"]
+
+[[entry]]
+id = "departure-thermostat-off"
+title = "thermostat to away"
+neutral_title = "Set thermostat fully to away"
+lead_offset_days = 0
+duration_minutes = 1
+sticker_id = "thermostat"
+tags = ["travel", "departure"]
+
+[[entry]]
+id = "departure-lock-door"
+title = "lock the door"
+neutral_title = "Lock front door"
+lead_offset_days = 0
+duration_minutes = 1
+sticker_id = "lock"
+tags = ["travel", "departure"]
+
+[[entry]]
+id = "departure-depart-airport"
+title = "depart for airport"
+neutral_title = "Depart for airport / station / dock"
+lead_offset_days = 0
+duration_minutes = 1
+sticker_id = "depart"
+tags = ["travel", "departure"]
