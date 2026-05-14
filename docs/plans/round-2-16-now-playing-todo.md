@@ -416,7 +416,7 @@ behaviour ride along. Nothing about the data layer changes.
       `/tmp/skb-2-16-F-cog.png`, `/tmp/skb-2-16-F-settings.png`,
       `/tmp/skb-2-16-F-repos.png`.
 
-## Phase G — Tests + AVD smoke — shipped in commit <pending-G>
+## Phase G — Tests + AVD smoke — shipped in commit dd038d9
 
 - [x] **G.1** Unit tests added (all pass under `:app:testDebugUnitTest`):
       - `MiniPlayerTaskBindingTest` (Robolectric + Compose) —
