@@ -421,6 +421,7 @@ private fun SkbAppShellContent(
                                 repoStoragePrefs = settingsAccess.repoStoragePrefs,
                                 notificationPrefs = settingsAccess.notificationPrefs,
                                 onPickBackupFolder = settingsAccess.onPickBackupFolder,
+                                demoModePrefs = settingsAccess.demoModePrefs,
                             )
                         } else {
                             PlaceholderScreen(stringResource(R.string.scaffold_dest_repos))

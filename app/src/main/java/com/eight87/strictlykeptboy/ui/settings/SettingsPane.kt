@@ -191,6 +191,8 @@ data class SettingsAccess(
     val repoStoragePrefs: com.eight87.strictlykeptboy.prefs.RepoStoragePrefs? = null,
     val onPickBackupFolder: () -> Unit = {},
     val onRemoveBackupFolder: () -> Unit = {},
+    // Round 2.15 — demo-mode toggle prefs.
+    val demoModePrefs: com.eight87.strictlykeptboy.prefs.DemoModePrefs? = null,
 )
 
 @Composable

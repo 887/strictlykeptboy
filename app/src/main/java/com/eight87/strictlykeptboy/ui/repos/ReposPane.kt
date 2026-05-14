@@ -105,6 +105,10 @@ fun ReposPane(
     repoStoragePrefs: com.eight87.strictlykeptboy.prefs.RepoStoragePrefs? = null,
     notificationPrefs: com.eight87.strictlykeptboy.notif.NotificationPrefs? = null,
     onPickBackupFolder: (() -> Unit)? = null,
+    /**
+     * Round 2.15 — demo-mode toggle row at the top of the repo list.
+     */
+    demoModePrefs: com.eight87.strictlykeptboy.prefs.DemoModePrefs? = null,
 ) {
     var mode by remember { mutableStateOf<Mode>(Mode.List) }
     val repos by state.repos.collectAsState()
@@ -155,6 +159,7 @@ fun ReposPane(
                         repoStoragePrefs = repoStoragePrefs,
                         notificationPrefs = notificationPrefs,
                         onPickBackupFolder = onPickBackupFolder,
+                        demoModePrefs = demoModePrefs,
                     )
                 },
                 detail = {
@@ -219,6 +224,7 @@ fun ReposPane(
                 repoStoragePrefs = repoStoragePrefs,
                 notificationPrefs = notificationPrefs,
                 onPickBackupFolder = onPickBackupFolder,
+                demoModePrefs = demoModePrefs,
             )
             Mode.Add -> AddRepoNavHost(
                 onCancel = { mode = Mode.List },
@@ -365,6 +371,7 @@ private fun ReposList(
     repoStoragePrefs: com.eight87.strictlykeptboy.prefs.RepoStoragePrefs? = null,
     notificationPrefs: com.eight87.strictlykeptboy.notif.NotificationPrefs? = null,
     onPickBackupFolder: (() -> Unit)? = null,
+    demoModePrefs: com.eight87.strictlykeptboy.prefs.DemoModePrefs? = null,
 ) {
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -419,6 +426,53 @@ private fun ReposList(
         }
 
         HorizontalDivider()
+
+        // Round 2.15 — demo-mode toggle row. Surfaces the current state +
+        // perspective when demo data is loaded; flips off via switch.
+        if (demoModePrefs != null) {
+            val demoState by demoModePrefs.state.collectAsState()
+            androidx.compose.material3.Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("Repos-DemoToggle"),
+                colors = androidx.compose.material3.CardDefaults.cardColors(
+                    containerColor = if (demoState.isActive) {
+                        MaterialTheme.colorScheme.primaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant
+                    },
+                ),
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Demo mode" +
+                                (if (demoState.isActive && demoState.perspective != null) {
+                                    " · ${demoState.perspective!!.name}"
+                                } else ""),
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        Text(
+                            if (demoState.isActive) {
+                                "Read-only demo data is loaded. Toggle off + tap + to make your own calendar."
+                            } else {
+                                "Toggle on to explore with seeded demo data."
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    androidx.compose.material3.Switch(
+                        checked = demoState.isActive,
+                        onCheckedChange = { demoModePrefs.setActive(it) },
+                        modifier = Modifier.testTag("Repos-DemoToggle-Switch"),
+                    )
+                }
+            }
+        }
 
         // Round 2.7.D.2-UI — dismissable backup-folder reminder banner.
         // Conditions: mirror still None AND user skipped during wizard

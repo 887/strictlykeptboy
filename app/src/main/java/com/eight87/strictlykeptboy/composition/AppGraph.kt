@@ -269,6 +269,14 @@ class AppGraph(private val appContext: Context) {
     val repoStoragePrefs: RepoStoragePrefs by lazy { RepoStoragePrefs.open(appContext) }
 
     /**
+     * Round 2.15 — demo-mode prefs (drives demo-first onboarding routing
+     * in MainActivity + the Repositories demo toggle).
+     */
+    val demoModePrefs: com.eight87.strictlykeptboy.prefs.DemoModePrefs by lazy {
+        com.eight87.strictlykeptboy.prefs.DemoModePrefs.open(appContext)
+    }
+
+    /**
      * Round 2.7.C — bridges [RepoStoragePrefs] to [RepoStore] by
      * ensuring each repo carries a `file://`-transport `"mirror"` remote
      * whenever a backup folder is configured. Invoked pre-sync from

@@ -267,51 +267,41 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 if (!firstLaunchDone) {
-                    // Phase 2.1.I.1 — first-launch wizard. The shell is not
-                    // mounted yet, so there's no empty-Schedule flash. Once
-                    // the user finishes (or cancels with at-least-one repo
-                    // present), we flip `firstLaunchDone = true` and the
-                    // next composition mounts the shell.
-                    com.eight87.strictlykeptboy.ui.wizard.WizardNavHost(
-                        onFinish = { firstLaunchDone = true },
-                        onCancel = { firstLaunchDone = true },
-                        onScaffold = { draft ->
-                            runCatching {
-                                val outcome = WizardScaffolder.materialize(
-                                    parentDir = filesDir.resolve("repos"),
-                                    draft = draft,
-                                    author = AuthorIdentity("me", "me@example.com"),
+                    // Round 2.15 — demo-first onboarding. The intro wizard
+                    // is two screens: manifesto + perspective picker. On
+                    // pick we seed a read-only demo repo and drop the user
+                    // straight into the app.
+                    com.eight87.strictlykeptboy.ui.wizard.intro.IntroWizardHost(
+                        onPerspectiveChosen = { card ->
+                            scope.launch {
+                                val outcome = com.eight87.strictlykeptboy.demo.DemoRepoSeeder.seed(
+                                    parentDir = filesDir.resolve("demo-repos")
+                                        .resolve(com.eight87.strictlykeptboy.demo.DemoRepoSeeder.folderName(card)),
+                                    perspective = card,
+                                    author = AuthorIdentity("demo", "demo@strictlykeptboy.local"),
                                     assetPackLoader = graph.assetPackLoader,
                                 )
+                                val displayName = "demo · ${card.name.lowercase()}"
                                 graph.repoStore.add(
                                     RepoConfig(
                                         repoId = outcome.repoId,
-                                        displayName = draft.displayName.ifBlank { "my calendar" },
+                                        displayName = displayName,
                                         rootDir = outcome.rootDir.absolutePath,
                                         remotes = emptyList(),
                                         primaryRemote = null,
                                         authorIdentity = outcome.authorIdentity,
                                         defaultCalendarId = outcome.calendarIds.values.firstOrNull(),
                                         defaultTodolistId = outcome.todolistId,
-                                        iconEmoji = when (draft.species) {
-                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Bat -> "🦇"
-                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Bunny -> "🐰"
-                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Cat -> "🐱"
-                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.CatChan -> "🐱"
-                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Fox -> "🦊"
-                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.FoxChan -> "🦊"
-                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Lion -> "🦁"
-                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Tiger -> "🐯"
-                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Wolf -> "🐺"
-                                        },
-                                        iconSpecies = draft.species.name,
+                                        iconEmoji = "🦇",
+                                        iconSpecies = "Bat",
+                                        isDemo = true,
                                     ),
                                 )
-                                graph.activeRepoName.value = draft.displayName.ifBlank { "my calendar" }
-                                Unit
+                                graph.demoModePrefs.setPerspective(card)
+                                graph.activeRepoName.value = displayName
+                                firstLaunchDone = true
                             }
                         },
-                        neutralMode = graph.neutralModePrefs.isEnabled(),
                     )
                 } else {
                     val scheduleState = remember {
@@ -533,6 +523,8 @@ class MainActivity : ComponentActivity() {
                                     com.eight87.strictlykeptboy.prefs.MirrorLocation.None,
                                 )
                             },
+                            // Round 2.15 — demo-mode toggle access.
+                            demoModePrefs = graph.demoModePrefs,
                             // Round 2.2.D — Settings completion.
                             reposFlow = graph.repoStore.state,
                             onOpenRepo = { cfg ->

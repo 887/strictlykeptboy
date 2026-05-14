@@ -428,15 +428,6 @@ data class WizardDraft(
      * is reached at Done.
      */
     val hasPartner: Boolean = false,
-    /**
-     * Round 2.12 — splits the lifestyle picker into two screens. Null
-     * until the FramingChoice screen sets it. `false` → user wants the
-     * plain calendar app; the wizard auto-applies
-     * [LifestyleCard.JustCalendar] and skips the Lifestyle screen on
-     * `goNext`. `true` → show the Lifestyle screen with the kink cards
-     * (JustCalendar hidden, since that path is handled here).
-     */
-    val wantsKinkFraming: Boolean? = null,
 ) {
     /** True iff alignment hides kink role / templates / strict-X phrasing. */
     val kinkOff: Boolean get() = alignment == Alignment.UnalignedPrivate
@@ -508,12 +499,6 @@ enum class WizardScreen(val stickerKey: String) {
     Welcome("welcome-wave"),
     Species("species-greeting"),
     Identity("name-tag"),         // Screen 3.5 (K.5a)
-    // Round 2.12 — splits the lifestyle picker into a Plain/Kink binary
-    // first. Plain → auto-applies JustCalendar + skips Lifestyle on
-    // goNext. Kink → shows the five-card Lifestyle screen (JustCalendar
-    // hidden, since the plain path is handled here) with an explainer
-    // card teaching sub/pet/bottom ≡ dom/owner equivalence.
-    FramingChoice("framing-choice"),
     // Phase 2.2.B — collapsed Alignment + Lifestyle + Mode into a single
     // six-card screen. The on-disk Alignment / Lifestyle / WizardModePick
     // enums survive (wire format unchanged); only the wizard surface

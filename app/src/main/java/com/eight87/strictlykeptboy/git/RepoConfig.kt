@@ -83,6 +83,12 @@ data class RepoConfig(
      * inflate the repo and most users won't customize.
      */
     val importStickersToRepo: Boolean = false,
+    /**
+     * Round 2.15 — repo is a generated demo. Treat as read-only; not eligible
+     * for share / push / Access enumeration. Wiped + regenerated whenever the
+     * user re-enables demo mode for the same perspective.
+     */
+    val isDemo: Boolean = false,
 ) {
     init {
         require(remotes.isEmpty() == (primaryRemote == null)) {
