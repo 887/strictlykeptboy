@@ -23,6 +23,9 @@ const val TestTagPerListView = "PerListView"
 const val TestTagListFilterChip = "ListFilterChip"
 
 /** UI-J.3 — Per-list view: chip-row filter at the top. */
+const val TestTagPerListSummary = "PerListSummary"
+const val TestTagPerListInactiveBanner = "PerListInactiveBanner"
+
 @Composable
 fun TaskPerListView(
     tasks: List<TaskItem>,
@@ -32,6 +35,10 @@ fun TaskPerListView(
     onToggleDone: (TaskItem) -> Unit,
     onOpen: (TaskItem) -> Unit,
     modifier: Modifier = Modifier,
+    activeTodolistIds: Set<String> = emptySet(),
+    multiRepo: Boolean = false,
+    activeRepoOwner: String = "",
+    onStartTask: ((String) -> Unit)? = null,
 ) {
     Column(modifier = modifier.fillMaxSize().testTag(TestTagPerListView)) {
         val scroll = rememberScrollState()
@@ -55,6 +62,39 @@ fun TaskPerListView(
                 )
             }
         }
+        // Phase 2.1.D.9 — active-window summary + inactive banner for
+        // the selected list.
+        val selectedList = todolists.firstOrNull { it.id == selectedListId }
+        if (selectedList != null) {
+            val summary = formatActiveSummary(selectedList)
+            if (summary.isNotEmpty()) {
+                Text(
+                    text = summary,
+                    style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .testTag(TestTagPerListSummary),
+                )
+            }
+            if (isCurrentlyInactive(selectedList, activeTodolistIds)) {
+                androidx.compose.material3.Surface(
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.errorContainer,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                        .testTag(TestTagPerListInactiveBanner),
+                ) {
+                    Text(
+                        text = "This list is currently inactive",
+                        style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
+                        color = androidx.compose.material3.MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.padding(8.dp),
+                    )
+                }
+            }
+        }
         val filtered = if (selectedListId == null) tasks
         else tasks.filter { it.todolist.id == selectedListId }
         val sorted = filtered.sortedForCombined()
@@ -67,7 +107,14 @@ fun TaskPerListView(
         }
         LazyColumn(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             items(sorted, key = { it.id }) { task ->
-                TaskRow(item = task, onToggleDone = { onToggleDone(task) }, onClick = { onOpen(task) })
+                TaskRow(
+                    item = task,
+                    onToggleDone = { onToggleDone(task) },
+                    onClick = { onOpen(task) },
+                    multiRepo = multiRepo,
+                    activeRepoOwner = activeRepoOwner,
+                    onStartTask = onStartTask,
+                )
             }
         }
     }

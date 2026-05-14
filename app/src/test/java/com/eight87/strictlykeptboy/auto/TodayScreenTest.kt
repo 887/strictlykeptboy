@@ -30,16 +30,19 @@ class TodayScreenTest {
     private val tz = ZoneId.of("UTC")
     private val today = ZonedDateTime.now(tz).withHour(9).withMinute(0).withSecond(0).withNano(0)
 
-    private fun fixture(title: String, hour: Int) = MaterializedInstance(
-        source = InstanceSource.OneOff(EventRef("evt-$hour")),
-        calendar = CalendarRef("cal-a"),
-        repo = RepoRef("repo-a"),
-        originalStart = today.withHour(hour),
-        originalEnd = today.withHour(hour + 1),
-        effectiveStart = today.withHour(hour),
-        effectiveEnd = today.withHour(hour + 1),
-        title = title,
-        body = "",
+    private fun fixture(title: String, hour: Int, offSchedule: Boolean = false) = AutoEvent(
+        instance = MaterializedInstance(
+            source = InstanceSource.OneOff(EventRef("evt-$hour")),
+            calendar = CalendarRef("cal-a"),
+            repo = RepoRef("repo-a"),
+            originalStart = today.withHour(hour),
+            originalEnd = today.withHour(hour + 1),
+            effectiveStart = today.withHour(hour),
+            effectiveEnd = today.withHour(hour + 1),
+            title = title,
+            body = "",
+        ),
+        offSchedule = offSchedule,
     )
 
     @Test fun today_with_events_lists_each_event_in_start_order() {
@@ -69,6 +72,8 @@ class TodayScreenTest {
 
         val tmpl = screen.onGetTemplate() as ListTemplate
         val msg = tmpl.singleList!!.noItemsMessage
+        // Plain (no identity bound) fallback path — must keep matching the
+        // existing string-resource literal for back-compat (auto_today_empty).
         assertEquals("Nothing scheduled today.", msg!!.toString())
     }
 }

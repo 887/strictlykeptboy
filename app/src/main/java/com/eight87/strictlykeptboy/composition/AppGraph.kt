@@ -1,8 +1,10 @@
 package com.eight87.strictlykeptboy.composition
 
 import android.content.Context
+import com.eight87.strictlykeptboy.auto.AutoEvent
 import com.eight87.strictlykeptboy.auto.CarAppRuntime
 import com.eight87.strictlykeptboy.auto.TodayEventSource
+import com.eight87.strictlykeptboy.cache.CacheDatabase
 import com.eight87.strictlykeptboy.avatar.AssetPackLoader
 import com.eight87.strictlykeptboy.avatar.AvatarPackPrefs
 import com.eight87.strictlykeptboy.avatar.AvatarResolver
@@ -16,8 +18,11 @@ import com.eight87.strictlykeptboy.git.GitRepo
 import com.eight87.strictlykeptboy.git.GitRepoRegistry
 import com.eight87.strictlykeptboy.git.RepoStore
 import com.eight87.strictlykeptboy.git.auth.SecretsStore
+import com.eight87.strictlykeptboy.notif.BriefingRuntime
+import com.eight87.strictlykeptboy.notif.BriefingSource
 import com.eight87.strictlykeptboy.notif.SyncEventNotificationBridge
 import com.eight87.strictlykeptboy.resolver.CommonTimeFinder
+import com.eight87.strictlykeptboy.resolver.DateRange
 import com.eight87.strictlykeptboy.resolver.MaterializedInstance
 import com.eight87.strictlykeptboy.resolver.Renderer
 import com.eight87.strictlykeptboy.resolver.RepoSnapshot
@@ -25,8 +30,15 @@ import com.eight87.strictlykeptboy.sync.SyncRuntime
 import com.eight87.strictlykeptboy.sync.SyncScheduler
 import com.eight87.strictlykeptboy.sync.SyncStatusStore
 import com.eight87.strictlykeptboy.notif.NotificationPrefs
+import com.eight87.strictlykeptboy.prefs.RepoStoragePrefs
+import com.eight87.strictlykeptboy.sync.MirrorReconciler
 import com.eight87.strictlykeptboy.theme.AppearancePrefs
+import com.eight87.strictlykeptboy.task.ActiveTaskController
+import com.eight87.strictlykeptboy.task.TaskPlaybackProjector
+import com.eight87.strictlykeptboy.task.TaskTransportAdapter
 import com.eight87.strictlykeptboy.ui.repos.ReposViewState
+import com.eight87.strictlykeptboy.ui.tasks.TaskItem
+import com.eight87.strictlykeptboy.ui.tasks.TasksViewState
 import com.eight87.strictlykeptboy.ui.schedule.ScheduleViewModePrefs
 import com.eight87.strictlykeptboy.ui.settings.CalendarVisibilityPrefs
 import com.eight87.strictlykeptboy.ui.settings.IdentityPrefs
@@ -35,6 +47,7 @@ import com.eight87.strictlykeptboy.ui.settings.ModePrefs
 import com.eight87.strictlykeptboy.ui.settings.SyncSettingsPrefs
 import com.eight87.strictlykeptboy.ui.together.BusySource
 import com.eight87.strictlykeptboy.ui.together.CommonTimeFinderPort
+import com.eight87.strictlykeptboy.ui.together.TogetherCalendarOption
 import com.eight87.strictlykeptboy.ui.together.TogetherRepoOption
 import com.eight87.strictlykeptboy.ui.wizard.AgeGatePrefs
 import com.eight87.strictlykeptboy.ui.wizard.NeutralModePrefs
@@ -109,9 +122,9 @@ class AppGraph(private val appContext: Context) {
     /** Phase WW.2 — composite store: user packs first, then bundled defaults. */
     val packStore: CompositePackStore by lazy {
         CompositePackStore(
-            sources = listOf(
-                userPackLoader.loadAll(),
-                assetPackLoader.loadAll(),
+            sourceFactories = listOf(
+                { userPackLoader.loadAll() },
+                { assetPackLoader.loadAll() },
             ),
         )
     }
@@ -156,6 +169,21 @@ class AppGraph(private val appContext: Context) {
     /** Phase S.3 — global sync settings. */
     val syncSettingsPrefs: SyncSettingsPrefs by lazy { SyncSettingsPrefs.open(appContext) }
 
+    /** Round 2.2.D.7 — Android Auto + tablet master-detail prefs. */
+    val autoTabletPrefs: com.eight87.strictlykeptboy.ui.settings.AutoTabletPrefs by lazy {
+        com.eight87.strictlykeptboy.ui.settings.AutoTabletPrefs.open(appContext)
+    }
+
+    /** Round 2.2.D.6 — Access aggregator (read-only across configured repos). */
+    val accessAggregator: com.eight87.strictlykeptboy.store.AccessAggregator by lazy {
+        com.eight87.strictlykeptboy.store.AccessAggregator(repoStore)
+    }
+
+    /** Round 2.2.D.13 — Trip-summary feed; empty default until Phase CCC wires the real resolver. */
+    val tripFeed: com.eight87.strictlykeptboy.ui.trip.TripFeed by lazy {
+        com.eight87.strictlykeptboy.ui.trip.InMemoryTripFeed()
+    }
+
     /** Phase S.4 — notification prefs (per-channel + briefings master + per-category lead times). */
     val notificationPrefs: NotificationPrefs by lazy { NotificationPrefs.open(appContext) }
 
@@ -175,13 +203,22 @@ class AppGraph(private val appContext: Context) {
     /** Phase S.11 — Mode (HV-Q.1 / DDD.1 / D.86). */
     val modePrefs: ModePrefs by lazy { ModePrefs.open(appContext) }
 
-    /** Phase J — per-process sync scheduler. */
-    val scheduler: SyncScheduler by lazy {
-        SyncScheduler(
-            repoStore = repoStore,
-            statusStore = statusStore,
-            repoProvider = { cfg ->
-                GitRepoRegistry.get(cfg.repoId) ?: runCatching {
+    /**
+     * Phase 2.1.J.1 — bind [IdentityPrefs] to the active repo so Settings
+     * edits round-trip to `<rootDir>/identity.toml` and commit. Call this
+     * after the wizard finishes scaffolding or when the active repo flips
+     * (see [activeRepoName]). Idempotent. Passing `null` unbinds the
+     * write-back path and reverts IdentityPrefs to in-memory only.
+     */
+    fun bindIdentityToActiveRepo(repoId: String?) {
+        val cfg = repoId?.let { repoStore.get(it) }
+        val root = cfg?.let { java.io.File(it.rootDir).toPath() }
+        // 2.1.K — ensure the registry has a live handle (the wizard
+        // doesn't register the repo it scaffolds; without this, the
+        // commit step in IdentityPrefs / ModePrefs is silently skipped).
+        if (cfg != null && GitRepoRegistry.get(cfg.repoId) == null) {
+            runCatching {
+                kotlinx.coroutines.runBlocking {
                     GitRepo.open(
                         rootDir = File(cfg.rootDir),
                         repoId = cfg.repoId,
@@ -190,33 +227,256 @@ class AppGraph(private val appContext: Context) {
                         authorIdentity = cfg.authorIdentity,
                         defaultBranch = cfg.defaultBranch,
                     ).also(GitRepoRegistry::put)
+                }
+            }
+        }
+        identityPrefs.bindActiveRepo(
+            rootDir = root,
+            repoId = cfg?.repoId,
+            strictlyKept = {
+                modePrefs.state.value.mode == com.eight87.strictlykeptboy.ui.settings.AppMode.StrictlyKept
+            },
+        )
+    }
+
+    /**
+     * Phase 2.1.K.1 — bind [ModePrefs] to the active repo so Settings
+     * edits round-trip to `<rootDir>/mode.toml` and commit. Sibling of
+     * [bindIdentityToActiveRepo]; call after wizard scaffolding or when
+     * the active repo flips. Idempotent; null unbinds.
+     */
+    fun bindModeToActiveRepo(repoId: String?) {
+        val cfg = repoId?.let { repoStore.get(it) }
+        val root = cfg?.let { java.io.File(it.rootDir).toPath() }
+        // Ensure GitRepoRegistry has a live handle so commits land. The
+        // wizard's WizardScaffolder doesn't register, so we open lazily
+        // here. Idempotent — `GitRepoRegistry.put` overwrites by repoId.
+        if (cfg != null && GitRepoRegistry.get(cfg.repoId) == null) {
+            runCatching {
+                kotlinx.coroutines.runBlocking {
+                    GitRepo.open(
+                        rootDir = File(cfg.rootDir),
+                        repoId = cfg.repoId,
+                        remotes = cfg.remotes,
+                        primaryRemote = cfg.primaryRemote,
+                        authorIdentity = cfg.authorIdentity,
+                        defaultBranch = cfg.defaultBranch,
+                    ).also(GitRepoRegistry::put)
+                }
+            }
+        }
+        modePrefs.bindActiveRepo(rootDir = root, repoId = cfg?.repoId)
+    }
+
+    /**
+     * Round 2.7.B.1 — app-wide mirror location prefs (SAF tree URI).
+     */
+    val repoStoragePrefs: RepoStoragePrefs by lazy { RepoStoragePrefs.open(appContext) }
+
+    /**
+     * Round 2.15 — demo-mode prefs (drives demo-first onboarding routing
+     * in MainActivity + the Repositories demo toggle).
+     */
+    val demoModePrefs: com.eight87.strictlykeptboy.prefs.DemoModePrefs by lazy {
+        com.eight87.strictlykeptboy.prefs.DemoModePrefs.open(appContext)
+    }
+
+    /**
+     * Round 2.7.C — bridges [RepoStoragePrefs] to [RepoStore] by
+     * ensuring each repo carries a `file://`-transport `"mirror"` remote
+     * whenever a backup folder is configured. Invoked pre-sync from
+     * [scheduler]'s repoProvider hook.
+     */
+    val mirrorReconciler: MirrorReconciler by lazy {
+        MirrorReconciler(repoStore = repoStore, storagePrefs = repoStoragePrefs)
+    }
+
+    /**
+     * Round 2.7.B.2-UI — parked handle so Compose surfaces (Settings →
+     * Backup location, Repos pane reminder banner) can trigger the
+     * `OpenDocumentTree` launcher that's `ComponentActivity`-scoped.
+     *
+     * MainActivity sets this to `{ openTreeLauncher.launch(null) }` after
+     * registering the launcher in `onCreate`. Composables call
+     * `appGraph.backupPickerHandle?.invoke()`. Null = not yet wired
+     * (previews / tests).
+     */
+    @Volatile
+    var backupPickerHandle: (() -> Unit)? = null
+
+    /** Phase J — per-process sync scheduler. */
+    val scheduler: SyncScheduler by lazy {
+        SyncScheduler(
+            repoStore = repoStore,
+            statusStore = statusStore,
+            repoProvider = { cfg ->
+                // Round 2.7.C.1 — reconcile mirror remote before each sync
+                // pass so repos created before the user picked a folder
+                // catch up on their first tick. Idempotent + safe to call
+                // when no mirror is configured (no-op).
+                try {
+                    mirrorReconciler.reconcile(cfg.repoId)
+                } catch (_: Throwable) {
+                    // Don't fail the primary sync if mirror setup glitches —
+                    // the SyncStatusStore.MirrorPushFailure event surfaces
+                    // the user-visible signal on the next push attempt.
+                }
+                val fresh = repoStore.get(cfg.repoId) ?: cfg
+                GitRepoRegistry.get(fresh.repoId)?.also { existing ->
+                    // Best-effort: if the repo already exists in the
+                    // registry but its remotes list grew (the reconciler
+                    // just added `mirror`), patch the in-memory GitRepo so
+                    // the upcoming push fan-out covers the mirror.
+                    val mirrorBinding = fresh.remotes
+                        .firstOrNull { it.name.value == MirrorReconciler.MIRROR_REMOTE_NAME }
+                    if (mirrorBinding != null && existing.remotes.none { it.name == mirrorBinding.name }) {
+                        try {
+                            existing.addRemote(mirrorBinding)
+                        } catch (_: Throwable) {
+                            // already added by a concurrent pass — ignore.
+                        }
+                    }
+                } ?: runCatching {
+                    GitRepo.open(
+                        rootDir = File(fresh.rootDir),
+                        repoId = fresh.repoId,
+                        remotes = fresh.remotes,
+                        primaryRemote = fresh.primaryRemote,
+                        authorIdentity = fresh.authorIdentity,
+                        defaultBranch = fresh.defaultBranch,
+                    ).also(GitRepoRegistry::put)
                 }.getOrNull()
             },
         )
     }
 
     // ----------------------------------------------------------------
-    // Phase F→G integration is still pending: live RepoStore → Room
-    // bridge has not landed. Until then, the schedule pane and the
-    // Auto surface both observe these empty flows. When the bridge
-    // lands, only this section changes.
+    // Round 2.1.A — live RepoStore + Room cache → resolver bridge.
+    //
+    // The two publishers below own the data hand-off into the resolver
+    // pipeline. The schedule pane and Auto surface both observe these
+    // flows. Calendar / todolist metadata is synthesized from row IDs
+    // until the per-repo `calendar.toml` / `todolist.toml` reader is
+    // wired (follow-on phase).
     // ----------------------------------------------------------------
 
-    /** Mutable so wizard scaffolding can flip the displayed active repo. */
-    val activeRepoName: MutableStateFlow<String> = MutableStateFlow("demo-repo")
+    /**
+     * Round 2.1.B.6 / D-2.1.d — write-target repo display name.
+     *
+     * Renamed from `activeRepoName` to make the calendars-first split
+     * explicit: the schedule reads from all repos by default, the avatar
+     * drives only the *write* target. Backed by a `MutableStateFlow` so
+     * wizard scaffolding + the repo switcher can flip it.
+     *
+     * **No more `"demo-repo"` literal.** Defaults to `""` when no repos
+     * are configured; the shell renders the empty/placeholder avatar.
+     * The wizard sets this to the first configured repo's `displayName`
+     * after scaffolding completes (D-2.1.g).
+     */
+    val defaultWriteRepoName: MutableStateFlow<String> by lazy {
+        // Lazy so AppGraph construction doesn't touch EncryptedSharedPreferences
+        // (Robolectric can't init those — see `ColdStartBudgetTest`).
+        MutableStateFlow(
+            runCatching { repoStore.list().firstOrNull()?.displayName }.getOrNull().orEmpty(),
+        )
+    }
 
-    val snapshot: MutableStateFlow<RepoSnapshot> =
-        MutableStateFlow(RepoSnapshot(emptyList(), emptyList(), emptyList()))
-
-    val sources: MutableStateFlow<Renderer.Sources> = MutableStateFlow(
-        Renderer.Sources(
-            events = emptyList(),
-            rules = emptyList(),
-            exceptionsByRule = emptyMap(),
-            deviations = emptyList(),
-            overrides = emptyList(),
-        ),
+    /**
+     * Compatibility alias. The rename in 2.1.B.6 is gradual — UI surfaces
+     * still use the old name internally (parameter naming inside scaffold
+     * composables remains `activeRepoName` because that parameter encodes
+     * "the avatar's current label", which is still meaningful). Removing
+     * the alias is a 2.1.L follow-on.
+     */
+    @Deprecated(
+        message = "Use defaultWriteRepoName (2.1.B.6 rename).",
+        replaceWith = ReplaceWith("defaultWriteRepoName"),
     )
+    val activeRepoName: MutableStateFlow<String> get() = defaultWriteRepoName
+
+    /**
+     * Phase 2.1.I.2 — wizard re-entry request. Set to a non-null
+     * [com.eight87.strictlykeptboy.ui.wizard.WizardScreen] when a settings
+     * surface (e.g. Lifestyle → "Open wizard at Roles") wants the shell to
+     * switch to the Wizard destination and pre-position the host at a
+     * specific screen. Shell observes; resets back to null on finish.
+     */
+    val wizardEntryRequest: MutableStateFlow<com.eight87.strictlykeptboy.ui.wizard.WizardScreen?> =
+        MutableStateFlow(null)
+
+    /** Phase D — read-through cache. Owned here so publishers can share it. */
+    val cacheDatabase: CacheDatabase by lazy { CacheDatabase.open(appContext) }
+
+    /**
+     * Round 2.1.A.2 — visible schedule-pane date range. 90-day window
+     * centered on today by default; downstream view-models can write to
+     * this flow when the user scrolls / changes pane mode.
+     */
+    val visibleDateRange: MutableStateFlow<DateRange> = MutableStateFlow(
+        run {
+            val today = java.time.LocalDate.now()
+            DateRange(start = today.minusDays(45), endInclusive = today.plusDays(45))
+        },
+    )
+
+    /** Round 2.1.A.1 — Room → [RepoSnapshot] bridge. */
+    val snapshotPublisher: IndexerSnapshotPublisher by lazy {
+        IndexerSnapshotPublisher(
+            db = cacheDatabase,
+            repoStore = repoStore,
+            scope = appScope,
+        )
+    }
+
+    /** Round 2.1.A.2 — Room → [Renderer.Sources] bridge (windowed). */
+    val sourcesPublisher: SourcesPublisher by lazy {
+        SourcesPublisher(
+            db = cacheDatabase,
+            repoStore = repoStore,
+            visibleRange = visibleDateRange,
+            scope = appScope,
+        )
+    }
+
+    val snapshot: StateFlow<RepoSnapshot> get() = snapshotPublisher.state
+    val sources: StateFlow<Renderer.Sources> get() = sourcesPublisher.state
+
+    /**
+     * Round 2.1.B.1 — calendars-first aggregator. Reads
+     * `calendars/<id>/calendar.toml` from each configured repo and
+     * overlays parsed fields onto the synthesized [snapshot].
+     */
+    val calendarRegistry: com.eight87.strictlykeptboy.resolver.CalendarRegistry by lazy {
+        com.eight87.strictlykeptboy.resolver.CalendarRegistry(
+            repoStore = repoStore,
+            synthesizedSnapshot = snapshot,
+            scope = appScope,
+        )
+    }
+
+    /**
+     * Round 2.1.B.9 — Together picker options at the calendar grain.
+     * Derived from [calendarRegistry]: every active calendar across
+     * every repo gets its own option; the source repo's display name
+     * is the subtitle.
+     */
+    @Suppress("OPT_IN_USAGE")
+    val togetherCalendarOptions: StateFlow<List<TogetherCalendarOption>> by lazy {
+        kotlinx.coroutines.flow.combine(
+            calendarRegistry.state,
+            repoStore.state,
+        ) { cals, repos ->
+            val repoLabels = repos.associate { it.repoId to it.displayName }
+            cals.map { cal ->
+                TogetherCalendarOption(
+                    calendarId = cal.ref.id,
+                    repoId = cal.repo.id,
+                    displayName = cal.displayName,
+                    repoLabel = repoLabels[cal.repo.id] ?: cal.repo.id,
+                )
+            }
+        }.stateIn(GlobalScope, SharingStarted.Eagerly, emptyList())
+    }
 
     /** Phase N — Together repo options (id + label) derived from RepoStore. */
     @Suppress("OPT_IN_USAGE")
@@ -243,7 +503,7 @@ class AppGraph(private val appContext: Context) {
      */
     @Suppress("OPT_IN_USAGE")
     val activeRepoIconKind: StateFlow<com.eight87.strictlykeptboy.ui.theming.RepoIconKind> by lazy {
-        combine(activeRepoName, repoStore.state) { name, list ->
+        combine(defaultWriteRepoName, repoStore.state) { name, list ->
             val cfg = list.firstOrNull { it.displayName == name } ?: list.firstOrNull()
             cfg?.toIconKind() ?: com.eight87.strictlykeptboy.ui.theming.RepoIconKind.Sticker("bat")
         }.stateIn(
@@ -272,8 +532,32 @@ class AppGraph(private val appContext: Context) {
      * same data the phone schedule sees, no extra wiring needed.
      */
     val todayEventSource: TodayEventSource by lazy {
-        TodayEventSource { renderTodaySync() }
+        TodayEventSource {
+            // Wrap each `MaterializedInstance` into an `AutoEvent` (2.1.G).
+            // The one-off fast path doesn't run the off-schedule resolver
+            // (RV-Q lives on `DayBand`), so `offSchedule = false` here
+            // until the full snapshot bridge ships.
+            renderTodaySync().map { AutoEvent(instance = it, offSchedule = false) }
+        }
     }
+
+    /**
+     * Phase 2.1.G.2 / 2.1.G.4 — identity snapshot for the Auto surface.
+     *
+     * Reads from the default-write repo (`defaultWriteRepoName` → first
+     * matching `RepoConfig`) and returns its `identity.toml`, falling
+     * back to `null` when no repo is bound or the file is missing /
+     * malformed. Resolved on every call so wizard edits + repo flips
+     * are picked up without restarting the Auto session.
+     */
+    fun loadActiveIdentity(): com.eight87.strictlykeptboy.store.IdentityTomlData? = runCatching {
+        val name = defaultWriteRepoName.value
+        val cfg = repoStore.list().firstOrNull { it.displayName == name }
+            ?: repoStore.list().firstOrNull()
+            ?: return@runCatching null
+        val root = File(cfg.rootDir).toPath()
+        com.eight87.strictlykeptboy.store.IdentityTomlCodec.readOrDefault(root)
+    }.getOrNull()
 
     private fun renderTodaySync(): List<MaterializedInstance> {
         // Read-once snapshot of the inputs. The Renderer is async, but
@@ -330,6 +614,45 @@ class AppGraph(private val appContext: Context) {
         SyncRuntime.scheduler = scheduler
         SyncRuntime.statusStore = statusStore
         CarAppRuntime.todayEventSource = todayEventSource
+        CarAppRuntime.identityProvider = { loadActiveIdentity() }
+        // Phase 2.2.E.6 — parked-handle for BriefingWorker. Mirrors the
+        // CarAppRuntime contract: a narrow source the worker collects
+        // against on every fire, plus a lazy identity provider so wizard
+        // edits + repo flips are picked up without restarting the worker.
+        BriefingRuntime.source = briefingSource
+        BriefingRuntime.identityProvider = { loadActiveIdentity() }
+    }
+
+    /**
+     * Phase 2.2.E.6 — narrow [BriefingSource] adapter on the AppGraph's
+     * live snapshot. Returns materialized one-off events that overlap
+     * the requested date in the requested zone. Recurrence-rule
+     * instances flow through this same path once the full Renderer is
+     * wired into the snapshot (see [renderTodaySync]).
+     */
+    val briefingSource: BriefingSource by lazy {
+        BriefingSource { date, zone ->
+            val src = sources.value
+            src.events
+                .asSequence()
+                .filter { evt -> evt.start.withZoneSameInstant(zone).toLocalDate() == date }
+                .map { evt ->
+                    MaterializedInstance(
+                        source = com.eight87.strictlykeptboy.resolver.InstanceSource.OneOff(evt.ref),
+                        calendar = evt.calendar,
+                        repo = evt.repo,
+                        originalStart = evt.start,
+                        originalEnd = evt.end,
+                        effectiveStart = evt.start,
+                        effectiveEnd = evt.end,
+                        title = evt.title,
+                        body = evt.body,
+                        emoji = evt.emoji,
+                        isAllDay = evt.isAllDay,
+                    )
+                }
+                .toList()
+        }
     }
 
     /**
@@ -339,4 +662,52 @@ class AppGraph(private val appContext: Context) {
      * changing call sites.
      */
     val appScope: CoroutineScope get() = GlobalScope
+
+    // ----------------------------------------------------------------
+    // Round 2.16.B — active task playback (in-memory only).
+    //
+    // [tasksViewState] is hoisted onto AppGraph so the projector can
+    // read the same task list the UI renders. MainActivity previously
+    // owned this as a `remember { TasksViewState() }`; the projector
+    // would diverge from the UI if we kept two instances, so we own
+    // the canonical instance here.
+    // ----------------------------------------------------------------
+
+    /** Round 2.16.B — single canonical tasks UI state, shared between
+     *  the schedule shell's task views and the playback projector. */
+    val tasksViewState: TasksViewState by lazy { TasksViewState() }
+
+    /** Round 2.16.B — derived flow of just the tasks list (for the
+     *  projector — narrow ISP surface). */
+    @Suppress("OPT_IN_USAGE")
+    val tasksFlow: StateFlow<List<TaskItem>> by lazy {
+        tasksViewState.state
+            .map { it.tasks }
+            .stateIn(appScope, SharingStarted.Eagerly, tasksViewState.state.value.tasks)
+    }
+
+    /** Round 2.16.B — in-memory active-task controller. NOT persisted. */
+    val activeTaskController: ActiveTaskController by lazy {
+        ActiveTaskController(scope = appScope)
+    }
+
+    /** Round 2.16.B — read-only projection consumed by MiniPlayer /
+     *  NowPlayingScreen via [taskTransport]. */
+    val taskPlaybackProjector: TaskPlaybackProjector by lazy {
+        TaskPlaybackProjector(
+            controller = activeTaskController,
+            tasksFlow = tasksFlow,
+            scope = appScope,
+        )
+    }
+
+    /** Round 2.16.B — facet adapter that the sheet host passes into
+     *  MiniPlayer / NowPlayingScreen / QueueSection. Replaces the
+     *  Phase A `StubTaskPlaybackSource`. */
+    val taskTransport: TaskTransportAdapter by lazy {
+        TaskTransportAdapter(
+            controller = activeTaskController,
+            projector = taskPlaybackProjector,
+        )
+    }
 }

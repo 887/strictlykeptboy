@@ -97,6 +97,122 @@ class NotificationPrefs internal constructor(private val prefs: SharedPreference
         _state.value = loadAll()
     }
 
+    // --- Phase 2.1.F.2 — per-event mute -----------------------------------
+
+    /**
+     * Per-event mute toggle. When `true`, the receiver short-circuits the
+     * notification post for the given `(repoId, eventId)` even though the
+     * channel + calendar are still enabled.
+     */
+    fun isEventMuted(repoId: String, eventId: String): Boolean =
+        prefs.getBoolean(eventKey(repoId, eventId, "muted"), false)
+
+    fun setEventMuted(repoId: String, eventId: String, muted: Boolean) {
+        val k = eventKey(repoId, eventId, "muted")
+        val editor = prefs.edit()
+        if (muted) editor.putBoolean(k, true) else editor.remove(k)
+        editor.apply()
+        _state.value = loadAll()
+    }
+
+    // --- Phase 2.1.F.4 — time-bounded group mute --------------------------
+
+    /**
+     * Persist a time-bounded mute. `untilEpochMs == null` clears the mute.
+     * Scopes are keyed by [LogicalGroup.storageKey] so callers don't have
+     * to think about how a group is serialised.
+     */
+    fun setGroupMute(scope: LogicalGroup, untilEpochMs: Long?) {
+        val k = groupMuteKey(scope)
+        val editor = prefs.edit()
+        if (untilEpochMs == null || untilEpochMs <= 0L) editor.remove(k)
+        else editor.putLong(k, untilEpochMs)
+        editor.apply()
+        _state.value = loadAll()
+    }
+
+    /** Return the absolute epoch-ms a group is muted until, or `null`. */
+    fun groupMuteUntil(scope: LogicalGroup): Long? {
+        val v = prefs.getLong(groupMuteKey(scope), -1L)
+        return if (v <= 0L) null else v
+    }
+
+    /**
+     * True iff [scope] is currently muted at [nowEpochMs]. Expired mutes
+     * are treated as not-muted (the receiver may opt to clear them lazily,
+     * but the read path doesn't mutate prefs).
+     */
+    fun isGroupMutedAt(scope: LogicalGroup, nowEpochMs: Long): Boolean {
+        val until = groupMuteUntil(scope) ?: return false
+        return until > nowEpochMs
+    }
+
+    // --- Round 2.2.D.8 — defaults for new events ---------------------------
+
+    /**
+     * Default reminder offsets applied to events that don't specify their
+     * own. Stored as a semicolon-joined list (e.g. `15m;1h;1d`).
+     */
+    fun defaultLeadTimes(): List<String> {
+        val raw = prefs.getString(KEY_DEFAULT_LEADS, null) ?: return DEFAULT_LEAD_TIMES
+        if (raw.isBlank()) return emptyList()
+        return raw.split(';').filter { it.isNotBlank() }
+    }
+
+    fun setDefaultLeadTimes(values: List<String>) {
+        prefs.edit().putString(KEY_DEFAULT_LEADS, values.joinToString(";")).apply()
+        _state.value = loadAll()
+    }
+
+    /**
+     * Default notification channel id (one of [NotificationChannels.EVENTS],
+     * [NotificationChannels.TASKS], etc). Defaults to EVENTS.
+     */
+    fun defaultChannel(): String =
+        prefs.getString(KEY_DEFAULT_CHANNEL, null) ?: NotificationChannels.EVENTS
+
+    fun setDefaultChannel(channelId: String) {
+        prefs.edit().putString(KEY_DEFAULT_CHANNEL, channelId).apply()
+        _state.value = loadAll()
+    }
+
+    // --- Round 2.7.D.2 — dismissed reminder banners ----------------------
+
+    /**
+     * Set of reminder keys the user has explicitly dismissed via the
+     * banner's X button (e.g. `"backup-folder-reminder"`). Stored as a
+     * single semicolon-joined string in the underlying SharedPreferences
+     * to keep the schema flat.
+     *
+     * Once dismissed, a key stays dismissed until something clears it —
+     * the read-side never auto-evicts. Callers can clear via
+     * [clearDismissedReminder] (e.g. a debug surface) or
+     * [setDismissedReminders] with the empty set.
+     */
+    val dismissedReminders: Set<String>
+        get() {
+            val raw = prefs.getString(KEY_DISMISSED_REMINDERS, null) ?: return emptySet()
+            if (raw.isEmpty()) return emptySet()
+            return raw.split(';').filter { it.isNotBlank() }.toSet()
+        }
+
+    fun dismissReminder(key: String) {
+        val current = dismissedReminders
+        if (key in current) return
+        setDismissedReminders(current + key)
+    }
+
+    fun clearDismissedReminder(key: String) {
+        val current = dismissedReminders
+        if (key !in current) return
+        setDismissedReminders(current - key)
+    }
+
+    fun setDismissedReminders(values: Set<String>) {
+        prefs.edit().putString(KEY_DISMISSED_REMINDERS, values.joinToString(";")).apply()
+        _state.value = loadAll()
+    }
+
     // --- Phase XX.10 / AT-J.4 — global streak-count visibility toggle --------
 
     /** Default ON per AT-J.4. */
@@ -110,6 +226,9 @@ class NotificationPrefs internal constructor(private val prefs: SharedPreference
     private fun channelKey(channelId: String, suffix: String) = "channel.$channelId.$suffix"
     private fun calKey(repoId: String, calendarId: String, suffix: String) =
         "cal.$repoId.$calendarId.$suffix"
+    private fun eventKey(repoId: String, eventId: String, suffix: String) =
+        "event.$repoId.$eventId.$suffix"
+    private fun groupMuteKey(scope: LogicalGroup): String = "mute.${scope.storageKey}"
 
     private fun loadAll(): Map<String, Any> = prefs.all.filterValues { it != null }
         .mapValues { it.value as Any }
@@ -118,6 +237,13 @@ class NotificationPrefs internal constructor(private val prefs: SharedPreference
         private const val PREFS_FILE = "notification_prefs_v1"
         private const val KEY_BRIEFINGS_MASTER = "briefings.master.enabled"
         private const val KEY_STREAK_COUNTS = "streak.counts.enabled"
+        // 2.7.D.2 — dismissed reminder banners (semicolon-joined set).
+        private const val KEY_DISMISSED_REMINDERS = "reminders.dismissed"
+        const val REMINDER_BACKUP_FOLDER: String = "backup-folder-reminder"
+        // 2.2.D.8 — defaults for new events.
+        private const val KEY_DEFAULT_LEADS = "defaults.new_event.leads"
+        private const val KEY_DEFAULT_CHANNEL = "defaults.new_event.channel"
+        val DEFAULT_LEAD_TIMES: List<String> = listOf("15m", "1h", "1d")
 
         fun open(context: Context): NotificationPrefs {
             val prefs = context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE)

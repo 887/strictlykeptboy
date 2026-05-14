@@ -17,9 +17,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.resolver.DayBand
@@ -52,6 +54,8 @@ fun ScheduleMonthView(
     onBandTap: (DayBand) -> Unit = {},
     weekStart: DayOfWeek = DayOfWeek.MONDAY,
     today: LocalDate = LocalDate.now(),
+    /** Round 2.2.C.6 — when true, chip background tint uses `band.instance.repo.id.hashCode()` seed. */
+    groupByRepo: Boolean = false,
 ) {
     val firstOfMonth = monthAnchor.withDayOfMonth(1)
     val gridStart = firstOfMonth.with(TemporalAdjusters.previousOrSame(weekStart))
@@ -90,6 +94,7 @@ fun ScheduleMonthView(
                         onDayTap = onDayTap,
                         onOverflowTap = onOverflowTap,
                         onBandTap = onBandTap,
+                        groupByRepo = groupByRepo,
                         modifier = Modifier.weight(1f).fillMaxSize(),
                     )
                 }
@@ -107,6 +112,7 @@ private fun MonthCell(
     onDayTap: (LocalDate) -> Unit,
     onOverflowTap: (LocalDate) -> Unit,
     onBandTap: (DayBand) -> Unit,
+    groupByRepo: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val visibleBands = bands.take(MaxChipsPerCell)
@@ -140,9 +146,18 @@ private fun MonthCell(
                 fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
             )
             visibleBands.forEach { band ->
+                val seed = if (groupByRepo) band.instance.repo.id.hashCode() else band.accentColorSeed
+                val seedColor = colorForSeed(seed)
+                val chipBg = if (seedColor == Color.Unspecified) {
+                    MaterialTheme.colorScheme.secondaryContainer
+                } else {
+                    seedColor.copy(alpha = 0.35f)
+                }
+                val isSuperseded = band.supersededByCalendar != null
+                val effectiveBg = if (isSuperseded) chipBg.copy(alpha = chipBg.alpha * 0.35f) else chipBg
                 Surface(
                     onClick = { onBandTap(band) },
-                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    color = effectiveBg,
                     shape = RoundedCornerShape(3.dp),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -152,6 +167,7 @@ private fun MonthCell(
                     Text(
                         text = band.instance.title,
                         style = MaterialTheme.typography.labelSmall,
+                        textDecoration = if (isSuperseded) TextDecoration.LineThrough else null,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.padding(horizontal = 3.dp),

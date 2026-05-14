@@ -1,12 +1,20 @@
 package com.eight87.strictlykeptboy.ui.wizard
 
+import com.eight87.strictlykeptboy.avatar.AssetPackLoader
 import com.eight87.strictlykeptboy.git.AuthorIdentity
 import com.eight87.strictlykeptboy.git.GitRepo
 import com.eight87.strictlykeptboy.git.Uuid7
+import com.eight87.strictlykeptboy.store.DomCadenceWire
 import com.eight87.strictlykeptboy.store.EntityHeader
 import com.eight87.strictlykeptboy.store.EntityWriter
+import com.eight87.strictlykeptboy.store.IdentityPronouns
+import com.eight87.strictlykeptboy.store.IdentityTomlCodec
+import com.eight87.strictlykeptboy.store.IdentityTomlData
 import com.eight87.strictlykeptboy.store.RecurrenceRule
 import com.eight87.strictlykeptboy.store.RepoBootstrap
+import com.eight87.strictlykeptboy.store.ModeTomlCodec
+import com.eight87.strictlykeptboy.store.ModeTomlData
+import com.eight87.strictlykeptboy.store.RepoMode
 import com.eight87.strictlykeptboy.store.StandingTask
 import com.eight87.strictlykeptboy.store.TemplateOrigin
 import com.eight87.strictlykeptboy.store.TomlTable
@@ -57,6 +65,13 @@ object WizardScaffolder {
      * @param author committer identity (Name <email>)
      * @param tzId default timezone for new calendars
      * @param now optional clock for tests (epoch-millis source)
+     * @param assetPackLoader Phase 2.7.A — when supplied, bundled sticker
+     *   pack for `draft.species` is copied into `stickers/<species>/`
+     *   before the initial commit so the pack lands in git history.
+     *   Passed as a parameter (not a constructor dep) because
+     *   WizardScaffolder is an `object`; injecting per-call keeps the
+     *   existing test surface (Robolectric runs that don't need stickers
+     *   can pass null) while letting MainActivity wire `graph.assetPackLoader`.
      */
     suspend fun materialize(
         parentDir: File,
@@ -64,6 +79,7 @@ object WizardScaffolder {
         author: AuthorIdentity = AuthorIdentity("me", "me@example.com"),
         tzId: String = ZoneId.systemDefault().id,
         now: () -> OffsetDateTime = { OffsetDateTime.now().withNano(0) },
+        assetPackLoader: AssetPackLoader? = null,
     ): Outcome = withContext(Dispatchers.IO) {
         val safeName = draft.displayName.ifBlank { "my-calendar" }
             .lowercase().replace(Regex("[^a-z0-9-]+"), "-").trim('-')
@@ -136,6 +152,10 @@ object WizardScaffolder {
             }
             for (atomId in atomsToWrite) {
                 val rid = Uuid7.generate().toString()
+                // Phase 2.1.I.5 — spread atoms across morning/midday/evening
+                // buckets so the wizard's emitted schedule isn't N
+                // overlapping 09:00 blocks. Fallback bucket is 09:00.
+                val hm = TemplateRegistry.dtstartHmFor(atomId)
                 val rule = RecurrenceRule(
                     header = EntityHeader(
                         id = rid,
@@ -145,7 +165,7 @@ object WizardScaffolder {
                     ),
                     title = TemplateRegistry.templatesFor(role)
                         .firstOrNull { it.atomId == atomId }?.label ?: atomId,
-                    dtstart = "2025-01-01T09:00:00",
+                    dtstart = "2025-01-01T$hm:00",
                     duration = "PT15M",
                     tzId = tzId,
                     rrule = "FREQ=DAILY",
@@ -165,6 +185,8 @@ object WizardScaffolder {
                         if (role == RoleId.Kink) add("kink")
                     },
                     emoji = role.emoji,
+                    // Phase 2.1.I.6 — flag inverted-default habit atoms.
+                    inverted = TemplateRegistry.isInvertedAtom(atomId),
                 )
                 EntityWriter.write(rootDir, rule)
                 recurCount += 1
@@ -196,24 +218,90 @@ object WizardScaffolder {
             EntityWriter.write(rootDir, task)
         }
 
-        // Identity.toml — extend with honorific / tone / emoji density that
-        // RepoBootstrap doesn't yet know about (D.83 surface).
-        val idTomlPath = rootDir.toPath().resolve("identity.toml")
-        val extra = buildString {
-            append("\n[honorific]\nterm = \"${normalized.honorific.label}\"\n")
-            append("\n[tone]\nregister = \"${normalized.tone.id}\"\n")
-            append("\n[emoji]\ndensity = \"${normalized.emojiDensity.id}\"\n")
-            if (normalized.praiseTerms.size > 1) {
-                val csv = normalized.praiseTerms.joinToString(", ") { "\"$it\"" }
-                append("\n[praise.alternates]\nterms = [$csv]\n")
-            }
-            append("\n[alignment]\nvalue = \"${normalized.alignment.id}\"\n")
-            append("\n[lifestyle]\nvalue = \"${normalized.lifestyle.id}\"\n")
-        }
-        Files.write(
-            idTomlPath,
-            (String(Files.readAllBytes(idTomlPath), Charsets.UTF_8) + extra).toByteArray(StandardCharsets.UTF_8),
+        // Identity.toml — Phase 2.1.J.2: replace the legacy text-concat
+        // appendix with a single codec-driven write so the on-disk format
+        // matches IdentityTomlCodec exactly (and so Settings edits can
+        // round-trip via the same codec). RepoBootstrap wrote primary
+        // praise term + pronouns; we now overwrite with the full draft.
+        val firstAlt = normalized.praiseTerms.firstOrNull() ?: "good boy"
+        val alts = if (normalized.praiseTerms.size > 1) {
+            normalized.praiseTerms.drop(1)
+        } else emptyList()
+        val honorificTerm = normalized.honorific.label
+        val identityData = IdentityTomlData(
+            praiseTerm = firstAlt,
+            altTerms = alts,
+            pronouns = IdentityPronouns(
+                subject = normalized.pronouns.subject,
+                obj = normalized.pronouns.obj,
+                possessive = normalized.pronouns.possessive,
+                reflexive = normalized.pronouns.reflexive,
+            ),
+            honorificForDom = honorificTerm.ifBlank { "Sir" },
+            toneRegister = normalized.tone.id,
+            emojiDensity = normalized.emojiDensity.id,
+            alignment = normalized.alignment.id,
+            lifestyle = normalized.lifestyle.id,
         )
+        IdentityTomlCodec.write(rootDir.toPath(), identityData)
+
+        // Phase 2.1.I.3 — overwrite mode.toml with the wizard's mode pick.
+        // RepoBootstrap.scaffold wrote ModeTomlData.Default (free, no dom);
+        // here we layer the user's actual pick on top. KeptByAi seeds a
+        // builtin dom-persona; KeptByHuman leaves persona null (the share
+        // link the user generates next populates write_back_target).
+        val modeData = when (normalized.effectiveModePick) {
+            WizardModePick.Free -> ModeTomlData(mode = RepoMode.Free)
+            WizardModePick.SelfKeep -> ModeTomlData(mode = RepoMode.SelfKeep)
+            WizardModePick.KeptByAi -> ModeTomlData(
+                mode = RepoMode.StrictlyKept,
+                domPersona = "stern-but-fair",
+                domCadence = DomCadenceWire.EndOfDay,
+            )
+            WizardModePick.KeptByHuman -> ModeTomlData(
+                mode = RepoMode.StrictlyKept,
+                domPersona = null,
+                domCadence = DomCadenceWire.EndOfDay,
+            )
+        }
+        ModeTomlCodec.write(rootDir.toPath(), modeData)
+
+        // Phase 2.1.F.7 — seed `cal-briefings/` so the WorkManager
+        // briefing worker has a canonical system calendar to walk.
+        // Idempotent: re-running the wizard for an existing repo skips
+        // when calendar.toml already exists.
+        com.eight87.strictlykeptboy.store.CalBriefingsSeed.seed(
+            rootDir = rootDir,
+            author = scaffold.identityId,
+            tzId = tzId,
+        )
+
+        // Phase 2.8 — write the customization README always, regardless of
+        // species. We do NOT copy bundled-pack image files into the repo by
+        // default (they'd inflate repo size for users who never customize).
+        // The opt-in "Import stickers into repo" toggle in per-repo Sticker
+        // Pack settings (RepoConfig.importStickersToRepo) is what triggers
+        // the copy — see StickerPackSelectorScreen.
+        run {
+            val readme = rootDir.toPath().resolve("stickers/README.md")
+            Files.createDirectories(readme.parent)
+            if (!Files.exists(readme)) {
+                Files.write(
+                    readme,
+                    ("# Sticker packs\n\n" +
+                        "Built-in sticker packs render straight from the app's bundled\n" +
+                        "assets — they are NOT copied into this repo by default (image\n" +
+                        "bytes would inflate every clone for users who don't customize).\n\n" +
+                        "To customize your stickers (e.g. hand them to an AI image\n" +
+                        "generator), open the app's **Repo Settings → Sticker pack**\n" +
+                        "section and turn on **Import stickers into repo**. The active\n" +
+                        "pack will be copied to `stickers/<pack>/` (one directory per\n" +
+                        "pack, so multiple packs can coexist) and committed. Edit the\n" +
+                        "files in that directory, commit your changes, and the app\n" +
+                        "re-reads them on next launch.\n").toByteArray(StandardCharsets.UTF_8),
+                )
+            }
+        }
 
         // Step 5 — git init (phone-only for v1; remote paths land in a follow-up
         // once OAuth client IDs are registered).

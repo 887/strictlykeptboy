@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
 import com.eight87.strictlykeptboy.resolver.RenderedSchedule
 import java.time.LocalDate
 import java.time.Month
@@ -49,6 +50,9 @@ fun ScheduleYearView(
 ) {
     val countsByDate: Map<LocalDate, Int> =
         schedule?.days?.associate { it.date to it.bands.size }.orEmpty()
+    // Round 2.2.C.1-paint — pick the first band's accentColorSeed (if any) per day for the heat-cell tint.
+    val seedByDate: Map<LocalDate, Int> =
+        schedule?.days?.associate { it.date to (it.bands.firstOrNull()?.accentColorSeed ?: 0) }.orEmpty()
 
     val isLandscape = LocalConfiguration.current.screenWidthDp >= 600 ||
         LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -64,6 +68,7 @@ fun ScheduleYearView(
                 year = year,
                 month = month,
                 countsByDate = countsByDate,
+                seedByDate = seedByDate,
                 onTap = { onMonthTap(month) },
             )
         }
@@ -75,6 +80,7 @@ private fun MiniMonth(
     year: Int,
     month: Month,
     countsByDate: Map<LocalDate, Int>,
+    seedByDate: Map<LocalDate, Int>,
     onTap: () -> Unit,
 ) {
     val ym = YearMonth.of(year, month)
@@ -105,7 +111,11 @@ private fun MiniMonth(
                         val date = ym.atDay(dayOfMonth)
                         val count = countsByDate[date] ?: 0
                         val intensity = intensityForCount(count)
-                        val baseColor = MaterialTheme.colorScheme.primary
+                        val seed = seedByDate[date] ?: 0
+                        val seedColor = colorForSeed(seed)
+                        val baseColor = if (seedColor == Color.Unspecified)
+                            MaterialTheme.colorScheme.primary
+                        else seedColor
                         val color = if (count == 0) {
                             MaterialTheme.colorScheme.surfaceContainer
                         } else {

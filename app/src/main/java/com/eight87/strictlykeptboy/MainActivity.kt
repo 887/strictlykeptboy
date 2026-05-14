@@ -8,6 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -25,6 +26,7 @@ import java.io.File
 import com.eight87.strictlykeptboy.theme.StrictlyKeptBoyTheme
 import com.eight87.strictlykeptboy.ui.scaffold.SkbAppShell
 import com.eight87.strictlykeptboy.ui.schedule.ScheduleViewState
+import com.eight87.strictlykeptboy.ui.tasks.TasksViewState
 import com.eight87.strictlykeptboy.ui.together.TogetherViewModel
 import com.eight87.strictlykeptboy.ui.wizard.AgeGateScreen
 import com.eight87.strictlykeptboy.ui.wizard.WizardScaffolder
@@ -73,6 +75,62 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * Round 2.7.B.2-UI — SAF tree picker for the external backup folder.
+     *
+     * Mirrors [openIcsLauncher]: registered eagerly because
+     * `registerForActivityResult` must be called before `onCreate`'s
+     * STARTED state. On grant we take the persistable permission, derive
+     * a human label by parsing the SAF tree document-id (avoids pulling
+     * in `androidx.documentfile`),
+     * write `MirrorLocation.External` into [com.eight87.strictlykeptboy.prefs.RepoStoragePrefs],
+     * then (per the 2.7.D.1 design choice — no separate confirm dialog)
+     * fire [com.eight87.strictlykeptboy.sync.MirrorReconciler.applyToAll]
+     * and Toast the count.
+     */
+    private var pendingAppGraph: com.eight87.strictlykeptboy.composition.AppGraph? = null
+
+    private val openTreeLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri: Uri? ->
+        if (uri == null) return@registerForActivityResult
+        val graph = pendingAppGraph ?: return@registerForActivityResult
+        runCatching {
+            contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+            )
+        }
+        // Derive a human label from the tree document id without pulling
+        // in androidx.documentfile. Doc-ids look like `"primary:Documents/foo"`;
+        // take the leaf segment of the sub-path. Falls back to "selected
+        // folder" for volume-root or non-primary picks.
+        val label = runCatching {
+            val docId = android.provider.DocumentsContract.getTreeDocumentId(uri)
+            val sub = docId.substringAfter(':', "")
+            sub.substringAfterLast('/', sub).ifBlank { null }
+        }.getOrNull() ?: "selected folder"
+        graph.repoStoragePrefs.set(
+            com.eight87.strictlykeptboy.prefs.MirrorLocation.External(
+                treeUri = uri.toString(),
+                label = label,
+            ),
+        )
+        // 2.7.D.1 design call — when the user explicitly opts in via the
+        // Settings/banner picker, apply immediately + Toast the count.
+        // No separate "Apply?" dialog: the picker action IS the consent.
+        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val count = runCatching { graph.mirrorReconciler.applyToAll() }.getOrDefault(0)
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                Toast.makeText(
+                    this@MainActivity,
+                    getString(R.string.backup_applied_to_n_repos, count),
+                    Toast.LENGTH_SHORT,
+                ).show()
+            }
+        }
+    }
+
     private val createIcsLauncher = registerForActivityResult(
         ActivityResultContracts.CreateDocument("text/calendar")
     ) { uri: Uri? ->
@@ -108,6 +166,11 @@ class MainActivity : ComponentActivity() {
         ) { AppGraph(applicationContext) }
         graph.parkRuntimes()
         graph.installSyncEventBridge()
+        // Round 2.7.B.2-UI — park the SAF tree picker so Compose
+        // surfaces (Settings → Backup location, Repos reminder banner)
+        // can launch it without owning an ActivityResultLauncher.
+        pendingAppGraph = graph
+        graph.backupPickerHandle = { openTreeLauncher.launch(null) }
 
         // Phase O.2 — handle strictlykeptboy://share deep links.
         deepLinkHandler = { intent ->
@@ -160,8 +223,21 @@ class MainActivity : ComponentActivity() {
         setContent {
             val appearance by graph.appearancePrefs.state.collectAsState()
             var ageOk by remember { mutableStateOf(graph.ageGatePrefs.isConfirmed()) }
+            // Phase 2.1.I.1 — first-launch auto-route to the wizard when the
+            // repo store is empty after the age gate succeeds. We flip
+            // `firstLaunchDone = true` once a repo exists (either after the
+            // wizard scaffold lands, or because the user already had repos
+            // from a prior install). The empty-Schedule flash is avoided by
+            // NOT mounting SkbAppShell on first launch.
+            var firstLaunchDone by remember {
+                mutableStateOf(graph.repoStore.list().isNotEmpty())
+            }
             androidx.compose.runtime.CompositionLocalProvider(
                 com.eight87.strictlykeptboy.avatar.LocalAvatarResolver provides graph.avatarResolver,
+                com.eight87.strictlykeptboy.ui.repos.LocalAvatarPackPrefs provides graph.avatarPackPrefs,
+                com.eight87.strictlykeptboy.ui.repos.LocalPackStore provides graph.packStore,
+                com.eight87.strictlykeptboy.ui.repos.LocalAssetPackLoader provides graph.assetPackLoader,
+                com.eight87.strictlykeptboy.ui.repos.LocalUserPackLoader provides graph.userPackLoader,
             ) {
             StrictlyKeptBoyTheme(
                 themeMode = appearance.themeMode,
@@ -169,13 +245,63 @@ class MainActivity : ComponentActivity() {
                 dynamicColor = appearance.dynamicColor,
             ) {
                 val scope = rememberCoroutineScope()
-                if (!ageOk) {
-                    AgeGateScreen(
-                        onAccept = {
-                            graph.ageGatePrefs.confirm()
-                            ageOk = true
+                // Phase 2.1.J.1 / 2.1.K.1 — keep IdentityPrefs + ModePrefs bound
+                // to the active repo so settings edits round-trip to disk +
+                // commit. Reacts to defaultWriteRepoName flips (wizard finish,
+                // repo switcher, etc.). Idempotent at the bind layer.
+                val activeRepoName by graph.defaultWriteRepoName.collectAsState()
+                LaunchedEffect(activeRepoName) {
+                    val cfg = graph.repoStore.list().firstOrNull { it.displayName == activeRepoName }
+                        ?: graph.repoStore.list().firstOrNull()
+                    graph.bindIdentityToActiveRepo(cfg?.repoId)
+                    graph.bindModeToActiveRepo(cfg?.repoId)
+                }
+                // Round 2.9 — age gate dropped per user direction ("don't even
+                // ask if the app is 18+, immediately go to setup"). Age
+                // confirmation is silently auto-marked so the existing prefs
+                // flow doesn't re-prompt elsewhere.
+                LaunchedEffect(Unit) {
+                    if (!ageOk) {
+                        graph.ageGatePrefs.confirm()
+                        ageOk = true
+                    }
+                }
+                if (!firstLaunchDone) {
+                    // Round 2.15 — demo-first onboarding. The intro wizard
+                    // is two screens: manifesto + perspective picker. On
+                    // pick we seed a read-only demo repo and drop the user
+                    // straight into the app.
+                    com.eight87.strictlykeptboy.ui.wizard.intro.IntroWizardHost(
+                        onPerspectiveChosen = { card ->
+                            scope.launch {
+                                val outcome = com.eight87.strictlykeptboy.demo.DemoRepoSeeder.seed(
+                                    parentDir = filesDir.resolve("demo-repos")
+                                        .resolve(com.eight87.strictlykeptboy.demo.DemoRepoSeeder.folderName(card)),
+                                    perspective = card,
+                                    author = AuthorIdentity("demo", "demo@strictlykeptboy.local"),
+                                    assetPackLoader = graph.assetPackLoader,
+                                )
+                                val displayName = "demo · ${card.name.lowercase()}"
+                                graph.repoStore.add(
+                                    RepoConfig(
+                                        repoId = outcome.repoId,
+                                        displayName = displayName,
+                                        rootDir = outcome.rootDir.absolutePath,
+                                        remotes = emptyList(),
+                                        primaryRemote = null,
+                                        authorIdentity = outcome.authorIdentity,
+                                        defaultCalendarId = outcome.calendarIds.values.firstOrNull(),
+                                        defaultTodolistId = outcome.todolistId,
+                                        iconEmoji = "🦇",
+                                        iconSpecies = "Bat",
+                                        isDemo = true,
+                                    ),
+                                )
+                                graph.demoModePrefs.setPerspective(card)
+                                graph.activeRepoName.value = displayName
+                                firstLaunchDone = true
+                            }
                         },
-                        onDecline = { finish() },
                     )
                 } else {
                     val scheduleState = remember {
@@ -183,8 +309,95 @@ class MainActivity : ComponentActivity() {
                             scope = scope,
                             snapshotFlow = graph.snapshot,
                             sourcesFlow = graph.sources,
+                            calendarsFlow = graph.calendarRegistry.state,
+                            visibilityFlow = graph.calendarVisibility.state,
+                            repoConfigsFlow = graph.repoStore.state,
                             initialTab = graph.viewModePrefs.selected.value,
                         )
+                    }
+                    // Phase 2.1.D.1 — TasksViewState bound to the resolver.
+                    // Re-evaluates active-todolist IDs whenever the snapshot
+                    // changes. Also pumps multiRepo / activeRepoOwner from
+                    // the repo store + active write target. Owned here (not
+                    // hoisted) so SkbAppShell can keep its remember-default.
+                    // Round 2.16.B — hoisted onto AppGraph so the playback
+                    // projector and the UI share one canonical instance.
+                    val tasksViewState = graph.tasksViewState
+                    androidx.compose.runtime.LaunchedEffect(Unit) {
+                        val evaluator = com.eight87.strictlykeptboy.resolver.ActiveSetEvaluator()
+                        kotlinx.coroutines.flow.combine(
+                            graph.snapshot,
+                            graph.defaultWriteRepoName,
+                            graph.repoStore.state,
+                        ) { snap, writeName, repos ->
+                            Triple(snap, writeName, repos)
+                        }.collect { (snap, writeName, repos) ->
+                            // Round 2.5.D.2 — filter snapshot to repos with
+                            // `drawTasksFrom = true` BEFORE evaluating the
+                            // active set. Todolists from `drawTasksFrom =
+                            // false` repos never reach `activeTodolistIds`,
+                            // so Combined / Today views won't surface their
+                            // tasks.
+                            val drawRepoIds = repos
+                                .filter { it.drawTasksFrom }
+                                .map { it.repoId }
+                                .toSet()
+                            val filteredSnap = if (drawRepoIds.isEmpty()) {
+                                snap
+                            } else {
+                                snap.copy(
+                                    todolists = snap.todolists.filter {
+                                        it.repo.id in drawRepoIds
+                                    },
+                                )
+                            }
+                            val ids = com.eight87.strictlykeptboy.ui.tasks.evaluateActiveTodolistIds(
+                                evaluator,
+                                filteredSnap,
+                            )
+                            val activeRepo = repos.firstOrNull { it.displayName == writeName }
+                                ?: repos.firstOrNull()
+                            val owner = activeRepo?.authorIdentity?.name.orEmpty()
+                            val cur = tasksViewState.state.value
+                            // Phase 2.1.D.8 — synthesize FromEvents tasks
+                            // from today's MaterializedInstances. Today's
+                            // wiring is best-effort: we don't have a live
+                            // resolver fold here yet, so use today's
+                            // one-off events (via `graph.todayEventSource`).
+                            val fromEvents =
+                                com.eight87.strictlykeptboy.ui.tasks.FromEventsProjector.project(
+                                    instances = graph.todayEventSource.eventsForToday().map { it.instance },
+                                    calendarsById = snap.calendars.associateBy { it.ref.id },
+                                )
+                            // Merge: keep non-FromEvents tasks the caller
+                            // pushed in via `set/addTask`; replace the
+                            // FromEvents slice with the freshly projected
+                            // set. This is the producer the brief noted is
+                            // missing for the `TaskSource.FromEvents` enum.
+                            val nonFromEvents = cur.tasks.filter {
+                                it.source != com.eight87.strictlykeptboy.ui.tasks.TaskSource.FromEvents
+                            }
+                            // Round 2.16.C — temp sub-stepped demo tasks so
+                            // the mini-player has visible content on the AVD
+                            // (petkeptbyai demo perspective ships no tasks).
+                            // TODO Phase D — remove once in-sheet creation
+                            // can author sub-stepped tasks directly.
+                            val demoSubstepped =
+                                com.eight87.strictlykeptboy.ui.tasks.TasksDemoSeed.substeppedDemoTasks
+                            val hasDemo = nonFromEvents.any { t ->
+                                demoSubstepped.any { it.id == t.id }
+                            }
+                            val withDemo = if (hasDemo) nonFromEvents
+                            else nonFromEvents + demoSubstepped
+                            tasksViewState.set(
+                                cur.copy(
+                                    tasks = withDemo + fromEvents,
+                                    activeTodolistIds = ids,
+                                    multiRepo = repos.size > 1,
+                                    activeRepoOwner = owner,
+                                ),
+                            )
+                        }
                     }
                     val togetherVm = remember(scope) {
                         TogetherViewModel(
@@ -200,7 +413,7 @@ class MainActivity : ComponentActivity() {
                             prefs = graph.eventCreatePrefs,
                             context = applicationContext,
                             activeRepoProvider = {
-                                val name = graph.activeRepoName.value
+                                val name = graph.defaultWriteRepoName.value
                                 graph.repoStore.list().firstOrNull { it.displayName == name }
                                     ?: graph.repoStore.list().firstOrNull()
                             },
@@ -218,9 +431,37 @@ class MainActivity : ComponentActivity() {
                             neutralModeProvider = { graph.neutralModePrefs.isEnabled() },
                         )
                     }
+                    // Phase 2.1.I.4 — share-with-dom CTA needs the active
+                    // repo. We resolve at click-time so the latest scaffold
+                    // outcome is observed. Falls back to a toast if no repo.
+                    var pendingShareRepo by remember { mutableStateOf<RepoConfig?>(null) }
+                    // Round 2.1.B.2 / B.4 — pending calendar to edit. Long-press
+                    // on a chip routes here; the sheet writes back via
+                    // CalendarSettingsSheet → RoutineCalendarConfig +
+                    // SupersedenceConfig + CalendarActivityConfig codecs.
+                    var pendingCalendarEdit by remember {
+                        mutableStateOf<com.eight87.strictlykeptboy.resolver.CalendarMeta?>(null)
+                    }
                     SkbAppShell(
-                        activeRepoNameFlow = graph.activeRepoName,
+                        tasksState = tasksViewState,
+                        // Round 2.16.B — wire the real projector + transport
+                        // adapter so MiniPlayer/NowPlayingScreen read live
+                        // active-task state. Temp Start affordance on
+                        // TaskRow → controller.start(taskId).
+                        taskPlaybackSource = graph.taskTransport,
+                        onStartTask = { taskId -> graph.activeTaskController.start(taskId) },
+                        activeRepoNameFlow = graph.defaultWriteRepoName,
                         activeIconKindFlow = graph.activeRepoIconKind,
+                        wizardEntryRequest = graph.wizardEntryRequest,
+                        calendarVisibility = graph.calendarVisibility,
+                        onLongPressCalendar = { meta -> pendingCalendarEdit = meta },
+                        onShareWithDom = {
+                            val name = graph.activeRepoName.value
+                            val cfg = graph.repoStore.list()
+                                .firstOrNull { it.displayName == name }
+                                ?: graph.repoStore.list().firstOrNull()
+                            pendingShareRepo = cfg
+                        },
                         scheduleState = scheduleState,
                         eventCreateController = eventCreateController,
                         onPersistTab = graph.viewModePrefs::set,
@@ -253,6 +494,8 @@ class MainActivity : ComponentActivity() {
                             notificationPrefs = graph.notificationPrefs,
                             calendarVisibility = graph.calendarVisibility,
                             todolistVisibility = graph.todolistVisibility,
+                            calendarsFlow = graph.calendarRegistry.state,
+                            onEditCalendar = { meta -> pendingCalendarEdit = meta },
                             identityPrefs = graph.identityPrefs,
                             appearancePrefs = graph.appearancePrefs,
                             neutralPrefs = graph.neutralModePrefs,
@@ -275,12 +518,43 @@ class MainActivity : ComponentActivity() {
                             // Phase W.7 — privacy policy lives in-repo at
                             // docs/privacy-policy.md; the canonical URL is the
                             // GitHub rendering of that file on the main branch.
+                            // Phase 2.1.I.2 — fix the broken K.12 re-entry.
+                            // Setting `wizardEntryRequest` makes SkbAppShell
+                            // switch to the Wizard destination and pass
+                            // `initialScreen = Roles`. Reset to null on
+                            // wizard finish (handled inside SkbAppShell).
+                            onOpenWizardAtRoles = {
+                                graph.wizardEntryRequest.value =
+                                    com.eight87.strictlykeptboy.ui.wizard.WizardScreen.Roles
+                            },
                             onOpenPrivacyPolicy = {
                                 val url = "https://github.com/887/strictlykeptboy/blob/main/docs/privacy-policy.md"
                                 runCatching {
                                     startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                                 }
                             },
+                            // Round 2.7.B.4-UI — backup folder picker access.
+                            repoStoragePrefs = graph.repoStoragePrefs,
+                            onPickBackupFolder = {
+                                graph.backupPickerHandle?.invoke()
+                            },
+                            onRemoveBackupFolder = {
+                                graph.repoStoragePrefs.set(
+                                    com.eight87.strictlykeptboy.prefs.MirrorLocation.None,
+                                )
+                            },
+                            // Round 2.15 — demo-mode toggle access.
+                            demoModePrefs = graph.demoModePrefs,
+                            // Round 2.2.D — Settings completion.
+                            reposFlow = graph.repoStore.state,
+                            onOpenRepo = { cfg ->
+                                // Surface per-repo settings via the existing Repos top-destination.
+                                graph.defaultWriteRepoName.value = cfg.displayName
+                            },
+                            accessAggregator = graph.accessAggregator,
+                            onOpenShareFor = { /* hook for ShareSheet wiring */ },
+                            autoTabletPrefs = graph.autoTabletPrefs,
+                            tripFeed = graph.tripFeed,
                         ),
                         onWizardScaffold = { draft ->
                             runCatching {
@@ -288,6 +562,7 @@ class MainActivity : ComponentActivity() {
                                     parentDir = filesDir.resolve("repos"),
                                     draft = draft,
                                     author = AuthorIdentity("me", "me@example.com"),
+                                    assetPackLoader = graph.assetPackLoader,
                                 )
                                 graph.repoStore.add(
                                     RepoConfig(
@@ -303,31 +578,35 @@ class MainActivity : ComponentActivity() {
                                             com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Bat -> "🦇"
                                             com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Bunny -> "🐰"
                                             com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Cat -> "🐱"
+                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.CatChan -> "🐱"
                                             com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Fox -> "🦊"
+                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.FoxChan -> "🦊"
                                             com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Lion -> "🦁"
                                             com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Tiger -> "🐯"
                                             com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Wolf -> "🐺"
-                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.ChooseYourOwn -> null
                                         },
                                         // Per D.88 / F48 — the species drives the per-repo avatar.
                                         // `Sticker(<species>)` falls back to about_bat for bat and
                                         // to AutoInitials for others until Phase WW lands.
-                                        iconSpecies = draft.species.name.takeIf {
-                                            draft.species != com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.ChooseYourOwn
-                                        },
+                                        iconSpecies = draft.species.name,
                                     ),
                                 )
-                                graph.activeRepoName.value = draft.displayName.ifBlank { "my calendar" }
+                                graph.defaultWriteRepoName.value = draft.displayName.ifBlank { "my calendar" }
                                 Unit
                             }
                         },
+                        // Phase 2.1.I.4 — share-with-dom sheet host. Reuses
+                        // the existing ShareSheet; the wizard CTA flips
+                        // `pendingShareRepo` and we render here. The user
+                        // sets allowWriteBack themselves in the sheet (the
+                        // wizard advertises that's what we're doing).
                         // Phase CCC.8 — trip-overlay materializer. Writes a
                         // `cal-trip-<uuidv7>/` overlay into the active repo and
                         // commits atomically. Falls back to no-op (Result.failure)
                         // if no active repo exists yet.
                         onTripMaterialize = { tripDraft ->
                             runCatching {
-                                val activeName = graph.activeRepoName.value
+                                val activeName = graph.defaultWriteRepoName.value
                                 val cfg = graph.repoStore.list().firstOrNull { it.displayName == activeName }
                                     ?: graph.repoStore.list().firstOrNull()
                                     ?: error("no active repo — run the lifestyle wizard first")
@@ -344,6 +623,49 @@ class MainActivity : ComponentActivity() {
                             }
                         },
                     )
+                    // Round 2.1.B.4 — overlay CalendarSettingsSheet on
+                    // long-press of a chip. Save writes calendar.toml on
+                    // Dispatchers.IO and commits via GitRepoRegistry.
+                    pendingCalendarEdit?.let { meta ->
+                        com.eight87.strictlykeptboy.ui.calendars.CalendarSettingsSheet(
+                            calendar = meta,
+                            onDismiss = { pendingCalendarEdit = null },
+                            onSave = { draft ->
+                                scope.launch {
+                                    runCatching {
+                                        com.eight87.strictlykeptboy.ui.calendars.CalendarSettingsWriter
+                                            .write(graph, draft)
+                                    }
+                                    pendingCalendarEdit = null
+                                }
+                            },
+                        )
+                    }
+                    // Phase 2.1.I.4 — overlay the ShareSheet when the
+                    // wizard's Share-with-dom CTA fired. Lives as a sibling
+                    // of SkbAppShell so it overlays everything else.
+                    pendingShareRepo?.let { repo ->
+                        val ctx = androidx.compose.ui.platform.LocalContext.current
+                        com.eight87.strictlykeptboy.ui.share.ShareSheet(
+                            repo = repo,
+                            onDismiss = { pendingShareRepo = null },
+                            onCopy = { link ->
+                                val cm = ctx.getSystemService(
+                                    android.content.Context.CLIPBOARD_SERVICE,
+                                ) as android.content.ClipboardManager
+                                cm.setPrimaryClip(
+                                    android.content.ClipData.newPlainText("share link", link),
+                                )
+                            },
+                            onSend = { link ->
+                                val send = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, link)
+                                }
+                                ctx.startActivity(Intent.createChooser(send, null))
+                            },
+                        )
+                    }
                 }
             }
             }

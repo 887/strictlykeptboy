@@ -21,18 +21,21 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,30 +51,46 @@ import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.ui.a11y.labelString
 import com.eight87.strictlykeptboy.ui.a11y.taglineString
+import com.eight87.strictlykeptboy.ui.adaptive.LocalWindowWidthSizeClass
+import com.eight87.strictlykeptboy.ui.adaptive.MasterDetailLayout
+import com.eight87.strictlykeptboy.ui.adaptive.isTwoPane
 import kotlinx.coroutines.launch
+
+const val TestTagWizardPreviewPane = "Wizard-PreviewPane"
 
 // Test tags
 const val TestTagWizard = "Wizard"
 const val TestTagWizardWelcome = "Wizard-Welcome"
 const val TestTagWizardSpecies = "Wizard-Species"
-const val TestTagWizardAlignment = "Wizard-Alignment"
 const val TestTagWizardIdentity = "Wizard-Identity"
+// Phase 2.2.B — single Lifestyle screen (6 cards) subsumes the old
+// Alignment + Lifestyle + Mode screens. TestTagWizardLifestyle stays
+// stable so snapshot tests don't churn; the per-card tags are
+// `Wizard-LifestyleCard-<enum-name>`.
 const val TestTagWizardLifestyle = "Wizard-Lifestyle"
 const val TestTagWizardRoles = "Wizard-Roles"
 const val TestTagWizardTemplates = "Wizard-Templates"
 const val TestTagWizardGit = "Wizard-Git"
 const val TestTagWizardScaffold = "Wizard-Scaffold"
 const val TestTagWizardDone = "Wizard-Done"
+const val TestTagWizardShareWithDom = "Wizard-ShareWithDom"
 const val TestTagWizardNext = "Wizard-Next"
 const val TestTagWizardBack = "Wizard-Back"
 const val TestTagWizardSkip = "Wizard-Skip"
 const val TestTagWizardDiscardDialog = "Wizard-DiscardDialog"
 
-/** Linear screen sequence. Renumbered into a single source-of-truth ordering. */
+/**
+ * Linear screen sequence. Phase 2.2.B collapsed Alignment + Lifestyle +
+ * Mode into a single six-card Lifestyle screen (D-2.2.c). 12 → 10
+ * screens. Phase 2.1.I.4 appends a Share-with-dom screen after Done;
+ * it's only entered when [shouldShowShareWithDom] returns true.
+ */
+// Round 2.14 — Welcome reinstated as the wizard intro. Explains what the
+// next ~minute looks like so users aren't dropped straight into a chooser
+// with no context.
 private val SCREEN_ORDER: List<WizardScreen> = listOf(
     WizardScreen.Welcome,
     WizardScreen.Species,
-    WizardScreen.Alignment,
     WizardScreen.Identity,
     WizardScreen.Lifestyle,
     WizardScreen.Roles,
@@ -79,7 +98,22 @@ private val SCREEN_ORDER: List<WizardScreen> = listOf(
     WizardScreen.Git,
     WizardScreen.Scaffold,
     WizardScreen.Done,
+    WizardScreen.ShareWithDom,
 )
+
+/**
+ * Phase 2.1.I.4 — the Share-with-dom screen only renders for sub/switch
+ * users who are kept-by-human (or AI but want to also share). Strict
+ * predicate: alignment ∈ {Submissive, Switch} AND mode pick = KeptByHuman.
+ * Keeping it strict prevents the screen from showing up for users who
+ * picked KeptByAi (where there is no human dom to share with).
+ */
+internal fun shouldShowShareWithDom(draft: WizardDraft): Boolean {
+    val alignmentOk = draft.alignment == Alignment.Submissive ||
+        draft.alignment == Alignment.Switch
+    val keptByHuman = draft.effectiveModePick == WizardModePick.KeptByHuman
+    return alignmentOk && keptByHuman
+}
 
 /**
  * Phase K.1 / LW-A — wizard host. Replaces the stub destination in AppScaffold.
@@ -101,6 +135,13 @@ fun WizardNavHost(
     initialScreen: WizardScreen = WizardScreen.Welcome,
     initialDraft: WizardDraft = WizardDraft(),
     neutralMode: Boolean = false,
+    /**
+     * Phase 2.1.I.4 — callback fired when the user requests to generate a
+     * share link from the Share-with-dom screen. Caller wires this to the
+     * existing [com.eight87.strictlykeptboy.ui.share.ShareSheet] with the
+     * just-scaffolded repo and `allowWriteBack` pre-checked.
+     */
+    onShareWithDom: () -> Unit = {},
 ) {
     // v1: in-memory draft only. SavedStateHandle-backed persistence is a
     // follow-up (LW-A.5 mid-wizard exit safety beyond config-change is
@@ -111,12 +152,11 @@ fun WizardNavHost(
     var scaffoldProgress by remember { mutableStateOf(ScaffoldProgress.Idle) }
     var scaffoldError by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val widthClass = LocalWindowWidthSizeClass.current
 
     fun goNext() {
         val idx = SCREEN_ORDER.indexOf(current)
-        if (idx in 0 until SCREEN_ORDER.size - 1) {
-            current = SCREEN_ORDER[idx + 1]
-        }
+        if (idx in 0 until SCREEN_ORDER.size - 1) current = SCREEN_ORDER[idx + 1]
     }
 
     fun goBack() {
@@ -124,7 +164,8 @@ fun WizardNavHost(
         if (idx > 0) current = SCREEN_ORDER[idx - 1]
     }
 
-    BackHandler(enabled = current != WizardScreen.Welcome && current != WizardScreen.Done) {
+    // Round 2.9 — Welcome dropped; allow back from any non-Done screen.
+    BackHandler(enabled = current != WizardScreen.Done) {
         if (draft.hasUserChoices) showDiscard = true else onCancel()
     }
 
@@ -146,36 +187,43 @@ fun WizardNavHost(
         )
     }
 
+    Surface(modifier = modifier.fillMaxSize()) {
     Column(
-        modifier = modifier.fillMaxSize().testTag(TestTagWizard).padding(16.dp),
+        modifier = Modifier.fillMaxSize().testTag(TestTagWizard).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         // Progress dots
         ProgressRow(currentIndex = SCREEN_ORDER.indexOf(current), total = SCREEN_ORDER.size)
         Spacer(Modifier.height(4.dp))
 
+        val stepContent: @Composable () -> Unit = {
+        // Species screen manages its own layout (mascot suppressed,
+        // internal scroll on the list region only) so the screen chrome
+        // — prompt, explainer, Continue/Back — stays visible while the
+        // species options scroll.
+        if (current == WizardScreen.Species) {
+            SpeciesScreen(
+                draft = draft,
+                onUpdate = { draft = it.normalize() },
+            )
+        } else if (current == WizardScreen.Identity) {
+            IdentityScreen(
+                draft = draft,
+                onUpdate = { draft = it.normalize() },
+            )
+        } else {
         Column(
-            modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             BatMascotSticker(screen = current)
             when (current) {
-                WizardScreen.Welcome -> WelcomeScreen(onGo = ::goNext)
-                WizardScreen.Species -> SpeciesScreen(
+                WizardScreen.Welcome -> WelcomeScreen()
+                WizardScreen.Species -> Unit // handled above
+                WizardScreen.Identity -> Unit // handled above
+                WizardScreen.Lifestyle -> LifestyleCardScreen(
                     draft = draft,
-                    onUpdate = { draft = it.normalize() },
-                )
-                WizardScreen.Alignment -> AlignmentScreen(
-                    draft = draft,
-                    onUpdate = { draft = it.normalize() },
-                )
-                WizardScreen.Identity -> IdentityScreen(
-                    draft = draft,
-                    onUpdate = { draft = it.normalize() },
-                )
-                WizardScreen.Lifestyle -> LifestyleScreen(
-                    draft = draft,
-                    onUpdate = { draft = it.normalize() },
+                    onUpdate = { draft = it },
                 )
                 WizardScreen.Roles -> RolesScreen(
                     draft = draft,
@@ -207,21 +255,64 @@ fun WizardNavHost(
                         }
                     }
                 }
-                WizardScreen.Done -> DoneScreen(draft = draft, onOpen = onFinish)
+                WizardScreen.Done -> DoneScreen(
+                    draft = draft,
+                    // Phase 2.1.I.4 — if a human dom is selected, route to
+                    // the Share-with-dom screen first; otherwise finish.
+                    onOpen = {
+                        if (shouldShowShareWithDom(draft)) {
+                            current = WizardScreen.ShareWithDom
+                        } else {
+                            onFinish()
+                        }
+                    },
+                )
+                WizardScreen.ShareWithDom -> ShareWithDomScreen(
+                    draft = draft,
+                    onGenerateLink = {
+                        onShareWithDom()
+                        onFinish()
+                    },
+                    onSkip = onFinish,
+                )
+            }
+        }
+        }
+        }
+
+        // H.1 — two-pane on Medium/Expanded: step on the left, identity-driven
+        // preview on the right. Compact keeps the single-column flow (preview
+        // already lives inline inside IdentityScreen + DoneScreen there).
+        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            if (widthClass.isTwoPane()) {
+                MasterDetailLayout(
+                    widthClass = widthClass,
+                    master = stepContent,
+                    detail = {
+                        WizardIdentityPreviewPane(
+                            draft = draft,
+                            screen = current,
+                        )
+                    },
+                )
+            } else {
+                stepContent()
             }
         }
 
         // Buttons
-        if (current != WizardScreen.Welcome &&
-            current != WizardScreen.Scaffold &&
-            current != WizardScreen.Done
+        if (current != WizardScreen.Scaffold &&
+            current != WizardScreen.Done &&
+            current != WizardScreen.ShareWithDom
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(
                     onClick = ::goBack,
                     modifier = Modifier.testTag(TestTagWizardBack),
                 ) { Text(stringResource(R.string.wizard_back)) }
-                if (current == WizardScreen.Species || current == WizardScreen.Templates) {
+                // Round 2.6 — Species (sticker pack) is mandatory; only
+                // Templates retains a skip affordance now.
+                if (current == WizardScreen.Templates) {
                     TextButton(
                         onClick = ::goNext,
                         modifier = Modifier.testTag(TestTagWizardSkip),
@@ -242,6 +333,7 @@ fun WizardNavHost(
                 TextButton(onClick = onCancel) { Text(stringResource(R.string.wizard_cancel)) }
             }
         }
+    }
     }
 }
 
@@ -286,11 +378,10 @@ private fun BatMascotSticker(screen: WizardScreen) {
 // --- Screen 1 Welcome ----------------------------------------------------------
 
 @Composable
-private fun WelcomeScreen(onGo: () -> Unit) {
+private fun WelcomeScreen() {
     Column(
         modifier = Modifier.fillMaxWidth().testTag(TestTagWizardWelcome),
         verticalArrangement = Arrangement.spacedBy(16.dp),
-        horizontalAlignment = ComposeAlign.CenterHorizontally,
     ) {
         Text(
             stringResource(R.string.wizard_welcome_title),
@@ -300,13 +391,10 @@ private fun WelcomeScreen(onGo: () -> Unit) {
             stringResource(R.string.wizard_welcome_blurb),
             style = MaterialTheme.typography.bodyMedium,
         )
-        Button(
-            onClick = onGo,
-            modifier = Modifier.testTag(TestTagWizardNext),
-        ) { Text(stringResource(R.string.wizard_welcome_cta)) }
         Text(
             stringResource(R.string.wizard_welcome_footnote),
             style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -315,79 +403,86 @@ private fun WelcomeScreen(onGo: () -> Unit) {
 
 @Composable
 private fun SpeciesScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
+    // Round 2.14 — fixed chrome (prompt + explainer) at top; the list of
+    // hero-sized species cards scrolls in its own region so the wizard's
+    // Continue / Back stay visible. Anime variants (Cat-chan / Fox-chan)
+    // sink to the bottom so realistic species lead the list.
+    val animeIds = setOf(SpeciesChoice.CatChan, SpeciesChoice.FoxChan)
+    val cards = SpeciesChoice.entries.sortedBy { if (it in animeIds) 1 else 0 }
     Column(
-        modifier = Modifier.fillMaxWidth().testTag(TestTagWizardSpecies),
+        modifier = Modifier
+            .fillMaxSize()
+            .testTag(TestTagWizardSpecies),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(stringResource(R.string.wizard_species_prompt), style = MaterialTheme.typography.titleMedium)
-        // Use a single-column flow on phones; 2-col grid is acceptable but
-        // simpler to use a Column of clickable cards for v1.
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            contentPadding = PaddingValues(0.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.height(380.dp),
+        Text(
+            stringResource(R.string.wizard_species_subtitle),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("Wizard-Species-CustomizeInfo"),
         ) {
-            items(SpeciesChoice.entries.toList()) { species ->
+            Text(
+                text = stringResource(R.string.wizard_species_customize_later_info),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(12.dp),
+            )
+        }
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            cards.forEach { species ->
                 val selected = draft.species == species
                 Card(
                     onClick = { onUpdate(draft.copy(species = species)) },
-                    colors = if (selected) CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    ) else CardDefaults.cardColors(),
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("Wizard-Species-${species.id}"),
+                    colors = if (selected) CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    ) else CardDefaults.cardColors(),
                 ) {
                     Column(
-                        modifier = Modifier.padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.padding(20.dp).fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalAlignment = ComposeAlign.CenterHorizontally,
                     ) {
-                        Text(species.labelString(), style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            text = speciesPreviewEmoji(species),
+                            style = MaterialTheme.typography.displayLarge,
+                        )
+                        Text(
+                            species.labelString(),
+                            style = MaterialTheme.typography.titleLarge,
+                        )
                         if (selected) Icon(Icons.Filled.Check, contentDescription = null)
                     }
                 }
             }
         }
-        if (draft.species == SpeciesChoice.ChooseYourOwn) {
-            OutlinedTextField(
-                value = draft.customPackUrl,
-                onValueChange = { onUpdate(draft.copy(customPackUrl = it)) },
-                label = { Text(stringResource(R.string.wizard_species_custom_pack_url)) },
-                modifier = Modifier.fillMaxWidth().testTag("Wizard-Species-PackUrl"),
-            )
-        }
     }
 }
 
-// --- Screen 3 Alignment --------------------------------------------------------
-
-@Composable
-private fun AlignmentScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxWidth().testTag(TestTagWizardAlignment),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Text(stringResource(R.string.wizard_alignment_prompt), style = MaterialTheme.typography.titleMedium)
-        for (a in Alignment.entries) {
-            val selected = draft.alignment == a
-            Card(
-                onClick = { onUpdate(draft.copy(alignment = a)) },
-                colors = if (selected) CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                ) else CardDefaults.cardColors(),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("Wizard-Alignment-${a.id}"),
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text(a.labelString(), style = MaterialTheme.typography.titleMedium)
-                    Text(a.taglineString(), style = MaterialTheme.typography.bodySmall)
-                }
-            }
-        }
-    }
+/** Stock-placeholder emoji preview for each species — replaced when
+ *  bundled-pack artwork ships (Phase WW). */
+private fun speciesPreviewEmoji(species: SpeciesChoice): String = when (species) {
+    SpeciesChoice.Bat -> "🦇"
+    SpeciesChoice.Bunny -> "🐰"
+    SpeciesChoice.Cat -> "🐱"
+    SpeciesChoice.CatChan -> "🐱"
+    SpeciesChoice.Fox -> "🦊"
+    SpeciesChoice.FoxChan -> "🦊"
+    SpeciesChoice.Lion -> "🦁"
+    SpeciesChoice.Tiger -> "🐯"
+    SpeciesChoice.Wolf -> "🐺"
 }
 
 // --- Screen 3.5 Identity (praise, pronouns, honorific, tone, emoji) -----------
@@ -395,43 +490,79 @@ private fun AlignmentScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit)
 @Composable
 private fun IdentityScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
     val showHonorific = draft.alignment == Alignment.Submissive || draft.alignment == Alignment.Switch
+    var customPraise by remember { mutableStateOf("") }
+    // Merge defaults with whatever the user already picked (incl.
+    // custom-added terms) so custom entries render as their own chips.
+    val praiseChipTerms = (PraiseRegistry.defaults + draft.praiseTerms).distinct()
     Column(
-        modifier = Modifier.fillMaxWidth().testTag(TestTagWizardIdentity),
+        modifier = Modifier.fillMaxSize().testTag(TestTagWizardIdentity),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(stringResource(R.string.wizard_identity_prompt), style = MaterialTheme.typography.titleMedium)
+        Text(
+            stringResource(R.string.wizard_identity_blurb),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
 
-        // Praise chips (multi-select).
-        Text(stringResource(R.string.wizard_identity_praise_label), style = MaterialTheme.typography.bodyMedium)
-        WrappingChipRow {
-            PraiseRegistry.defaults.forEach { term ->
-                val on = term in draft.praiseTerms
-                FilterChip(
-                    selected = on,
+        Column(
+            modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            // Praise chips (multi-select) + custom-term input.
+            Text(stringResource(R.string.wizard_identity_praise_label), style = MaterialTheme.typography.bodyMedium)
+            WrappingChipRow {
+                praiseChipTerms.forEach { term ->
+                    val on = term in draft.praiseTerms
+                    FilterChip(
+                        selected = on,
+                        onClick = {
+                            val next = if (on) draft.praiseTerms - term else draft.praiseTerms + term
+                            onUpdate(draft.copy(praiseTerms = next.ifEmpty { listOf("good boy") }))
+                        },
+                        label = { Text(term) },
+                        modifier = Modifier.testTag("Wizard-Praise-${term.replace(' ', '-')}"),
+                    )
+                }
+            }
+            Row(
+                verticalAlignment = ComposeAlign.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                OutlinedTextField(
+                    value = customPraise,
+                    onValueChange = { customPraise = it },
+                    label = { Text("Add custom term") },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f).testTag("Wizard-Praise-Custom-Input"),
+                )
+                TextButton(
+                    enabled = customPraise.isNotBlank() && customPraise.trim() !in draft.praiseTerms,
                     onClick = {
-                        val next = if (on) draft.praiseTerms - term else draft.praiseTerms + term
-                        onUpdate(draft.copy(praiseTerms = next.ifEmpty { listOf("good boy") }))
+                        val term = customPraise.trim()
+                        if (term.isNotEmpty()) {
+                            onUpdate(draft.copy(praiseTerms = draft.praiseTerms + term))
+                            customPraise = ""
+                        }
                     },
-                    label = { Text(term) },
-                    modifier = Modifier.testTag("Wizard-Praise-${term.replace(' ', '-')}"),
-                )
+                    modifier = Modifier.testTag("Wizard-Praise-Custom-Add"),
+                ) { Text("Add") }
             }
-        }
 
-        // Pronouns radio.
-        Text(stringResource(R.string.wizard_identity_pronouns_label), style = MaterialTheme.typography.bodyMedium)
-        for (p in PronounSet.defaults) {
-            Row(verticalAlignment = ComposeAlign.CenterVertically) {
-                RadioButton(
-                    selected = draft.pronouns == p,
-                    onClick = { onUpdate(draft.copy(pronouns = p)) },
-                    modifier = Modifier.testTag("Wizard-Pronouns-${p.subject}"),
-                )
-                Text(p.label)
+            // Pronouns as compact chips.
+            Text(stringResource(R.string.wizard_identity_pronouns_label), style = MaterialTheme.typography.bodyMedium)
+            WrappingChipRow {
+                PronounSet.defaults.forEach { p ->
+                    FilterChip(
+                        selected = draft.pronouns == p,
+                        onClick = { onUpdate(draft.copy(pronouns = p)) },
+                        label = { Text(p.label) },
+                        modifier = Modifier.testTag("Wizard-Pronouns-${p.subject}"),
+                    )
+                }
             }
-        }
 
-        if (showHonorific) {
+            if (showHonorific) {
             Text(stringResource(R.string.wizard_identity_honorific_label), style = MaterialTheme.typography.bodyMedium)
             WrappingChipRow {
                 Honorific.entries.forEach { h ->
@@ -492,50 +623,115 @@ private fun IdentityScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) 
                 )
             }
         }
+        }
     }
 }
 
-// --- Screen 4 Lifestyle --------------------------------------------------------
+// --- Screen 4 Lifestyle (Phase 2.2.B — six-card collapse) ----------------------
 
+/**
+ * Phase 2.2.B — collapsed Lifestyle screen. Six mutually-exclusive
+ * cards (D-2.2.c); each card atomically writes (alignment, lifestyle,
+ * modePick, hasPartner) via [WizardDraft.applyLifestyleCard]. Pre-
+ * selected default = [LifestyleCard.PetKeptByAi] (solo-sub kept by an
+ * AI dom — the project's genesis use-case).
+ */
 @Composable
-private fun LifestyleScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
+private fun LifestyleCardScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
+    // Reverse-lookup the currently-active card; falls back to Default
+    // when the draft is fresh (no card chosen yet) or to null when the
+    // user has hand-edited via Settings into a non-card combination.
+    val current = LifestyleCard.fromDraft(draft) ?: LifestyleCard.Default
+
+    // Phase 2.2.B — auto-apply the default card on first entry so the
+    // user can simply "Continue" without tapping and have the wizard
+    // emit the matching (alignment, lifestyle, modePick, hasPartner)
+    // tuple on materialization. Idempotent: re-applying the same card
+    // is a no-op for the equality check via [LifestyleCard.fromDraft].
+    LaunchedEffect(Unit) {
+        val matched = LifestyleCard.fromDraft(draft)
+        if (matched == null || matched == LifestyleCard.JustCalendar) {
+            onUpdate(draft.applyLifestyleCard(LifestyleCard.Default))
+        }
+    }
     Column(
         modifier = Modifier.fillMaxWidth().testTag(TestTagWizardLifestyle),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
-            stringResource(R.string.wizard_lifestyle_prompt),
+            stringResource(R.string.wizard_lifestyle_card_prompt),
             style = MaterialTheme.typography.titleMedium,
         )
-
-        val options: List<Lifestyle> = when (draft.alignment) {
-            Alignment.UnalignedPrivate -> listOf(
-                Lifestyle.SingleFree, Lifestyle.SingleRoutine,
-                Lifestyle.PartneredFree, Lifestyle.PartneredRoutine,
-            )
-            else -> listOf(
-                Lifestyle.SingleFree, Lifestyle.SingleStrict,
-                Lifestyle.PartneredFree, Lifestyle.PartneredStrict,
+        Text(
+            stringResource(R.string.wizard_lifestyle_card_blurb),
+            style = MaterialTheme.typography.bodySmall,
+        )
+        // Round 2.12 — language-equivalence explainer. The app defaults
+        // to pet-coded wording everywhere (matching the project name),
+        // but sub/pet/bottom describe the same role here, and dom/owner
+        // likewise. Every label is customizable post-wizard in
+        // Settings → Identity (praise terms, honorifics, role labels).
+        Card(
+            modifier = Modifier.fillMaxWidth().testTag("Wizard-Lifestyle-LanguageExplainer"),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            ),
+        ) {
+            Text(
+                text = stringResource(R.string.wizard_lifestyle_language_explainer),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(12.dp),
             )
         }
-        for (opt in options) {
-            val selected = draft.lifestyle == opt
+        // Round 2.12 — JustCalendar is now picked on the FramingChoice
+        // screen, not here. Hiding it keeps the kink-path picker focused.
+        for (card in LifestyleCard.entries.filter { it != LifestyleCard.JustCalendar }) {
+            val selected = card == current
             Card(
-                onClick = { onUpdate(draft.copy(lifestyle = opt)) },
+                onClick = { onUpdate(draft.applyLifestyleCard(card)) },
                 colors = if (selected) CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                 ) else CardDefaults.cardColors(),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testTag("Wizard-Lifestyle-${opt.id}"),
+                    .testTag("Wizard-LifestyleCard-${card.name}"),
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text(opt.labelString(draft.alignment), style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "${card.emoji}  ${stringResource(card.titleRes)}",
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(
+                        stringResource(card.subtitleRes),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
                 }
             }
         }
     }
 }
+
+@get:androidx.annotation.StringRes
+private val LifestyleCard.titleRes: Int
+    get() = when (this) {
+        LifestyleCard.PetKeptByAi -> R.string.lifestyle_card_pet_kept_by_ai_title
+        LifestyleCard.PetKeptByPartner -> R.string.lifestyle_card_pet_kept_by_partner_title
+        LifestyleCard.PetSelfKept -> R.string.lifestyle_card_pet_self_kept_title
+        LifestyleCard.DomKeepingPets -> R.string.lifestyle_card_dom_keeping_pets_title
+        LifestyleCard.Switch -> R.string.lifestyle_card_switch_title
+        LifestyleCard.JustCalendar -> R.string.lifestyle_card_just_calendar_title
+    }
+
+@get:androidx.annotation.StringRes
+private val LifestyleCard.subtitleRes: Int
+    get() = when (this) {
+        LifestyleCard.PetKeptByAi -> R.string.lifestyle_card_pet_kept_by_ai_subtitle
+        LifestyleCard.PetKeptByPartner -> R.string.lifestyle_card_pet_kept_by_partner_subtitle
+        LifestyleCard.PetSelfKept -> R.string.lifestyle_card_pet_self_kept_subtitle
+        LifestyleCard.DomKeepingPets -> R.string.lifestyle_card_dom_keeping_pets_subtitle
+        LifestyleCard.Switch -> R.string.lifestyle_card_switch_subtitle
+        LifestyleCard.JustCalendar -> R.string.lifestyle_card_just_calendar_subtitle
+    }
 
 // --- Screen 5 Roles ------------------------------------------------------------
 
@@ -823,7 +1019,137 @@ private fun chooseFirstNowCardTitle(draft: WizardDraft, fallback: String): Strin
     return fallback
 }
 
+// --- Phase 2.1.I.4 Share-with-dom screen ---------------------------------------
+
+@Composable
+private fun ShareWithDomScreen(
+    draft: WizardDraft,
+    onGenerateLink: () -> Unit,
+    onSkip: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().testTag(TestTagWizardShareWithDom),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalAlignment = ComposeAlign.CenterHorizontally,
+    ) {
+        Text(
+            stringResource(R.string.wizard_share_with_dom_title),
+            style = MaterialTheme.typography.headlineSmall,
+        )
+        Text(
+            stringResource(R.string.wizard_share_with_dom_blurb),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Button(
+            onClick = onGenerateLink,
+            modifier = Modifier.testTag("Wizard-ShareWithDom-Generate"),
+        ) {
+            Text(stringResource(R.string.wizard_share_with_dom_generate))
+        }
+        TextButton(
+            onClick = onSkip,
+            modifier = Modifier.testTag("Wizard-ShareWithDom-Skip"),
+        ) {
+            Text(stringResource(R.string.wizard_share_with_dom_skip))
+        }
+    }
+}
+
 // --- Small helpers -------------------------------------------------------------
+
+/**
+ * Phase 2.1.H.1 — read-only identity-driven live preview that sits in the
+ * detail pane on Medium/Expanded widths. Mirrors the inline preview cards
+ * inside [IdentityScreen] + [DoneScreen] but stays visible across every
+ * wizard step so tablet users see their choices accumulate. No edits
+ * happen here — the step forms on the left own state.
+ */
+@Composable
+private fun WizardIdentityPreviewPane(draft: WizardDraft, screen: WizardScreen) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp)
+            .testTag(TestTagWizardPreviewPane),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(
+            stringResource(R.string.wizard_identity_preview_label),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        val honoraryPrefix = if (draft.honorific != Honorific.None) {
+            "${draft.honorific.labelString()}, "
+        } else ""
+        val praiseDefault = stringResource(R.string.wizard_identity_praise_default)
+        val praise = draft.praiseTerms.firstOrNull() ?: praiseDefault
+        val emoji = when (draft.emojiDensity) {
+            EmojiDensity.Off -> ""
+            EmojiDensity.Light -> " ✓"
+            EmojiDensity.Medium -> " ✓ ;3"
+            EmojiDensity.Heavy -> " ✓ ;3 ✨"
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            ),
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    stringResource(R.string.wizard_identity_preview_line, honoraryPrefix, praise, emoji),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+        }
+
+        // Summary of choices so far, regardless of which screen we're on.
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    "Species: ${draft.species.labelString()}",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Text(
+                    "Alignment: ${draft.alignment.labelString()}",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                if (draft.honorific != Honorific.None) {
+                    Text(
+                        "Honorific: ${draft.honorific.labelString()}",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                Text(
+                    "Tone: ${draft.tone.labelString()}",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                if (draft.praiseTerms.isNotEmpty()) {
+                    Text(
+                        "Praise: ${draft.praiseTerms.joinToString(", ")}",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                if (draft.roles.isNotEmpty()) {
+                    val roleLabels = draft.roles.map { it.labelString() }
+                    Text(
+                        "Roles: ${roleLabels.joinToString(", ")}",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+        }
+
+        Text(
+            "Step: ${screen.name}",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
 
 @Composable
 private fun WrappingChipRow(content: @Composable () -> Unit) {

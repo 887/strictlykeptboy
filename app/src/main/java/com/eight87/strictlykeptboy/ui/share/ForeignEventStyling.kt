@@ -20,7 +20,27 @@ const val TestTagForeignEventBg = "ForeignEvent-Bg"
  *
  * Narrow data interface (R.X.1): takes just the source label, not the
  * whole RepoConfig. Caller pulls the label from `RepoConfig.sourceRepoLabel`.
+ *
+ * **Round 2.1.B.5 — generalized.** Originally the chip rendered only on
+ * bands originating from a `readOnlyViaShare` repo (Phase O share-import
+ * path). Per D-2.1.e + B.5, the chip is now a property of any band whose
+ * `repo` differs from the current `defaultWriteRepoName`. The chip itself
+ * already takes just a label; [isForeignBand] is the predicate band
+ * renderers consult.
  */
+/**
+ * Round 2.1.B.5 — predicate used by Day/Week/Agenda band renderers to
+ * decide whether to overlay [ForeignEventSourceChip].
+ *
+ * `true` when the band's source [bandRepoId] is non-blank and differs
+ * from the current write-target repo. Independent of `readOnlyViaShare`.
+ */
+fun isForeignBand(bandRepoId: String, defaultWriteRepoId: String): Boolean =
+    bandRepoId.isNotBlank() &&
+        defaultWriteRepoId.isNotBlank() &&
+        bandRepoId != defaultWriteRepoId
+
+
 @Composable
 fun ForeignEventSourceChip(
     sourceLabel: String,

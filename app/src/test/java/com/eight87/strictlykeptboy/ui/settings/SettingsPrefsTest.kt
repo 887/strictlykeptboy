@@ -75,9 +75,12 @@ class SettingsPrefsTest {
         assertEquals("yes I want to leave", ModePrefs.FREE_CONFIRMATION_PHRASE)
     }
 
-    @Test fun `mode prefs custom persona round-trips`() {
+    @Test fun `mode prefs persona id round-trips through state`() {
+        // Phase 2.1.K.6 — DomPersonaStore is the single source of truth
+        // for persona definitions. ModePrefs only persists the active
+        // personaId; availability comes from DomPersonaStore.
         val p = ModePrefs.openForTest(prefs("mode_s2"))
-        p.addCustomPersona(DomPersona.Custom(id = "mine", label = "Mine", prompt = "hi"))
-        assertTrue(p.availablePersonas().any { it.id == "mine" })
+        p.setPersonaId("playful-tease")
+        assertEquals("playful-tease", p.state.value.personaId)
     }
 }

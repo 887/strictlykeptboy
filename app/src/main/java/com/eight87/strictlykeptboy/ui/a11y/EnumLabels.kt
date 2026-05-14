@@ -51,7 +51,6 @@ import com.eight87.strictlykeptboy.ui.wizard.ToneRegister
 val TopDestination.labelRes: Int
     get() = when (this) {
         TopDestination.Schedule -> R.string.dest_schedule
-        TopDestination.Tasks -> R.string.dest_tasks
         TopDestination.Together -> R.string.dest_together
         TopDestination.Repos -> R.string.dest_repos
         TopDestination.Wizard -> R.string.dest_wizard
@@ -112,11 +111,12 @@ val SpeciesChoice.labelRes: Int
         SpeciesChoice.Bat -> R.string.species_bat
         SpeciesChoice.Bunny -> R.string.species_bunny
         SpeciesChoice.Cat -> R.string.species_cat
+        SpeciesChoice.CatChan -> R.string.species_cat_chan
         SpeciesChoice.Fox -> R.string.species_fox
+        SpeciesChoice.FoxChan -> R.string.species_fox_chan
         SpeciesChoice.Lion -> R.string.species_lion
         SpeciesChoice.Tiger -> R.string.species_tiger
         SpeciesChoice.Wolf -> R.string.species_wolf
-        SpeciesChoice.ChooseYourOwn -> R.string.species_choose_your_own
     }
 
 @Composable

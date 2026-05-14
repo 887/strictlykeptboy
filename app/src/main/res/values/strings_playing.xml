@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Round 2.16.A — NowPlaying / MiniPlayer / queue strings, verbatim
+     port of tonearmboy's `playing_*` namespace. Keys identical so the
+     ported composables compile unchanged. Music-domain wording lightly
+     adapted to task-domain where it surfaces in placeholders / labels. -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:locale="en">
+  <string name="playing_top_bar_title">Now Playing</string>
+  <string name="playing_cd_back">Back</string>
+  <string name="playing_cd_save_queue_as_playlist">Save queue as playlist</string>
+  <string name="playing_cd_delete_current">Delete current task</string>
+  <string name="playing_delete_confirm_title">Delete this task?</string>
+  <string name="playing_delete_confirm_message">"%1$s" will be deleted. This can\'t be undone.</string>
+  <string name="playing_delete_confirm_hint">Type "y" or "yes" to confirm. Anything else cancels.</string>
+  <string name="playing_delete_confirm_button">Delete</string>
+  <string name="playing_delete_confirm_cancel">Cancel</string>
+  <string name="playing_no_track">No task</string>
+  <string name="playing_unknown">Unknown</string>
+  <string name="playing_mini_player_unknown_artist">Unknown step</string>
+  <string name="playing_connecting">Connecting…</string>
+  <string name="playing_empty_title">Nothing running</string>
+  <string name="playing_empty_message">Pick a task to start.</string>
+  <string name="playing_empty_back_button">Back</string>
+  <string name="playing_cd_stop">Stop</string>
+  <string name="playing_cd_shuffle_on">Shuffle on</string>
+  <string name="playing_cd_shuffle_off">Shuffle off</string>
+  <string name="playing_cd_skip_previous">Previous</string>
+  <string name="playing_cd_skip_next">Next</string>
+  <string name="playing_cd_play">Play</string>
+  <string name="playing_cd_pause">Pause</string>
+  <string name="playing_cd_custom_action">Custom action</string>
+  <string name="playing_cd_seek_back_10">Seek back 10 seconds</string>
+  <string name="playing_cd_seek_forward_10">Seek forward 10 seconds</string>
+  <string name="playing_cd_repeat_off">Repeat off</string>
+  <string name="playing_cd_repeat_one">Repeat one</string>
+  <string name="playing_cd_repeat_all">Repeat all</string>
+  <string name="playing_queue_header">Queue</string>
+  <string name="playing_queue_filter_placeholder">Filter queue</string>
+  <string name="playing_cd_queue_filter_clear">Clear filter</string>
+  <string name="playing_queue_empty">Nothing in the queue</string>
+  <string name="playing_queue_no_match">No tasks match your filter</string>
+  <string name="playing_cd_queue_remove">Remove from queue</string>
+  <string name="playing_cd_queue_now_playing">Now running</string>
+  <string name="playing_cd_queue_reorder">Reorder</string>
+  <string name="playing_queue_remove_dialog_title">Remove from queue?</string>
+  <string name="playing_queue_remove_dialog_text">Remove \'%1$s\' from the queue?</string>
+  <string name="playing_queue_remove_confirm">Remove</string>
+  <string name="playing_queue_remove_cancel">Cancel</string>
+</resources>

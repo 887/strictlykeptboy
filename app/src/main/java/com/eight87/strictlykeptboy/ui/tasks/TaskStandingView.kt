@@ -34,6 +34,7 @@ fun TaskStandingView(
     onOpen: (TaskItem) -> Unit,
     onPinToday: (TaskItem, Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    onStartTask: ((String) -> Unit)? = null,
 ) {
     val sorted = tasks.sortedForStanding()
     if (sorted.isEmpty()) {
@@ -55,6 +56,7 @@ fun TaskStandingView(
                 onToggleDone = { onToggleDone(task) },
                 onOpen = { onOpen(task) },
                 onPin = { onPinToday(task, !task.pinnedForToday) },
+                onStartTask = onStartTask,
             )
         }
     }
@@ -67,6 +69,7 @@ private fun StandingTaskRowWithMenu(
     onToggleDone: () -> Unit,
     onOpen: () -> Unit,
     onPin: () -> Unit,
+    onStartTask: ((String) -> Unit)? = null,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     androidx.compose.foundation.layout.Box(
@@ -82,6 +85,7 @@ private fun StandingTaskRowWithMenu(
             onToggleDone = onToggleDone,
             onClick = onOpen,
             onLongClick = { menuOpen = true },
+            onStartTask = onStartTask,
         )
         DropdownMenu(
             expanded = menuOpen,

@@ -24,6 +24,41 @@ import com.eight87.strictlykeptboy.R
 const val TestTagEmptyBat = "EmptyBat"
 const val TestTagEmptyMessage = "EmptyMessage"
 const val TestTagEmptyPlanTrip = "EmptyPlanTrip"
+const val TestTagEmptyCta = "EmptyCta"
+
+/**
+ * Round 2.2.C.8 — three-state empty schedule kind.
+ *
+ * - [NoRepos] — no repos configured (welcome state)
+ * - [NoActiveCalendars] — repos configured, every calendar is paused/inactive
+ * - [NoEvents] — calendars active, the current range happens to be empty
+ *
+ * Selected by the pure helper [selectEmptyKind] so the branch logic
+ * stays unit-testable without Compose runtime.
+ */
+enum class EmptyScheduleKind { NoRepos, NoActiveCalendars, NoEvents, AllReposHidden }
+
+/**
+ * Pure selector for the four-state empty branch.
+ *
+ * Round 2.5.D.3 — adds [AllReposHidden] when repos are configured but
+ * every single one has `showOnSchedule = false`.
+ *
+ * Inputs are caller-aggregated counts so we don't reach across
+ * `repoStore` / `calendarRegistry` / `CalendarVisibilityPrefs` directly
+ * — keeps this function trivially testable.
+ */
+fun selectEmptyKind(
+    repoCount: Int,
+    calendarCount: Int,
+    activeCalendarCount: Int,
+    showOnScheduleRepoCount: Int = repoCount,
+): EmptyScheduleKind = when {
+    repoCount <= 0 -> EmptyScheduleKind.NoRepos
+    showOnScheduleRepoCount <= 0 -> EmptyScheduleKind.AllReposHidden
+    calendarCount <= 0 || activeCalendarCount <= 0 -> EmptyScheduleKind.NoActiveCalendars
+    else -> EmptyScheduleKind.NoEvents
+}
 
 /**
  * Phase F.5 — empty state for the day view.
@@ -39,11 +74,28 @@ fun EmptyScheduleState(
     praiseTerm: String = "good boy",
     /** Phase CCC.10 / HV-G.3 — locked as the ONLY in-card promotion of the trip wizard. */
     onPlanTrip: (() -> Unit)? = null,
+    /**
+     * Round 2.2.C.8 — three-state empty branch. Defaults to [EmptyScheduleKind.NoEvents]
+     * (the legacy single-state behaviour). Hosts that have wired counts in
+     * pick via [selectEmptyKind].
+     */
+    kind: EmptyScheduleKind = EmptyScheduleKind.NoEvents,
+    /** Routes to `TopDestination.Repos` for (a). */
+    onOpenRepos: (() -> Unit)? = null,
+    /** Routes to Settings → Lists / Calendars master list for (b). */
+    onOpenCalendars: (() -> Unit)? = null,
+    /** Routes to the EventCreate sheet for (c) — "+ Add event". */
+    onAddEvent: (() -> Unit)? = null,
 ) {
-    val message = if (neutralOnly) {
-        stringResource(R.string.schedule_empty_neutral)
-    } else {
-        stringResource(R.string.schedule_empty_primary, praiseTerm)
+    val message = when (kind) {
+        EmptyScheduleKind.NoRepos -> stringResource(R.string.schedule_empty_no_repos)
+        EmptyScheduleKind.NoActiveCalendars -> stringResource(R.string.schedule_empty_no_active_cals)
+        EmptyScheduleKind.AllReposHidden -> stringResource(R.string.schedule_empty_all_repos_hidden)
+        EmptyScheduleKind.NoEvents -> if (neutralOnly) {
+            stringResource(R.string.schedule_empty_neutral)
+        } else {
+            stringResource(R.string.schedule_empty_primary, praiseTerm)
+        }
     }
 
     Column(
@@ -63,8 +115,31 @@ fun EmptyScheduleState(
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = 16.dp).testTag(TestTagEmptyMessage),
         )
+        Spacer(Modifier.height(12.dp))
+        when (kind) {
+            EmptyScheduleKind.NoRepos -> if (onOpenRepos != null) {
+                TextButton(onClick = onOpenRepos, modifier = Modifier.testTag(TestTagEmptyCta)) {
+                    Text(stringResource(R.string.schedule_empty_cta_open_repos))
+                }
+            }
+            EmptyScheduleKind.NoActiveCalendars -> if (onOpenCalendars != null) {
+                TextButton(onClick = onOpenCalendars, modifier = Modifier.testTag(TestTagEmptyCta)) {
+                    Text(stringResource(R.string.schedule_empty_cta_open_calendars))
+                }
+            }
+            EmptyScheduleKind.AllReposHidden -> if (onOpenRepos != null) {
+                TextButton(onClick = onOpenRepos, modifier = Modifier.testTag(TestTagEmptyCta)) {
+                    Text(stringResource(R.string.schedule_empty_cta_open_repos))
+                }
+            }
+            EmptyScheduleKind.NoEvents -> if (onAddEvent != null) {
+                TextButton(onClick = onAddEvent, modifier = Modifier.testTag(TestTagEmptyCta)) {
+                    Text(stringResource(R.string.schedule_empty_cta_add_event))
+                }
+            }
+        }
         if (onPlanTrip != null) {
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(8.dp))
             TextButton(
                 onClick = onPlanTrip,
                 modifier = Modifier.testTag(TestTagEmptyPlanTrip),

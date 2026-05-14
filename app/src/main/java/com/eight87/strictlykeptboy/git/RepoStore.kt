@@ -123,12 +123,73 @@ class RepoStore internal constructor(
         update(existing.copy(remotes = updatedRemotes))
     }
 
+    /**
+     * Round 2.5.A.4 — toggle the per-repo "show on schedule" flag.
+     */
+    suspend fun setShowOnSchedule(repoId: String, value: Boolean) {
+        val existing = get(repoId) ?: error("repo $repoId not in store")
+        if (existing.showOnSchedule == value) return
+        update(existing.copy(showOnSchedule = value))
+    }
+
+    /**
+     * Round 2.5.A.4 — toggle the per-repo "draw tasks from" flag.
+     */
+    suspend fun setDrawTasksFrom(repoId: String, value: Boolean) {
+        val existing = get(repoId) ?: error("repo $repoId not in store")
+        if (existing.drawTasksFrom == value) return
+        update(existing.copy(drawTasksFrom = value))
+    }
+
     suspend fun setPrimary(repoId: String, name: RemoteName) {
         val existing = get(repoId) ?: error("repo $repoId not in store")
         require(existing.remotes.any { it.name == name }) {
             "remote $name is not configured on repo $repoId"
         }
         update(existing.copy(primaryRemote = name))
+    }
+
+    /**
+     * Round 2.5.A.1 — one-time migration from the legacy
+     * `ReposViewState.unifiedView` boolean to per-repo
+     * [RepoConfig.showOnSchedule] + [RepoConfig.drawTasksFrom] flags.
+     *
+     * Migration policy:
+     * - `unified = true`  → every repo: `showOnSchedule = true`,
+     *   `drawTasksFrom = true` for the single repo; if there are
+     *   multiple, only the active repo's `drawTasksFrom = true`.
+     * - `unified = false` → only the active repo (or the first one if
+     *   no active is recorded) gets `showOnSchedule = true` /
+     *   `drawTasksFrom = true`; all others get both `false`.
+     *
+     * Idempotent: writes a `migrated_v25` marker into the repos
+     * SharedPreferences and skips on subsequent loads. Safe to call
+     * before any repos exist (no-op).
+     */
+    internal suspend fun migrateUnifiedViewV25(
+        unifiedView: Boolean,
+        activeRepoId: String?,
+    ) = mutex.withLock {
+        if (prefs.getBoolean(MIGRATION_MARKER_V25, false)) return@withLock
+        val current = _state.value
+        val activeId = activeRepoId ?: current.firstOrNull()?.repoId
+        val migrated = current.map { cfg ->
+            val isActive = cfg.repoId == activeId
+            val show = if (unifiedView) true else isActive
+            val draw = when {
+                unifiedView && current.size == 1 -> true
+                else -> isActive
+            }
+            cfg.copy(showOnSchedule = show, drawTasksFrom = draw)
+        }
+        prefs.edit().run {
+            for (cfg in migrated) {
+                putString(keyFor(cfg.repoId), json.encodeToString(cfg))
+            }
+            putBoolean(MIGRATION_MARKER_V25, true)
+            apply()
+        }
+        _state.value = migrated
     }
 
     private fun loadAll(): List<RepoConfig> {
@@ -145,6 +206,8 @@ class RepoStore internal constructor(
     companion object {
         private const val INDEX_KEY = "index"
         private const val PREFS_FILE = "repos_v1"
+        /** Round 2.5.A.1 — sticky marker that the unified-view → per-repo migration ran. */
+        internal const val MIGRATION_MARKER_V25 = "migrated_v25_overlay_flags"
 
         private val DefaultJson = Json {
             ignoreUnknownKeys = true

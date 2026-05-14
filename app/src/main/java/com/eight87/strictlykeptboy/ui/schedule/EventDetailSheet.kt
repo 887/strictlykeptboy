@@ -28,10 +28,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import com.eight87.strictlykeptboy.notif.NotificationPrefs
+import com.eight87.strictlykeptboy.resolver.InstanceSource
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
@@ -56,6 +63,15 @@ const val TestTagEventDetailAttachment = "EventDetailAttachment"
 const val TestTagEventDetailAuthor = "EventDetailAuthor"
 const val TestTagEventDetailCompletion = "EventDetailCompletion"
 const val TestTagEventDetailEdit = "EventDetailEdit"
+/** Phase 2.1.F.2 — per-event mute toggle. */
+const val TestTagEventDetailMute = "EventDetailMute"
+
+// 2.1.C.7 — source-section test tags
+const val TestTagEventDetailSource = "EventDetailSource"
+const val TestTagEventDetailSourceRepo = "EventDetailSourceRepo"
+const val TestTagEventDetailSourceKind = "EventDetailSourceKind"
+const val TestTagEventDetailSourceAuthor = "EventDetailSourceAuthor"
+const val TestTagEventDetailSupersededNote = "EventDetailSupersededNote"
 
 /**
  * Phase G.7 — modal bottom sheet that surfaces an event's full content.
@@ -72,6 +88,7 @@ fun EventDetailSheet(
     onEdit: () -> Unit = {},
     attachments: List<AttachmentRef> = emptyList(),
     calendarName: String? = null,
+    notificationPrefs: NotificationPrefs? = null,
     modifier: Modifier = Modifier,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -86,6 +103,7 @@ fun EventDetailSheet(
             onEdit = onEdit,
             attachments = attachments,
             calendarName = calendarName,
+            notificationPrefs = notificationPrefs,
         )
     }
 }
@@ -101,6 +119,9 @@ fun EventDetailContent(
     onEdit: () -> Unit = {},
     attachments: List<AttachmentRef> = emptyList(),
     calendarName: String? = null,
+    repoName: String? = null,
+    supersededByName: String? = null,
+    notificationPrefs: NotificationPrefs? = null,
     modifier: Modifier = Modifier,
 ) {
     val tz = band.instance.effectiveStart.zone
@@ -129,18 +150,57 @@ fun EventDetailContent(
                 modifier = Modifier.testTag(TestTagEventDetailTime),
             )
             Spacer(modifier = Modifier.height(8.dp))
-            // Calendar source
-            calendarName?.let {
-                AssistChip(
-                    onClick = {},
-                    label = { Text(it) },
-                    modifier = Modifier.testTag(TestTagEventDetailCalendar),
+            // Round 2.1.C.7 — source section: repo · calendar · kind · author
+            // appears above the calendar chip so the user can tell at a glance
+            // which repo the event lives in, especially with cross-repo views.
+            Column(modifier = Modifier.testTag(TestTagEventDetailSource)) {
+                if (!repoName.isNullOrBlank()) {
+                    Text(
+                        text = "Repo: $repoName",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testTag(TestTagEventDetailSourceRepo),
+                    )
+                }
+                Text(
+                    text = "Kind: " + when (band.kind) {
+                        com.eight87.strictlykeptboy.resolver.CalendarKind.Timebox -> "Timebox"
+                        com.eight87.strictlykeptboy.resolver.CalendarKind.Regular -> "Regular"
+                    },
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testTag(TestTagEventDetailSourceKind),
                 )
-            } ?: AssistChip(
+                band.instance.author?.let { author ->
+                    Text(
+                        text = "Author: ${author.id}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testTag(TestTagEventDetailSourceAuthor),
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            // Calendar source chip — Round 2.1.C.7 falls back to the calendar
+            // ref id only when the caller did not resolve a CalendarMeta.displayName.
+            val chipLabel = calendarName?.takeIf { it.isNotBlank() } ?: band.instance.calendar.id
+            AssistChip(
                 onClick = {},
-                label = { Text(band.instance.calendar.id) },
+                label = { Text(chipLabel) },
                 modifier = Modifier.testTag(TestTagEventDetailCalendar),
             )
+            // Round 2.1.C.4 — pause-by-supersedence explanation.
+            if (band.supersededByCalendar != null) {
+                Spacer(modifier = Modifier.height(6.dp))
+                val byLabel = supersededByName?.takeIf { it.isNotBlank() }
+                    ?: band.supersededByCalendar.id
+                Text(
+                    text = "Paused by $byLabel",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testTag(TestTagEventDetailSupersededNote),
+                )
+            }
             CompletionBadge(state = band.completionState)
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -201,6 +261,40 @@ fun EventDetailContent(
                     )
                 }
                 Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            // Phase 2.1.F.2 — per-event mute toggle. Surfaces in both the
+            // compact ModalBottomSheet caller and the tablet detail pane
+            // since both flow through this composable. Backed by
+            // `event.<repoId>.<eventId>.muted` in NotificationPrefs.
+            if (notificationPrefs != null) {
+                val eventId = when (val s = band.instance.source) {
+                    is InstanceSource.OneOff -> s.eventId.id
+                    is InstanceSource.RuleInstance -> s.ruleId.id
+                }
+                val repoId = band.instance.repo.id
+                var muted by remember(repoId, eventId) {
+                    mutableStateOf(notificationPrefs.isEventMuted(repoId, eventId))
+                }
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.event_detail_mute_reminders),
+                        modifier = Modifier.padding(end = 8.dp),
+                    )
+                    Spacer(modifier = Modifier.size(0.dp).weight(1f))
+                    Switch(
+                        checked = muted,
+                        onCheckedChange = {
+                            muted = it
+                            notificationPrefs.setEventMuted(repoId, eventId, it)
+                        },
+                        modifier = Modifier.testTag(TestTagEventDetailMute),
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
             }
 
             FilledTonalButton(

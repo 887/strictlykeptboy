@@ -4,6 +4,13 @@
     <!-- Schedule rail -->
     <string name="schedule_empty_neutral">Nothing scheduled today.</string>
     <string name="schedule_empty_primary">nothing scheduled — %1$s can rest ;3</string>
+    <!-- Round 2.2.C.8 — three-state empty schedule branches. -->
+    <string name="schedule_empty_no_repos">Welcome — set up your first calendar</string>
+    <string name="schedule_empty_all_repos_hidden">All repos hidden from schedule</string>
+    <string name="schedule_empty_no_active_cals">All your calendars are paused</string>
+    <string name="schedule_empty_cta_open_repos">Open Repos</string>
+    <string name="schedule_empty_cta_open_calendars">Open Calendars</string>
+    <string name="schedule_empty_cta_add_event">+ Add event</string>
     <string name="cd_bat_mascot">Bat mascot</string>
     <string name="cd_identity_avatar">Identity</string>
     <string name="cd_repo_switcher_active">Switch repo, active: %1$s</string>
@@ -17,6 +24,7 @@
     <!-- Event detail -->
     <string name="event_detail_attachments">Attachments</string>
     <string name="event_detail_edit">Edit</string>
+    <string name="event_detail_mute_reminders">Mute reminders for this event</string>
     <string name="event_detail_author">Author: %1$s</string>
     <string name="event_detail_state_scheduled">Scheduled</string>
     <string name="event_detail_state_in_progress">In progress</string>
@@ -73,9 +81,13 @@
          to render as "Identity" which read as a duplicate in the list. -->
     <string name="settings_category_identity">Authors</string>
     <string name="settings_search_placeholder">Search settings</string>
-    <string name="settings_category_mode">Mode</string>
+    <!-- Phase 2.2.B.4 — Mode category becomes "Lifestyle" (six-radio
+         aligned with the wizard's six lifestyle cards). Test tags +
+         sealed-class case SettingsCategory.Mode stay stable. -->
+    <string name="settings_category_mode">Lifestyle</string>
     <string name="settings_category_notifications">Notifications</string>
-    <string name="settings_category_repos">Repos</string>
+    <!-- 2.1.E.3 — user-facing copy renamed to "Accounts"; testTag stays "Repos". -->
+    <string name="settings_category_repos">Accounts</string>
     <string name="settings_category_about">About</string>
     <string name="settings_category_placeholder">This section ships in a later phase.</string>
     <string name="settings_about_app_name">strictlykeptboy</string>
@@ -100,7 +112,7 @@
     <string name="settings_section_content">Content</string>
     <string name="settings_section_lifestyle">Lifestyle</string>
     <string name="settings_section_app">App</string>
-    <string name="settings_subtitle_repos">Manage repos, identities and import/export.</string>
+    <string name="settings_subtitle_repos">Manage accounts, identities and import/export.</string>
     <string name="settings_subtitle_authors">Per-repo authors used for commits.</string>
     <string name="settings_subtitle_sync">Auto-sync, conflict resolution, schedule.</string>
     <string name="settings_subtitle_notifications">Reminders, do-not-disturb, channels.</string>
@@ -114,8 +126,8 @@
     <string name="settings_subtitle_mode">Free vs strictly-kept.</string>
 
     <!-- S.1 Repos navigation tile -->
-    <string name="settings_repos_intro">Manage repos, identities and import/export. Tap a repo to open its settings.</string>
-    <string name="settings_repos_open_full">Open repo list</string>
+    <string name="settings_repos_intro">Manage accounts, identities and import/export. Tap an account to open its settings.</string>
+    <string name="settings_repos_open_full">Open account list</string>
 
     <!-- S.2 Identities (per-repo, placeholder until signed commits) -->
     <string name="settings_identities_intro">Per-repo identity comes from identity.toml in each repo.</string>
@@ -150,6 +162,15 @@
     <string name="settings_notif_lead_flight">Flight</string>
     <string name="settings_notif_lead_household">Household</string>
     <string name="settings_notif_lead_general">General</string>
+    <!-- Phase 2.1.F.3 / F.4 — per-calendar mute UI -->
+    <string name="settings_notif_calendars_section">Calendars</string>
+    <string name="settings_notif_mute_until_active">Muted (%1$d h left)</string>
+    <string name="settings_notif_mute_until_inactive">Mute for 24 h</string>
+    <!-- Phase 2.1.F.6 — briefings firing path -->
+    <string name="notif_briefing_morning_title">Today\'s schedule</string>
+    <string name="notif_briefing_evening_title">Tomorrow\'s schedule</string>
+    <string name="notif_briefing_empty">Nothing scheduled.</string>
+    <string name="notif_event_collapsed_count">%1$d reminders</string>
 
     <!-- S.5 / S.6 Calendars + Todolists -->
     <string name="settings_lists_visibility_title">Visibility</string>
@@ -182,7 +203,7 @@
     <string name="settings_identity_pronouns_extra">Extra pronoun sets (comma separated)</string>
     <string name="settings_identity_honorific">Honorific</string>
     <string name="settings_identity_tone">Tone register</string>
-    <string name="settings_identity_emoji">Emoji density</string>
+    <string name="settings_identity_emoji">Praise emoji density</string>
     <string name="settings_identity_tone_soft">Soft</string>
     <string name="settings_identity_tone_neutral">Neutral</string>
     <string name="settings_identity_tone_formal">Formal</string>
@@ -250,8 +271,21 @@
     <!-- S.11 Mode -->
     <string name="settings_mode_pill_free">Mode: free</string>
     <string name="settings_mode_pill_strictly_kept">Mode: strictly-kept</string>
+    <string name="settings_mode_pill_self_keep">Mode: self-keep</string>
     <string name="settings_mode_switch_to_free">Switch to free</string>
     <string name="settings_mode_switch_to_strictly_kept">Switch to strictly-kept</string>
+    <!-- 2.1.M.3 — Pet Mode framing (sealed-class names unchanged) -->
+    <string name="settings_mode_kept_by_section">Pet Mode</string>
+    <string name="settings_mode_kept_by_ai">I keep myself — AI keeps you on track</string>
+    <string name="settings_mode_kept_by_human">Someone keeps me — partner with share link</string>
+    <string name="settings_mode_kept_by_self">I keep myself (no AI) — no dom</string>
+    <string name="settings_mode_kept_by_free">Not a pet right now — plain calendar</string>
+    <string name="settings_mode_edit_personas">Edit personas</string>
+    <string name="settings_mode_cooling_off_countdown">Flips in %1$dh %2$02dm</string>
+    <string name="settings_mode_cooling_off_ready">24h elapsed — confirmation available.</string>
+    <string name="settings_mode_share_title">Generate share link</string>
+    <string name="settings_mode_share_body">Open the Share screen to generate a write-back link for your human dom.</string>
+    <string name="settings_mode_share_ok">Got it</string>
     <string name="settings_mode_persona_section">Dom persona</string>
     <string name="settings_mode_cadence_section">Dom cadence</string>
     <string name="settings_mode_cadence_realtime">Realtime</string>
@@ -265,11 +299,10 @@
 
     <!-- Repos pane -->
     <string name="repos_title">Repositories</string>
-    <string name="repos_unified_toggle_title">Show all repos in unified view</string>
-    <string name="repos_unified_on">All configured repos render together</string>
-    <string name="repos_unified_off">Only the active repo\'s data renders</string>
     <string name="repos_empty_title">No repositories yet</string>
     <string name="repos_empty_hint">Tap + Add repo below to create your first.</string>
+    <string name="repos_select_hint_title">Select a repo</string>
+    <string name="repos_select_hint_body">Pick a repo from the list to view its remotes, identity, and mode.</string>
 
     <!-- Repo switcher dropdown -->
     <string name="repo_switcher_add">Add repo</string>
@@ -319,6 +352,30 @@
     <string name="repo_settings_last_synced_never">never</string>
     <string name="repo_settings_set_primary">Set primary</string>
     <string name="repo_settings_remove">Remove</string>
+
+    <!-- Round 2.5.B — per-repo settings new sections -->
+    <string name="repo_settings_section_calendars">Calendars</string>
+    <string name="repo_settings_section_mode">Mode</string>
+    <string name="repo_settings_section_sticker_pack">Sticker pack</string>
+    <string name="repo_settings_section_per_repo_identity">Repo identity (identity.toml)</string>
+    <string name="repo_settings_calendars_empty">No calendars yet in this repo.</string>
+    <string name="repo_settings_calendars_priority">P=%1$d</string>
+    <string name="repo_settings_calendars_add">+ Add calendar</string>
+    <string name="repo_settings_calendars_new_title">New calendar</string>
+    <string name="repo_settings_calendars_new_name">Name</string>
+    <string name="repo_settings_calendars_new_emoji">Emoji (optional)</string>
+    <string name="repo_settings_calendars_new_kind_regular">Regular</string>
+    <string name="repo_settings_calendars_new_kind_timebox">Timebox</string>
+    <string name="repo_settings_calendars_new_confirm">Create</string>
+    <string name="repo_settings_sticker_pack_placeholder">Sticker pack chooser ships in Round 2.5.C.</string>
+    <string name="repo_settings_per_repo_identity_praise">Praise term</string>
+    <string name="repo_settings_per_repo_identity_pronouns">Pronouns (subject/object)</string>
+    <string name="repo_settings_per_repo_identity_honorific">Honorific for dom</string>
+    <string name="repo_settings_per_repo_mode_label">Repo mode</string>
+    <string name="repo_settings_per_repo_mode_free">Free</string>
+    <string name="repo_settings_per_repo_mode_self_keep">Self-keep</string>
+    <string name="repo_settings_per_repo_mode_strictly_kept">Strictly kept</string>
+    <string name="cd_repo_settings_calendar_chevron">Open calendar settings</string>
 
     <!-- Identities screen -->
     <string name="identities_title">Identities</string>
@@ -388,19 +445,21 @@
     <string name="wizard_cancel">Cancel</string>
     <string name="wizard_step_of">Step %1$d of %2$d</string>
     <string name="cd_wizard_mascot">bat mascot — %1$s</string>
-    <string name="wizard_welcome_title">let\'s design your lifestyle</string>
-    <string name="wizard_welcome_blurb">by the end you\'ll have a living calendar, not an empty app.</string>
+    <string name="wizard_welcome_title">let\'s set up your repo</string>
+    <string name="wizard_welcome_blurb">A short walkthrough — by the end you\'ll have a working calendar repo, not an empty app. You\'ll pick:\n\n• a sticker pack (how the app illustrates you)\n• how the app addresses you (praise terms, pronouns, tone)\n• plain calendar vs. kink framing\n• your initial role + a few starter routines\n• an optional Git remote (or stay phone-only)\n\nNothing here is final — every choice is editable later in Settings.</string>
     <string name="wizard_welcome_cta">let\'s go</string>
-    <string name="wizard_welcome_footnote">you can change any of this later in Settings → Add more to my lifestyle.</string>
-    <string name="wizard_species_prompt">Pick your avatar species</string>
+    <string name="wizard_welcome_footnote">~1 minute. You can back out any time.</string>
+    <string name="wizard_species_prompt">Pick your sticker pack</string>
+    <string name="wizard_species_subtitle">Your sticker pack is how the app illustrates you. Bat is the default. You can clone the scaffolded repo and customize the artwork later.</string>
     <string name="wizard_species_custom_pack_url">Custom sticker-pack URL (GitHub)</string>
     <string name="wizard_alignment_prompt">How would you like the rules to work?</string>
     <string name="wizard_identity_prompt">How should the app speak to you?</string>
-    <string name="wizard_identity_praise_label">Praise terms (pick any — alternated):</string>
+    <string name="wizard_identity_blurb">Pick how notifications, briefings, and reminders address you. The Preview at the bottom updates live. Everything here is editable later in Settings → Identity.</string>
+    <string name="wizard_identity_praise_label">Praise terms — pick one or more, the app rotates between them. Add your own with “Add custom term”.</string>
     <string name="wizard_identity_pronouns_label">Pronouns:</string>
     <string name="wizard_identity_honorific_label">Honorific:</string>
     <string name="wizard_identity_tone_label">Tone register:</string>
-    <string name="wizard_identity_emoji_label">Emoji density:</string>
+    <string name="wizard_identity_emoji_label">Praise emoji density (stickers are configured in Repo settings):</string>
     <string name="wizard_identity_preview_label">Preview</string>
     <string name="wizard_identity_preview_line">%1$syou did it — %2$s.%3$s</string>
     <string name="wizard_identity_praise_default">good boy</string>
@@ -435,6 +494,59 @@
     <string name="wizard_done_praise_line">— %1$s</string>
     <string name="wizard_done_open">Open my calendar</string>
     <string name="wizard_done_fallback_now_card_title">brush teeth</string>
+
+    <!-- Phase 2.2.B — collapsed Lifestyle screen (six-card metaphor). Replaces
+         the old Alignment + Lifestyle + Mode triple. -->
+    <string name="wizard_lifestyle_card_prompt">How do you live?</string>
+    <string name="wizard_lifestyle_card_blurb">Pick one. You can change this any time in Settings → Lifestyle.</string>
+    <string name="lifestyle_card_pet_kept_by_ai_title">Pet, kept by an AI dom</string>
+    <string name="lifestyle_card_pet_kept_by_ai_subtitle">Solo pet — your AI dom keeps you on track.</string>
+    <string name="lifestyle_card_pet_kept_by_partner_title">Pet, kept by my partner</string>
+    <string name="lifestyle_card_pet_kept_by_partner_subtitle">A human dom keeps you — they get a share link.</string>
+    <string name="lifestyle_card_pet_self_kept_title">Pet, keeping myself</string>
+    <string name="lifestyle_card_pet_self_kept_subtitle">Self-discipline — no AI, no human dom.</string>
+    <string name="lifestyle_card_dom_keeping_pets_title">I keep pet(s)</string>
+    <string name="lifestyle_card_dom_keeping_pets_subtitle">You\'re the dom — others share their calendars with you.</string>
+    <string name="lifestyle_card_switch_title">We switch</string>
+    <string name="lifestyle_card_switch_subtitle">Sometimes dom, sometimes sub — depending.</string>
+    <string name="lifestyle_card_just_calendar_title">Just a calendar app</string>
+    <string name="lifestyle_card_just_calendar_subtitle">No kink framing — plain calendar + tasks.</string>
+
+    <!-- Settings → Lifestyle six-radio (Phase 2.2.B.4) shares wording with cards -->
+    <string name="settings_lifestyle_radio_section">How do you live?</string>
+
+    <!-- Round 2.12 — FramingChoice screen (plain vs. kink binary) gates
+         the Lifestyle picker. Picks the seed framing during initial
+         setup; every label (role, praise term, honorific, persona)
+         remains customizable later in Settings → Identity. -->
+    <string name="wizard_framing_prompt">How should the app talk to you?</string>
+    <string name="wizard_framing_blurb">Pick the starting framing. You can customize every label later in Settings → Identity.</string>
+    <string name="wizard_framing_plain_title">Just a calendar app</string>
+    <string name="wizard_framing_plain_subtitle">No kink framing — plain calendar + tasks.</string>
+    <string name="wizard_framing_kink_title">Kink framing</string>
+    <string name="wizard_framing_kink_subtitle">Sub / pet / bottom — kept by a dom / owner. Or you keep someone. Pick the shape on the next step.</string>
+    <string name="wizard_lifestyle_language_explainer">In strictlykeptboy we default to pet wording — but sub / pet / bottom all describe the same role here, and dom / owner likewise. A dom can keep pets, subs, or others freely. You\'ll set the praise terms (good boy / good girl / good pet…), pronouns, and honorific on the next screens — and every label stays editable in Settings → Identity.</string>
+
+    <!-- Phase 2.1.I.3 / 2.1.M — Pet Mode wizard screen (now unused at wizard
+         surface; strings kept for Settings → Mode pill copy) -->
+    <string name="wizard_mode_prompt">Pet Mode</string>
+    <string name="wizard_mode_blurb">How do you want to be kept? You can change this any time in Settings → Pet Mode.</string>
+    <string name="wizard_mode_free_title">Not a pet right now</string>
+    <string name="wizard_mode_free_blurb">Plain calendar app — no kept-mode.</string>
+    <string name="wizard_mode_kept_by_ai_title">I keep myself</string>
+    <string name="wizard_mode_kept_by_ai_blurb">AI keeps you on track — your dom is a persona you pick.</string>
+    <string name="wizard_mode_kept_by_human_title">Someone keeps me</string>
+    <string name="wizard_mode_kept_by_human_blurb">Your partner keeps you — they\'ll get a share link.</string>
+    <string name="wizard_mode_self_keep_title">I keep myself (no AI)</string>
+    <string name="wizard_mode_self_keep_blurb">You hold yourself accountable, no AI dom.</string>
+    <!-- 2.1.M.4 — partner checkbox shown on submissive/switch alignments -->
+    <string name="wizard_mode_partner_checkbox">I have a partner who keeps me</string>
+
+    <!-- Phase 2.1.I.4 — Share-with-dom wizard screen -->
+    <string name="wizard_share_with_dom_title">Share with your dom</string>
+    <string name="wizard_share_with_dom_blurb">Generate a link your dom can open to clone your calendar and write back to it.</string>
+    <string name="wizard_share_with_dom_generate">Generate share link</string>
+    <string name="wizard_share_with_dom_skip">Skip for now</string>
 
     <!-- Phase M — notification channels -->
     <string name="notif_channel_events_name">Events</string>
@@ -555,6 +667,8 @@
     <string name="import_export_title">Import / export</string>
     <string name="import_export_subtitle">iCal (.ics) — per-repo import + export. Pick a repo to import into, or export its calendars to .ics.</string>
     <string name="import_export_empty">No repos yet. Add a repo from the Repos rail first.</string>
+    <string name="import_export_detail_empty_title">Pick an import file</string>
+    <string name="import_export_detail_empty_body">Choose an .ics file on the left to preview the events that will be imported here.</string>
     <string name="import_action">Import .ics</string>
     <string name="export_action">Export .ics</string>
     <string name="import_preview_title">Import preview</string>
@@ -633,11 +747,14 @@
     <string name="species_bat">Bat</string>
     <string name="species_bunny">Bunny</string>
     <string name="species_cat">Cat</string>
+    <string name="species_cat_chan">Cat-chan (anime)</string>
     <string name="species_fox">Fox</string>
+    <string name="species_fox_chan">Fox-chan (anime)</string>
     <string name="species_lion">Lion</string>
     <string name="species_tiger">Tiger</string>
     <string name="species_wolf">Wolf</string>
-    <string name="species_choose_your_own">Choose your own</string>
+    <string name="species_choose_your_own">Customize later</string>
+    <string name="wizard_species_customize_later_info">Built-in packs render straight from the app — not copied into your repo by default. To customize, pick a species, then in Repo Settings → Sticker pack turn on “Import stickers into repo”.</string>
 
     <!-- Wizard Alignment labels + taglines. -->
     <string name="alignment_dominant">Dominant</string>
@@ -872,4 +989,92 @@
     <string name="widget_countdown_tomorrow">tomorrow</string>
     <string name="widget_countdown_today">today</string>
     <string name="widget_countdown_past_due">%1$d days ago</string>
+
+    <!-- Phase 2.1.E — Settings restructure -->
+    <!-- 2.1.E.4 — Neutral mode relocates to Lifestyle; Appearance keeps a deeplink chip. -->
+    <string name="settings_appearance_neutral_moved_blurb">Neutral mode now lives in Lifestyle — it is a content-mode switch, not a visual one.</string>
+    <string name="settings_appearance_neutral_open_lifestyle">Open Lifestyle → Neutral mode</string>
+    <string name="settings_lifestyle_neutral_section">Neutral mode</string>
+    <string name="settings_lifestyle_neutral_blurb">Hide kink role + templates (K-3). Per-event private flag is independent.</string>
+
+    <!-- 2.1.E.5 — Identity sub-sections after Identities retirement. -->
+    <string name="settings_identity_section_persona">My persona</string>
+    <string name="settings_identity_section_signing">Signing and authors</string>
+    <string name="settings_identity_signing_blurb">GPG and SSH key import for signed commits lands in Phase GG. Per-repo author overrides live in each account.</string>
+    <string name="settings_identity_signing_gpg_disabled">Import GPG key (Phase GG)</string>
+    <string name="settings_identity_signing_ssh_disabled">Import SSH key (Phase GG)</string>
+
+    <!-- 2.1.E.10 — Diagnostic banner replacing silent CategoryPlaceholder. -->
+    <string name="settings_diagnostic_missing_pref_title">%1$s is missing its preferences handle</string>
+    <string name="settings_diagnostic_missing_pref_body">The %1$s category requires the %2$s preference to be wired into SettingsAccess. Check logcat tag SettingsAccess.</string>
+
+    <!-- 2.1.E.12 — CalDAV stub category. -->
+    <string name="settings_category_caldav">CalDAV</string>
+    <string name="settings_subtitle_caldav">Two-way calendar sync (Phase Y).</string>
+    <string name="settings_caldav_intro">Two-way CalDAV mirror is on the roadmap. Phase Y closes this out — until then, this surface is a placeholder.</string>
+    <string name="settings_caldav_coming">Coming with Phase Y close-out</string>
+
+    <!-- 2.2.D.2 — Repos as in-pane list. -->
+    <string name="settings_repos_inline_header">Your accounts</string>
+    <string name="settings_repos_inline_empty">No accounts yet. Run the lifestyle wizard from the bat avatar to add one.</string>
+    <string name="settings_repos_import_export_header">Import / export</string>
+    <string name="settings_repos_row_open_a11y">Open account settings</string>
+
+    <!-- 2.2.D.6 — Access category. -->
+    <string name="settings_category_access">Access</string>
+    <string name="settings_subtitle_access">Who has access to which of your accounts.</string>
+    <string name="settings_access_empty">No one has access to your repos yet. Tap a repo → Share to invite.</string>
+    <string name="settings_access_mode_ro">read-only</string>
+    <string name="settings_access_mode_rw">read-write</string>
+    <string name="settings_access_single_use">single-use</string>
+    <string name="settings_access_expires_at">expires %1$s</string>
+    <string name="settings_access_expires_never">no expiry</string>
+
+    <!-- 2.2.D.7 — Auto & Tablet category. -->
+    <string name="settings_category_autotablet">Auto &amp; Tablet</string>
+    <string name="settings_subtitle_autotablet">Android Auto and tablet master-detail behaviour.</string>
+    <string name="settings_autotablet_show_on_auto">Show this repo on Android Auto</string>
+    <string name="settings_autotablet_max_events">Maximum events on Auto Today list: %1$d</string>
+    <string name="settings_autotablet_master_detail">Use master-detail on tablet</string>
+    <string name="settings_autotablet_master_detail_auto">Auto</string>
+    <string name="settings_autotablet_master_detail_on">On</string>
+    <string name="settings_autotablet_master_detail_off">Off</string>
+    <string name="settings_autotablet_open_detail_default">Open detail by default on tablet</string>
+    <string name="settings_autotablet_no_repos">No repos configured yet. Per-repo Auto toggles appear here once you add one.</string>
+
+    <!-- 2.2.D.8 — Defaults-for-new-events. -->
+    <string name="settings_notif_defaults_section">Defaults for new events</string>
+    <string name="settings_notif_defaults_blurb">Reminder offsets and notification channel applied to events you create that don\'t specify their own.</string>
+    <string name="settings_notif_defaults_lead_chips">Default reminder offsets</string>
+    <string name="settings_notif_defaults_channel">Default notification channel</string>
+    <string name="settings_notif_defaults_chip_custom">+ custom</string>
+    <string name="settings_notif_defaults_custom_dialog_title">Custom reminder offset</string>
+    <string name="settings_notif_defaults_custom_amount">Amount</string>
+    <string name="settings_notif_defaults_custom_unit_minutes">minutes</string>
+    <string name="settings_notif_defaults_custom_unit_hours">hours</string>
+    <string name="settings_notif_defaults_custom_unit_days">days</string>
+    <string name="settings_notif_defaults_custom_unit_weeks">weeks</string>
+    <string name="settings_notif_defaults_custom_add">Add</string>
+    <string name="settings_notif_defaults_custom_cancel">Cancel</string>
+
+    <!-- 2.2.D.13 — Trip-summary card. -->
+    <string name="settings_lifestyle_trip_upcoming">Upcoming trip</string>
+    <string name="settings_lifestyle_trip_last">Last trip</string>
+    <string name="settings_lifestyle_trip_none">No trips yet — plan one below.</string>
+    <string name="settings_lifestyle_trip_in_days">in %1$d day(s)</string>
+    <string name="settings_lifestyle_trip_in_today">today</string>
+
+    <!-- Round 2.7.B/D — backup location surfaces. -->
+    <string name="settings_category_backup">Backup location</string>
+    <string name="settings_subtitle_backup">External folder mirror so your repos survive uninstall.</string>
+    <string name="settings_backup_none_subtitle">No backup folder set</string>
+    <string name="settings_backup_pick_button">Pick a folder</string>
+    <string name="settings_backup_change_button">Change folder</string>
+    <string name="settings_backup_remove_button">Remove backup</string>
+    <string name="settings_backup_blurb">Pick a folder on your phone\'s internal storage. Each repo will be mirrored into a bare Git folder there so a fresh install can recover everything.</string>
+    <string name="settings_backup_current_label">Backup folder: %1$s</string>
+    <string name="backup_applied_to_n_repos">Applied backup mirror to %1$d repo(s)</string>
+    <string name="repos_backup_reminder_text">Set up a backup folder so your repos survive app uninstall</string>
+    <string name="repos_backup_reminder_pick">Pick now</string>
+    <string name="repos_backup_reminder_dismiss">Dismiss</string>
 </resources>

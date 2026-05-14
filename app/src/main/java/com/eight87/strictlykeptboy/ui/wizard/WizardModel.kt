@@ -22,11 +22,16 @@ enum class SpeciesChoice(val id: String, val label: String) {
     Bat("bat", "Bat"),
     Bunny("bunny", "Bunny"),
     Cat("cat", "Cat"),
+    CatChan("cat-chan", "Cat-chan"),
     Fox("fox", "Fox"),
+    FoxChan("fox-chan", "Fox-chan"),
     Lion("lion", "Lion"),
     Tiger("tiger", "Tiger"),
     Wolf("wolf", "Wolf"),
-    ChooseYourOwn("custom", "Choose your own"),
+    // Round 2.10 — ChooseYourOwn removed. Every species card is a valid
+    // sticker pack on its own; the customization explainer is shown
+    // unconditionally on the Species screen, and users opt in to importing
+    // the bundled pack into their repo via Repo Settings → Sticker pack.
 }
 
 /**
@@ -166,13 +171,157 @@ object TemplateRegistry {
 
     private fun humanize(atomId: String): String =
         atomId.replace('-', ' ').replaceFirstChar { it.uppercase() }
+
+    // Phase 2.1.I.5 — per-atom time-of-day bucket (HH:mm). Starter heuristic;
+    // the existing wizard stub stacked every atom at 09:00, producing N
+    // overlapping 15-min blocks per role. This map spreads them across a
+    // morning / midday / evening band so the user's first-day schedule
+    // actually looks like a day. NOT a final per-(alignment, lifestyle)
+    // matrix — that's a future phase. Anything not listed falls back to
+    // [DefaultDtstart].
+    //
+    // Bucket logic: morning (07:00–10:00), midday (12:00–14:00),
+    // afternoon/evening (17:00–22:00). Pre/post-sleep anchors (brush-teeth,
+    // meds, journal) lean to start/end of day.
+    private val DTSTART_BUCKETS: Map<String, String> = mapOf(
+        // SelfCare — morning + evening anchors
+        "brush-teeth" to "07:00",
+        "shower" to "07:30",
+        "shave" to "07:45",
+        "skincare" to "07:50",
+        "hydration-check" to "12:00",
+        "sunlight-10min" to "12:15",
+        "bedtime-wind-down" to "22:00",
+        // Workout — late afternoon
+        "pushups" to "17:00",
+        "situps" to "17:05",
+        "squats" to "17:10",
+        "pull-ups" to "17:15",
+        "planks" to "17:20",
+        "cardio-30min" to "17:00",
+        "stretch-15min" to "17:45",
+        "foam-roll" to "17:30",
+        // Study
+        "focus-block-25min" to "10:00",
+        "deep-work-90min" to "10:00",
+        "review-flashcards" to "20:00",
+        "read-20pg" to "20:30",
+        "weekly-review" to "18:00",
+        // Work
+        "deep-work-am" to "09:00",
+        "deep-work-pm" to "14:00",
+        "inbox-triage" to "08:30",
+        "stand-up-15min" to "09:30",
+        "weekly-planning" to "09:00",
+        "weekly-shutdown" to "17:30",
+        // University
+        "lecture-block" to "10:00",
+        "lab-block" to "13:00",
+        "assignment-block" to "18:00",
+        "office-hours" to "15:00",
+        // Freelance
+        "client-block" to "10:00",
+        "invoicing" to "16:00",
+        "weekly-pipeline-review" to "17:00",
+        "deep-work-block" to "09:30",
+        // Kink — start/end-of-day check-ins
+        "cage-check" to "07:00",
+        "plug-check" to "21:30",
+        "posture-check" to "12:00",
+        "collar-check" to "07:15",
+        "edge-and-stop" to "22:15",
+        "kegels" to "12:30",
+        "grooming" to "07:45",
+        "weigh-in" to "07:30",
+        "journal-entry" to "22:00",
+        "check-in-with-keeper" to "21:00",
+        // Social
+        "call-friend" to "18:00",
+        "coffee-with-someone" to "10:30",
+        "send-a-message" to "12:00",
+        "plan-meetup" to "19:00",
+        // Family
+        "call-family" to "19:30",
+        "family-meal" to "18:30",
+        "family-event" to "12:00",
+        // Creative
+        "practice-instrument" to "19:00",
+        "draw-15min" to "20:00",
+        "write-page" to "08:00",
+        "edit-photos" to "20:30",
+        // Hobby
+        "hobby-block-1h" to "20:00",
+        // Recovery
+        "nap-20min" to "14:00",
+        "meditation-10min" to "06:30",
+        "walk-20min" to "12:30",
+        "bath" to "21:00",
+        "therapy-prep" to "16:00",
+        // Spirituality
+        "morning-practice" to "06:30",
+        "evening-practice" to "21:00",
+        "weekly-service" to "10:00",
+        "scripture-read" to "07:00",
+        // Health
+        "meds-am" to "08:00",
+        "meds-pm" to "21:00",
+        "vitamins" to "08:00",
+        "doctor-followup" to "10:00",
+        "bloodwork-quarterly" to "08:30",
+        // Finance
+        "weekly-budget-review" to "10:00",
+        "monthly-budget-close" to "10:00",
+        "invoices-out" to "11:00",
+        "expenses-in" to "20:00",
+        // Household
+        "dishes" to "19:30",
+        "laundry" to "10:00",
+        "trash-out" to "07:30",
+        "groceries" to "17:30",
+        "deep-clean-weekly" to "10:00",
+        "bills-out" to "11:00",
+        // PetCare
+        "feed-am" to "07:00",
+        "feed-pm" to "18:00",
+        "walk-am" to "07:30",
+        "walk-pm" to "18:30",
+        "litter-clean" to "10:00",
+        "vet-followup" to "10:00",
+    )
+
+    /**
+     * Fallback for atoms not present in [DTSTART_BUCKETS]; we keep 09:00
+     * for parity with the legacy WizardScaffolder behaviour so unexpected
+     * atoms still get a sensible default rather than midnight.
+     */
+    const val DefaultDtstart: String = "09:00"
+
+    /** Returns "HH:mm" time-of-day for an atomId. */
+    fun dtstartHmFor(atomId: String): String = DTSTART_BUCKETS[atomId] ?: DefaultDtstart
+
+    /**
+     * Phase 2.1.I.6 — inverted-default atom registry. These atoms exist
+     * primarily as "did you do your habit?" prompts whose default truth
+     * value is YES (completed-by-schedule). Daily hygiene, meds, feeding,
+     * shower, and similar baseline routines.
+     */
+    private val INVERTED_ATOMS: Set<String> = setOf(
+        "brush-teeth", "shower", "skincare", "hydration-check",
+        "bedtime-wind-down", "sunlight-10min",
+        "meds-am", "meds-pm", "vitamins",
+        "feed-am", "feed-pm", "walk-am", "walk-pm", "litter-clean",
+        "cage-check", "plug-check", "collar-check", "kegels",
+        "morning-practice", "evening-practice",
+        "meditation-10min",
+    )
+
+    fun isInvertedAtom(atomId: String): Boolean = atomId in INVERTED_ATOMS
 }
 
 /** Praise chips per K.5a / LW Screen 3.5. */
 object PraiseRegistry {
     val defaults: List<String> = listOf(
-        "good boy", "good girl", "good pup", "good kitten", "sweet thing",
-        "darling", "love", "buddy", "champ", "you star",
+        "good boy", "good girl", "good pup", "good kitten", "champ", "you star",
     )
 }
 
@@ -265,6 +414,20 @@ data class WizardDraft(
     val gitChoice: GitChoice = GitChoice.PhoneOnly,
     val displayName: String = "my calendar",
     val repoIconEmoji: String? = null,
+    /**
+     * Phase 2.1.I.3 — mode pick. Null until the Mode screen sets it; the
+     * Mode screen computes its default from [alignment] on first render
+     * (Submissive → KeptByAi, everything else → Free). Materialization
+     * resolves null → Free.
+     */
+    val modePick: WizardModePick? = null,
+    /**
+     * Phase 2.1.M.4 — partner checkbox on the Pet Mode screen. Only
+     * surfaced when alignment ∈ {Submissive, Switch}. When ticked, the
+     * Pet Mode default flips to KeptByHuman + the Share-with-dom screen
+     * is reached at Done.
+     */
+    val hasPartner: Boolean = false,
 ) {
     /** True iff alignment hides kink role / templates / strict-X phrasing. */
     val kinkOff: Boolean get() = alignment == Alignment.UnalignedPrivate
@@ -294,6 +457,30 @@ data class WizardDraft(
         )
     }
 
+    /**
+     * Phase 2.2.B — effective mode pick. Falls back to the default
+     * lifestyle card ([LifestyleCard.PetKeptByAi]) when the user hasn't
+     * visited the Lifestyle screen yet. The card-collapse subsumed the
+     * old `defaultModeFor(alignment, hasPartner)` heuristic — each
+     * lifestyle card now carries its `modePick` field directly.
+     */
+    val effectiveModePick: WizardModePick
+        get() = modePick ?: LifestyleCard.Default.modePick
+
+    /**
+     * Phase 2.2.B — apply a [LifestyleCard] selection. Sets the four
+     * fields the card encodes (`alignment`, `lifestyle`, `modePick`,
+     * `hasPartner`) atomically and lets [normalize] downstream-clamp
+     * everything else (e.g. kink-off → drop kink role + templates).
+     */
+    fun applyLifestyleCard(card: LifestyleCard): WizardDraft =
+        copy(
+            alignment = card.alignment,
+            lifestyle = card.lifestyle,
+            modePick = card.modePick,
+            hasPartner = card.hasPartner,
+        ).normalize()
+
     /** True when the draft contains anything worth confirming-before-discarding. */
     val hasUserChoices: Boolean
         get() = species != SpeciesChoice.Bat ||
@@ -311,12 +498,120 @@ data class WizardDraft(
 enum class WizardScreen(val stickerKey: String) {
     Welcome("welcome-wave"),
     Species("species-greeting"),
-    Alignment("align-reaction"),
     Identity("name-tag"),         // Screen 3.5 (K.5a)
+    // Phase 2.2.B — collapsed Alignment + Lifestyle + Mode into a single
+    // six-card screen. The on-disk Alignment / Lifestyle / WizardModePick
+    // enums survive (wire format unchanged); only the wizard surface
+    // collapses. Each card sets the four fields atomically via
+    // [WizardDraft.applyLifestyleCard].
     Lifestyle("life-reaction"),
     Roles("roles-notebook"),
     Templates("templates-checklist"),
     Git("git-setup"),
     Scaffold("scaffold-pleased"),
     Done("handoff-wave"),
+    // Phase 2.1.I.4 — Share-with-dom screen only renders on Done path when
+    // alignment ∈ {Submissive, Switch} AND mode = strictly-kept AND a
+    // human-dom is selected. Skippable. Reuses ShareSheet.
+    ShareWithDom("share-with-dom"),
+}
+
+/**
+ * Phase 2.1.I.3 — wizard-side mode pick. Maps to [RepoMode] on
+ * materialization. `KeptByAi` writes mode=strictly-kept + a builtin
+ * dom_persona; `KeptByHuman` writes mode=strictly-kept with no persona
+ * (a share-link will populate write_back_target later); `Free` and
+ * `SelfKeep` map directly.
+ *
+ * Wire-format strings live alongside [RepoMode.wire]; the wizard label
+ * is rendered separately so the screen can show friendlier copy.
+ */
+enum class WizardModePick(val id: String) {
+    Free("free"),
+    KeptByAi("kept-by-ai"),
+    KeptByHuman("kept-by-human"),
+    SelfKeep("self-keep"),
+}
+
+/**
+ * Phase 2.2.B — collapsed lifestyle cards (D-2.2.c). Each card encodes
+ * the four data-layer fields the wizard needs to write atomically:
+ * `alignment`, `lifestyle`, `modePick`, `hasPartner`. The six cards
+ * replace the previous three-screen Alignment/Lifestyle/Mode flow that
+ * asked the same "how do you live" question in three different
+ * vocabularies. Wire format (Alignment + Lifestyle + WizardModePick
+ * enums + on-disk TOML) is unchanged — the collapse is wizard-surface
+ * only.
+ *
+ * Default card = [PetKeptByAi] (solo-sub kept by an AI dom, the
+ * project's genesis use-case).
+ */
+enum class LifestyleCard(
+    val emoji: String,
+    val alignment: Alignment,
+    val lifestyle: Lifestyle,
+    val modePick: WizardModePick,
+    val hasPartner: Boolean,
+) {
+    PetKeptByAi(
+        emoji = "🤖",
+        alignment = Alignment.Submissive,
+        lifestyle = Lifestyle.SingleStrict,
+        modePick = WizardModePick.KeptByAi,
+        hasPartner = false,
+    ),
+    PetKeptByPartner(
+        emoji = "🧑",
+        alignment = Alignment.Submissive,
+        lifestyle = Lifestyle.PartneredStrict,
+        modePick = WizardModePick.KeptByHuman,
+        hasPartner = true,
+    ),
+    PetSelfKept(
+        emoji = "🪞",
+        alignment = Alignment.Submissive,
+        lifestyle = Lifestyle.SingleStrict,
+        modePick = WizardModePick.SelfKeep,
+        hasPartner = false,
+    ),
+    DomKeepingPets(
+        emoji = "👑",
+        alignment = Alignment.Dominant,
+        lifestyle = Lifestyle.PartneredStrict,
+        modePick = WizardModePick.Free,
+        hasPartner = true,
+    ),
+    Switch(
+        emoji = "🔄",
+        alignment = com.eight87.strictlykeptboy.ui.wizard.Alignment.Switch,
+        lifestyle = Lifestyle.PartneredStrict,
+        modePick = WizardModePick.Free,
+        hasPartner = true,
+    ),
+    JustCalendar(
+        emoji = "📅",
+        alignment = Alignment.UnalignedPrivate,
+        lifestyle = Lifestyle.SingleFree,
+        modePick = WizardModePick.Free,
+        hasPartner = false,
+    );
+
+    companion object {
+        /** Default card pre-selected on fresh start. */
+        val Default: LifestyleCard = PetKeptByAi
+
+        /**
+         * Reverse-lookup: which card matches the current draft? Returns
+         * null when the draft has hand-edited (alignment, lifestyle,
+         * modePick, hasPartner) into a combination no card covers — the
+         * Settings six-radio uses null to fall through to "none of the
+         * above" rather than misrepresenting state.
+         */
+        fun fromDraft(draft: WizardDraft): LifestyleCard? = entries.firstOrNull {
+            it.alignment == draft.alignment &&
+                it.lifestyle == draft.lifestyle &&
+                it.modePick == draft.effectiveModePick &&
+                it.hasPartner == draft.hasPartner
+        }
+    }
 }

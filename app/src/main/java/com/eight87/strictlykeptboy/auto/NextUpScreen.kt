@@ -9,41 +9,44 @@ import androidx.car.app.model.Pane
 import androidx.car.app.model.Row
 import androidx.car.app.model.Template
 import com.eight87.strictlykeptboy.R
-import com.eight87.strictlykeptboy.resolver.MaterializedInstance
+import com.eight87.strictlykeptboy.store.IdentityTomlData
 import java.time.Duration
 import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
 
 /**
- * Phase Q.3 — Next-up pane template (UI-S.2).
+ * Phase Q.3 / 2.1.G — Next-up pane template (UI-S.2).
  *
- * Single [PaneTemplate] focused on one [MaterializedInstance]:
- *  - title row: HH:mm + event title
+ * Single [PaneTemplate] focused on one [AutoEvent]:
+ *  - title row: identity-driven row title via [AutoRowFormatter.rowTitle]
  *  - duration row: "1h 30m"
  *  - time-until row: "in 12 minutes" (or "now" / "starts in N hours")
  *  - up to 3 follow-up rows: the next instances after this one
  *
  * Includes an "Open in app" pane-action that fires an [Intent] back to
- * `MainActivity` on the phone (UI-S.4 still defers voice). Read-only by
- * contract; no edit affordances anywhere on the screen (Phase Q / UI-S.4).
+ * `MainActivity` on the phone (UI-S.4 still defers voice). Read-only
+ * by contract; no edit affordances anywhere on the screen (Phase Q /
+ * UI-S.4).
  */
 class NextUpScreen(
     carContext: CarContext,
-    private val focus: MaterializedInstance,
-    private val allToday: List<MaterializedInstance>,
+    private val focus: AutoEvent,
+    private val allToday: List<AutoEvent>,
+    private val identityProvider: () -> IdentityTomlData? = { null },
 ) : Screen(carContext) {
 
     override fun onGetTemplate(): Template {
-        val now = ZonedDateTime.now(focus.effectiveStart.zone)
-        val titleText = carContext.getString(
-            R.string.auto_row_title,
-            TIME_FMT.format(focus.effectiveStart),
-            focus.title,
+        val identity = identityProvider()
+        val now = ZonedDateTime.now(focus.instance.effectiveStart.zone)
+        val titleText = AutoRowFormatter.rowTitle(
+            start = focus.instance.effectiveStart,
+            title = focus.instance.title,
+            identity = identity,
+            offSchedule = focus.offSchedule,
         )
 
-        val duration = Duration.between(focus.effectiveStart, focus.effectiveEnd)
+        val duration = Duration.between(focus.instance.effectiveStart, focus.instance.effectiveEnd)
         val durationText = carContext.getString(R.string.auto_pane_duration, formatDuration(duration))
-        val timeUntilText = carContext.getString(R.string.auto_pane_time_until, formatTimeUntil(focus.effectiveStart, now))
+        val timeUntilText = carContext.getString(R.string.auto_pane_time_until, formatTimeUntil(focus.instance.effectiveStart, now))
 
         val paneBuilder = Pane.Builder()
             .addRow(Row.Builder().setTitle(titleText).build())
@@ -52,16 +55,17 @@ class NextUpScreen(
 
         // Up to 3 follow-up rows for context (UI-S.2 — "small list of next 3").
         val followUps = allToday
-            .filter { it.effectiveStart.isAfter(focus.effectiveStart) }
+            .filter { it.instance.effectiveStart.isAfter(focus.instance.effectiveStart) }
             .take(3)
         followUps.forEach { f ->
             paneBuilder.addRow(
                 Row.Builder()
                     .setTitle(
-                        carContext.getString(
-                            R.string.auto_row_title,
-                            TIME_FMT.format(f.effectiveStart),
-                            f.title,
+                        AutoRowFormatter.rowTitle(
+                            start = f.instance.effectiveStart,
+                            title = f.instance.title,
+                            identity = identity,
+                            offSchedule = f.offSchedule,
                         ),
                     )
                     .build(),
@@ -107,9 +111,5 @@ class NextUpScreen(
                 carContext.getString(R.string.auto_time_until_hours, hours)
             }
         }
-    }
-
-    companion object {
-        private val TIME_FMT: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
     }
 }

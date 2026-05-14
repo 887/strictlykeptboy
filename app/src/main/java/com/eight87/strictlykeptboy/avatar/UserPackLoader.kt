@@ -4,6 +4,9 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.eclipse.jgit.api.Git
 import java.io.File
 
 /**
@@ -49,6 +52,36 @@ class UserPackLoader(private val rootDir: File) {
         }
         return StaticPackStore(packs)
     }
+
+    /**
+     * Phase 2.5.C — clone a user-supplied pack repo into `<packsRoot>/<packId>/`.
+     *
+     * Reuses the JGit clone machinery from `GitRepo.clone` (D.69 — user
+     * packs are read-only data sources, so we don't track remotes or
+     * register a `RepoConfig`). Network auth is intentionally not wired
+     * here: the v1 picker accepts public clone URLs and `file://` test
+     * fixtures. Existing `<packId>` directory is left untouched if it's
+     * already a valid pack (idempotent re-import).
+     *
+     * Returns the resulting on-disk directory; throws on clone failure
+     * (caller surfaces an error message in the UI).
+     */
+    suspend fun cloneFrom(url: String, packId: String = PackId.fromCloneUrl(url)): File =
+        withContext(Dispatchers.IO) {
+            val target = File(packsRoot, packId)
+            if (File(target, "pack.toml").isFile) return@withContext target
+            if (target.exists()) target.deleteRecursively()
+            target.parentFile?.mkdirs()
+            Git.cloneRepository()
+                .setURI(url)
+                .setDirectory(target)
+                .call()
+                .use { /* close immediately — we only need the working tree */ }
+            require(File(target, "pack.toml").isFile) {
+                "cloned pack at $url is missing pack.toml"
+            }
+            target
+        }
 
     /** Decode a sticker file from `<packsRoot>/<packId>/<file>`. */
     fun loadBitmap(packId: String, file: String): Bitmap? {

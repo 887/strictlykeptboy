@@ -125,11 +125,20 @@ class OverlayResolver(
         val total = laneEnds.size
 
         return assignments.map { (inst, priority, lane) ->
+            val meta = calMetaByRef[inst.calendar]
+            // Round 2.1.C.1: seed defaults to displayName.hashCode() so even
+            // calendars without an explicit colorSeed get stable per-calendar
+            // tinting in the UI.
+            val seed = meta?.colorSeed
+                ?: meta?.displayName?.hashCode()
+                ?: inst.calendar.id.hashCode()
             DayBand(
                 instance = inst,
                 priority = priority,
                 laneIndex = lane,
                 totalLanes = total,
+                accentColorSeed = seed,
+                kind = meta?.kind ?: CalendarKind.Regular,
             )
         }
     }

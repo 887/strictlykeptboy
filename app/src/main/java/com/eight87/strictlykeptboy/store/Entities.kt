@@ -198,6 +198,18 @@ data class RecurrenceRule(
     val emoji: String? = null,
     val busy: Boolean = true,
     val active: Boolean = true,
+    /**
+     * Phase 2.1.I.6 — inverted-default habit marker (per Phase XX inversion
+     * model, draft-atomic-activities.md AT-B.2). When `true`, this rule's
+     * occurrences should be treated as "completed-by-schedule" until a
+     * deviation file is written for that day. The resolver applies the
+     * same algorithm universally today; this field is the explicit
+     * signal on disk so readers / future per-rule visualization can
+     * distinguish "this is a habit" from "this is a meeting".
+     *
+     * Default `false` keeps existing rule files round-tripping unchanged.
+     */
+    val inverted: Boolean = false,
     val body: String = "",
 ) : TypedEntity {
     override val schemaVersion: Int get() = header.schemaVersion
@@ -222,6 +234,7 @@ data class RecurrenceRule(
         t.putString("emoji", emoji)
         if (!busy) t.putBool("busy", false)
         if (!active) t.putBool("active", false)
+        if (inverted) t.putBool("inverted", true)
         return FrontmatterDoc(t, body)
     }
 
@@ -246,6 +259,7 @@ data class RecurrenceRule(
                 emoji = t.getString("emoji"),
                 busy = t.getBool("busy") ?: true,
                 active = t.getBool("active") ?: true,
+                inverted = t.getBool("inverted") ?: false,
                 body = doc.body,
             )
         }

@@ -5,6 +5,7 @@
 #   scripts/start-avd.sh                  # start AVD if not running, then attach scrcpy
 #   scripts/start-avd.sh --no-mirror      # start AVD only, skip scrcpy
 #   scripts/start-avd.sh --kill           # stop the AVD (and scrcpy)
+#   scripts/start-avd.sh --tablet [...]   # delegate to scripts/start-tablet-avd.sh (Phase 2.1.H)
 #
 # Prereqs (one-time):
 #   - Android CLI 0.7+ installed at ~/.local/bin/android (see README)
@@ -20,6 +21,14 @@ ADB_DEVICE="emulator-5554"
 SCRCPY_TITLE="strictlykeptboy-AVD"
 
 action="${1:-start}"
+
+# Phase 2.1.H — `--tablet` delegates to the tablet-AVD sibling so callers
+# can fork a 10" tablet (pixel_tablet 1600×2560 mdpi) for two-pane testing
+# without remembering a second script name. Pass-through any extra args.
+if [ "${action}" = "--tablet" ]; then
+    shift || true
+    exec "$(dirname "$0")/start-tablet-avd.sh" "$@"
+fi
 
 is_avd_running() {
     adb devices 2>/dev/null | grep -qE "^${ADB_DEVICE}\s+device$"

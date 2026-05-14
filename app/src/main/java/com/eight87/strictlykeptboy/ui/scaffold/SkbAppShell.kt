@@ -30,7 +30,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.RateReview
@@ -61,6 +61,30 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.git.auth.SecretsStore
+import com.eight87.strictlykeptboy.task.StubTaskPlaybackSource
+import com.eight87.strictlykeptboy.task.TaskNowPlayingState
+import com.eight87.strictlykeptboy.task.TaskQueueCommands
+import com.eight87.strictlykeptboy.task.TaskTransportCommands
+import com.eight87.strictlykeptboy.ui.playing.ExpandedNowPlayingTaskBody
+import com.eight87.strictlykeptboy.ui.playing.MiniPlayer
+import com.eight87.strictlykeptboy.ui.playing.NowPlayingScreen
+import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Velocity
+import androidx.activity.compose.BackHandler
+import kotlinx.coroutines.launch
 import com.eight87.strictlykeptboy.ui.a11y.labelString
 import com.eight87.strictlykeptboy.ui.adaptive.LocalWindowWidthSizeClass
 import com.eight87.strictlykeptboy.ui.adaptive.ProvideWindowSizeClass
@@ -75,8 +99,6 @@ import com.eight87.strictlykeptboy.ui.schedule.ScheduleViewState
 import com.eight87.strictlykeptboy.ui.settings.SettingsAccess
 import com.eight87.strictlykeptboy.ui.settings.SettingsPane
 import com.eight87.strictlykeptboy.ui.tasks.TaskQuickAddRequest
-import com.eight87.strictlykeptboy.ui.tasks.TaskViewTab
-import com.eight87.strictlykeptboy.ui.tasks.TasksPane
 import com.eight87.strictlykeptboy.ui.tasks.TasksViewState
 import com.eight87.strictlykeptboy.ui.together.TogetherPane
 import com.eight87.strictlykeptboy.ui.together.TogetherViewModel
@@ -121,6 +143,8 @@ const val TestTagShellRail = "ShellRail"
 const val TestTagShellContent = "ShellContent"
 const val TestTagShellDestPrefix = "ShellDest-"
 const val TestTagShellRailItemPrefix = "ShellRail-"
+/** Round 2.16.F — global settings cog in the top-bar action row. */
+const val TestTagShellSettingsCog = "ShellSettingsCog"
 
 /**
  * Phase U.4 / F11 note: [label] is **wire-format** / stable English fallback
@@ -129,13 +153,14 @@ const val TestTagShellRailItemPrefix = "ShellRail-"
  */
 enum class TopDestination(val label: String, val icon: ImageVector) {
     Schedule("Schedule", Icons.Filled.CalendarMonth),
-    Tasks("Tasks", Icons.Filled.CheckCircle),
+    // Round 2.16.E — `Tasks` destination deleted. All todolist surface
+    // area now lives inside the expanded NowPlayingScreen sheet
+    // (reachable via the Schedule "Open tasks" FAB or the mini-player
+    // peek when a task is active).
     Together("Together", Icons.Filled.Groups),
     Repos("Repos", Icons.Filled.Folder),
     Wizard("Wizard", Icons.Filled.AutoAwesome),
-    // Phase DDD.13 / UI-SS — dom-/boy-side review feed surface. Added in
-    // the F45 fix-up round; the rail expansion from 6 -> 7 destinations
-    // lands together with `AppShellNavigationSwapTest`'s updated assertion.
+    // Phase DDD.13 / UI-SS — dom-/boy-side review feed surface.
     Reviews("Reviews", Icons.Filled.RateReview),
     Settings("Settings", Icons.Filled.Settings),
 }
@@ -183,6 +208,45 @@ fun SkbAppShell(
     settingsAccess: SettingsAccess = SettingsAccess(),
     activeIconKindFlow: StateFlow<com.eight87.strictlykeptboy.ui.theming.RepoIconKind>? = null,
     eventCreateController: com.eight87.strictlykeptboy.ui.schedule.EventCreateController? = null,
+    /**
+     * Phase 2.1.I.2 — external request to switch to the Wizard destination
+     * and pre-position the host at a specific screen (e.g. Roles, from the
+     * Settings → Lifestyle entry-point). When non-null, the shell selects
+     * [TopDestination.Wizard], passes `initialScreen` down, then clears
+     * the request on wizard finish. Null → no auto-routing.
+     */
+    wizardEntryRequest: kotlinx.coroutines.flow.MutableStateFlow<
+        com.eight87.strictlykeptboy.ui.wizard.WizardScreen?
+    >? = null,
+    /**
+     * Phase 2.1.I.4 — share-with-dom CTA from the wizard's last screen.
+     * Caller wires this to ShareSheet with the just-scaffolded repo + the
+     * `allowWriteBack` checkbox pre-set.
+     */
+    onShareWithDom: () -> Unit = {},
+    /**
+     * Round 2.1.B.2 — phone-local calendar visibility powering the
+     * [CalendarFilterChipStrip] above SchedulePane. Null suppresses the
+     * strip (previews / tests).
+     */
+    calendarVisibility: com.eight87.strictlykeptboy.ui.settings.CalendarVisibilityPrefs? = null,
+    /**
+     * Round 2.1.B.2 / B.4 — long-press handler for calendar chips.
+     * Host opens [com.eight87.strictlykeptboy.ui.calendars.CalendarSettingsSheet].
+     */
+    onLongPressCalendar: ((com.eight87.strictlykeptboy.resolver.CalendarMeta) -> Unit)? = null,
+    /**
+     * Round 2.16.B — task-playback source feeding MiniPlayer +
+     * NowPlayingScreen. Defaults to the Phase A stub for previews /
+     * tests; MainActivity wires `appGraph.taskTransport`.
+     */
+    taskPlaybackSource: Any = StubTaskPlaybackSource,
+    /**
+     * Round 2.16.B — temporary "Start" affordance handler exposed on
+     * task rows. TODO Phase D — replace with proper start-from-mini-
+     * player flow inside the expanded sheet.
+     */
+    onStartTask: ((String) -> Unit)? = null,
 ) {
     ProvideWindowSizeClass(modifier = modifier) { _ ->
         SkbAppShellContent(
@@ -205,6 +269,12 @@ fun SkbAppShell(
             settingsAccess = settingsAccess,
             activeIconKindFlow = activeIconKindFlow,
             eventCreateController = eventCreateController,
+            wizardEntryRequest = wizardEntryRequest,
+            onShareWithDom = onShareWithDom,
+            calendarVisibility = calendarVisibility,
+            onLongPressCalendar = onLongPressCalendar,
+            taskPlaybackSource = taskPlaybackSource,
+            onStartTask = onStartTask,
         )
     }
 }
@@ -230,8 +300,23 @@ private fun SkbAppShellContent(
     settingsAccess: SettingsAccess,
     activeIconKindFlow: StateFlow<com.eight87.strictlykeptboy.ui.theming.RepoIconKind>?,
     eventCreateController: com.eight87.strictlykeptboy.ui.schedule.EventCreateController? = null,
+    wizardEntryRequest: kotlinx.coroutines.flow.MutableStateFlow<
+        com.eight87.strictlykeptboy.ui.wizard.WizardScreen?
+    >? = null,
+    onShareWithDom: () -> Unit = {},
+    calendarVisibility: com.eight87.strictlykeptboy.ui.settings.CalendarVisibilityPrefs? = null,
+    onLongPressCalendar: ((com.eight87.strictlykeptboy.resolver.CalendarMeta) -> Unit)? = null,
+    taskPlaybackSource: Any = StubTaskPlaybackSource,
+    onStartTask: ((String) -> Unit)? = null,
 ) {
     var selected by rememberSaveable { mutableStateOf(TopDestination.Schedule) }
+    // Phase 2.1.I.2 — observe wizard re-entry requests.
+    val wizardEntry = wizardEntryRequest?.collectAsState()?.value
+    androidx.compose.runtime.LaunchedEffect(wizardEntry) {
+        if (wizardEntry != null) {
+            selected = TopDestination.Wizard
+        }
+    }
     val activeRepoName by activeRepoNameFlow.collectAsState()
     // D.88 / F48 — top-bar avatar reflects the active repo's iconKind. Defaults
     // to Sticker("bat") if the caller hasn't wired the flow (e.g. tests, previews).
@@ -239,10 +324,8 @@ private fun SkbAppShellContent(
         ?: MutableStateFlow(com.eight87.strictlykeptboy.ui.theming.RepoIconKind.Sticker("bat") as com.eight87.strictlykeptboy.ui.theming.RepoIconKind))
         .collectAsState()
 
-    // Tasks owns its tab here so the rail (which lives in the shell) can
-    // drive it. ISP: only the tab + setter are hoisted; quick-add /
-    // detail sheets continue to live inside [TasksPane].
-    var tasksTab by rememberSaveable { mutableStateOf(TaskViewTab.Combined) }
+    // Round 2.16.E — `tasksTab` removed along with the Tasks destination.
+    // Task view-mode selection now lives inside ExpandedNowPlayingTaskBody.
 
     val scheduleTab by scheduleState.selectedTab.collectAsState()
 
@@ -260,14 +343,6 @@ private fun SkbAppShellContent(
                     scheduleState.setSelectedTab(tab)
                     onPersistTab(tab)
                 },
-            )
-        }
-        TopDestination.Tasks -> TaskViewTab.entries.map { tab ->
-            RailItem(
-                key = tab.name,
-                labelRes = taskTabLabelRes(tab),
-                selected = tab == tasksTab,
-                onClick = { tasksTab = tab },
             )
         }
         TopDestination.Together,
@@ -288,7 +363,14 @@ private fun SkbAppShellContent(
     // redundant — destination is the right granularity here.
     val title = selected.labelString()
 
-    Surface(
+    NowPlayingSheetHost(
+        source = taskPlaybackSource,
+        tasksState = tasksState,
+        onWriteTask = onWriteTask,
+        onStartTask = onStartTask,
+        showTasksEntryFab = selected == TopDestination.Schedule,
+    ) {
+      Surface(
         color = MaterialTheme.colorScheme.background,
         modifier = Modifier.fillMaxSize().testTag(TestTagAppShell),
     ) {
@@ -306,6 +388,7 @@ private fun SkbAppShellContent(
                 // in the row to satisfy `AppShellNavigationSwapTest`; the
                 // avatar is a parallel affordance per user direction.
                 onRepoSwitcherClick = { selected = TopDestination.Repos },
+                onSettingsTap = { selected = TopDestination.Settings },
                 modePrefs = settingsAccess.modePrefs,
             )
             Row(modifier = Modifier.fillMaxSize()) {
@@ -331,13 +414,8 @@ private fun SkbAppShellContent(
                             onSyncClick = onSyncClick,
                             eventCreateController = eventCreateController,
                             onPlanTrip = { tripWizardOpen = true },
-                        )
-                        TopDestination.Tasks -> TasksPane(
-                            activeRepoName = activeRepoName,
-                            state = tasksState,
-                            selectedTab = tasksTab,
-                            onSelectTab = { tasksTab = it },
-                            onWriteTask = onWriteTask,
+                            calendarVisibility = calendarVisibility,
+                            onLongPressCalendar = onLongPressCalendar,
                         )
                         TopDestination.Together -> if (togetherViewModel != null) {
                             TogetherPane(vm = togetherViewModel, neutralMode = neutralMode)
@@ -350,6 +428,14 @@ private fun SkbAppShellContent(
                                 secretsStore = secretsStore,
                                 onOpenTogether = { selected = TopDestination.Together },
                                 onOpenWizard = { selected = TopDestination.Wizard },
+                                onOpenAppSettings = { selected = TopDestination.Settings },
+                                // Round 2.7.D.2-UI — banner inputs forwarded via SettingsAccess
+                                // because that's the only narrow surface that already carries
+                                // RepoStoragePrefs + NotificationPrefs into the shell.
+                                repoStoragePrefs = settingsAccess.repoStoragePrefs,
+                                notificationPrefs = settingsAccess.notificationPrefs,
+                                onPickBackupFolder = settingsAccess.onPickBackupFolder,
+                                demoModePrefs = settingsAccess.demoModePrefs,
                             )
                         } else {
                             PlaceholderScreen(stringResource(R.string.scaffold_dest_repos))
@@ -357,11 +443,18 @@ private fun SkbAppShellContent(
                         TopDestination.Wizard -> WizardNavHost(
                             onFinish = {
                                 onWizardFinish()
+                                wizardEntryRequest?.value = null
                                 selected = TopDestination.Schedule
                             },
-                            onCancel = { selected = TopDestination.Schedule },
+                            onCancel = {
+                                wizardEntryRequest?.value = null
+                                selected = TopDestination.Schedule
+                            },
                             onScaffold = onWizardScaffold,
                             neutralMode = neutralMode,
+                            initialScreen = wizardEntry
+                                ?: com.eight87.strictlykeptboy.ui.wizard.WizardScreen.Welcome,
+                            onShareWithDom = onShareWithDom,
                         )
                         TopDestination.Reviews -> {
                             // Phase DDD.13 wiring (F45 follow-up). Items list is
@@ -406,6 +499,7 @@ private fun SkbAppShellContent(
             }
         }
     }
+    }  // end NowPlayingSheetHost
 }
 
 @Composable
@@ -418,6 +512,13 @@ private fun ShellTopBar(
     onSyncClick: () -> Unit,
     onIdentityClick: () -> Unit,
     onRepoSwitcherClick: () -> Unit,
+    /**
+     * Round 2.16.F — global app-settings cog moved back into the top-bar
+     * action row, immediately before the avatar. The Repos pane's
+     * top-bar cog (Round 2.4 migration) is removed; per-repo settings
+     * still open via row-tap on a repo inside Repos.
+     */
+    onSettingsTap: () -> Unit,
     modePrefs: com.eight87.strictlykeptboy.ui.settings.ModePrefs? = null,
 ) {
     // enableEdgeToEdge() is on in MainActivity — content draws under the
@@ -431,64 +532,67 @@ private fun ShellTopBar(
             .windowInsetsPadding(WindowInsets.statusBars.union(WindowInsets.displayCutout))
             .testTag(TestTagShellTopBar),
     ) {
-        // Tonearmboy-shape: big title left + small icon actions right + sync.
-        // The big stacked destination buttons are gone; destinations live
-        // as tiny IconButtons in the action row. Bat + settings-gear move to
-        // the BOTTOM of the left rail (see RailColumn). See user direction
-        // 2026-05-13 (tonearmboy parity ask).
-        // Two-row top bar: row 1 carries the title + mode pill + sync + the
-        // bat avatar; row 2 carries the destination icon-buttons in a
-        // horizontally-scrollable strip so all 7 destinations stay reachable
-        // on Compact (1080dp) width without colliding with the avatar.
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+        // Round 2.3.A.1 — single-row top bar. Destination icon-buttons
+        // (read surfaces only: Schedule / Tasks / Reviews) are inlined
+        // into the action row to the right of the title, alongside the
+        // bat avatar. Mode + sync are no longer global concerns — they
+        // moved into ReposPane as per-repo state (Round 2.3.A.2 / .A.3).
+        // The `modePrefs` + `onSyncClick` params remain on the function
+        // signature (null-allowed) to avoid breaking call-sites, but
+        // they no longer render anything here.
+        // Round 2.16.E — Tasks removed from the top-bar icon row (the
+        // destination is gone; todolist UI lives in the expanded
+        // NowPlayingScreen sheet now).
+        val topBarDestinations = listOf(
+            TopDestination.Schedule,
+            TopDestination.Reviews,
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f),
-                    maxLines = 1,
-                )
-                // Phase DDD.12 — always-visible mode pill in chrome. Long-press
-                // → transition modal with typed-confirmation gate (D.86). Only
-                // renders when ModePrefs is wired (tests / previews omit it).
-                if (modePrefs != null) {
-                    ModePill(prefs = modePrefs)
-                }
-                SyncButton(onClick = onSyncClick)
-                IdentityAvatar(
-                    onClick = onRepoSwitcherClick,
-                    iconKind = activeIconKind,
-                    sizeDp = 40,
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            )
+            topBarDestinations.forEach { dest ->
+                DestinationButton(
+                    dest = dest,
+                    selected = dest == selectedDest,
+                    onClick = { onSelectDest(dest) },
                 )
             }
-            // F45 fix-up: all 7 TopDestination entries render as icon-only
-            // buttons in a horizontally-scrollable row so `AppShellNavigationSwapTest`
-            // finds a `ShellDest-<name>` node + click action for every
-            // destination. The bat avatar on row 1 is a parallel affordance
-            // for Repos; the settings-gear duplicate was dropped because the
-            // `ShellDest-Settings` button now covers it.
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            // Round 2.16.F — global app-settings cog, immediately before
+            // the avatar (pre-Round-2.1 location). Tapping selects
+            // `TopDestination.Settings`. Per-repo settings still open from
+            // inside the Repos pane (row-tap).
+            androidx.compose.material3.IconButton(
+                onClick = onSettingsTap,
+                modifier = Modifier.testTag(TestTagShellSettingsCog),
             ) {
-                TopDestination.entries.forEach { dest ->
-                    DestinationButton(
-                        dest = dest,
-                        selected = dest == selectedDest,
-                        onClick = { onSelectDest(dest) },
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Filled.Settings,
+                    contentDescription = "Settings",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(22.dp),
+                )
             }
+            IdentityAvatar(
+                onClick = onRepoSwitcherClick,
+                iconKind = activeIconKind,
+                sizeDp = 40,
+            )
+            // Keep params referenced so an accidental removal of either
+            // ModePill/SyncButton call-site doesn't silently lose meaning.
+            @Suppress("UNUSED_EXPRESSION") modePrefs
+            @Suppress("UNUSED_EXPRESSION") onSyncClick
         }
     }
 }
@@ -692,11 +796,360 @@ private fun scheduleTabLabelRes(tab: ScheduleViewTab): Int = when (tab) {
     ScheduleViewTab.Year -> R.string.schedule_view_tab_year
 }
 
-@StringRes
-private fun taskTabLabelRes(tab: TaskViewTab): Int = when (tab) {
-    TaskViewTab.Combined -> R.string.task_view_tab_combined
-    TaskViewTab.Today -> R.string.task_view_tab_today
-    TaskViewTab.PerList -> R.string.task_view_tab_per_list
-    TaskViewTab.Shopping -> R.string.task_view_tab_shopping
-    TaskViewTab.Standing -> R.string.task_view_tab_standing
+/**
+ * Round 2.16.A — verbatim port of tonearmboy `TonearmboyApp.kt` lines
+ * 140-471 (the sheet-host block). Wraps a [content] layer (the app's
+ * existing chrome) with a bottom-anchored sheet that hosts the
+ * [MiniPlayer] at peek and [NowPlayingScreen] at fully-expanded.
+ *
+ * Matches tonearmboy verbatim:
+ *  - peek = 118 dp
+ *  - flick threshold = 0.05f (5% of sheet travel)
+ *  - staggered crossfade: mini visible 0..0.5, full visible 0.5..1
+ *  - nested-scroll connection drains queue overscroll → sheet progress
+ *  - drag-start progress captured for direction-based flick commit
+ *
+ * Phase A reads from [StubTaskPlaybackSource]; Phase B replaces with
+ * the real projector.
+ */
+@Composable
+private fun NowPlayingSheetHost(
+    source: Any = StubTaskPlaybackSource,
+    tasksState: TasksViewState = remember { TasksViewState() },
+    onWriteTask: (TaskQuickAddRequest) -> Unit = {},
+    onStartTask: ((String) -> Unit)? = null,
+    /**
+     * Round 2.16.D.7 — when true, render a stacked-FAB entry point at
+     * bottom-end of the host. Only meaningful when the active top
+     * destination is the one whose chrome owns the bottom-right slot
+     * (Schedule today). When `hasMedia` is false (no mini-player peek)
+     * this is the only way the user can reach the expanded sheet.
+     */
+    showTasksEntryFab: Boolean = false,
+    content: @Composable () -> Unit,
+) {
+    // Round 2.16.B — the source is one object satisfying the three
+    // facets the ported composables consume. Phase A used the singleton
+    // [StubTaskPlaybackSource]; Phase B injects the real
+    // `TaskTransportAdapter` from AppGraph (or anything else
+    // satisfying the union of the three interfaces).
+    val now = source as TaskNowPlayingState
+    val transport = source as TaskTransportCommands
+    val queue = source as TaskQueueCommands
+    val playbackState by now.state.collectAsState()
+    // Round 2.16.D — task detail / quick-add overlays migrated here
+    // from TasksPane so they layer above the sheet per tonearmboy's
+    // overlay convention.
+    var openTask by remember {
+        mutableStateOf<com.eight87.strictlykeptboy.ui.tasks.TaskItem?>(null)
+    }
+    var quickAddOpen by remember { mutableStateOf(false) }
+    val tasksUi by tasksState.state.collectAsState()
+
+    val sheetProgress = remember { Animatable(0f) }
+    val coroutineScope = rememberCoroutineScope()
+    val nowPlayingListState = rememberLazyListState()
+
+    val openNowPlayingSheet: () -> Unit = remember {
+        { coroutineScope.launch { sheetProgress.animateTo(1f) }; Unit }
+    }
+    val closeSheet: () -> Unit = remember {
+        { coroutineScope.launch { sheetProgress.animateTo(0f) }; Unit }
+    }
+
+    val showMiniPlayer = playbackState.hasMedia
+
+    BackHandler(enabled = sheetProgress.value > 0f) {
+        closeSheet()
+    }
+
+    val configuration = LocalConfiguration.current
+    val screenHeightDp = configuration.screenHeightDp.dp
+    val density = LocalDensity.current
+    val screenHeightPx = with(density) { screenHeightDp.toPx() }.coerceAtLeast(1f)
+    Box(modifier = Modifier.fillMaxSize()) {
+        val peekDp = 118.dp
+        val peekPx = with(density) { peekDp.toPx() }
+        val effectivePeekPx = if (showMiniPlayer) peekPx else 0f
+
+        val progress = sheetProgress.value
+        val miniAlpha = (1f - kotlin.math.min(progress * 2f, 1f)).coerceIn(0f, 1f)
+        val nowPlayingAlpha = (kotlin.math.max(progress - 0.5f, 0f) * 2f).coerceIn(0f, 1f)
+
+        val dragStartProgress = remember { mutableStateOf<Float?>(null) }
+        val onSheetDragDelta: (Float) -> Unit = { delta ->
+            coroutineScope.launch {
+                if (dragStartProgress.value == null) {
+                    dragStartProgress.value = sheetProgress.value
+                }
+                val travel = (screenHeightPx - effectivePeekPx).coerceAtLeast(1f)
+                val next = (sheetProgress.value - delta / travel).coerceIn(0f, 1f)
+                sheetProgress.snapTo(next)
+            }
+        }
+        val onSheetDragSettle: () -> Unit = {
+            coroutineScope.launch {
+                val start = dragStartProgress.value ?: 0f
+                val end = sheetProgress.value
+                val moved = end - start
+                val flickThreshold = 0.05f  // 5% of sheet travel = decisive flick
+                val target = when {
+                    moved > flickThreshold -> 1f       // upward flick → open
+                    moved < -flickThreshold -> 0f      // downward flick → close
+                    else -> if (end >= 0.5f) 1f else 0f
+                }
+                sheetProgress.animateTo(target)
+                dragStartProgress.value = null
+            }
+        }
+
+        // ---- Layer 1: existing app chrome (with bottom inset = peek). ----
+        val libraryBottomPad = if (showMiniPlayer) peekDp else 0.dp
+        Box(modifier = Modifier.fillMaxSize().padding(bottom = libraryBottomPad)) {
+            content()
+        }
+
+        // Round 2.16.D.7 — second FAB above the Schedule new-event FAB,
+        // visible only when there's no active task (no mini-player peek)
+        // and we're on a destination whose chrome owns the bottom-right
+        // (Schedule today). Tapping animates the sheet open so the user
+        // can reach the todo views without first starting a task.
+        if (showTasksEntryFab && !showMiniPlayer && sheetProgress.value < 0.5f) {
+            androidx.compose.material3.SmallFloatingActionButton(
+                onClick = { openNowPlayingSheet() },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    // Stack above the EventCreateFab (56dp FAB +
+                    // 16dp host pad + 12dp gap = 84dp lift).
+                    .padding(end = 16.dp, bottom = 84.dp)
+                    .testTag(TestTagTasksEntryFab)
+                    .semantics {
+                        contentDescription = "Open tasks"
+                    },
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Checklist,
+                    contentDescription = null,
+                )
+            }
+        }
+
+        // ---- Layer 2: bottom-anchored sheet (Auxio-style). ----
+        // Round 2.16.D.7 — the sheet container is always rendered so the
+        // D.7 FAB can animate it open even with no active task. The peek
+        // (mini-player) still only renders when `hasMedia` is true; an
+        // unopened sheet with no media has effectivePeekPx=0 and progress
+        // 0 → sheetHeight 0, so nothing is visible.
+        run {
+            val sheetHeightPx = effectivePeekPx + progress * (screenHeightPx - effectivePeekPx)
+            val sheetHeightDp = with(density) { sheetHeightPx.toDp() }
+
+            val nestedDragDirection = remember { mutableStateOf(0) }
+            val sheetNestedScroll = remember(screenHeightPx, effectivePeekPx) {
+                object : NestedScrollConnection {
+                    override fun onPreScroll(
+                        available: Offset,
+                        source: NestedScrollSource,
+                    ): Offset {
+                        if (source != NestedScrollSource.UserInput)
+                            return Offset.Zero
+                        if (available.y < 0f && sheetProgress.value < 1f) {
+                            val travel = (screenHeightPx - effectivePeekPx).coerceAtLeast(1f)
+                            val delta = -available.y / travel
+                            nestedDragDirection.value = -1
+                            coroutineScope.launch {
+                                sheetProgress.snapTo((sheetProgress.value + delta).coerceAtMost(1f))
+                            }
+                            return Offset(0f, available.y)
+                        }
+                        if (available.y > 0f &&
+                            nowPlayingListState.firstVisibleItemIndex == 0 &&
+                            nowPlayingListState.firstVisibleItemScrollOffset == 0
+                        ) {
+                            val travel = (screenHeightPx - effectivePeekPx).coerceAtLeast(1f)
+                            val delta = available.y / travel
+                            nestedDragDirection.value = 1
+                            coroutineScope.launch {
+                                sheetProgress.snapTo((sheetProgress.value - delta).coerceAtLeast(0f))
+                            }
+                            return Offset(0f, available.y)
+                        }
+                        return Offset.Zero
+                    }
+
+                    override fun onPostScroll(
+                        consumed: Offset,
+                        available: Offset,
+                        source: NestedScrollSource,
+                    ): Offset {
+                        if (source != NestedScrollSource.UserInput)
+                            return Offset.Zero
+                        if (available.y > 0f) {
+                            val travel = (screenHeightPx - effectivePeekPx).coerceAtLeast(1f)
+                            val delta = available.y / travel
+                            nestedDragDirection.value = 1
+                            coroutineScope.launch {
+                                sheetProgress.snapTo((sheetProgress.value - delta).coerceAtLeast(0f))
+                            }
+                            return Offset(0f, available.y)
+                        }
+                        return Offset.Zero
+                    }
+
+                    override suspend fun onPreFling(
+                        available: Velocity,
+                    ): Velocity {
+                        val dir = nestedDragDirection.value
+                        val target = when {
+                            dir > 0 -> 0f
+                            dir < 0 -> 1f
+                            else -> if (sheetProgress.value >= 0.5f) 1f else 0f
+                        }
+                        sheetProgress.animateTo(target)
+                        nestedDragDirection.value = 0
+                        return Velocity.Zero
+                    }
+                }
+            }
+
+            val sheetDraggable = rememberDraggableState { delta ->
+                onSheetDragDelta(delta)
+            }
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .height(sheetHeightDp)
+                    .background(MaterialTheme.colorScheme.surface)
+                    .clipToBounds()
+                    .nestedScroll(sheetNestedScroll)
+                    .draggable(
+                        state = sheetDraggable,
+                        orientation = Orientation.Vertical,
+                        onDragStopped = { onSheetDragSettle() },
+                    ),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .fillMaxWidth()
+                        .height(screenHeightDp),
+                ) {
+                    if (progress > 0.45f) Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .alpha(nowPlayingAlpha),
+                    ) {
+                        NowPlayingScreen(
+                            nowPlayingState = now,
+                            transport = transport,
+                            queueCommands = queue,
+                            onBack = closeSheet,
+                            nowPlayingListState = nowPlayingListState,
+                            // Round 2.16.D — replace the music queue with
+                            // the task views: chip-strip + selected
+                            // Combined/Today/Per-list/Standing/Shopping.
+                            // The body is hoisted as a LazyItemScope-
+                            // scoped slot so it can claim viewport height
+                            // when needed.
+                            showHeroCard = playbackState.hasMedia,
+                            bodyContent = {
+                                ExpandedNowPlayingTaskBody(
+                                    tasksState = tasksState,
+                                    onOpenTask = { task -> openTask = task },
+                                    onStartTask = onStartTask,
+                                    onLongPressTask = { /* Phase D — TBD */ },
+                                    bodyHeight = if (playbackState.hasMedia) {
+                                        // Hero + transport ~ 480 dp; leave
+                                        // most of the rest of the viewport
+                                        // to the task body.
+                                        (screenHeightDp - 560.dp).coerceAtLeast(240.dp)
+                                    } else {
+                                        // No hero → task body fills the
+                                        // whole viewport minus top app bar.
+                                        (screenHeightDp - 120.dp).coerceAtLeast(360.dp)
+                                    },
+                                )
+                            },
+                        )
+                    }
+
+                    // Round 2.16.D.2 — TaskQuickAdd FAB anchored bottom-end
+                    // of the expanded sheet. Tapping does NOT collapse the
+                    // sheet (we drive only the quick-add overlay flag).
+                    // Visible alpha follows the expanded-sheet crossfade so
+                    // it fades in with NowPlayingScreen.
+                    if (progress > 0.45f) Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(24.dp)
+                            .alpha(nowPlayingAlpha),
+                    ) {
+                        com.eight87.strictlykeptboy.ui.tasks.TaskQuickAddFab(
+                            onClick = { quickAddOpen = true },
+                        )
+                    }
+
+                    if (showMiniPlayer) Box(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .fillMaxWidth()
+                            .height(peekDp)
+                            .alpha(miniAlpha),
+                    ) {
+                        MiniPlayer(
+                            state = playbackState,
+                            onTogglePlayPause = transport::togglePlayPause,
+                            onClose = transport::stop,
+                            onExpand = openNowPlayingSheet,
+                            onSkipNext = transport::seekToNext,
+                            onSkipPrevious = transport::seekToPrevious,
+                            onPlayButtonLongPress = { transport.stop() },
+                            onToggleShuffle = transport::toggleShuffle,
+                            onCycleRepeat = transport::cycleRepeatMode,
+                            onSeekTo = transport::seekTo,
+                            onSheetDragDelta = onSheetDragDelta,
+                            onSheetDragSettle = onSheetDragSettle,
+                        )
+                    }
+                }
+            }
+        }
+
+        // Round 2.16.D.3 — TaskDetailSheet over NowPlayingScreen.
+        // ModalBottomSheet renders above all sibling Box content per the
+        // Compose dialog/sheet z-order convention, so no extra z-index
+        // wrangling is needed.
+        openTask?.let { t ->
+            com.eight87.strictlykeptboy.ui.tasks.TaskDetailSheet(
+                task = t,
+                onDismiss = { openTask = null },
+                onEdit = { /* Phase EE — editor stub */ },
+                onToggleDone = { tasksState.toggleDone(t.id) },
+            )
+        }
+
+        // Round 2.16.D.2 — TaskQuickAdd sheet (modal) over NowPlayingScreen.
+        if (quickAddOpen) {
+            val initialTarget = tasksUi.todolists.firstOrNull()?.let {
+                com.eight87.strictlykeptboy.ui.tasks.QuickAddTarget.Todolist(it)
+            }
+            com.eight87.strictlykeptboy.ui.tasks.TaskQuickAddSheet(
+                todolists = tasksUi.todolists,
+                initialTarget = initialTarget,
+                onDismiss = { quickAddOpen = false },
+                onSubmit = { title, target ->
+                    onWriteTask(
+                        com.eight87.strictlykeptboy.ui.tasks.TaskQuickAddRequest(
+                            title = title,
+                            target = target,
+                        ),
+                    )
+                    quickAddOpen = false
+                },
+            )
+        }
+    }
 }
+
+const val TestTagTasksEntryFab = "TasksEntryFab"

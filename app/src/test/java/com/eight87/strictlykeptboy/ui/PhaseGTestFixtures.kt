@@ -27,6 +27,8 @@ internal object PhaseGTestFixtures {
         title: String = id,
         body: String = "",
         tags: List<String> = emptyList(),
+        kind: com.eight87.strictlykeptboy.resolver.CalendarKind =
+            com.eight87.strictlykeptboy.resolver.CalendarKind.Regular,
     ): DayBand {
         val start = ZonedDateTime.of(date.atTime(startHour, 0), tz)
         val end = ZonedDateTime.of(date.atTime(endHour, 0), tz)
@@ -42,7 +44,7 @@ internal object PhaseGTestFixtures {
             body = body,
             tags = tags,
         )
-        return DayBand(instance = inst, priority = 500, laneIndex = lane, totalLanes = total)
+        return DayBand(instance = inst, priority = 500, laneIndex = lane, totalLanes = total, kind = kind)
     }
 
     fun schedule(days: Map<LocalDate, List<DayBand>>, viewMode: ViewMode = ViewMode.Day): RenderedSchedule {

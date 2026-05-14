@@ -26,16 +26,18 @@ class NextUpScreenTest {
     private val tz = ZoneId.of("UTC")
     private val base = ZonedDateTime.now(tz).withHour(9).withMinute(0).withSecond(0).withNano(0)
 
-    private fun fixture(title: String, hour: Int) = MaterializedInstance(
-        source = InstanceSource.OneOff(EventRef("evt-$hour")),
-        calendar = CalendarRef("cal-a"),
-        repo = RepoRef("repo-a"),
-        originalStart = base.withHour(hour),
-        originalEnd = base.withHour(hour + 1),
-        effectiveStart = base.withHour(hour),
-        effectiveEnd = base.withHour(hour + 1),
-        title = title,
-        body = "",
+    private fun fixture(title: String, hour: Int) = AutoEvent(
+        instance = MaterializedInstance(
+            source = InstanceSource.OneOff(EventRef("evt-$hour")),
+            calendar = CalendarRef("cal-a"),
+            repo = RepoRef("repo-a"),
+            originalStart = base.withHour(hour),
+            originalEnd = base.withHour(hour + 1),
+            effectiveStart = base.withHour(hour),
+            effectiveEnd = base.withHour(hour + 1),
+            title = title,
+            body = "",
+        ),
     )
 
     @Test fun next_up_pane_carries_title_duration_and_followups_in_order() {

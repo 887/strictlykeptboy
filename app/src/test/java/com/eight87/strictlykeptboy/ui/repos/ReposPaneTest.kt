@@ -1,8 +1,6 @@
 package com.eight87.strictlykeptboy.ui.repos
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsOff
-import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -22,18 +20,6 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34])
 class ReposPaneTest {
     @get:Rule val composeRule = createComposeRule()
-
-    @Test fun unified_view_toggle_persists_state() {
-        val store = RepoFixtures.store("repos_unified")
-        val state = ReposViewState(store)
-        composeRule.setContent {
-            StrictlyKeptBoyTheme { ReposPane(state = state) }
-        }
-        composeRule.onNodeWithTag(TestTagReposPaneUnifiedToggle).assertIsOff()
-        composeRule.onNodeWithTag(TestTagReposPaneUnifiedToggle).performClick()
-        composeRule.onNodeWithTag(TestTagReposPaneUnifiedToggle).assertIsOn()
-        assertTrue(state.unifiedView.value)
-    }
 
     @Test fun empty_state_shown_when_no_repos() {
         val store = RepoFixtures.store("repos_empty")

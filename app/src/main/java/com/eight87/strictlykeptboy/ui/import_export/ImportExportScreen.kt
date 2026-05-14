@@ -25,6 +25,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.git.RepoConfig
+import com.eight87.strictlykeptboy.ui.adaptive.LocalWindowWidthSizeClass
+import com.eight87.strictlykeptboy.ui.adaptive.MasterDetailLayout
+import com.eight87.strictlykeptboy.ui.adaptive.isTwoPane
+
+const val TestTagImportExportDetailEmpty = "ImportExport-DetailEmpty"
+const val TestTagImportExportPreviewPane = "ImportExport-PreviewPane"
 
 const val TestTagImportExportScreen = "ImportExportScreen"
 const val TestTagImportButtonPrefix = "ImportBtn-"
@@ -50,6 +56,78 @@ fun ImportExportScreen(
 ) {
     val repos by state.repos.collectAsState()
     val preview by state.pendingPreview.collectAsState()
+    val widthClass = LocalWindowWidthSizeClass.current
+
+    // Phase 2.1.H.4 — two-pane on Medium/Expanded: repo picker + per-repo
+    // import/export buttons on the left, live preview-of-events-to-import
+    // on the right. When no preview is pending, the right pane explains
+    // what will happen (replacing the bottom-sheet flow on tablet).
+    if (widthClass.isTwoPane() && repos.isNotEmpty()) {
+        Box(modifier = modifier.fillMaxSize().testTag(TestTagImportExportScreen).padding(16.dp)) {
+            MasterDetailLayout(
+                widthClass = widthClass,
+                master = {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        Text(
+                            text = stringResource(R.string.import_export_title),
+                            style = MaterialTheme.typography.headlineSmall,
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = stringResource(R.string.import_export_subtitle),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            repos.forEach { repo ->
+                                RepoRow(
+                                    repo = repo,
+                                    onImport = { onPickImportFile(repo) },
+                                    onExport = { onPickExportFile(repo) },
+                                )
+                                HorizontalDivider()
+                            }
+                        }
+                    }
+                },
+                detail = {
+                    val pv = preview
+                    if (pv != null) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(8.dp)
+                                .testTag(TestTagImportExportPreviewPane),
+                        ) {
+                            ImportPreviewContent(
+                                preview = pv,
+                                onConfirm = { state.confirmPreview() },
+                                onCancel = { state.cancelPreview() },
+                            )
+                        }
+                    } else {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(24.dp)
+                                .testTag(TestTagImportExportDetailEmpty),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Text(
+                                stringResource(R.string.import_export_detail_empty_title),
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                            Text(
+                                stringResource(R.string.import_export_detail_empty_body),
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
+                    }
+                },
+            )
+        }
+        return
+    }
 
     Box(modifier = modifier.fillMaxSize().testTag(TestTagImportExportScreen).padding(16.dp)) {
         if (repos.isEmpty()) {

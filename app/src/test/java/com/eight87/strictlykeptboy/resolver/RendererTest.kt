@@ -83,7 +83,9 @@ class RendererTest {
         assertEquals(3, out.days.sumOf { it.bands.size })
     }
 
-    @Test fun supersededBands_filteredFromRender() = runTest {
+    @Test fun supersededBands_keptWithTag_perRound2_1_C_4() = runTest {
+        // Round 2.1.C.4: superseded bands MUST flow through the renderer so
+        // the UI can paint them as paused. Previously they were filtered out.
         val snap = snapshot(
             cal("work"),
             cal("vacation", priority = 999, supersedes = listOf("work")),
@@ -100,9 +102,8 @@ class RendererTest {
             ViewMode.Day, snap, sources,
             now = zdt("2026-05-11T08:00:00"),
         )
-        // ActiveSetEvaluator drops the superseded calendar entirely, so its
-        // events never enter the render.
-        assertTrue(out.days.single().bands.isEmpty())
+        val band = out.days.single().bands.single()
+        assertEquals(CalendarRef("vacation"), band.supersededByCalendar)
     }
 
     @Test fun offSchedule_taggedWhenBeyondBaselineCadence() = runTest {

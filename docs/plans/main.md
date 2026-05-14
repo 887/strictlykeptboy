@@ -2,7 +2,42 @@
 
 ## Status: ✅ Round 1 COMPLETE — Phases A–W shipped. Round 2+ tracked below.
 
-## Round 2 closeout summary (audit 2026-05-13)
+## Round 2.1 — make it actually make sense (✅ DONE — closed out 2026-05-13)
+
+**Shipped:** all 12 phases (A DataBridge → B Multirepo → C resolver-layer → D Tasks → E settings chrome-light subset → F Notifications → G Auto → H Tablet → I First-run + Wizard → J Identity write-back → K Mode + dom-persona → M Pet Mode framing → L Polish + tests). Resolver/data plumbing is end-to-end correct; chip strip + view-mode source rail + identity-driven copy live on-device; identity + mode round-trip through `identity.toml` / `mode.toml`; notifications fire boot-persistent with Inbox style + per-group mute + briefings; Auto + tablet master-detail green on phone-resized AVD.
+
+**Test count:** 735 → **736** passing (1 new `CrossRepoAuthorTest`). 0 failures, 1 skip.
+
+**Deferred to Round 2.2 (explicit follow-ons):** 2.1.C UI overlays (.2 author-chip painting, .5 off-schedule dashed border, .6 repo-grouped collapse, .8 empty-state correction, .9 timebox filter) — resolver halves shipped, UI painting pending; 2.1.E.2 in-pane Repos kill-trampoline; 2.1.E.6 Access category cross-repo aggregator; 2.1.E.7 Auto & Tablet category; 2.1.E.8 defaults-for-new-events ChipGroup; 2.1.E.13 trip-summary card; 2.1.F.1 incremental indexer wiring + F.6 worker-safe snapshot handoff; 2.1.H.7 physical-tablet wifi-adb pass.
+
+**AVD smoke caveat (2.1.L.1):** multi-repo population from outside the app requires writing to the app's `EncryptedSharedPreferences`-backed `RepoStore`, which is keyed to the app's `MasterKey` and not externally writable from ADB. Per the brief's escape clause, the round closes on the wizard-seeded single-repo state — cross-repo author-chip rendering is unit-test verified (`CrossRepoAuthorTest` resolver layer + `ForeignEventStylingTest` Compose layer).
+
+→ Full plan: [`round-2-1.md`](round-2-1.md)
+→ Source audits: [`audit-2-1-settings.md`](audit-2-1-settings.md) · [`audit-2-1-schedule-tasks.md`](audit-2-1-schedule-tasks.md) · [`audit-2-1-multirepo.md`](audit-2-1-multirepo.md) · [`audit-2-1-notif-auto-tablet.md`](audit-2-1-notif-auto-tablet.md) · [`audit-2-1-wizard-identity-mode.md`](audit-2-1-wizard-identity-mode.md)
+
+## Round 2.2 — wizard metaphor cleanup + main-shell regression fix + 2.1 deferreds (✅ DONE — closed out 2026-05-14)
+
+**Shipped:** all 6 phases (A shell cleanup → B wizard metaphor unification → C Schedule UI overlays → D Settings completion → E Notification polish → F polish + release). Top-bar destination row restored to 3 read-surface buttons (Schedule/Tasks/Reviews); wizard goes 12→10 screens via collapse of Alignment+Lifestyle+Mode into a single six-card Lifestyle screen ("pet" canonical metaphor). Schedule paints color stripes, kind glyphs, author chips, supersedence visual, off-schedule dashed border, three-state empty. Repos in-pane (trampoline killed), Access category, Auto&Tablet category, defaults-for-new-events ChipGroup, trip-summary card all live. Foreground commits arm reminders incrementally; briefings render real today's-events; `ReminderBroadcastReceiver` calls `bodyForPet`.
+
+**Test count:** 736 → **773** passing (+37 across 12 new test files). 0 failures.
+
+→ Full plan: [`round-2-2.md`](round-2-2.md)
+
+## Round 2.5 — per-repo overlay + repo config + sticker packs (PENDING — 2026-05-14)
+
+User feedback after 2.3: per-repo settings screen is too thin, sticker packs are still shown as "emoji", and the unified-view boolean is the wrong overlay metaphor. Three-repo use-case (sub + dom + shared-fun) needs per-repo `showOnSchedule` + `drawTasksFrom` flags. **5 phases, ~20 sub-steps.**
+
+→ Full plan: [`round-2-5.md`](round-2-5.md)
+
+## Round 2.3 — top-bar consolidation (✅ DONE — 2026-05-14)
+
+User feedback on screenshots: the destination buttons currently occupy row 2; `kept` mode pill and sync icon sit in row 1 alongside title + avatar. Wanted: ONE row only. Mode + sync are per-repo state, not global app-bar concerns — they move into ReposPane.
+
+- [x] **2.3.A.1** Move `Schedule` / `Tasks` / `Reviews` destination buttons from the second row INTO the top-bar action row (`ShellTopBar`), placed to the left of the bat avatar. Drop the second-row container entirely.
+- [x] **2.3.A.2** Remove the `kept` mode pill (`ModePill`) from `ShellTopBar`. Render it instead inside `ReposPane` next to each repo card as a per-repo badge (new `RepoModeBadge` in `RepoSwitcherDropdown.kt`, reads `mode.toml` via `ModeTomlCodec.readOrDefault`).
+- [x] **2.3.A.3** Remove the global sync `IconButton` from `ShellTopBar`. Render a per-repo sync icon inside each repo card row in `ReposPane` (wired to `SyncService.startSyncRepo(context, repoId)`; suppressed for local-only repos).
+- [x] **2.3.A.4** Verify destination buttons fit on a single row alongside title + avatar on Compact width (1080dp baseline). Title elides with `…` via `overflow = TextOverflow.Ellipsis` while taking `weight(1f)`; action-row icons never clip.
+- [x] **2.3.A.5** AVD smoke verified on `emulator-5554` (1080×2400). Screenshots in `docs/qa/2-3/`. `AppShellNavigationSwapTest` did not need updates — `TestTagShellDestPrefix` tags are preserved on the relocated destination buttons.
 
 **Sub-step counts (post-cleanup sweep):**
 

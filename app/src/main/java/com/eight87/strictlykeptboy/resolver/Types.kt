@@ -279,6 +279,19 @@ data class DayBand(
     val completionState: CompletionState = CompletionState.Scheduled,
     val supersededByCalendar: CalendarRef? = null,
     val offSchedule: Boolean = false,
+    /**
+     * Round 2.1.C.1 — per-calendar color seed. Piped from
+     * `CalendarMeta.colorSeed` when set, otherwise falls back to the
+     * calendar `displayName.hashCode()` at construction. UI consumers
+     * map the seed to a chip / stripe / fill tint.
+     */
+    val accentColorSeed: Int = 0,
+    /**
+     * Round 2.1.C.3 — kind glyph hint. Mirrors the source
+     * `CalendarMeta.kind` so renderers do not need to look up the
+     * calendar by ref to pick a glyph.
+     */
+    val kind: CalendarKind = CalendarKind.Regular,
 )
 
 data class LayeredView(

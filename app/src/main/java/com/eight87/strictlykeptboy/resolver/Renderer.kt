@@ -58,7 +58,13 @@ class Renderer(
         // a single-snapshot answer. Day-by-day re-evaluation is a v2 nicety
         // and not needed for v1's coarse calendar-toggle semantics.
         val sampleAt = rangeFrom.plus(java.time.Duration.between(rangeFrom, rangeToExclusive).dividedBy(2))
-        val active = activeSet.activeCalendarsAt(sampleAt, snapshot, sources.overrides)
+        // Round 2.1.C.4: include superseded calendars in the active set so the
+        // overlay layer can tag their bands with `supersededByCalendar`; the
+        // renderer then keeps the tagged bands and the UI paints them with
+        // alpha 0.35 + strikethrough + leaf glyph. The previous `activeCalendarsAt`
+        // path dropped superseded calendars outright, hiding the fact that a
+        // routine had been paused (RV-O regression noted in 2.1.C.4).
+        val active = activeSet.activeCalendarsAtIncludingSuperseded(sampleAt, snapshot)
 
         val materializedRules = sources.rules
             .filter { it.calendar in active }
@@ -141,12 +147,11 @@ class Renderer(
     }
 
     private fun filterForViewMode(bands: List<DayBand>, viewMode: ViewMode): List<DayBand> {
-        // RV-O: render pipeline drops superseded bands (the overlay layer tagged them).
-        val notSuperseded = bands.filter { it.supersededByCalendar == null }
-        return when (viewMode) {
-            is ViewMode.Todolist -> notSuperseded // todolist mode is event-agnostic but harmless to include
-            else -> notSuperseded
-        }
+        // Round 2.1.C.4: keep superseded bands so the UI can paint them as
+        // paused (alpha 0.35 + strikethrough + leaf glyph + tap → detail-sheet
+        // "paused by …"). Previously this filtered them out and the user had
+        // no signal that a routine had been suppressed by a vacation overlay.
+        return bands
     }
 
     private fun sortBandsForView(bands: List<DayBand>, viewMode: ViewMode): List<DayBand> {
