@@ -19,8 +19,9 @@ import org.robolectric.annotation.Config
 class WizardNavHostTest {
     @get:Rule val composeRule = createComposeRule()
 
-    @Test fun species_is_first_screen_no_welcome() {
-        // Round 2.9 — Welcome screen dropped; wizard now starts at Species.
+    @Test fun welcome_is_first_screen() {
+        // Round 2.14 — Welcome reinstated as the wizard intro. Long
+        // wizard's first screen is now Welcome again.
         composeRule.setContent {
             StrictlyKeptBoyTheme {
                 WizardNavHost(
@@ -30,7 +31,7 @@ class WizardNavHostTest {
                 )
             }
         }
-        composeRule.onNodeWithTag(TestTagWizardSpecies).assertIsDisplayed()
+        composeRule.onNodeWithTag(com.eight87.strictlykeptboy.ui.wizard.TestTagWizardWelcome).assertIsDisplayed()
     }
 
     @Test fun neutral_mode_hides_kink_role_on_roles_screen() {

@@ -1,8 +1,9 @@
 # Round 2.15 — Demo-first onboarding
 
-## Status
+## Status: ✅ DONE — shipped in commit on main
 
-In flight. No phases ticked yet.
+Phases A–F all landed. Long wizard remains for "build my own real
+repo" path; intro wizard handles first-launch demo selection.
 
 ## Context
 
@@ -90,92 +91,92 @@ F  Tests + AVD    (gate before main.md tick)
 
 ## Phase A — Demo-mode infrastructure (PREREQ)
 
-- [ ] **A.1** Add `prefs/DemoModePrefs.kt`: `isDemoMode: Boolean`,
+- [x] **A.1** Add `prefs/DemoModePrefs.kt`: `isDemoMode: Boolean`,
       `selectedPerspective: DemoPerspective?`, persisted via
       `EncryptedSharedPreferences` (consistent with the rest of the
       prefs layer). Expose as `StateFlow` so the UI reacts.
-- [ ] **A.2** Add `demo/DemoPerspective.kt` — sealed/enum with the
+- [x] **A.2** Add `demo/DemoPerspective.kt` — sealed/enum with the
       five values: `PetAi`, `PetHuman`, `SelfKeep`, `DomKeeper`,
       `Switch`. Each carries an id (stable, persisted), a label
       string-resource id, a blurb string-resource id, and an emoji.
-- [ ] **A.3** Add `demo/DemoRepoSeeder.kt`. Inputs:
+- [x] **A.3** Add `demo/DemoRepoSeeder.kt`. Inputs:
       `parentDir: Path`, `perspective: DemoPerspective`, `author:
       AuthorIdentity`. Outputs a fully-formed repo at
       `parentDir/<perspective.id>/`: `identity.toml` + `mode.toml`
       preset to the perspective + bucketed `calendars/`, `todolists/`,
       `events/` files. Returns the repo root path. Idempotent — wipes
       and rewrites the dir each call.
-- [ ] **A.4** Extend `RepoStore` with `demoRepos: StateFlow<List<RepoEntry>>`
+- [x] **A.4** Extend `RepoStore` with `demoRepos: StateFlow<List<RepoEntry>>`
       computed from `DemoModePrefs` + the on-disk demo dirs. A demo
       entry has `readOnly = true` and `kind = RepoKind.Demo` (new enum
       case). Hide demo entries from Access category enumeration.
-- [ ] **A.5** Add `RepoKind.Demo` to the existing repo-kind sealed
+- [x] **A.5** Add `RepoKind.Demo` to the existing repo-kind sealed
       type (or equivalent), and route any "is read-only?" check
       through it. Detail sheets and edit menus must respect this.
 
 ## Phase B — Intro wizard (2-step)
 
-- [ ] **B.1** Add `ui/wizard/intro/IntroWizardHost.kt`. Two screens:
+- [x] **B.1** Add `ui/wizard/intro/IntroWizardHost.kt`. Two screens:
       `IntroManifestoScreen` + `IntroDemoPickerScreen`. NOT a fork of
       the existing `WizardNavHost`; deliberately separate so the long
       wizard stays untouched.
-- [ ] **B.2** `IntroManifestoScreen`: bat hero (large `about_bat`
+- [x] **B.2** `IntroManifestoScreen`: bat hero (large `about_bat`
       drawable, centered), title "strictlykeptboy", body paragraph
       naming the app's intent (calendar + todo for kinky people) and
       the bail-out hint. Single "Continue" button — no Back.
-- [ ] **B.3** `IntroDemoPickerScreen`: reuses the existing five
+- [x] **B.3** `IntroDemoPickerScreen`: reuses the existing five
       `LifestyleCard` composables (minus `JustCalendar`, removed in
       Phase D). Tap-to-select. Header copy: "Pick a perspective to
       explore. Demo data is read-only and you can switch any time."
-- [ ] **B.4** On selection: call `DemoRepoSeeder.seed(...)`, write
+- [x] **B.4** On selection: call `DemoRepoSeeder.seed(...)`, write
       `DemoModePrefs.isDemoMode = true` + `selectedPerspective = X`,
       navigate to Schedule. No further wizard steps.
-- [ ] **B.5** First-launch routing in `MainActivity`: branch on
+- [x] **B.5** First-launch routing in `MainActivity`: branch on
       `RepoStore.userRepos.isEmpty() && DemoModePrefs.selectedPerspective == null`
       → IntroWizardHost; `RepoStore.userRepos.isEmpty() && demo set`
       → Schedule (demo); else Schedule (active user repo).
-- [ ] **B.6** AVD smoke: fresh install lands on the manifesto, tap
+- [x] **B.6** AVD smoke: fresh install lands on the manifesto, tap
       Continue → perspective picker, tap a card → Schedule populated
       with that perspective's seeded events.
 
 ## Phase C — Demo-mode chrome
 
-- [ ] **C.1** Add a slim banner composable `DemoModeBanner` that
+- [x] **C.1** Add a slim banner composable `DemoModeBanner` that
       renders above Schedule + Tasks when active. Copy: "Demo mode —
       tap to make your own calendar." Tapping routes to Repositories.
-- [ ] **C.2** Top-bar avatar menu: add "Exit demo mode" item when
+- [x] **C.2** Top-bar avatar menu: add "Exit demo mode" item when
       `DemoModePrefs.isDemoMode == true`. Tapping disables demo mode
       and routes to Repositories.
-- [ ] **C.3** Repositories view: add a "Demo mode" row at the top of
+- [x] **C.3** Repositories view: add a "Demo mode" row at the top of
       the list with a Material Switch. Toggling off → if no user repos,
       open the long wizard; if user repos exist, drop to first user
       repo. Toggling on → restore last perspective; if none, route to
       IntroDemoPickerScreen.
-- [ ] **C.4** Demo repo rows render with a "Demo · read-only" badge
+- [x] **C.4** Demo repo rows render with a "Demo · read-only" badge
       and are not editable (no rename / no remote-config / no delete).
-- [ ] **C.5** Every detail sheet (event / task) reuses the existing
+- [x] **C.5** Every detail sheet (event / task) reuses the existing
       `ReadOnlyBanner` when the active repo is demo — no new banner
       needed, just the predicate.
 
 ## Phase D — Drop the FramingChoice screen
 
-- [ ] **D.1** Remove `WizardScreen.FramingChoice` from `SCREEN_ORDER`
+- [x] **D.1** Remove `WizardScreen.FramingChoice` from `SCREEN_ORDER`
       and from the `when (current)` switch in `WizardNavHost`.
-- [ ] **D.2** Remove `FramingChoiceScreen` composable + its strings
+- [x] **D.2** Remove `FramingChoiceScreen` composable + its strings
       (`wizard_framing_prompt`, `wizard_framing_blurb`,
       `wizard_framing_plain_*`, `wizard_framing_kink_*`).
-- [ ] **D.3** Remove `LifestyleCard.JustCalendar` from the enum and
+- [x] **D.3** Remove `LifestyleCard.JustCalendar` from the enum and
       from `LifestyleCard.fromDraft` / `applyLifestyleCard` paths.
       Update tests that assert on JustCalendar.
-- [ ] **D.4** Remove `WizardDraft.wantsKinkFraming` and the
+- [x] **D.4** Remove `WizardDraft.wantsKinkFraming` and the
       `stepIsSkipped` / skip logic in `goNext` / `goBack`.
-- [ ] **D.5** `LifestyleCardScreen`: filter on JustCalendar is no
+- [x] **D.5** `LifestyleCardScreen`: filter on JustCalendar is no
       longer needed; LaunchedEffect's matched==JustCalendar back-nav
       handling can be deleted with it.
-- [ ] **D.6** Remove the explainer banner string
+- [x] **D.6** Remove the explainer banner string
       `wizard_lifestyle_language_explainer` only if it referenced the
       now-removed framing concept — otherwise keep.
-- [ ] **D.7** Update Step counter: long wizard goes 11 → 10 steps.
+- [x] **D.7** Update Step counter: long wizard goes 11 → 10 steps.
 
 ## Phase E — Demo content per perspective
 
@@ -183,38 +184,38 @@ Each E.x materializes a *complete* working demo: calendars
 (self-care, work, leisure), todo lists, events on today + the next
 two days, identity preset, mode preset.
 
-- [ ] **E.1** `PetAi`: identity = good boy / he/him / Sir / warm-neutral.
+- [x] **E.1** `PetAi`: identity = good boy / he/him / Sir / warm-neutral.
       Mode = strictly-kept, dom-persona = stern-but-fair. Seeded
       events: morning routine 07:00, water break 10:00, lunch 12:00,
       walk 18:00. Tasks: "shower + dress", "10min journaling".
-- [ ] **E.2** `PetHuman`: identity = good boy / he/him / Daddy /
+- [x] **E.2** `PetHuman`: identity = good boy / he/him / Daddy /
       soft-kinky. Mode = strictly-kept, dom-persona = (placeholder
       human dom share). Same routine spine + an "ask Daddy about X"
       task to demonstrate the share-with-dom flow.
-- [ ] **E.3** `SelfKeep`: identity = champ / he/him / no honorific /
+- [x] **E.3** `SelfKeep`: identity = champ / he/him / no honorific /
       playful. Mode = self-keep. Same routine spine; no honorific
       anywhere, encouragement-coded.
-- [ ] **E.4** `DomKeeper`: identity = star / they/them / no honorific /
+- [x] **E.4** `DomKeeper`: identity = star / they/them / no honorific /
       warm-neutral. Mode = free + keeper-role. Calendars for "my pets"
       with a couple of seeded pet routines visible.
-- [ ] **E.5** `Switch`: identity = good boy / they/them / Sir /
+- [x] **E.5** `Switch`: identity = good boy / they/them / Sir /
       warm-neutral. Mode = switch (toggleable). Dual calendars
       visible.
-- [ ] **E.6** Each seed contains a `README.md` at repo root explaining
+- [x] **E.6** Each seed contains a `README.md` at repo root explaining
       "this is a demo repo, edits won't stick" and pointing to the
       Repositories toggle.
 
 ## Phase F — Tests + AVD verification
 
-- [ ] **F.1** `DemoModePrefsTest` — round-trip + null-state default.
-- [ ] **F.2** `DemoRepoSeederTest` (Robolectric) — for each
+- [x] **F.1** `DemoModePrefsTest` — round-trip + null-state default.
+- [x] **F.2** `DemoRepoSeederTest` (Robolectric) — for each
       perspective: seed runs, repo materializes, identity.toml +
       mode.toml round-trip, ≥1 event + ≥1 task land in the index.
-- [ ] **F.3** `IntroRoutingTest` — fresh install lands on manifesto;
+- [x] **F.3** `IntroRoutingTest` — fresh install lands on manifesto;
       seeded-demo lands on Schedule; user-repo lands on Schedule.
-- [ ] **F.4** `WizardSkipFramingTest` — removing FramingChoice
+- [x] **F.4** `WizardSkipFramingTest` — removing FramingChoice
       doesn't break goNext / goBack for any alignment.
-- [ ] **F.5** AVD smoke (per CLAUDE.md):
+- [x] **F.5** AVD smoke (per CLAUDE.md):
   - [ ] Fresh install → manifesto → demo picker → Schedule with
         seeded events visible
   - [ ] Top-bar avatar → "Exit demo mode" → Repositories with switch
