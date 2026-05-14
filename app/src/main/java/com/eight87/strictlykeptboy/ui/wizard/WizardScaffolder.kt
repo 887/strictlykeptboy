@@ -276,35 +276,27 @@ object WizardScaffolder {
             tzId = tzId,
         )
 
-        // Phase 2.7.A — bake the bundled sticker pack into the repo so it
-        // lands in the initial commit. ChooseYourOwn maps to the Bat pack
-        // (its on-disk id is "custom" but there's no bundled `custom`
-        // pack — Bat is the editable starting point) and additionally
-        // gets a `stickers/README.md` explaining the customization path.
-        if (assetPackLoader != null) {
-            val speciesId = draft.species.id
-            val (bundledSpecies, isCustom) = when (draft.species) {
-                SpeciesChoice.ChooseYourOwn -> "bat" to true
-                else -> speciesId to false
-            }
-            val destSpeciesDir = if (isCustom) {
-                rootDir.toPath().resolve("stickers/bat/")
-            } else {
-                rootDir.toPath().resolve("stickers/$speciesId/")
-            }
-            assetPackLoader.copyPackInto(bundledSpecies, destSpeciesDir)
-            if (isCustom) {
-                val readme = rootDir.toPath().resolve("stickers/README.md")
-                if (!Files.exists(readme)) {
-                    Files.createDirectories(readme.parent)
-                    Files.write(
-                        readme,
-                        ("# Sticker packs\n\n" +
-                            "Edit these files and commit — the app re-reads them from disk " +
-                            "on next launch. Hand them to an AI image generator if you want " +
-                            "a custom look.\n").toByteArray(StandardCharsets.UTF_8),
-                    )
-                }
+        // Phase 2.8 — write the customization README always, regardless of
+        // species. We do NOT copy bundled-pack image files into the repo by
+        // default (they'd inflate repo size for users who never customize).
+        // The opt-in "Import stickers into repo" toggle in per-repo Sticker
+        // Pack settings (RepoConfig.importStickersToRepo) is what triggers
+        // the copy — see StickerPackSelectorScreen.
+        run {
+            val readme = rootDir.toPath().resolve("stickers/README.md")
+            Files.createDirectories(readme.parent)
+            if (!Files.exists(readme)) {
+                Files.write(
+                    readme,
+                    ("# Sticker packs\n\n" +
+                        "By default this repo doesn't carry sticker images — the app " +
+                        "renders the active bundled pack from its own assets. To customize " +
+                        "your stickers (e.g. hand them to an AI image generator), open " +
+                        "**Repo Settings → Sticker pack** and turn on **Import stickers " +
+                        "into repo**. The active pack's files will be copied to " +
+                        "`stickers/<species>/` and committed. Edit them and commit your " +
+                        "changes; the app re-reads them on next launch.\n").toByteArray(StandardCharsets.UTF_8),
+                )
             }
         }
 

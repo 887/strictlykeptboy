@@ -74,6 +74,15 @@ data class RepoConfig(
      * scenario in `docs/plans/round-2-5.md`).
      */
     val drawTasksFrom: Boolean = false,
+    /**
+     * Round 2.8 — per-repo opt-in: when `true`, the active sticker pack's
+     * image files are copied into `<repoRoot>/stickers/<species>/` and
+     * committed (so users can edit them / hand to AI image gen). When
+     * `false` (default), the repo only carries `stickers/README.md`; the
+     * app renders from bundled assets. Off by default because image bytes
+     * inflate the repo and most users won't customize.
+     */
+    val importStickersToRepo: Boolean = false,
 ) {
     init {
         require(remotes.isEmpty() == (primaryRemote == null)) {

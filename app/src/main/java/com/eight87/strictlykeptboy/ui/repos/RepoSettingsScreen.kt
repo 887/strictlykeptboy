@@ -366,15 +366,60 @@ fun RepoSettingsScreen(
             }
         }
 
-        // ---- Sticker pack placeholder (Round 2.5.C) --------------------------
+        // ---- Sticker pack (Round 2.8 — import toggle) ------------------------
         SectionCard(
             title = stringResource(R.string.repo_settings_section_sticker_pack),
             modifier = Modifier.testTag(TestTagRepoSettingsStickerPack),
         ) {
             Text(
-                stringResource(R.string.repo_settings_sticker_pack_placeholder),
+                "By default this repo only carries a `stickers/README.md`; the app " +
+                    "renders the active bundled pack from its own assets. Turn on the " +
+                    "toggle below to copy the active pack's images into this repo so " +
+                    "you can edit them (e.g. hand them to an AI image generator).",
                 style = MaterialTheme.typography.bodyMedium,
             )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "Import stickers into repo",
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(
+                        "Off by default — image bytes inflate repo size.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                Switch(
+                    checked = draft.importStickersToRepo,
+                    onCheckedChange = { newValue ->
+                        draft = draft.copy(importStickersToRepo = newValue)
+                    },
+                    modifier = Modifier.testTag("RepoSettings-ImportStickersToggle"),
+                )
+            }
+            val assetLoader = LocalAssetPackLoader.current
+            val species = draft.iconSpecies
+            val didImport = remember(repo.repoId) { mutableStateOf(repo.importStickersToRepo) }
+            LaunchedEffect(draft.importStickersToRepo, species, assetLoader) {
+                val on = draft.importStickersToRepo
+                val justFlippedOn = on && !didImport.value
+                if (justFlippedOn && species != null && assetLoader != null) {
+                    runCatching {
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            val dest = java.nio.file.Paths.get(repo.rootDir)
+                                .resolve("stickers/$species/")
+                            assetLoader.copyPackInto(species.lowercase(), dest)
+                            com.eight87.strictlykeptboy.git.GitRepoRegistry
+                                .get(repo.repoId)
+                                ?.commitAll("stickers: import $species pack into repo")
+                        }
+                    }
+                }
+                didImport.value = on
+            }
         }
 
         // ---- Defaults --------------------------------------------------------

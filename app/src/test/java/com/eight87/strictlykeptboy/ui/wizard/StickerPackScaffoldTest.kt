@@ -51,7 +51,11 @@ class StickerPackScaffoldTest {
         return ctx().assets.open("avatar-packs/$species/$name").use { it.readBytes() }
     }
 
-    @Test fun foxScaffoldShipsBundledPack() = runTest {
+    @Test fun foxScaffoldShipsReadmeOnly_packCopyDeferredToToggle() = runTest {
+        // Round 2.8 — by default, scaffolding writes only stickers/README.md.
+        // The bundled pack is NOT copied into the repo unless the user
+        // explicitly toggles `RepoConfig.importStickersToRepo` ON later in
+        // per-repo Sticker pack settings. This keeps initial repo size small.
         val loader = AssetPackLoader(ctx())
         val draft = WizardDraft(
             alignment = Alignment.UnalignedPrivate,
@@ -66,43 +70,36 @@ class StickerPackScaffoldTest {
             assetPackLoader = loader,
         )
         val root = outcome.rootDir.toPath()
+
+        // README is now ALWAYS written (regardless of species — Round 2.8).
+        val readme = root.resolve("stickers/README.md")
+        assertTrue("stickers/README.md exists for all species", Files.exists(readme))
+
+        // No pack image files in the repo — those are opt-in via the toggle.
         val stickerDir = root.resolve("stickers/fox")
-        assertTrue("stickers/fox/ exists", Files.isDirectory(stickerDir))
-
-        // Every bundled file shows up + matches byte-for-byte.
-        val bundled = listAssetFiles("fox")
-        assertTrue("bundled fox pack non-empty (at minimum pack.toml)", bundled.isNotEmpty())
-        for (name in bundled) {
-            val onDisk = stickerDir.resolve(name)
-            assertTrue("stickers/fox/$name copied", Files.exists(onDisk))
-            val diskBytes = Files.readAllBytes(onDisk)
-            val assetBytes = bytesFromAsset("fox", name)
-            assertArrayEqualsMsg("byte parity for $name", assetBytes, diskBytes)
-        }
-
-        // For non-custom species, no stickers/README.md is written.
         assertFalse(
-            "stickers/README.md is only emitted for ChooseYourOwn",
-            Files.exists(root.resolve("stickers/README.md")),
+            "stickers/fox/ should NOT exist until import-toggle is flipped",
+            Files.isDirectory(stickerDir),
         )
 
-        // The initial commit includes the sticker files.
+        // Initial commit contains the README but not pack files.
         Git.open(outcome.rootDir).use { git ->
             val headId = git.repository.resolve(Constants.HEAD)
             RevWalk(git.repository).use { walk ->
                 val commit = walk.parseCommit(headId)
-                val tree = commit.tree
                 TreeWalk(git.repository).use { tw ->
-                    tw.addTree(tree)
+                    tw.addTree(commit.tree)
                     tw.isRecursive = true
                     val paths = mutableListOf<String>()
                     while (tw.next()) paths += tw.pathString
-                    for (name in bundled) {
-                        assertTrue(
-                            "initial commit contains stickers/fox/$name (have: $paths)",
-                            paths.contains("stickers/fox/$name"),
-                        )
-                    }
+                    assertTrue(
+                        "initial commit contains stickers/README.md",
+                        paths.contains("stickers/README.md"),
+                    )
+                    assertFalse(
+                        "initial commit does not contain stickers/fox/pack.toml (deferred to toggle)",
+                        paths.contains("stickers/fox/pack.toml"),
+                    )
                 }
             }
         }
@@ -123,21 +120,20 @@ class StickerPackScaffoldTest {
             assetPackLoader = loader,
         )
         val root = outcome.rootDir.toPath()
-        // ChooseYourOwn → Bat starter at stickers/bat/.
-        val stickerDir = root.resolve("stickers/bat")
-        assertTrue("stickers/bat/ exists for ChooseYourOwn", Files.isDirectory(stickerDir))
-        val bundled = listAssetFiles("bat")
-        assertTrue("bundled bat pack non-empty", bundled.isNotEmpty())
-        for (name in bundled) {
-            assertTrue("stickers/bat/$name exists", Files.exists(stickerDir.resolve(name)))
-        }
-        // README is emitted for ChooseYourOwn.
+        // Round 2.8 — README is ALWAYS written (no species-conditional anymore).
         val readme = root.resolve("stickers/README.md")
         assertTrue("stickers/README.md exists for ChooseYourOwn", Files.exists(readme))
         val readmeText = String(Files.readAllBytes(readme), Charsets.UTF_8)
-        assertTrue("README mentions editing", readmeText.contains("Edit"))
+        assertTrue(
+            "README mentions Import stickers into repo toggle",
+            readmeText.contains("Import stickers into repo"),
+        )
 
-        // README lands in the initial commit too.
+        // Pack files are NOT copied — toggle is the entry point.
+        assertFalse("no stickers/bat/ until toggle", Files.isDirectory(root.resolve("stickers/bat")))
+        assertFalse("no stickers/fox/", Files.isDirectory(root.resolve("stickers/fox")))
+
+        // README lands in the initial commit.
         Git.open(outcome.rootDir).use { git ->
             val headId = git.repository.resolve(Constants.HEAD)
             RevWalk(git.repository).use { walk ->
@@ -151,16 +147,9 @@ class StickerPackScaffoldTest {
                         "initial commit contains stickers/README.md",
                         paths.contains("stickers/README.md"),
                     )
-                    assertTrue(
-                        "initial commit contains stickers/bat/pack.toml",
-                        paths.contains("stickers/bat/pack.toml"),
-                    )
                 }
             }
         }
-
-        // The fox dir is NOT created when ChooseYourOwn is picked.
-        assertFalse("no stickers/fox/", Files.isDirectory(root.resolve("stickers/fox")))
     }
 
     private fun assertArrayEqualsMsg(msg: String, expected: ByteArray, actual: ByteArray) {
