@@ -396,8 +396,13 @@ private fun WelcomeScreen(onGo: () -> Unit) {
 
 @Composable
 private fun SpeciesScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
+    // The wizard host (line ~201) already wraps each screen in a
+    // verticalScroll, so nothing extra here — the non-lazy 2-col grid
+    // below is enough to make all 9 species cards reachable.
     Column(
-        modifier = Modifier.fillMaxWidth().testTag(TestTagWizardSpecies),
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(TestTagWizardSpecies),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(stringResource(R.string.wizard_species_prompt), style = MaterialTheme.typography.titleMedium)
@@ -406,41 +411,73 @@ private fun SpeciesScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        // Use a single-column flow on phones; 2-col grid is acceptable but
-        // simpler to use a Column of clickable cards for v1.
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            contentPadding = PaddingValues(0.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.height(380.dp),
-        ) {
-            items(SpeciesChoice.entries.toList()) { species ->
-                val selected = draft.species == species
-                Card(
-                    onClick = { onUpdate(draft.copy(species = species)) },
-                    colors = if (selected) CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    ) else CardDefaults.cardColors(),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("Wizard-Species-${species.id}"),
-                ) {
-                    Column(
-                        modifier = Modifier.padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        Text(species.labelString(), style = MaterialTheme.typography.titleMedium)
-                        if (selected) Icon(Icons.Filled.Check, contentDescription = null)
+        // Round 2.11 — non-lazy 2-col grid so the whole screen can be
+        // verticalScrolled (LazyVerticalGrid can't nest in a verticalScroll
+        // without explicit height). N=9 cards, perf is irrelevant.
+        val cards = SpeciesChoice.entries.toList()
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            cards.chunked(2).forEach { row ->
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    row.forEach { species ->
+                        val selected = draft.species == species
+                        Card(
+                            onClick = { onUpdate(draft.copy(species = species)) },
+                            colors = if (selected) CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            ) else CardDefaults.cardColors(),
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("Wizard-Species-${species.id}"),
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                Text(species.labelString(), style = MaterialTheme.typography.titleMedium)
+                                if (selected) Icon(Icons.Filled.Check, contentDescription = null)
+                            }
+                        }
                     }
+                    // Pad the trailing empty cell on an odd-count row so the
+                    // last card doesn't stretch full-width.
+                    if (row.size == 1) Spacer(modifier = Modifier.weight(1f))
                 }
             }
         }
-        // Round 2.10 — customization explainer is always visible (no
-        // longer gated on a "Customize later" choice). Built-in packs
-        // aren't copied into the repo by default — toggle 'Import
-        // stickers into repo' in Repo Settings → Sticker pack to make
-        // them editable.
+        // Round 2.11 — single preview card for the currently-selected
+        // species. Stock placeholder (large species emoji) until the user
+        // ships AI-generated artwork to replace it.
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("Wizard-Species-Preview"),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            ),
+        ) {
+            Row(
+                verticalAlignment = ComposeAlign.CenterVertically,
+                modifier = Modifier.padding(16.dp).fillMaxWidth(),
+            ) {
+                Text(
+                    text = speciesPreviewEmoji(draft.species),
+                    style = MaterialTheme.typography.displayLarge,
+                    modifier = Modifier.padding(end = 16.dp),
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        draft.species.labelString(),
+                        style = MaterialTheme.typography.titleLarge,
+                    )
+                    Text(
+                        "Preview — stock placeholder. Customize via Repo Settings.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+        // Round 2.10 — customization explainer is always visible.
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -453,6 +490,20 @@ private fun SpeciesScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
             )
         }
     }
+}
+
+/** Stock-placeholder emoji preview for each species — replaced when
+ *  bundled-pack artwork ships (Phase WW). */
+private fun speciesPreviewEmoji(species: SpeciesChoice): String = when (species) {
+    SpeciesChoice.Bat -> "🦇"
+    SpeciesChoice.Bunny -> "🐰"
+    SpeciesChoice.Cat -> "🐱"
+    SpeciesChoice.CatChan -> "🐱"
+    SpeciesChoice.Fox -> "🦊"
+    SpeciesChoice.FoxChan -> "🦊"
+    SpeciesChoice.Lion -> "🦁"
+    SpeciesChoice.Tiger -> "🐯"
+    SpeciesChoice.Wolf -> "🐺"
 }
 
 // --- Screen 3.5 Identity (praise, pronouns, honorific, tone, emoji) -----------
