@@ -61,6 +61,26 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.git.auth.SecretsStore
+import com.eight87.strictlykeptboy.task.StubTaskPlaybackSource
+import com.eight87.strictlykeptboy.ui.playing.MiniPlayer
+import com.eight87.strictlykeptboy.ui.playing.NowPlayingScreen
+import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Velocity
+import androidx.activity.compose.BackHandler
+import kotlinx.coroutines.launch
 import com.eight87.strictlykeptboy.ui.a11y.labelString
 import com.eight87.strictlykeptboy.ui.adaptive.LocalWindowWidthSizeClass
 import com.eight87.strictlykeptboy.ui.adaptive.ProvideWindowSizeClass
@@ -332,7 +352,8 @@ private fun SkbAppShellContent(
     // redundant — destination is the right granularity here.
     val title = selected.labelString()
 
-    Surface(
+    NowPlayingSheetHost {
+      Surface(
         color = MaterialTheme.colorScheme.background,
         modifier = Modifier.fillMaxSize().testTag(TestTagAppShell),
     ) {
@@ -485,6 +506,7 @@ private fun SkbAppShellContent(
             }
         }
     }
+    }  // end NowPlayingSheetHost
 }
 
 @Composable
@@ -764,4 +786,226 @@ private fun taskTabLabelRes(tab: TaskViewTab): Int = when (tab) {
     TaskViewTab.PerList -> R.string.task_view_tab_per_list
     TaskViewTab.Shopping -> R.string.task_view_tab_shopping
     TaskViewTab.Standing -> R.string.task_view_tab_standing
+}
+
+/**
+ * Round 2.16.A — verbatim port of tonearmboy `TonearmboyApp.kt` lines
+ * 140-471 (the sheet-host block). Wraps a [content] layer (the app's
+ * existing chrome) with a bottom-anchored sheet that hosts the
+ * [MiniPlayer] at peek and [NowPlayingScreen] at fully-expanded.
+ *
+ * Matches tonearmboy verbatim:
+ *  - peek = 118 dp
+ *  - flick threshold = 0.05f (5% of sheet travel)
+ *  - staggered crossfade: mini visible 0..0.5, full visible 0.5..1
+ *  - nested-scroll connection drains queue overscroll → sheet progress
+ *  - drag-start progress captured for direction-based flick commit
+ *
+ * Phase A reads from [StubTaskPlaybackSource]; Phase B replaces with
+ * the real projector.
+ */
+@Composable
+private fun NowPlayingSheetHost(content: @Composable () -> Unit) {
+    val source = StubTaskPlaybackSource
+    val playbackState by source.state.collectAsState()
+
+    val sheetProgress = remember { Animatable(0f) }
+    val coroutineScope = rememberCoroutineScope()
+    val nowPlayingListState = rememberLazyListState()
+
+    val openNowPlayingSheet: () -> Unit = remember {
+        { coroutineScope.launch { sheetProgress.animateTo(1f) }; Unit }
+    }
+    val closeSheet: () -> Unit = remember {
+        { coroutineScope.launch { sheetProgress.animateTo(0f) }; Unit }
+    }
+
+    val showMiniPlayer = playbackState.hasMedia
+
+    BackHandler(enabled = sheetProgress.value > 0f) {
+        closeSheet()
+    }
+
+    val configuration = LocalConfiguration.current
+    val screenHeightDp = configuration.screenHeightDp.dp
+    val density = LocalDensity.current
+    val screenHeightPx = with(density) { screenHeightDp.toPx() }.coerceAtLeast(1f)
+    Box(modifier = Modifier.fillMaxSize()) {
+        val peekDp = 118.dp
+        val peekPx = with(density) { peekDp.toPx() }
+        val effectivePeekPx = if (showMiniPlayer) peekPx else 0f
+
+        val progress = sheetProgress.value
+        val miniAlpha = (1f - kotlin.math.min(progress * 2f, 1f)).coerceIn(0f, 1f)
+        val nowPlayingAlpha = (kotlin.math.max(progress - 0.5f, 0f) * 2f).coerceIn(0f, 1f)
+
+        val dragStartProgress = remember { mutableStateOf<Float?>(null) }
+        val onSheetDragDelta: (Float) -> Unit = { delta ->
+            coroutineScope.launch {
+                if (dragStartProgress.value == null) {
+                    dragStartProgress.value = sheetProgress.value
+                }
+                val travel = (screenHeightPx - effectivePeekPx).coerceAtLeast(1f)
+                val next = (sheetProgress.value - delta / travel).coerceIn(0f, 1f)
+                sheetProgress.snapTo(next)
+            }
+        }
+        val onSheetDragSettle: () -> Unit = {
+            coroutineScope.launch {
+                val start = dragStartProgress.value ?: 0f
+                val end = sheetProgress.value
+                val moved = end - start
+                val flickThreshold = 0.05f  // 5% of sheet travel = decisive flick
+                val target = when {
+                    moved > flickThreshold -> 1f       // upward flick → open
+                    moved < -flickThreshold -> 0f      // downward flick → close
+                    else -> if (end >= 0.5f) 1f else 0f
+                }
+                sheetProgress.animateTo(target)
+                dragStartProgress.value = null
+            }
+        }
+
+        // ---- Layer 1: existing app chrome (with bottom inset = peek). ----
+        val libraryBottomPad = if (showMiniPlayer) peekDp else 0.dp
+        Box(modifier = Modifier.fillMaxSize().padding(bottom = libraryBottomPad)) {
+            content()
+        }
+
+        // ---- Layer 2: bottom-anchored sheet (Auxio-style). ----
+        if (showMiniPlayer) {
+            val sheetHeightPx = effectivePeekPx + progress * (screenHeightPx - effectivePeekPx)
+            val sheetHeightDp = with(density) { sheetHeightPx.toDp() }
+
+            val nestedDragDirection = remember { mutableStateOf(0) }
+            val sheetNestedScroll = remember(screenHeightPx, effectivePeekPx) {
+                object : NestedScrollConnection {
+                    override fun onPreScroll(
+                        available: Offset,
+                        source: NestedScrollSource,
+                    ): Offset {
+                        if (source != NestedScrollSource.UserInput)
+                            return Offset.Zero
+                        if (available.y < 0f && sheetProgress.value < 1f) {
+                            val travel = (screenHeightPx - effectivePeekPx).coerceAtLeast(1f)
+                            val delta = -available.y / travel
+                            nestedDragDirection.value = -1
+                            coroutineScope.launch {
+                                sheetProgress.snapTo((sheetProgress.value + delta).coerceAtMost(1f))
+                            }
+                            return Offset(0f, available.y)
+                        }
+                        if (available.y > 0f &&
+                            nowPlayingListState.firstVisibleItemIndex == 0 &&
+                            nowPlayingListState.firstVisibleItemScrollOffset == 0
+                        ) {
+                            val travel = (screenHeightPx - effectivePeekPx).coerceAtLeast(1f)
+                            val delta = available.y / travel
+                            nestedDragDirection.value = 1
+                            coroutineScope.launch {
+                                sheetProgress.snapTo((sheetProgress.value - delta).coerceAtLeast(0f))
+                            }
+                            return Offset(0f, available.y)
+                        }
+                        return Offset.Zero
+                    }
+
+                    override fun onPostScroll(
+                        consumed: Offset,
+                        available: Offset,
+                        source: NestedScrollSource,
+                    ): Offset {
+                        if (source != NestedScrollSource.UserInput)
+                            return Offset.Zero
+                        if (available.y > 0f) {
+                            val travel = (screenHeightPx - effectivePeekPx).coerceAtLeast(1f)
+                            val delta = available.y / travel
+                            nestedDragDirection.value = 1
+                            coroutineScope.launch {
+                                sheetProgress.snapTo((sheetProgress.value - delta).coerceAtLeast(0f))
+                            }
+                            return Offset(0f, available.y)
+                        }
+                        return Offset.Zero
+                    }
+
+                    override suspend fun onPreFling(
+                        available: Velocity,
+                    ): Velocity {
+                        val dir = nestedDragDirection.value
+                        val target = when {
+                            dir > 0 -> 0f
+                            dir < 0 -> 1f
+                            else -> if (sheetProgress.value >= 0.5f) 1f else 0f
+                        }
+                        sheetProgress.animateTo(target)
+                        nestedDragDirection.value = 0
+                        return Velocity.Zero
+                    }
+                }
+            }
+
+            val sheetDraggable = rememberDraggableState { delta ->
+                onSheetDragDelta(delta)
+            }
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .height(sheetHeightDp)
+                    .background(MaterialTheme.colorScheme.surface)
+                    .clipToBounds()
+                    .nestedScroll(sheetNestedScroll)
+                    .draggable(
+                        state = sheetDraggable,
+                        orientation = Orientation.Vertical,
+                        onDragStopped = { onSheetDragSettle() },
+                    ),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .fillMaxWidth()
+                        .height(screenHeightDp),
+                ) {
+                    if (progress > 0.45f) Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .alpha(nowPlayingAlpha),
+                    ) {
+                        NowPlayingScreen(
+                            nowPlayingState = source,
+                            transport = source,
+                            queueCommands = source,
+                            onBack = closeSheet,
+                            nowPlayingListState = nowPlayingListState,
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .fillMaxWidth()
+                            .height(peekDp)
+                            .alpha(miniAlpha),
+                    ) {
+                        MiniPlayer(
+                            state = playbackState,
+                            onTogglePlayPause = source::togglePlayPause,
+                            onClose = source::stop,
+                            onExpand = openNowPlayingSheet,
+                            onSkipNext = source::seekToNext,
+                            onSkipPrevious = source::seekToPrevious,
+                            onPlayButtonLongPress = { /* Phase A stub */ },
+                            onToggleShuffle = source::toggleShuffle,
+                            onCycleRepeat = source::cycleRepeatMode,
+                            onSeekTo = source::seekTo,
+                            onSheetDragDelta = onSheetDragDelta,
+                            onSheetDragSettle = onSheetDragSettle,
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
