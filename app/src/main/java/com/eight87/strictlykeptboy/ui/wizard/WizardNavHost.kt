@@ -28,15 +28,12 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material3.FilledIconButton
-import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -88,11 +85,11 @@ const val TestTagWizardDiscardDialog = "Wizard-DiscardDialog"
  * screens. Phase 2.1.I.4 appends a Share-with-dom screen after Done;
  * it's only entered when [shouldShowShareWithDom] returns true.
  */
-// Round 2.9 — Welcome screen dropped per user direction. First screen on
-// fresh launch is Species (sticker pack pick). The Welcome composable
-// stays in the file in case a re-entry path wants it later, but it's not
-// in SCREEN_ORDER anymore.
+// Round 2.14 — Welcome reinstated as the wizard intro. Explains what the
+// next ~minute looks like so users aren't dropped straight into a chooser
+// with no context.
 private val SCREEN_ORDER: List<WizardScreen> = listOf(
+    WizardScreen.Welcome,
     WizardScreen.Species,
     WizardScreen.Identity,
     WizardScreen.FramingChoice,
@@ -136,7 +133,7 @@ fun WizardNavHost(
     onCancel: () -> Unit,
     onScaffold: suspend (WizardDraft) -> Result<Unit>,
     modifier: Modifier = Modifier,
-    initialScreen: WizardScreen = WizardScreen.Species,
+    initialScreen: WizardScreen = WizardScreen.Welcome,
     initialDraft: WizardDraft = WizardDraft(),
     neutralMode: Boolean = false,
     /**
@@ -210,8 +207,9 @@ fun WizardNavHost(
         )
     }
 
+    Surface(modifier = modifier.fillMaxSize()) {
     Column(
-        modifier = modifier.fillMaxSize().testTag(TestTagWizard).padding(16.dp),
+        modifier = Modifier.fillMaxSize().testTag(TestTagWizard).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         // Progress dots
@@ -219,21 +217,30 @@ fun WizardNavHost(
         Spacer(Modifier.height(4.dp))
 
         val stepContent: @Composable () -> Unit = {
+        // Species screen manages its own layout (mascot suppressed,
+        // internal scroll on the list region only) so the screen chrome
+        // — prompt, explainer, Continue/Back — stays visible while the
+        // species options scroll.
+        if (current == WizardScreen.Species) {
+            SpeciesScreen(
+                draft = draft,
+                onUpdate = { draft = it.normalize() },
+            )
+        } else if (current == WizardScreen.Identity) {
+            IdentityScreen(
+                draft = draft,
+                onUpdate = { draft = it.normalize() },
+            )
+        } else {
         Column(
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             BatMascotSticker(screen = current)
             when (current) {
-                WizardScreen.Welcome -> WelcomeScreen(onGo = ::goNext)
-                WizardScreen.Species -> SpeciesScreen(
-                    draft = draft,
-                    onUpdate = { draft = it.normalize() },
-                )
-                WizardScreen.Identity -> IdentityScreen(
-                    draft = draft,
-                    onUpdate = { draft = it.normalize() },
-                )
+                WizardScreen.Welcome -> WelcomeScreen()
+                WizardScreen.Species -> Unit // handled above
+                WizardScreen.Identity -> Unit // handled above
                 WizardScreen.FramingChoice -> FramingChoiceScreen(
                     draft = draft,
                     onUpdate = { draft = it },
@@ -295,6 +302,7 @@ fun WizardNavHost(
             }
         }
         }
+        }
 
         // H.1 — two-pane on Medium/Expanded: step on the left, identity-driven
         // preview on the right. Compact keeps the single-column flow (preview
@@ -350,6 +358,7 @@ fun WizardNavHost(
             }
         }
     }
+    }
 }
 
 private enum class ScaffoldProgress { Idle, Running, Done, Failed }
@@ -393,11 +402,10 @@ private fun BatMascotSticker(screen: WizardScreen) {
 // --- Screen 1 Welcome ----------------------------------------------------------
 
 @Composable
-private fun WelcomeScreen(onGo: () -> Unit) {
+private fun WelcomeScreen() {
     Column(
         modifier = Modifier.fillMaxWidth().testTag(TestTagWizardWelcome),
         verticalArrangement = Arrangement.spacedBy(16.dp),
-        horizontalAlignment = ComposeAlign.CenterHorizontally,
     ) {
         Text(
             stringResource(R.string.wizard_welcome_title),
@@ -407,13 +415,10 @@ private fun WelcomeScreen(onGo: () -> Unit) {
             stringResource(R.string.wizard_welcome_blurb),
             style = MaterialTheme.typography.bodyMedium,
         )
-        Button(
-            onClick = onGo,
-            modifier = Modifier.testTag(TestTagWizardNext),
-        ) { Text(stringResource(R.string.wizard_welcome_cta)) }
         Text(
             stringResource(R.string.wizard_welcome_footnote),
             style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -422,12 +427,15 @@ private fun WelcomeScreen(onGo: () -> Unit) {
 
 @Composable
 private fun SpeciesScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
-    // The wizard host (line ~201) already wraps each screen in a
-    // verticalScroll, so nothing extra here — the non-lazy 2-col grid
-    // below is enough to make all 9 species cards reachable.
+    // Round 2.14 — fixed chrome (prompt + explainer) at top; the list of
+    // hero-sized species cards scrolls in its own region so the wizard's
+    // Continue / Back stay visible. Anime variants (Cat-chan / Fox-chan)
+    // sink to the bottom so realistic species lead the list.
+    val animeIds = setOf(SpeciesChoice.CatChan, SpeciesChoice.FoxChan)
+    val cards = SpeciesChoice.entries.sortedBy { if (it in animeIds) 1 else 0 }
     Column(
         modifier = Modifier
-            .fillMaxWidth()
+            .fillMaxSize()
             .testTag(TestTagWizardSpecies),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -437,60 +445,6 @@ private fun SpeciesScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        // Round 2.13 — carousel: prev / [current species card] / next.
-        // One-at-a-time spotlight beats a 2-col grid for ~9 choices; the
-        // current pick reads as the hero, others are one tap away.
-        val cards = SpeciesChoice.entries.toList()
-        val currentIdx = cards.indexOf(draft.species).coerceAtLeast(0)
-        val prevSpecies = cards[(currentIdx - 1 + cards.size) % cards.size]
-        val nextSpecies = cards[(currentIdx + 1) % cards.size]
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = ComposeAlign.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            FilledIconButton(
-                onClick = { onUpdate(draft.copy(species = prevSpecies)) },
-                modifier = Modifier.testTag("Wizard-Species-Prev"),
-            ) {
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Previous species")
-            }
-            Card(
-                modifier = Modifier
-                    .weight(1f)
-                    .testTag("Wizard-Species-Carousel"),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                ),
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp).fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    horizontalAlignment = ComposeAlign.CenterHorizontally,
-                ) {
-                    Text(
-                        text = speciesPreviewEmoji(draft.species),
-                        style = MaterialTheme.typography.displayLarge,
-                    )
-                    Text(
-                        draft.species.labelString(),
-                        style = MaterialTheme.typography.titleLarge,
-                    )
-                    Text(
-                        "${currentIdx + 1} / ${cards.size}",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-            FilledIconButton(
-                onClick = { onUpdate(draft.copy(species = nextSpecies)) },
-                modifier = Modifier.testTag("Wizard-Species-Next"),
-            ) {
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Next species")
-            }
-        }
-        // Round 2.10 — customization explainer is always visible.
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -501,6 +455,42 @@ private fun SpeciesScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(12.dp),
             )
+        }
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            cards.forEach { species ->
+                val selected = draft.species == species
+                Card(
+                    onClick = { onUpdate(draft.copy(species = species)) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("Wizard-Species-${species.id}"),
+                    colors = if (selected) CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    ) else CardDefaults.cardColors(),
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp).fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalAlignment = ComposeAlign.CenterHorizontally,
+                    ) {
+                        Text(
+                            text = speciesPreviewEmoji(species),
+                            style = MaterialTheme.typography.displayLarge,
+                        )
+                        Text(
+                            species.labelString(),
+                            style = MaterialTheme.typography.titleLarge,
+                        )
+                        if (selected) Icon(Icons.Filled.Check, contentDescription = null)
+                    }
+                }
+            }
         }
     }
 }
@@ -524,43 +514,79 @@ private fun speciesPreviewEmoji(species: SpeciesChoice): String = when (species)
 @Composable
 private fun IdentityScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
     val showHonorific = draft.alignment == Alignment.Submissive || draft.alignment == Alignment.Switch
+    var customPraise by remember { mutableStateOf("") }
+    // Merge defaults with whatever the user already picked (incl.
+    // custom-added terms) so custom entries render as their own chips.
+    val praiseChipTerms = (PraiseRegistry.defaults + draft.praiseTerms).distinct()
     Column(
-        modifier = Modifier.fillMaxWidth().testTag(TestTagWizardIdentity),
+        modifier = Modifier.fillMaxSize().testTag(TestTagWizardIdentity),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(stringResource(R.string.wizard_identity_prompt), style = MaterialTheme.typography.titleMedium)
+        Text(
+            stringResource(R.string.wizard_identity_blurb),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
 
-        // Praise chips (multi-select).
-        Text(stringResource(R.string.wizard_identity_praise_label), style = MaterialTheme.typography.bodyMedium)
-        WrappingChipRow {
-            PraiseRegistry.defaults.forEach { term ->
-                val on = term in draft.praiseTerms
-                FilterChip(
-                    selected = on,
+        Column(
+            modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            // Praise chips (multi-select) + custom-term input.
+            Text(stringResource(R.string.wizard_identity_praise_label), style = MaterialTheme.typography.bodyMedium)
+            WrappingChipRow {
+                praiseChipTerms.forEach { term ->
+                    val on = term in draft.praiseTerms
+                    FilterChip(
+                        selected = on,
+                        onClick = {
+                            val next = if (on) draft.praiseTerms - term else draft.praiseTerms + term
+                            onUpdate(draft.copy(praiseTerms = next.ifEmpty { listOf("good boy") }))
+                        },
+                        label = { Text(term) },
+                        modifier = Modifier.testTag("Wizard-Praise-${term.replace(' ', '-')}"),
+                    )
+                }
+            }
+            Row(
+                verticalAlignment = ComposeAlign.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                OutlinedTextField(
+                    value = customPraise,
+                    onValueChange = { customPraise = it },
+                    label = { Text("Add custom term") },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f).testTag("Wizard-Praise-Custom-Input"),
+                )
+                TextButton(
+                    enabled = customPraise.isNotBlank() && customPraise.trim() !in draft.praiseTerms,
                     onClick = {
-                        val next = if (on) draft.praiseTerms - term else draft.praiseTerms + term
-                        onUpdate(draft.copy(praiseTerms = next.ifEmpty { listOf("good boy") }))
+                        val term = customPraise.trim()
+                        if (term.isNotEmpty()) {
+                            onUpdate(draft.copy(praiseTerms = draft.praiseTerms + term))
+                            customPraise = ""
+                        }
                     },
-                    label = { Text(term) },
-                    modifier = Modifier.testTag("Wizard-Praise-${term.replace(' ', '-')}"),
-                )
+                    modifier = Modifier.testTag("Wizard-Praise-Custom-Add"),
+                ) { Text("Add") }
             }
-        }
 
-        // Pronouns radio.
-        Text(stringResource(R.string.wizard_identity_pronouns_label), style = MaterialTheme.typography.bodyMedium)
-        for (p in PronounSet.defaults) {
-            Row(verticalAlignment = ComposeAlign.CenterVertically) {
-                RadioButton(
-                    selected = draft.pronouns == p,
-                    onClick = { onUpdate(draft.copy(pronouns = p)) },
-                    modifier = Modifier.testTag("Wizard-Pronouns-${p.subject}"),
-                )
-                Text(p.label)
+            // Pronouns as compact chips.
+            Text(stringResource(R.string.wizard_identity_pronouns_label), style = MaterialTheme.typography.bodyMedium)
+            WrappingChipRow {
+                PronounSet.defaults.forEach { p ->
+                    FilterChip(
+                        selected = draft.pronouns == p,
+                        onClick = { onUpdate(draft.copy(pronouns = p)) },
+                        label = { Text(p.label) },
+                        modifier = Modifier.testTag("Wizard-Pronouns-${p.subject}"),
+                    )
+                }
             }
-        }
 
-        if (showHonorific) {
+            if (showHonorific) {
             Text(stringResource(R.string.wizard_identity_honorific_label), style = MaterialTheme.typography.bodyMedium)
             WrappingChipRow {
                 Honorific.entries.forEach { h ->
@@ -620,6 +646,7 @@ private fun IdentityScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) 
                     fontWeight = FontWeight.Medium,
                 )
             }
+        }
         }
     }
 }

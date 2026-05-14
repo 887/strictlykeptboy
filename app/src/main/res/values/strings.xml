@@ -445,16 +445,17 @@
     <string name="wizard_cancel">Cancel</string>
     <string name="wizard_step_of">Step %1$d of %2$d</string>
     <string name="cd_wizard_mascot">bat mascot — %1$s</string>
-    <string name="wizard_welcome_title">let\'s design your lifestyle</string>
-    <string name="wizard_welcome_blurb">by the end you\'ll have a living calendar, not an empty app.</string>
+    <string name="wizard_welcome_title">let\'s set up your repo</string>
+    <string name="wizard_welcome_blurb">A short walkthrough — by the end you\'ll have a working calendar repo, not an empty app. You\'ll pick:\n\n• a sticker pack (how the app illustrates you)\n• how the app addresses you (praise terms, pronouns, tone)\n• plain calendar vs. kink framing\n• your initial role + a few starter routines\n• an optional Git remote (or stay phone-only)\n\nNothing here is final — every choice is editable later in Settings.</string>
     <string name="wizard_welcome_cta">let\'s go</string>
-    <string name="wizard_welcome_footnote">you can change any of this later in Settings → Add more to my lifestyle.</string>
+    <string name="wizard_welcome_footnote">~1 minute. You can back out any time.</string>
     <string name="wizard_species_prompt">Pick your sticker pack</string>
     <string name="wizard_species_subtitle">Your sticker pack is how the app illustrates you. Bat is the default. You can clone the scaffolded repo and customize the artwork later.</string>
     <string name="wizard_species_custom_pack_url">Custom sticker-pack URL (GitHub)</string>
     <string name="wizard_alignment_prompt">How would you like the rules to work?</string>
     <string name="wizard_identity_prompt">How should the app speak to you?</string>
-    <string name="wizard_identity_praise_label">Praise terms (pick any — alternated):</string>
+    <string name="wizard_identity_blurb">Pick how notifications, briefings, and reminders address you. The Preview at the bottom updates live. Everything here is editable later in Settings → Identity.</string>
+    <string name="wizard_identity_praise_label">Praise terms — pick one or more, the app rotates between them. Add your own with “Add custom term”.</string>
     <string name="wizard_identity_pronouns_label">Pronouns:</string>
     <string name="wizard_identity_honorific_label">Honorific:</string>
     <string name="wizard_identity_tone_label">Tone register:</string>
@@ -753,7 +754,7 @@
     <string name="species_tiger">Tiger</string>
     <string name="species_wolf">Wolf</string>
     <string name="species_choose_your_own">Customize later</string>
-    <string name="wizard_species_customize_later_info">Built-in sticker packs render straight from the app — they are NOT copied into your repo by default. To customize: pick a species below, then in **Repo Settings → Sticker pack** turn on **Import stickers into repo**. That copies the active pack into `stickers/&lt;pack&gt;/` so you can edit the artwork (e.g. hand it to an AI image generator) and commit your changes.</string>
+    <string name="wizard_species_customize_later_info">Built-in packs render straight from the app — not copied into your repo by default. To customize, pick a species, then in Repo Settings → Sticker pack turn on “Import stickers into repo”.</string>
 
     <!-- Wizard Alignment labels + taglines. -->
     <string name="alignment_dominant">Dominant</string>

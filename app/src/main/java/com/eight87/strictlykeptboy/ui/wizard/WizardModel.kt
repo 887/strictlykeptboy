@@ -321,8 +321,7 @@ object TemplateRegistry {
 /** Praise chips per K.5a / LW Screen 3.5. */
 object PraiseRegistry {
     val defaults: List<String> = listOf(
-        "good boy", "good girl", "good pup", "good kitten", "sweet thing",
-        "darling", "love", "buddy", "champ", "you star",
+        "good boy", "good girl", "good pup", "good kitten", "champ", "you star",
     )
 }
 
