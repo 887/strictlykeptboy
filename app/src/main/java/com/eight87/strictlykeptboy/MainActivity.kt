@@ -75,6 +75,62 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * Round 2.7.B.2-UI — SAF tree picker for the external backup folder.
+     *
+     * Mirrors [openIcsLauncher]: registered eagerly because
+     * `registerForActivityResult` must be called before `onCreate`'s
+     * STARTED state. On grant we take the persistable permission, derive
+     * a human label by parsing the SAF tree document-id (avoids pulling
+     * in `androidx.documentfile`),
+     * write `MirrorLocation.External` into [com.eight87.strictlykeptboy.prefs.RepoStoragePrefs],
+     * then (per the 2.7.D.1 design choice — no separate confirm dialog)
+     * fire [com.eight87.strictlykeptboy.sync.MirrorReconciler.applyToAll]
+     * and Toast the count.
+     */
+    private var pendingAppGraph: com.eight87.strictlykeptboy.composition.AppGraph? = null
+
+    private val openTreeLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri: Uri? ->
+        if (uri == null) return@registerForActivityResult
+        val graph = pendingAppGraph ?: return@registerForActivityResult
+        runCatching {
+            contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+            )
+        }
+        // Derive a human label from the tree document id without pulling
+        // in androidx.documentfile. Doc-ids look like `"primary:Documents/foo"`;
+        // take the leaf segment of the sub-path. Falls back to "selected
+        // folder" for volume-root or non-primary picks.
+        val label = runCatching {
+            val docId = android.provider.DocumentsContract.getTreeDocumentId(uri)
+            val sub = docId.substringAfter(':', "")
+            sub.substringAfterLast('/', sub).ifBlank { null }
+        }.getOrNull() ?: "selected folder"
+        graph.repoStoragePrefs.set(
+            com.eight87.strictlykeptboy.prefs.MirrorLocation.External(
+                treeUri = uri.toString(),
+                label = label,
+            ),
+        )
+        // 2.7.D.1 design call — when the user explicitly opts in via the
+        // Settings/banner picker, apply immediately + Toast the count.
+        // No separate "Apply?" dialog: the picker action IS the consent.
+        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val count = runCatching { graph.mirrorReconciler.applyToAll() }.getOrDefault(0)
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                Toast.makeText(
+                    this@MainActivity,
+                    getString(R.string.backup_applied_to_n_repos, count),
+                    Toast.LENGTH_SHORT,
+                ).show()
+            }
+        }
+    }
+
     private val createIcsLauncher = registerForActivityResult(
         ActivityResultContracts.CreateDocument("text/calendar")
     ) { uri: Uri? ->
@@ -110,6 +166,11 @@ class MainActivity : ComponentActivity() {
         ) { AppGraph(applicationContext) }
         graph.parkRuntimes()
         graph.installSyncEventBridge()
+        // Round 2.7.B.2-UI — park the SAF tree picker so Compose
+        // surfaces (Settings → Backup location, Repos reminder banner)
+        // can launch it without owning an ActivityResultLauncher.
+        pendingAppGraph = graph
+        graph.backupPickerHandle = { openTreeLauncher.launch(null) }
 
         // Phase O.2 — handle strictlykeptboy://share deep links.
         deepLinkHandler = { intent ->
@@ -462,6 +523,16 @@ class MainActivity : ComponentActivity() {
                                 runCatching {
                                     startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                                 }
+                            },
+                            // Round 2.7.B.4-UI — backup folder picker access.
+                            repoStoragePrefs = graph.repoStoragePrefs,
+                            onPickBackupFolder = {
+                                graph.backupPickerHandle?.invoke()
+                            },
+                            onRemoveBackupFolder = {
+                                graph.repoStoragePrefs.set(
+                                    com.eight87.strictlykeptboy.prefs.MirrorLocation.None,
+                                )
                             },
                             // Round 2.2.D — Settings completion.
                             reposFlow = graph.repoStore.state,

@@ -1050,4 +1050,18 @@
     <string name="settings_lifestyle_trip_none">No trips yet — plan one below.</string>
     <string name="settings_lifestyle_trip_in_days">in %1$d day(s)</string>
     <string name="settings_lifestyle_trip_in_today">today</string>
+
+    <!-- Round 2.7.B/D — backup location surfaces. -->
+    <string name="settings_category_backup">Backup location</string>
+    <string name="settings_subtitle_backup">External folder mirror so your repos survive uninstall.</string>
+    <string name="settings_backup_none_subtitle">No backup folder set</string>
+    <string name="settings_backup_pick_button">Pick a folder</string>
+    <string name="settings_backup_change_button">Change folder</string>
+    <string name="settings_backup_remove_button">Remove backup</string>
+    <string name="settings_backup_blurb">Pick a folder on your phone\'s internal storage. Each repo will be mirrored into a bare Git folder there so a fresh install can recover everything.</string>
+    <string name="settings_backup_current_label">Backup folder: %1$s</string>
+    <string name="backup_applied_to_n_repos">Applied backup mirror to %1$d repo(s)</string>
+    <string name="repos_backup_reminder_text">Set up a backup folder so your repos survive app uninstall</string>
+    <string name="repos_backup_reminder_pick">Pick now</string>
+    <string name="repos_backup_reminder_dismiss">Dismiss</string>
 </resources>

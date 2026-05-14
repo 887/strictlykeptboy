@@ -278,6 +278,19 @@ class AppGraph(private val appContext: Context) {
         MirrorReconciler(repoStore = repoStore, storagePrefs = repoStoragePrefs)
     }
 
+    /**
+     * Round 2.7.B.2-UI — parked handle so Compose surfaces (Settings →
+     * Backup location, Repos pane reminder banner) can trigger the
+     * `OpenDocumentTree` launcher that's `ComponentActivity`-scoped.
+     *
+     * MainActivity sets this to `{ openTreeLauncher.launch(null) }` after
+     * registering the launcher in `onCreate`. Composables call
+     * `appGraph.backupPickerHandle?.invoke()`. Null = not yet wired
+     * (previews / tests).
+     */
+    @Volatile
+    var backupPickerHandle: (() -> Unit)? = null
+
     /** Phase J — per-process sync scheduler. */
     val scheduler: SyncScheduler by lazy {
         SyncScheduler(

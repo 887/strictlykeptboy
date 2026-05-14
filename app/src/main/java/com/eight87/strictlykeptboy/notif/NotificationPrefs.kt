@@ -176,6 +176,43 @@ class NotificationPrefs internal constructor(private val prefs: SharedPreference
         _state.value = loadAll()
     }
 
+    // --- Round 2.7.D.2 — dismissed reminder banners ----------------------
+
+    /**
+     * Set of reminder keys the user has explicitly dismissed via the
+     * banner's X button (e.g. `"backup-folder-reminder"`). Stored as a
+     * single semicolon-joined string in the underlying SharedPreferences
+     * to keep the schema flat.
+     *
+     * Once dismissed, a key stays dismissed until something clears it —
+     * the read-side never auto-evicts. Callers can clear via
+     * [clearDismissedReminder] (e.g. a debug surface) or
+     * [setDismissedReminders] with the empty set.
+     */
+    val dismissedReminders: Set<String>
+        get() {
+            val raw = prefs.getString(KEY_DISMISSED_REMINDERS, null) ?: return emptySet()
+            if (raw.isEmpty()) return emptySet()
+            return raw.split(';').filter { it.isNotBlank() }.toSet()
+        }
+
+    fun dismissReminder(key: String) {
+        val current = dismissedReminders
+        if (key in current) return
+        setDismissedReminders(current + key)
+    }
+
+    fun clearDismissedReminder(key: String) {
+        val current = dismissedReminders
+        if (key !in current) return
+        setDismissedReminders(current - key)
+    }
+
+    fun setDismissedReminders(values: Set<String>) {
+        prefs.edit().putString(KEY_DISMISSED_REMINDERS, values.joinToString(";")).apply()
+        _state.value = loadAll()
+    }
+
     // --- Phase XX.10 / AT-J.4 — global streak-count visibility toggle --------
 
     /** Default ON per AT-J.4. */
@@ -200,6 +237,9 @@ class NotificationPrefs internal constructor(private val prefs: SharedPreference
         private const val PREFS_FILE = "notification_prefs_v1"
         private const val KEY_BRIEFINGS_MASTER = "briefings.master.enabled"
         private const val KEY_STREAK_COUNTS = "streak.counts.enabled"
+        // 2.7.D.2 — dismissed reminder banners (semicolon-joined set).
+        private const val KEY_DISMISSED_REMINDERS = "reminders.dismissed"
+        const val REMINDER_BACKUP_FOLDER: String = "backup-folder-reminder"
         // 2.2.D.8 — defaults for new events.
         private const val KEY_DEFAULT_LEADS = "defaults.new_event.leads"
         private const val KEY_DEFAULT_CHANNEL = "defaults.new_event.channel"

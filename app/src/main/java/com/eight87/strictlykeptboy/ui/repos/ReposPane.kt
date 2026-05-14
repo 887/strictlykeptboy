@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Groups
@@ -96,6 +97,14 @@ fun ReposPane(
      * `SyncService.startSyncRepo(context, repoId)`.
      */
     onSyncRepo: ((String) -> Unit)? = null,
+    /**
+     * Round 2.7.D.2-UI — backup-folder reminder banner. When all three
+     * are non-null, the banner is shown iff the mirror is unset AND the
+     * user skipped during the wizard AND hasn't already dismissed.
+     */
+    repoStoragePrefs: com.eight87.strictlykeptboy.prefs.RepoStoragePrefs? = null,
+    notificationPrefs: com.eight87.strictlykeptboy.notif.NotificationPrefs? = null,
+    onPickBackupFolder: (() -> Unit)? = null,
 ) {
     var mode by remember { mutableStateOf<Mode>(Mode.List) }
     val repos by state.repos.collectAsState()
@@ -143,6 +152,9 @@ fun ReposPane(
                         onOpenWizard = onOpenWizard,
                         onOpenAppSettings = onOpenAppSettings,
                         onSyncRepo = resolvedOnSyncRepo,
+                        repoStoragePrefs = repoStoragePrefs,
+                        notificationPrefs = notificationPrefs,
+                        onPickBackupFolder = onPickBackupFolder,
                     )
                 },
                 detail = {
@@ -204,6 +216,9 @@ fun ReposPane(
                 onOpenWizard = onOpenWizard,
                 onOpenAppSettings = onOpenAppSettings,
                 onSyncRepo = resolvedOnSyncRepo,
+                repoStoragePrefs = repoStoragePrefs,
+                notificationPrefs = notificationPrefs,
+                onPickBackupFolder = onPickBackupFolder,
             )
             Mode.Add -> AddRepoNavHost(
                 onCancel = { mode = Mode.List },
@@ -347,6 +362,9 @@ private fun ReposList(
     onOpenWizard: () -> Unit,
     onOpenAppSettings: () -> Unit = {},
     onSyncRepo: (String) -> Unit = {},
+    repoStoragePrefs: com.eight87.strictlykeptboy.prefs.RepoStoragePrefs? = null,
+    notificationPrefs: com.eight87.strictlykeptboy.notif.NotificationPrefs? = null,
+    onPickBackupFolder: (() -> Unit)? = null,
 ) {
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -402,6 +420,28 @@ private fun ReposList(
 
         HorizontalDivider()
 
+        // Round 2.7.D.2-UI — dismissable backup-folder reminder banner.
+        // Conditions: mirror still None AND user skipped during wizard
+        // AND not already dismissed. Recomposed when prefs flip.
+        if (repoStoragePrefs != null && notificationPrefs != null && onPickBackupFolder != null) {
+            val mirror by repoStoragePrefs.state.collectAsState()
+            val dismissed = notificationPrefs.dismissedReminders
+            val skippedDuringWizard = repoStoragePrefs.skippedDuringWizard
+            val show = mirror is com.eight87.strictlykeptboy.prefs.MirrorLocation.None &&
+                skippedDuringWizard &&
+                com.eight87.strictlykeptboy.notif.NotificationPrefs.REMINDER_BACKUP_FOLDER !in dismissed
+            if (show) {
+                BackupFolderReminderBanner(
+                    onPick = { onPickBackupFolder() },
+                    onDismiss = {
+                        notificationPrefs.dismissReminder(
+                            com.eight87.strictlykeptboy.notif.NotificationPrefs.REMINDER_BACKUP_FOLDER,
+                        )
+                    },
+                )
+            }
+        }
+
         if (repos.isEmpty()) {
             Column(
                 modifier = Modifier
@@ -440,6 +480,63 @@ private fun ReposList(
     @Suppress("UNUSED_EXPRESSION") AuthorIdentity("", "")
     @Suppress("UNUSED_EXPRESSION") PatCredential("", "")
     @Suppress("UNUSED_EXPRESSION") RepoStore::class
+}
+
+const val TestTagBackupReminderBanner = "ReposPane-BackupReminderBanner"
+const val TestTagBackupReminderPick = "ReposPane-BackupReminderPick"
+const val TestTagBackupReminderDismiss = "ReposPane-BackupReminderDismiss"
+
+/**
+ * Round 2.7.D.2-UI — primary-container card with copy + "Pick now"
+ * button + dismiss icon. Banner hides once the dismiss key lands in
+ * `NotificationPrefs.dismissedReminders` (or the mirror flips to
+ * External, clearing `skippedDuringWizard`).
+ */
+@Composable
+private fun BackupFolderReminderBanner(
+    onPick: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    androidx.compose.material3.Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(TestTagBackupReminderBanner),
+        colors = androidx.compose.material3.CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+        ),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    stringResource(R.string.repos_backup_reminder_text),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+                androidx.compose.foundation.layout.Spacer(Modifier.padding(top = 4.dp))
+                androidx.compose.material3.TextButton(
+                    onClick = onPick,
+                    modifier = Modifier.testTag(TestTagBackupReminderPick),
+                ) {
+                    Text(stringResource(R.string.repos_backup_reminder_pick))
+                }
+            }
+            androidx.compose.material3.IconButton(
+                onClick = onDismiss,
+                modifier = Modifier.testTag(TestTagBackupReminderDismiss),
+            ) {
+                androidx.compose.material3.Icon(
+                    imageVector = androidx.compose.material.icons.Icons.Filled.Close,
+                    contentDescription = stringResource(R.string.repos_backup_reminder_dismiss),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+        }
+    }
 }
 
 private sealed interface Mode {

@@ -415,6 +415,12 @@ private fun SkbAppShellContent(
                                 onOpenTogether = { selected = TopDestination.Together },
                                 onOpenWizard = { selected = TopDestination.Wizard },
                                 onOpenAppSettings = { selected = TopDestination.Settings },
+                                // Round 2.7.D.2-UI — banner inputs forwarded via SettingsAccess
+                                // because that's the only narrow surface that already carries
+                                // RepoStoragePrefs + NotificationPrefs into the shell.
+                                repoStoragePrefs = settingsAccess.repoStoragePrefs,
+                                notificationPrefs = settingsAccess.notificationPrefs,
+                                onPickBackupFolder = settingsAccess.onPickBackupFolder,
                             )
                         } else {
                             PlaceholderScreen(stringResource(R.string.scaffold_dest_repos))

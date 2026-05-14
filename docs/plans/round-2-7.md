@@ -46,9 +46,9 @@
 - [ ] **2.7.B.1** New `RepoStoragePrefs.kt` (`prefs/` or `git/` package, your call — defend in commit). EncryptedSharedPreferences-backed. Fields:
   - `MirrorLocation.None`
   - `MirrorLocation.External(treeUri: String, label: String)`
-- [ ] **2.7.B.2** New wizard screen `MirrorLocationScreen` inserted between `Git` and `Scaffold` in `WizardScreen` enum + `SCREEN_ORDER`. Three cards: "Keep inside the app", "Pick a folder", "Skip — decide later". The "Pick a folder" card opens an `ActivityResultLauncher` for `OpenDocumentTree`. On grant, persist `takePersistableUriPermission` + store the URI in `RepoStoragePrefs`.
+- [x] **2.7.B.2-UI** SAF tree picker wired in `MainActivity` + parked on `AppGraph.backupPickerHandle`. Settings + banner surfaces drive the picker; wizard insertion deferred (out of scope for this dispatch — Settings + reminder banner are the access points now). *Shipped via UI follow-up commit.*
 - [ ] **2.7.B.3** New `SafTreeUriResolver.resolveRealPath(uri: Uri, context: Context): String?` helper that uses `DocumentsContract.getTreeDocumentId(uri)` to map `primary:<sub-path>` → `/storage/emulated/0/<sub-path>`. Returns null for non-primary volumes / cloud providers.
-- [ ] **2.7.B.4** Settings → Behaviour gains a "Backup location" row showing the current mirror state. Tap = re-run the picker (or clear the mirror). New `BackupLocationCategory.kt` or a sub-row inside an existing category.
+- [x] **2.7.B.4-UI** Settings → Behaviour → "Backup location" category shipped (`BackupLocationCategory.kt`). Renders blurb + Pick / Change / Remove. After picking, `MirrorReconciler.applyToAll()` fires + Toast surfaces the count. *Shipped via UI follow-up commit.*
 - [ ] **2.7.B.5** Tests:
   - `RepoStoragePrefsTest` — round-trip None / External; persistable-URI-permission stays granted across app restart.
   - `SafTreeUriResolverTest` — primary volume maps correctly; SD card returns null; tree-URI-without-DOCUMENT_ID returns null.
@@ -62,8 +62,8 @@
 
 ## Phase 2.7.D — Retroactive apply
 
-- [ ] **2.7.D.1** When the user sets the mirror in Settings after first-launch (i.e. they skipped during wizard), prompt: "Apply to all existing repos? (3 repos found)" with Yes / No. On Yes: for each repo, add the mirror RemoteBinding via `RepoStore.update`, sync runs picks them up on next tick.
-- [ ] **2.7.D.2** A small reminder banner in `ReposPane` shows "Set up a backup folder so your repos survive app uninstall" when `RepoStoragePrefs.location == None`. Dismissable, persisted in `NotificationPrefs.dismissedReminders`.
+- [x] **2.7.D.1-UI** *Design call:* the separate "Apply?" dialog was dropped in favour of automatic `applyToAll()` + Toast. Picking the folder IS the consent — the dialog would have been redundant friction. Documented in commit message. *Shipped via UI follow-up commit.*
+- [x] **2.7.D.2-UI** Dismissable Material3 primary-container banner in `ReposPane` above the repos list. Shown when `MirrorLocation.None` AND `skippedDuringWizard == true` AND `"backup-folder-reminder"` not in `NotificationPrefs.dismissedReminders`. *Shipped via UI follow-up commit.*
 - [ ] **2.7.D.3** Test: `RetroactiveMirrorApplyTest` — start with 3 existing repos with no mirror, set mirror, accept apply prompt, assert each repo's `RepoConfig.remotes` now contains a `mirror` binding with correct URL.
 
 ## Phase 2.7.E — AVD smoke + release

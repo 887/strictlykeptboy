@@ -120,13 +120,15 @@ sealed class SettingsCategory(
     object Access : SettingsCategory(R.string.settings_category_access, "Access")
     /** 2.2.D.7 — Android Auto + tablet master-detail preferences. */
     object AutoTablet : SettingsCategory(R.string.settings_category_autotablet, "AutoTablet")
+    /** Round 2.7.B.4-UI — external backup-folder mirror picker. */
+    object BackupLocation : SettingsCategory(R.string.settings_category_backup, "BackupLocation")
 
     companion object {
         val all: List<SettingsCategory> by lazy {
             listOf(
                 Repos, Sync, Notifications, Calendars, Todolists,
                 Templates, Lifestyle, Identity, Appearance, About, Mode, CalDav,
-                Access, AutoTablet,
+                Access, AutoTablet, BackupLocation,
             )
         }
 
@@ -185,6 +187,10 @@ data class SettingsAccess(
     // 2.2.D.13 — Trip-summary feed for the Lifestyle card.
     val tripFeed: com.eight87.strictlykeptboy.ui.trip.TripFeed? = null,
     val onOpenTrip: (com.eight87.strictlykeptboy.ui.trip.TripSummary) -> Unit = {},
+    // Round 2.7.B.4-UI — backup-folder mirror prefs + picker handle.
+    val repoStoragePrefs: com.eight87.strictlykeptboy.prefs.RepoStoragePrefs? = null,
+    val onPickBackupFolder: () -> Unit = {},
+    val onRemoveBackupFolder: () -> Unit = {},
 )
 
 @Composable
@@ -302,6 +308,7 @@ private fun subtitleResFor(cat: SettingsCategory): Int = when (cat) {
     SettingsCategory.CalDav -> R.string.settings_subtitle_caldav
     SettingsCategory.Access -> R.string.settings_subtitle_access
     SettingsCategory.AutoTablet -> R.string.settings_subtitle_autotablet
+    SettingsCategory.BackupLocation -> R.string.settings_subtitle_backup
 }
 
 @Composable
@@ -336,6 +343,8 @@ private fun metaFor(cat: SettingsCategory): CategoryMeta {
             CategoryMeta(Icons.Filled.FolderShared, R.string.settings_subtitle_access, cs.secondary)
         SettingsCategory.AutoTablet ->
             CategoryMeta(Icons.Filled.Tune, R.string.settings_subtitle_autotablet, cs.tertiary)
+        SettingsCategory.BackupLocation ->
+            CategoryMeta(Icons.Filled.FolderShared, R.string.settings_subtitle_backup, cs.primary)
     }
 }
 
@@ -367,6 +376,7 @@ private val sections: List<SettingsSection> = listOf(
             SettingsCategory.CalDav,
             SettingsCategory.Access,
             SettingsCategory.AutoTablet,
+            SettingsCategory.BackupLocation,
         ),
     ),
     SettingsSection(
@@ -622,6 +632,14 @@ private fun SettingsCategoryContent(
                     reposFlow = access.reposFlow,
                 )
             } ?: DiagnosticMissingPrefBanner(category, "autoTabletPrefs")
+            // Round 2.7.B.4-UI — backup-folder mirror.
+            SettingsCategory.BackupLocation -> access.repoStoragePrefs?.let { p ->
+                com.eight87.strictlykeptboy.ui.settings.categories.BackupLocationCategory(
+                    prefs = p,
+                    onPickFolder = access.onPickBackupFolder,
+                    onRemoveFolder = access.onRemoveBackupFolder,
+                )
+            } ?: DiagnosticMissingPrefBanner(category, "repoStoragePrefs")
         }
     }
 }
