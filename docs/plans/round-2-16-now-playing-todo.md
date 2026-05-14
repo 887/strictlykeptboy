@@ -224,7 +224,7 @@ that derives `TaskPlaybackState` from existing task data + a started
       `TaskPlaybackProjectorTest` cases pass covering empty / start /
       tick / next / single-step / queue / stop transitions.
 
-## Phase C — Wire MiniPlayer + NowPlayingScreen to task data — shipped in commit (pending)
+## Phase C — Wire MiniPlayer + NowPlayingScreen to task data — shipped in commit 8f7d506
 
 **Goal:** all three info-row text nodes render task data per D-2.16.d;
 both progress bars per D-2.16.c; transport row buttons do
