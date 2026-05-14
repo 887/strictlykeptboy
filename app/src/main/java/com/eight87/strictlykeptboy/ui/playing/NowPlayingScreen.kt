@@ -28,7 +28,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -208,20 +207,90 @@ internal fun NowPlayingMergedSurface(
             )
           }
           val noTrackPlaceholder = stringResource(R.string.playing_no_track)
-          Text(
-            text = state.taskName.ifEmpty { noTrackPlaceholder },
-            style = MaterialTheme.typography.headlineSmall,
-            maxLines = 2,
-            modifier = Modifier.semantics { testTag = "now_playing_title" },
-          )
-          Text(
-            text = state.subStepName.ifEmpty { "—" },
-            style = MaterialTheme.typography.bodyMedium,
-          )
-          Scrubber(
-            positionMs = state.subStepElapsedMs,
+          // Round 2.16.C — three-node info row at expanded size per
+          // D-2.16.d, mirroring MiniPlayer's pattern.
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+          ) {
+            Column(modifier = Modifier.weight(1f)) {
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                  text = state.taskName.ifEmpty { noTrackPlaceholder },
+                  style = MaterialTheme.typography.headlineSmall,
+                  maxLines = 2,
+                  modifier = Modifier
+                    .weight(1f, fill = false)
+                    .semantics { testTag = "now_playing_title" },
+                )
+                if (state.subStepCount > 1) {
+                  Spacer(modifier = Modifier.size(12.dp))
+                  com.eight87.strictlykeptboy.ui.playing.StepCountPill(
+                    index = state.subStepIndex,
+                    total = state.subStepCount,
+                  )
+                }
+              }
+              Text(
+                text = if (state.subStepCount > 1) state.subStepName else "",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                modifier = Modifier.semantics { testTag = "now_playing_substep" },
+              )
+            }
+            Spacer(modifier = Modifier.size(12.dp))
+            val remainingMs =
+              (state.subStepDurationMs - state.subStepElapsedMs).coerceAtLeast(0L)
+            Text(
+              text = formatMmSs(remainingMs),
+              style = MaterialTheme.typography.displaySmall.copy(
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+              ),
+              maxLines = 1,
+              modifier = Modifier.semantics { testTag = "now_playing_countdown" },
+            )
+          }
+          // Round 2.16.C — sub-step progress as a non-draggable wide bar
+          // with darker/brighter split (Slider replaced; seeking has no
+          // meaning for tasks). Followed by elapsed / total mm:ss labels.
+          com.eight87.strictlykeptboy.ui.playing.SubStepProgressBar(
+            elapsedMs = state.subStepElapsedMs,
             durationMs = state.subStepDurationMs,
-            onSeek = onSeek,
+            modifier = Modifier
+              .fillMaxWidth()
+              .height(6.dp)
+              .semantics { testTag = "now_playing_substep_progress" },
+          )
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+          ) {
+            Text(
+              text = formatMmSs(state.subStepElapsedMs),
+              style = MaterialTheme.typography.labelMedium,
+            )
+            Text(
+              text = formatMmSs(state.subStepDurationMs),
+              style = MaterialTheme.typography.labelMedium,
+            )
+          }
+          // Round 2.16.C — whole-task progress row: thin 2-dp bar +
+          // "task: mm:ss / mm:ss" label (monospace).
+          com.eight87.strictlykeptboy.ui.playing.TaskProgressBar(
+            elapsedMs = state.taskElapsedMs,
+            durationMs = state.taskDurationMs,
+            modifier = Modifier
+              .fillMaxWidth()
+              .height(2.dp)
+              .semantics { testTag = "now_playing_task_progress" },
+          )
+          Text(
+            text = "task: ${formatMmSs(state.taskElapsedMs)} / ${formatMmSs(state.taskDurationMs)}",
+            style = MaterialTheme.typography.labelMedium.copy(
+              fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+            ),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
           )
         }
       }
@@ -237,6 +306,7 @@ internal fun NowPlayingMergedSurface(
           onToggleShuffle = onToggleShuffle,
           onCycleRepeat = onCycleRepeat,
           testTagPrefix = "now_playing",
+          showShuffleAndRepeat = false,
           modifier = Modifier.semantics { testTag = "now_playing_transport_row" },
           extraStart = {
             IconButton(onClick = onSeekBackward) {
@@ -341,39 +411,6 @@ private fun NowPlayingEmpty(
 
 private const val EmptyAutoPopMs: Long = 300L
 
-@Composable
-private fun Scrubber(positionMs: Long, durationMs: Long, onSeek: (Long) -> Unit) {
-  val total = durationMs.coerceAtLeast(0L)
-  val pos = positionMs.coerceIn(0L, total.coerceAtLeast(positionMs))
-  var dragValue by remember(positionMs) { mutableStateOf<Float?>(null) }
-  val sliderValue = dragValue ?: pos.toFloat()
-  val sliderMax = total.toFloat().coerceAtLeast(1f)
-
-  Column {
-    Slider(
-      value = sliderValue.coerceIn(0f, sliderMax),
-      onValueChange = { dragValue = it },
-      onValueChangeFinished = {
-        dragValue?.let { onSeek(it.toLong()) }
-        dragValue = null
-      },
-      valueRange = 0f..sliderMax,
-      modifier = Modifier.fillMaxWidth().semantics { testTag = "now_playing_scrubber" },
-    )
-    Row(
-      modifier = Modifier.fillMaxWidth(),
-      horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-      Text(formatMillis(sliderValue.toLong()), style = MaterialTheme.typography.labelMedium)
-      Text(formatMillis(total), style = MaterialTheme.typography.labelMedium)
-    }
-  }
-}
-
-private fun formatMillis(ms: Long): String {
-  if (ms <= 0) return "0:00"
-  val totalSeconds = ms / 1000
-  val minutes = totalSeconds / 60
-  val seconds = totalSeconds % 60
-  return "%d:%02d".format(minutes, seconds)
-}
+// Round 2.16.C — Scrubber + formatMillis removed; sub-step progress is
+// rendered via the shared `SubStepProgressBar`, and time labels use
+// `formatMmSs` from MiniPlayer.kt. Seeking has no meaning for tasks.

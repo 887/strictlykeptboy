@@ -64,25 +64,34 @@ fun PlaybackTransportRow(
   onPlayLongPress: (() -> Unit)? = null,
   extraStart: (@Composable () -> Unit)? = null,
   extraEnd: (@Composable () -> Unit)? = null,
+  /**
+   * Round 2.16.C — gates the shuffle + repeat IconToggleButtons. Tasks
+   * have no meaningful shuffle/repeat semantics, so skb call-sites pass
+   * `false`. Verbatim-port shape preserved (the calls are additively
+   * gated, not deleted).
+   */
+  showShuffleAndRepeat: Boolean = true,
 ) {
   Row(
     modifier = modifier.fillMaxWidth(),
     horizontalArrangement = Arrangement.SpaceEvenly,
     verticalAlignment = Alignment.CenterVertically,
   ) {
-    IconToggleButton(
-      checked = state.shuffleEnabled,
-      onCheckedChange = { onToggleShuffle() },
-      modifier = Modifier.semantics { testTag = "${testTagPrefix}_shuffle" },
-    ) {
-      Icon(
-        imageVector = if (state.shuffleEnabled) Icons.Filled.ShuffleOn else Icons.Filled.Shuffle,
-        contentDescription = stringResource(
-          if (state.shuffleEnabled) R.string.playing_cd_shuffle_on
-          else R.string.playing_cd_shuffle_off,
-        ),
-        modifier = Modifier.size(iconSize),
-      )
+    if (showShuffleAndRepeat) {
+      IconToggleButton(
+        checked = state.shuffleEnabled,
+        onCheckedChange = { onToggleShuffle() },
+        modifier = Modifier.semantics { testTag = "${testTagPrefix}_shuffle" },
+      ) {
+        Icon(
+          imageVector = if (state.shuffleEnabled) Icons.Filled.ShuffleOn else Icons.Filled.Shuffle,
+          contentDescription = stringResource(
+            if (state.shuffleEnabled) R.string.playing_cd_shuffle_on
+            else R.string.playing_cd_shuffle_off,
+          ),
+          modifier = Modifier.size(iconSize),
+        )
+      }
     }
     IconButton(
       onClick = onSkipPrevious,
@@ -145,21 +154,23 @@ fun PlaybackTransportRow(
         modifier = Modifier.size(iconSize),
       )
     }
-    IconToggleButton(
-      checked = state.repeatMode != RepeatMode.OFF,
-      onCheckedChange = { onCycleRepeat() },
-      modifier = Modifier.semantics { testTag = "${testTagPrefix}_repeat" },
-    ) {
-      val (icon, descRes) = when (state.repeatMode) {
-        RepeatMode.ONE -> Icons.Filled.RepeatOneOn to R.string.playing_cd_repeat_one
-        RepeatMode.ALL -> Icons.Filled.RepeatOn to R.string.playing_cd_repeat_all
-        RepeatMode.OFF -> Icons.Filled.Repeat to R.string.playing_cd_repeat_off
+    if (showShuffleAndRepeat) {
+      IconToggleButton(
+        checked = state.repeatMode != RepeatMode.OFF,
+        onCheckedChange = { onCycleRepeat() },
+        modifier = Modifier.semantics { testTag = "${testTagPrefix}_repeat" },
+      ) {
+        val (icon, descRes) = when (state.repeatMode) {
+          RepeatMode.ONE -> Icons.Filled.RepeatOneOn to R.string.playing_cd_repeat_one
+          RepeatMode.ALL -> Icons.Filled.RepeatOn to R.string.playing_cd_repeat_all
+          RepeatMode.OFF -> Icons.Filled.Repeat to R.string.playing_cd_repeat_off
+        }
+        Icon(
+          imageVector = icon,
+          contentDescription = stringResource(descRes),
+          modifier = Modifier.size(iconSize),
+        )
       }
-      Icon(
-        imageVector = icon,
-        contentDescription = stringResource(descRes),
-        modifier = Modifier.size(iconSize),
-      )
     }
   }
 }
