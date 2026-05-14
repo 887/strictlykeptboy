@@ -19,7 +19,8 @@ import org.robolectric.annotation.Config
 class WizardNavHostTest {
     @get:Rule val composeRule = createComposeRule()
 
-    @Test fun welcome_screen_renders_and_advances_on_lets_go() {
+    @Test fun species_is_first_screen_no_welcome() {
+        // Round 2.9 — Welcome screen dropped; wizard now starts at Species.
         composeRule.setContent {
             StrictlyKeptBoyTheme {
                 WizardNavHost(
@@ -29,8 +30,6 @@ class WizardNavHostTest {
                 )
             }
         }
-        composeRule.onNodeWithTag(TestTagWizardWelcome).assertIsDisplayed()
-        composeRule.onNodeWithText("let's go").performClick()
         composeRule.onNodeWithTag(TestTagWizardSpecies).assertIsDisplayed()
     }
 

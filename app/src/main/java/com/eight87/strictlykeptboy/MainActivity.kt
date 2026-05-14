@@ -256,15 +256,17 @@ class MainActivity : ComponentActivity() {
                     graph.bindIdentityToActiveRepo(cfg?.repoId)
                     graph.bindModeToActiveRepo(cfg?.repoId)
                 }
-                if (!ageOk) {
-                    AgeGateScreen(
-                        onAccept = {
-                            graph.ageGatePrefs.confirm()
-                            ageOk = true
-                        },
-                        onDecline = { finish() },
-                    )
-                } else if (!firstLaunchDone) {
+                // Round 2.9 — age gate dropped per user direction ("don't even
+                // ask if the app is 18+, immediately go to setup"). Age
+                // confirmation is silently auto-marked so the existing prefs
+                // flow doesn't re-prompt elsewhere.
+                LaunchedEffect(Unit) {
+                    if (!ageOk) {
+                        graph.ageGatePrefs.confirm()
+                        ageOk = true
+                    }
+                }
+                if (!firstLaunchDone) {
                     // Phase 2.1.I.1 — first-launch wizard. The shell is not
                     // mounted yet, so there's no empty-Schedule flash. Once
                     // the user finishes (or cancels with at-least-one repo

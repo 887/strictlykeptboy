@@ -84,8 +84,11 @@ const val TestTagWizardDiscardDialog = "Wizard-DiscardDialog"
  * screens. Phase 2.1.I.4 appends a Share-with-dom screen after Done;
  * it's only entered when [shouldShowShareWithDom] returns true.
  */
+// Round 2.9 — Welcome screen dropped per user direction. First screen on
+// fresh launch is Species (sticker pack pick). The Welcome composable
+// stays in the file in case a re-entry path wants it later, but it's not
+// in SCREEN_ORDER anymore.
 private val SCREEN_ORDER: List<WizardScreen> = listOf(
-    WizardScreen.Welcome,
     WizardScreen.Species,
     WizardScreen.Identity,
     WizardScreen.Lifestyle,
@@ -128,7 +131,7 @@ fun WizardNavHost(
     onCancel: () -> Unit,
     onScaffold: suspend (WizardDraft) -> Result<Unit>,
     modifier: Modifier = Modifier,
-    initialScreen: WizardScreen = WizardScreen.Welcome,
+    initialScreen: WizardScreen = WizardScreen.Species,
     initialDraft: WizardDraft = WizardDraft(),
     neutralMode: Boolean = false,
     /**
@@ -162,7 +165,8 @@ fun WizardNavHost(
         if (idx > 0) current = SCREEN_ORDER[idx - 1]
     }
 
-    BackHandler(enabled = current != WizardScreen.Welcome && current != WizardScreen.Done) {
+    // Round 2.9 — Welcome dropped; allow back from any non-Done screen.
+    BackHandler(enabled = current != WizardScreen.Done) {
         if (draft.hasUserChoices) showDiscard = true else onCancel()
     }
 
@@ -287,8 +291,7 @@ fun WizardNavHost(
         }
 
         // Buttons
-        if (current != WizardScreen.Welcome &&
-            current != WizardScreen.Scaffold &&
+        if (current != WizardScreen.Scaffold &&
             current != WizardScreen.Done &&
             current != WizardScreen.ShareWithDom
         ) {
