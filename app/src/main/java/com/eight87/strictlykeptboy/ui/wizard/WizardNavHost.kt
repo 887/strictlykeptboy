@@ -91,6 +91,7 @@ const val TestTagWizardDiscardDialog = "Wizard-DiscardDialog"
 private val SCREEN_ORDER: List<WizardScreen> = listOf(
     WizardScreen.Species,
     WizardScreen.Identity,
+    WizardScreen.FramingChoice,
     WizardScreen.Lifestyle,
     WizardScreen.Roles,
     WizardScreen.Templates,
@@ -153,16 +154,33 @@ fun WizardNavHost(
     val scope = rememberCoroutineScope()
     val widthClass = LocalWindowWidthSizeClass.current
 
+    // Round 2.12 — when the user picked "Just a calendar app" on
+    // FramingChoice, skip the Lifestyle screen in both directions.
+    fun stepIsSkipped(s: WizardScreen): Boolean =
+        s == WizardScreen.Lifestyle && draft.wantsKinkFraming == false
+
     fun goNext() {
-        val idx = SCREEN_ORDER.indexOf(current)
-        if (idx in 0 until SCREEN_ORDER.size - 1) {
-            current = SCREEN_ORDER[idx + 1]
+        var idx = SCREEN_ORDER.indexOf(current)
+        while (idx in 0 until SCREEN_ORDER.size - 1) {
+            val next = SCREEN_ORDER[idx + 1]
+            if (!stepIsSkipped(next)) {
+                current = next
+                return
+            }
+            idx++
         }
     }
 
     fun goBack() {
-        val idx = SCREEN_ORDER.indexOf(current)
-        if (idx > 0) current = SCREEN_ORDER[idx - 1]
+        var idx = SCREEN_ORDER.indexOf(current)
+        while (idx > 0) {
+            val prev = SCREEN_ORDER[idx - 1]
+            if (!stepIsSkipped(prev)) {
+                current = prev
+                return
+            }
+            idx--
+        }
     }
 
     // Round 2.9 — Welcome dropped; allow back from any non-Done screen.
@@ -211,6 +229,10 @@ fun WizardNavHost(
                 WizardScreen.Identity -> IdentityScreen(
                     draft = draft,
                     onUpdate = { draft = it.normalize() },
+                )
+                WizardScreen.FramingChoice -> FramingChoiceScreen(
+                    draft = draft,
+                    onUpdate = { draft = it },
                 )
                 WizardScreen.Lifestyle -> LifestyleCardScreen(
                     draft = draft,
@@ -614,6 +636,78 @@ private fun IdentityScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) 
 // --- Screen 4 Lifestyle (Phase 2.2.B — six-card collapse) ----------------------
 
 /**
+ * Round 2.12 — binary Plain/Kink picker that gates the Lifestyle
+ * screen. "Just a calendar app" auto-applies
+ * [LifestyleCard.JustCalendar] + sets `wantsKinkFraming = false`,
+ * causing `goNext` to skip Lifestyle. "Kink framing" sets
+ * `wantsKinkFraming = true` and surfaces the five-card kink picker
+ * on the next step, with the JustCalendar option hidden there.
+ */
+@Composable
+private fun FramingChoiceScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
+    val selectedPlain = draft.wantsKinkFraming == false
+    val selectedKink = draft.wantsKinkFraming == true
+    Column(
+        modifier = Modifier.fillMaxWidth().testTag("Wizard-FramingChoice"),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            stringResource(R.string.wizard_framing_prompt),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Text(
+            stringResource(R.string.wizard_framing_blurb),
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Card(
+            onClick = {
+                // Pick plain → auto-apply JustCalendar so downstream
+                // (alignment, lifestyle, modePick, hasPartner) are
+                // consistent with "no kink framing".
+                onUpdate(
+                    draft
+                        .copy(wantsKinkFraming = false)
+                        .applyLifestyleCard(LifestyleCard.JustCalendar),
+                )
+            },
+            colors = if (selectedPlain) CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+            ) else CardDefaults.cardColors(),
+            modifier = Modifier.fillMaxWidth().testTag("Wizard-FramingChoice-Plain"),
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    "📅  " + stringResource(R.string.wizard_framing_plain_title),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    stringResource(R.string.wizard_framing_plain_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+        Card(
+            onClick = { onUpdate(draft.copy(wantsKinkFraming = true)) },
+            colors = if (selectedKink) CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+            ) else CardDefaults.cardColors(),
+            modifier = Modifier.fillMaxWidth().testTag("Wizard-FramingChoice-Kink"),
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    "🦇  " + stringResource(R.string.wizard_framing_kink_title),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    stringResource(R.string.wizard_framing_kink_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+    }
+}
+
+/**
  * Phase 2.2.B — collapsed Lifestyle screen. Six mutually-exclusive
  * cards (D-2.2.c); each card atomically writes (alignment, lifestyle,
  * modePick, hasPartner) via [WizardDraft.applyLifestyleCard]. Pre-
@@ -633,7 +727,12 @@ private fun LifestyleCardScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> U
     // tuple on materialization. Idempotent: re-applying the same card
     // is a no-op for the equality check via [LifestyleCard.fromDraft].
     LaunchedEffect(Unit) {
-        if (LifestyleCard.fromDraft(draft) == null) {
+        // Round 2.12 — also force-default when the user previously chose
+        // JustCalendar on FramingChoice and then switched to Kink path:
+        // the JustCalendar card is hidden here, so we re-seed to Default
+        // (PetKeptByAi) rather than render nothing-selected.
+        val matched = LifestyleCard.fromDraft(draft)
+        if (matched == null || matched == LifestyleCard.JustCalendar) {
             onUpdate(draft.applyLifestyleCard(LifestyleCard.Default))
         }
     }
@@ -649,7 +748,26 @@ private fun LifestyleCardScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> U
             stringResource(R.string.wizard_lifestyle_card_blurb),
             style = MaterialTheme.typography.bodySmall,
         )
-        for (card in LifestyleCard.entries) {
+        // Round 2.12 — language-equivalence explainer. The app defaults
+        // to pet-coded wording everywhere (matching the project name),
+        // but sub/pet/bottom describe the same role here, and dom/owner
+        // likewise. Every label is customizable post-wizard in
+        // Settings → Identity (praise terms, honorifics, role labels).
+        Card(
+            modifier = Modifier.fillMaxWidth().testTag("Wizard-Lifestyle-LanguageExplainer"),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            ),
+        ) {
+            Text(
+                text = stringResource(R.string.wizard_lifestyle_language_explainer),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(12.dp),
+            )
+        }
+        // Round 2.12 — JustCalendar is now picked on the FramingChoice
+        // screen, not here. Hiding it keeps the kink-path picker focused.
+        for (card in LifestyleCard.entries.filter { it != LifestyleCard.JustCalendar }) {
             val selected = card == current
             Card(
                 onClick = { onUpdate(draft.applyLifestyleCard(card)) },

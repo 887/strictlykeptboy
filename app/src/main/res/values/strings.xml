@@ -514,6 +514,18 @@
     <!-- Settings → Lifestyle six-radio (Phase 2.2.B.4) shares wording with cards -->
     <string name="settings_lifestyle_radio_section">How do you live?</string>
 
+    <!-- Round 2.12 — FramingChoice screen (plain vs. kink binary) gates
+         the Lifestyle picker. Picks the seed framing during initial
+         setup; every label (role, praise term, honorific, persona)
+         remains customizable later in Settings → Identity. -->
+    <string name="wizard_framing_prompt">How should the app talk to you?</string>
+    <string name="wizard_framing_blurb">Pick the starting framing. You can customize every label later in Settings → Identity.</string>
+    <string name="wizard_framing_plain_title">Just a calendar app</string>
+    <string name="wizard_framing_plain_subtitle">No kink framing — plain calendar + tasks.</string>
+    <string name="wizard_framing_kink_title">Kink framing</string>
+    <string name="wizard_framing_kink_subtitle">Sub / pet / bottom — kept by a dom / owner. Or you keep someone. Pick the shape on the next step.</string>
+    <string name="wizard_lifestyle_language_explainer">In strictlykeptboy we default to pet wording — but sub / pet / bottom all describe the same role here, and dom / owner likewise. A dom can keep pets, subs, or others freely. You\'ll set the praise terms (good boy / good girl / good pet…), pronouns, and honorific on the next screens — and every label stays editable in Settings → Identity.</string>
+
     <!-- Phase 2.1.I.3 / 2.1.M — Pet Mode wizard screen (now unused at wizard
          surface; strings kept for Settings → Mode pill copy) -->
     <string name="wizard_mode_prompt">Pet Mode</string>
