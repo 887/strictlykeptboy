@@ -157,6 +157,33 @@ class TaskPlaybackProjectorTest {
         }
 
     @Test
+    fun `pause then resume preserves accumulated sub-step elapsed`() =
+        runTest(UnconfinedTestDispatcher()) {
+            // Round 2.16.G.1 — explicit guard against losing the
+            // already-banked elapsed when transport toggles pause → resume.
+            var now = 0L
+            val controller = ActiveTaskController(scope = TestScope(), clock = { now })
+            val tasks = MutableStateFlow(listOf(grooming))
+            val projector = TaskPlaybackProjector(controller, tasks, scope = backgroundScope, clock = { now })
+
+            controller.start("t1")
+            now = 40_000L
+            controller.pause()
+            // While paused, wall clock advances — must NOT count against elapsed.
+            now = 70_000L
+            assertEquals(40_000L, projector.state.value.subStepElapsedMs)
+            assertFalse(projector.state.value.isPlaying)
+            controller.resume()
+            now = 95_000L
+            // Flush by toggling — production driver is the tick flow.
+            controller.pause()
+            // Accumulated elapsed = 40s pre-pause + 25s since resume = 65s.
+            val s = projector.state.value
+            assertEquals(65_000L, s.subStepElapsedMs)
+            assertFalse(s.isPlaying)
+        }
+
+    @Test
     fun `stop returns to empty state`() = runTest(UnconfinedTestDispatcher()) {
         var now = 0L
         val controller = ActiveTaskController(scope = TestScope(), clock = { now })

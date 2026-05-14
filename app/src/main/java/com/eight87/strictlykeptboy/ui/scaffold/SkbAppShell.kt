@@ -891,13 +891,10 @@ private fun NowPlayingSheetHost(
             coroutineScope.launch {
                 val start = dragStartProgress.value ?: 0f
                 val end = sheetProgress.value
-                val moved = end - start
-                val flickThreshold = 0.05f  // 5% of sheet travel = decisive flick
-                val target = when {
-                    moved > flickThreshold -> 1f       // upward flick → open
-                    moved < -flickThreshold -> 0f      // downward flick → close
-                    else -> if (end >= 0.5f) 1f else 0f
-                }
+                // Round 2.16.G — flick-commit math factored to
+                // [flickCommitTarget] so it can be unit-tested without
+                // standing up the full draggable + nested-scroll host.
+                val target = flickCommitTarget(start = start, end = end)
                 sheetProgress.animateTo(target)
                 dragStartProgress.value = null
             }
