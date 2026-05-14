@@ -741,7 +741,7 @@
     <string name="species_tiger">Tiger</string>
     <string name="species_wolf">Wolf</string>
     <string name="species_choose_your_own">Customize later</string>
-    <string name="wizard_species_customize_later_info">Your sticker pack lives inside your calendar repo. We\'ll scaffold the repo with the Bat pack — clone it afterward and edit the artwork under `stickers/&lt;species&gt;/`. Hand it to an AI image generator when you\'re ready for your own look.</string>
+    <string name="wizard_species_customize_later_info">Built-in sticker packs render straight from the app — they are NOT copied into your repo by default. To customize: pick a species below, then in **Repo Settings → Sticker pack** turn on **Import stickers into repo**. That copies the active pack into `stickers/&lt;pack&gt;/` so you can edit the artwork (e.g. hand it to an AI image generator) and commit your changes.</string>
 
     <!-- Wizard Alignment labels + taglines. -->
     <string name="alignment_dominant">Dominant</string>

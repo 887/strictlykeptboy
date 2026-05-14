@@ -436,21 +436,21 @@ private fun SpeciesScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
                 }
             }
         }
-        if (draft.species == SpeciesChoice.ChooseYourOwn) {
-            // Round 2.6 — no git clone here. Picking "Customize later"
-            // scaffolds the repo with the Bat pack and tells the user how
-            // to swap in their own artwork after first launch.
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("Wizard-Species-CustomizeLaterInfo"),
-            ) {
-                Text(
-                    text = stringResource(R.string.wizard_species_customize_later_info),
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(12.dp),
-                )
-            }
+        // Round 2.10 — customization explainer is always visible (no
+        // longer gated on a "Customize later" choice). Built-in packs
+        // aren't copied into the repo by default — toggle 'Import
+        // stickers into repo' in Repo Settings → Sticker pack to make
+        // them editable.
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("Wizard-Species-CustomizeInfo"),
+        ) {
+            Text(
+                text = stringResource(R.string.wizard_species_customize_later_info),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(12.dp),
+            )
         }
     }
 }

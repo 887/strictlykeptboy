@@ -106,12 +106,15 @@ class StickerPackScaffoldTest {
     }
 
     @Test fun customScaffoldShipsBatStarter() = runTest {
+        // Round 2.10 — ChooseYourOwn dropped. This test now just verifies the
+        // README path for a species that doesn't ship a bundled pack (Cat-chan
+        // — bundled pack TBD); README behavior is identical to other species.
         val loader = AssetPackLoader(ctx())
         val draft = WizardDraft(
             alignment = Alignment.UnalignedPrivate,
             roles = setOf(RoleId.SelfCare),
-            species = SpeciesChoice.ChooseYourOwn,
-            displayName = "custom repo",
+            species = SpeciesChoice.CatChan,
+            displayName = "cat-chan repo",
         ).normalize()
         val outcome = WizardScaffolder.materialize(
             parentDir = tmp.newFolder("parent-custom"),

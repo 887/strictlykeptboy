@@ -28,10 +28,10 @@ enum class SpeciesChoice(val id: String, val label: String) {
     Lion("lion", "Lion"),
     Tiger("tiger", "Tiger"),
     Wolf("wolf", "Wolf"),
-    // ChooseYourOwn no longer clones a remote pack. Picking it scaffolds
-    // with the Bat pack and shows a "how to customize" info card —
-    // clone the repo + edit `stickers/<species>/` later.
-    ChooseYourOwn("custom", "Customize later"),
+    // Round 2.10 — ChooseYourOwn removed. Every species card is a valid
+    // sticker pack on its own; the customization explainer is shown
+    // unconditionally on the Species screen, and users opt in to importing
+    // the bundled pack into their repo via Repo Settings → Sticker pack.
 }
 
 /**

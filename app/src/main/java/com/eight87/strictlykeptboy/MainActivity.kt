@@ -303,11 +303,8 @@ class MainActivity : ComponentActivity() {
                                             com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Lion -> "🦁"
                                             com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Tiger -> "🐯"
                                             com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Wolf -> "🐺"
-                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.ChooseYourOwn -> null
                                         },
-                                        iconSpecies = draft.species.name.takeIf {
-                                            draft.species != com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.ChooseYourOwn
-                                        },
+                                        iconSpecies = draft.species.name,
                                     ),
                                 )
                                 graph.activeRepoName.value = draft.displayName.ifBlank { "my calendar" }
@@ -575,14 +572,11 @@ class MainActivity : ComponentActivity() {
                                             com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Lion -> "🦁"
                                             com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Tiger -> "🐯"
                                             com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Wolf -> "🐺"
-                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.ChooseYourOwn -> null
                                         },
                                         // Per D.88 / F48 — the species drives the per-repo avatar.
                                         // `Sticker(<species>)` falls back to about_bat for bat and
                                         // to AutoInitials for others until Phase WW lands.
-                                        iconSpecies = draft.species.name.takeIf {
-                                            draft.species != com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.ChooseYourOwn
-                                        },
+                                        iconSpecies = draft.species.name,
                                     ),
                                 )
                                 graph.defaultWriteRepoName.value = draft.displayName.ifBlank { "my calendar" }

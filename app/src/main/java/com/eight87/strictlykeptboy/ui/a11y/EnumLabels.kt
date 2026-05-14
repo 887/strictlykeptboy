@@ -118,7 +118,6 @@ val SpeciesChoice.labelRes: Int
         SpeciesChoice.Lion -> R.string.species_lion
         SpeciesChoice.Tiger -> R.string.species_tiger
         SpeciesChoice.Wolf -> R.string.species_wolf
-        SpeciesChoice.ChooseYourOwn -> R.string.species_choose_your_own
     }
 
 @Composable

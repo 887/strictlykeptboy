@@ -289,13 +289,16 @@ object WizardScaffolder {
                 Files.write(
                     readme,
                     ("# Sticker packs\n\n" +
-                        "By default this repo doesn't carry sticker images — the app " +
-                        "renders the active bundled pack from its own assets. To customize " +
-                        "your stickers (e.g. hand them to an AI image generator), open " +
-                        "**Repo Settings → Sticker pack** and turn on **Import stickers " +
-                        "into repo**. The active pack's files will be copied to " +
-                        "`stickers/<species>/` and committed. Edit them and commit your " +
-                        "changes; the app re-reads them on next launch.\n").toByteArray(StandardCharsets.UTF_8),
+                        "Built-in sticker packs render straight from the app's bundled\n" +
+                        "assets — they are NOT copied into this repo by default (image\n" +
+                        "bytes would inflate every clone for users who don't customize).\n\n" +
+                        "To customize your stickers (e.g. hand them to an AI image\n" +
+                        "generator), open the app's **Repo Settings → Sticker pack**\n" +
+                        "section and turn on **Import stickers into repo**. The active\n" +
+                        "pack will be copied to `stickers/<pack>/` (one directory per\n" +
+                        "pack, so multiple packs can coexist) and committed. Edit the\n" +
+                        "files in that directory, commit your changes, and the app\n" +
+                        "re-reads them on next launch.\n").toByteArray(StandardCharsets.UTF_8),
                 )
             }
         }
