@@ -71,10 +71,17 @@ fun MiniPlayer(
   onSheetDragDelta: (Float) -> Unit = {},
   onSheetDragSettle: () -> Unit = {},
 ) {
+  // Round 2.16 follow-up — wrap in Surface so LocalContentColor is set
+  // to `onSurface` for child Text/Icon. Previously Column + .background
+  // left text color unspecified, which on some dark schemes (dynamic
+  // wallpaper-derived) rendered near-black title text on a dark peek.
+  Surface(
+    modifier = Modifier.fillMaxSize(),
+    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    contentColor = MaterialTheme.colorScheme.onSurface,
+  ) {
   Column(
-    modifier = Modifier
-      .fillMaxSize()
-      .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+    modifier = Modifier.fillMaxSize(),
   ) {
     if (!state.hasMedia) {
       // Round 2.16 post-DONE — empty-state peek shown on Schedule when
@@ -237,6 +244,7 @@ fun MiniPlayer(
         .height(2.dp)
         .semantics { testTag = "mini_player_task_progress" },
     )
+  }
   }
 }
 

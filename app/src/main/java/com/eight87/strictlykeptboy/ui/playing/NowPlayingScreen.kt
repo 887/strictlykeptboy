@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Forward10
 import androidx.compose.material.icons.filled.Replay10
 import androidx.compose.material.icons.filled.Task
@@ -27,10 +26,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -68,6 +66,13 @@ import kotlinx.coroutines.delay
  *    Phase A spec — passed null in caller)
  *  - `onSaveQueueAsPlaylist` dropped
  *  - ReplayGain settings bridge bits dropped
+ *
+ * Round 2.16 follow-up — dropped Scaffold + TopAppBar wrapper. The
+ * expanded sheet has no music-chrome (no "Now Playing" title, no back
+ * arrow); a bottom-sheet drag-handle pill is rendered at the top
+ * instead, and the sheet is dismissed by drag-down or the BackHandler
+ * wired by [com.eight87.strictlykeptboy.ui.scaffold.SkbAppShell] which
+ * still routes to [onBack].
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -109,60 +114,76 @@ fun NowPlayingScreen(
     resolveSubState(state)
   }
 
-  Scaffold(
-    topBar = {
-      TopAppBar(
-        title = { Text(stringResource(R.string.playing_top_bar_title)) },
-        navigationIcon = {
-          IconButton(onClick = onBack) {
-            Icon(
-              Icons.AutoMirrored.Filled.ArrowBack,
-              contentDescription = stringResource(R.string.playing_cd_back),
-            )
-          }
-        },
-      )
-    },
-  ) { innerPadding ->
-    when (subState) {
-      NowPlayingSubState.Connecting -> NowPlayingConnecting(
-        modifier = Modifier
-          .fillMaxSize()
-          .padding(innerPadding)
-          .padding(24.dp),
-      )
-      NowPlayingSubState.ConnectedEmpty -> NowPlayingEmpty(
-        onBack = onBack,
-        modifier = Modifier
-          .fillMaxSize()
-          .padding(innerPadding)
-          .padding(24.dp),
-      )
-      NowPlayingSubState.ConnectedWithMedia -> {
-        NowPlayingMergedSurface(
-          state = state,
-          queueSnapshot = queueSnapshot,
-          listState = listState,
-          onSeek = transport::seekTo,
-          onTogglePlayPause = transport::togglePlayPause,
-          onSeekBackward = transport::seekBackward,
-          onSeekForward = transport::seekForward,
-          onSeekToPrevious = transport::seekToPrevious,
-          onSeekToNext = transport::seekToNext,
-          onToggleShuffle = transport::toggleShuffle,
-          onCycleRepeat = transport::cycleRepeatMode,
-          onJumpToQueueIndex = queueCommands::seekToQueueIndex,
-          onRemoveQueueItem = queueCommands::removeQueueItem,
-          onMoveQueueItem = queueCommands::moveQueueItem,
-          bodyContent = bodyContent,
-          showHeroCard = showHeroCard && state.hasMedia,
+  Surface(
+    modifier = Modifier.fillMaxSize(),
+    color = MaterialTheme.colorScheme.surface,
+  ) {
+    Column(modifier = Modifier.fillMaxSize()) {
+      // Round 2.16 follow-up — drag-handle pill replaces the
+      // Scaffold/TopAppBar back arrow. Sheet is dismissed by drag-down
+      // or BackHandler (wired in SkbAppShell to `onBack`), so no
+      // explicit back-button affordance is rendered.
+      SheetDragHandle()
+      when (subState) {
+        NowPlayingSubState.Connecting -> NowPlayingConnecting(
           modifier = Modifier
             .fillMaxSize()
-            .padding(innerPadding)
-            .semantics { testTag = "now_playing_screen" },
+            .padding(24.dp),
         )
+        NowPlayingSubState.ConnectedEmpty -> NowPlayingEmpty(
+          onBack = onBack,
+          modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        )
+        NowPlayingSubState.ConnectedWithMedia -> {
+          NowPlayingMergedSurface(
+            state = state,
+            queueSnapshot = queueSnapshot,
+            listState = listState,
+            onSeek = transport::seekTo,
+            onTogglePlayPause = transport::togglePlayPause,
+            onSeekBackward = transport::seekBackward,
+            onSeekForward = transport::seekForward,
+            onSeekToPrevious = transport::seekToPrevious,
+            onSeekToNext = transport::seekToNext,
+            onToggleShuffle = transport::toggleShuffle,
+            onCycleRepeat = transport::cycleRepeatMode,
+            onJumpToQueueIndex = queueCommands::seekToQueueIndex,
+            onRemoveQueueItem = queueCommands::removeQueueItem,
+            onMoveQueueItem = queueCommands::moveQueueItem,
+            bodyContent = bodyContent,
+            showHeroCard = showHeroCard && state.hasMedia,
+            modifier = Modifier
+              .fillMaxSize()
+              .semantics { testTag = "now_playing_screen" },
+          )
+        }
       }
     }
+  }
+}
+
+/**
+ * Round 2.16 follow-up — Material bottom-sheet drag-handle pill. 4-dp tall,
+ * 32-dp wide, outline-colored, centered. Replaces the music-chrome
+ * TopAppBar back arrow as the visual "this is a drag-up sheet" affordance.
+ */
+@Composable
+private fun SheetDragHandle() {
+  Row(
+    modifier = Modifier
+      .fillMaxWidth()
+      .padding(top = 8.dp, bottom = 4.dp),
+    horizontalArrangement = Arrangement.Center,
+  ) {
+    androidx.compose.foundation.layout.Box(
+      modifier = Modifier
+        .size(width = 32.dp, height = 4.dp)
+        .clip(RoundedCornerShape(2.dp))
+        .background(MaterialTheme.colorScheme.outline)
+        .semantics { testTag = "now_playing_drag_handle" },
+    )
   }
 }
 
