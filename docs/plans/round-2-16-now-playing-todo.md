@@ -332,7 +332,7 @@ behaviour ride along. Nothing about the data layer changes.
         fades in with the expanded screen; tapping toggles a local
         `quickAddOpen` flag — sheet itself doesn't collapse.
 
-## Phase E — Delete Tasks tab + remove top-of-Schedule tab toggle — shipped in commit <pending-E>
+## Phase E — Delete Tasks tab + remove top-of-Schedule tab toggle — shipped in commit f147c15
 
 - [x] **E.1** Delete `TopDestination.Tasks` from `SkbAppShell.kt`.
       Schedule remains the default landing. The `tasksTab` rememberSaveable
@@ -377,16 +377,35 @@ behaviour ride along. Nothing about the data layer changes.
       (D.7) which opens the expanded NowPlayingScreen sheet. Screenshot:
       `/tmp/skb-2-16-E-no-tab.png`.
 
-## Phase F — Move Settings cog back next to account avatar
+## Phase F — Move Settings cog back next to account avatar — shipped in commit <pending-F>
 
-- [ ] **F.1** Locate current Settings cog position (probably in the
-      Repos-pane top-bar after Round 2.1's restructure). Identify
-      the desired pre-2.1 location next to the account avatar in
-      Schedule's top bar.
-- [ ] **F.2** Move the cog there. Verify Repos pane still has its
-      own way to reach Repositories settings (its trampoline stays
-      put per D-2.16.f).
-- [ ] **F.3** Commit. AVD: cog visible next to avatar on Schedule.
+- [x] **F.1** Located the cog in `ReposPane.kt` (Round 2.4 migration)
+      at the right end of the "Repositories" header row, wired to the
+      `onOpenAppSettings` callback (which lands on
+      `selected = TopDestination.Settings` from the shell). Desired
+      destination: shell's `ShellTopBar` action row, immediately before
+      the `IdentityAvatar`.
+- [x] **F.2** Added an `IconButton(Icons.Filled.Settings)` to
+      `ShellTopBar`'s action row between the destination icon-buttons
+      and `IdentityAvatar`. New parameter `onSettingsTap: () -> Unit`
+      flows in from `SkbAppShellContent`'s call site, wired to
+      `selected = TopDestination.Settings` — the same mechanism the
+      Repos-pane trampoline used. New test-tag `TestTagShellSettingsCog`
+      ("ShellSettingsCog"). Removed the matching `IconButton` from
+      `ReposPane.kt`'s "Repositories" header. The `onOpenAppSettings`
+      composable parameter is retained on `ReposPane` (UNUSED_EXPRESSION
+      suppress) so existing call-sites at MainActivity / SkbAppShell
+      remain stable; the global-settings entry point is now the shell
+      top-bar cog. Per-repo settings continue to open via row-tap on
+      each repo (Mode.Settings(repoId)) — that path is unchanged.
+- [x] **F.3** AVD verified — Schedule top bar reads
+      `[Calendar] [Review] [Settings cog] [Avatar]`; tapping the cog
+      navigates to the Settings pane (search bar + Appearance /
+      Library / Behaviour categories shown). The Repos pane's
+      "Repositories" header now only carries
+      `[Find Together] [+ Add repo]`. Screenshots:
+      `/tmp/skb-2-16-F-cog.png`, `/tmp/skb-2-16-F-settings.png`,
+      `/tmp/skb-2-16-F-repos.png`.
 
 ## Phase G — Tests + AVD smoke
 

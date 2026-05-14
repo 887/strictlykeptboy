@@ -143,6 +143,8 @@ const val TestTagShellRail = "ShellRail"
 const val TestTagShellContent = "ShellContent"
 const val TestTagShellDestPrefix = "ShellDest-"
 const val TestTagShellRailItemPrefix = "ShellRail-"
+/** Round 2.16.F — global settings cog in the top-bar action row. */
+const val TestTagShellSettingsCog = "ShellSettingsCog"
 
 /**
  * Phase U.4 / F11 note: [label] is **wire-format** / stable English fallback
@@ -386,6 +388,7 @@ private fun SkbAppShellContent(
                 // in the row to satisfy `AppShellNavigationSwapTest`; the
                 // avatar is a parallel affordance per user direction.
                 onRepoSwitcherClick = { selected = TopDestination.Repos },
+                onSettingsTap = { selected = TopDestination.Settings },
                 modePrefs = settingsAccess.modePrefs,
             )
             Row(modifier = Modifier.fillMaxSize()) {
@@ -509,6 +512,13 @@ private fun ShellTopBar(
     onSyncClick: () -> Unit,
     onIdentityClick: () -> Unit,
     onRepoSwitcherClick: () -> Unit,
+    /**
+     * Round 2.16.F — global app-settings cog moved back into the top-bar
+     * action row, immediately before the avatar. The Repos pane's
+     * top-bar cog (Round 2.4 migration) is removed; per-repo settings
+     * still open via row-tap on a repo inside Repos.
+     */
+    onSettingsTap: () -> Unit,
     modePrefs: com.eight87.strictlykeptboy.ui.settings.ModePrefs? = null,
 ) {
     // enableEdgeToEdge() is on in MainActivity — content draws under the
@@ -557,6 +567,21 @@ private fun ShellTopBar(
                     dest = dest,
                     selected = dest == selectedDest,
                     onClick = { onSelectDest(dest) },
+                )
+            }
+            // Round 2.16.F — global app-settings cog, immediately before
+            // the avatar (pre-Round-2.1 location). Tapping selects
+            // `TopDestination.Settings`. Per-repo settings still open from
+            // inside the Repos pane (row-tap).
+            androidx.compose.material3.IconButton(
+                onClick = onSettingsTap,
+                modifier = Modifier.testTag(TestTagShellSettingsCog),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Settings,
+                    contentDescription = "Settings",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(22.dp),
                 )
             }
             IdentityAvatar(
