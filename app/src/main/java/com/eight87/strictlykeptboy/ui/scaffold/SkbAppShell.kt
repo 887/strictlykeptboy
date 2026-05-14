@@ -31,6 +31,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.RateReview
@@ -65,6 +66,7 @@ import com.eight87.strictlykeptboy.task.StubTaskPlaybackSource
 import com.eight87.strictlykeptboy.task.TaskNowPlayingState
 import com.eight87.strictlykeptboy.task.TaskQueueCommands
 import com.eight87.strictlykeptboy.task.TaskTransportCommands
+import com.eight87.strictlykeptboy.ui.playing.ExpandedNowPlayingTaskBody
 import com.eight87.strictlykeptboy.ui.playing.MiniPlayer
 import com.eight87.strictlykeptboy.ui.playing.NowPlayingScreen
 import androidx.compose.animation.core.Animatable
@@ -371,7 +373,13 @@ private fun SkbAppShellContent(
     // redundant — destination is the right granularity here.
     val title = selected.labelString()
 
-    NowPlayingSheetHost(source = taskPlaybackSource) {
+    NowPlayingSheetHost(
+        source = taskPlaybackSource,
+        tasksState = tasksState,
+        onWriteTask = onWriteTask,
+        onStartTask = onStartTask,
+        showTasksEntryFab = selected == TopDestination.Schedule,
+    ) {
       Surface(
         color = MaterialTheme.colorScheme.background,
         modifier = Modifier.fillMaxSize().testTag(TestTagAppShell),
@@ -827,6 +835,17 @@ private fun taskTabLabelRes(tab: TaskViewTab): Int = when (tab) {
 @Composable
 private fun NowPlayingSheetHost(
     source: Any = StubTaskPlaybackSource,
+    tasksState: TasksViewState = remember { TasksViewState() },
+    onWriteTask: (TaskQuickAddRequest) -> Unit = {},
+    onStartTask: ((String) -> Unit)? = null,
+    /**
+     * Round 2.16.D.7 — when true, render a stacked-FAB entry point at
+     * bottom-end of the host. Only meaningful when the active top
+     * destination is the one whose chrome owns the bottom-right slot
+     * (Schedule today). When `hasMedia` is false (no mini-player peek)
+     * this is the only way the user can reach the expanded sheet.
+     */
+    showTasksEntryFab: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     // Round 2.16.B — the source is one object satisfying the three
@@ -838,6 +857,14 @@ private fun NowPlayingSheetHost(
     val transport = source as TaskTransportCommands
     val queue = source as TaskQueueCommands
     val playbackState by now.state.collectAsState()
+    // Round 2.16.D — task detail / quick-add overlays migrated here
+    // from TasksPane so they layer above the sheet per tonearmboy's
+    // overlay convention.
+    var openTask by remember {
+        mutableStateOf<com.eight87.strictlykeptboy.ui.tasks.TaskItem?>(null)
+    }
+    var quickAddOpen by remember { mutableStateOf(false) }
+    val tasksUi by tasksState.state.collectAsState()
 
     val sheetProgress = remember { Animatable(0f) }
     val coroutineScope = rememberCoroutineScope()
@@ -902,8 +929,38 @@ private fun NowPlayingSheetHost(
             content()
         }
 
+        // Round 2.16.D.7 — second FAB above the Schedule new-event FAB,
+        // visible only when there's no active task (no mini-player peek)
+        // and we're on a destination whose chrome owns the bottom-right
+        // (Schedule today). Tapping animates the sheet open so the user
+        // can reach the todo views without first starting a task.
+        if (showTasksEntryFab && !showMiniPlayer && sheetProgress.value < 0.5f) {
+            androidx.compose.material3.SmallFloatingActionButton(
+                onClick = { openNowPlayingSheet() },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    // Stack above the EventCreateFab (56dp FAB +
+                    // 16dp host pad + 12dp gap = 84dp lift).
+                    .padding(end = 16.dp, bottom = 84.dp)
+                    .testTag(TestTagTasksEntryFab)
+                    .semantics {
+                        contentDescription = "Open tasks"
+                    },
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Checklist,
+                    contentDescription = null,
+                )
+            }
+        }
+
         // ---- Layer 2: bottom-anchored sheet (Auxio-style). ----
-        if (showMiniPlayer) {
+        // Round 2.16.D.7 — the sheet container is always rendered so the
+        // D.7 FAB can animate it open even with no active task. The peek
+        // (mini-player) still only renders when `hasMedia` is true; an
+        // unopened sheet with no media has effectivePeekPx=0 and progress
+        // 0 → sheetHeight 0, so nothing is visible.
+        run {
             val sheetHeightPx = effectivePeekPx + progress * (screenHeightPx - effectivePeekPx)
             val sheetHeightDp = with(density) { sheetHeightPx.toDp() }
 
@@ -1009,10 +1066,51 @@ private fun NowPlayingSheetHost(
                             queueCommands = queue,
                             onBack = closeSheet,
                             nowPlayingListState = nowPlayingListState,
+                            // Round 2.16.D — replace the music queue with
+                            // the task views: chip-strip + selected
+                            // Combined/Today/Per-list/Standing/Shopping.
+                            // The body is hoisted as a LazyItemScope-
+                            // scoped slot so it can claim viewport height
+                            // when needed.
+                            showHeroCard = playbackState.hasMedia,
+                            bodyContent = {
+                                ExpandedNowPlayingTaskBody(
+                                    tasksState = tasksState,
+                                    onOpenTask = { task -> openTask = task },
+                                    onStartTask = onStartTask,
+                                    onLongPressTask = { /* Phase D — TBD */ },
+                                    bodyHeight = if (playbackState.hasMedia) {
+                                        // Hero + transport ~ 480 dp; leave
+                                        // most of the rest of the viewport
+                                        // to the task body.
+                                        (screenHeightDp - 560.dp).coerceAtLeast(240.dp)
+                                    } else {
+                                        // No hero → task body fills the
+                                        // whole viewport minus top app bar.
+                                        (screenHeightDp - 120.dp).coerceAtLeast(360.dp)
+                                    },
+                                )
+                            },
                         )
                     }
 
-                    Box(
+                    // Round 2.16.D.2 — TaskQuickAdd FAB anchored bottom-end
+                    // of the expanded sheet. Tapping does NOT collapse the
+                    // sheet (we drive only the quick-add overlay flag).
+                    // Visible alpha follows the expanded-sheet crossfade so
+                    // it fades in with NowPlayingScreen.
+                    if (progress > 0.45f) Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(24.dp)
+                            .alpha(nowPlayingAlpha),
+                    ) {
+                        com.eight87.strictlykeptboy.ui.tasks.TaskQuickAddFab(
+                            onClick = { quickAddOpen = true },
+                        )
+                    }
+
+                    if (showMiniPlayer) Box(
                         modifier = Modifier
                             .align(Alignment.TopCenter)
                             .fillMaxWidth()
@@ -1037,5 +1135,41 @@ private fun NowPlayingSheetHost(
                 }
             }
         }
+
+        // Round 2.16.D.3 — TaskDetailSheet over NowPlayingScreen.
+        // ModalBottomSheet renders above all sibling Box content per the
+        // Compose dialog/sheet z-order convention, so no extra z-index
+        // wrangling is needed.
+        openTask?.let { t ->
+            com.eight87.strictlykeptboy.ui.tasks.TaskDetailSheet(
+                task = t,
+                onDismiss = { openTask = null },
+                onEdit = { /* Phase EE — editor stub */ },
+                onToggleDone = { tasksState.toggleDone(t.id) },
+            )
+        }
+
+        // Round 2.16.D.2 — TaskQuickAdd sheet (modal) over NowPlayingScreen.
+        if (quickAddOpen) {
+            val initialTarget = tasksUi.todolists.firstOrNull()?.let {
+                com.eight87.strictlykeptboy.ui.tasks.QuickAddTarget.Todolist(it)
+            }
+            com.eight87.strictlykeptboy.ui.tasks.TaskQuickAddSheet(
+                todolists = tasksUi.todolists,
+                initialTarget = initialTarget,
+                onDismiss = { quickAddOpen = false },
+                onSubmit = { title, target ->
+                    onWriteTask(
+                        com.eight87.strictlykeptboy.ui.tasks.TaskQuickAddRequest(
+                            title = title,
+                            target = target,
+                        ),
+                    )
+                    quickAddOpen = false
+                },
+            )
+        }
     }
 }
+
+const val TestTagTasksEntryFab = "TasksEntryFab"

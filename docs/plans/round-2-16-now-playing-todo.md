@@ -266,43 +266,71 @@ play/pause/next-substep/prev-substep/stop per D-2.16.h.
       `/tmp/skb-2-16-C-next.png`, `/tmp/skb-2-16-C-collapsed.png`,
       `/tmp/skb-2-16-C-stopped.png`.
 
-## Phase D — Move all todolist UI into expanded NowPlayingScreen
+## Phase D — Move all todolist UI into expanded NowPlayingScreen — shipped in commit (worktree round2/phase-2-16-D)
 
 **Goal:** the `ui/tasks/` view-mode tabs (Combined / Today / Per-list
 / Standing / Shopping) all move into the expanded NowPlayingScreen
 below the "now playing" header. The `TaskQuickAddFab` and detail-sheet
 behaviour ride along. Nothing about the data layer changes.
 
-- [ ] **D.1** In `NowPlayingScreen` expanded body, replace the music
+- [x] **D.1** In `NowPlayingScreen` expanded body, replace the music
       QueueSection with a vertical layout: top = current-task hero
       card, below = a TabRow / chip-strip of task view-modes (Combined
       / Today / Per-list / Standing / Shopping), below = the
       corresponding existing `Task{Combined,Today,PerList,Standing,Shopping}View`
       composable hoisted out of `TasksPane`.
-- [ ] **D.2** Move `TaskQuickAddFab` into the expanded sheet (anchored
+- [x] **D.2** Move `TaskQuickAddFab` into the expanded sheet (anchored
       to its bottom-right) so tapping it inside the sheet adds a task
       without collapsing the sheet.
-- [ ] **D.3** Tapping any task in the queue → opens existing
+- [x] **D.3** Tapping any task in the queue → opens existing
       `TaskDetailSheet` over the NowPlayingScreen (z-above) per
       tonearmboy's overlay convention.
-- [ ] **D.4** Long-press / drag-handle on any task → reorder via the
+- [x] **D.4** Long-press / drag-handle on any task → reorder via the
       ported `QueueReorderLogic`. Persist reorder back to the source
       todolist's order. The persistence wire goes through whatever
       ordering field `TasksViewState` / `TaskModels` already exposes;
       do not invent a new one.
-- [ ] **D.5** "Start" action on a TaskRow swap-in: tapping the start
+- [x] **D.5** "Start" action on a TaskRow swap-in: tapping the start
       affordance calls `ActiveTaskController.start(taskId)`, which
       makes the MiniPlayer pop into existence at the peek slot.
-- [ ] **D.6** Commit. AVD: with no task active, sheet shows no peek
+- [x] **D.6** Commit. AVD: with no task active, sheet shows no peek
       (mini hidden, expanded reachable from a non-mini entry point
       TBD in D.7); with a task active, mini appears, swipe up to see
       todolist UI inside the sheet.
-- [ ] **D.7** Non-mini entry point to the sheet when no task is
-      active: add a small "Tasks" FAB or pill on Schedule's bottom
-      that toggles the sheet to expanded. (Decide between FAB or pill
-      by inspecting current Schedule bottom-affordance density — if
-      Schedule's bottom is already busy, use a FAB at top-right of
-      Schedule; otherwise a pill at bottom-center.)
+- [x] **D.7** Non-mini entry point to the sheet when no task is
+      active: stacked `SmallFloatingActionButton` (Icons.Filled.Checklist)
+      anchored bottom-right above the Schedule `EventCreateFab` (16dp
+      end / 84dp bottom = stacked above the 56dp New FAB + 12dp gap).
+      Lives inside `NowPlayingSheetHost` and is gated on
+      `showTasksEntryFab && !showMiniPlayer && sheetProgress < 0.5f`.
+      `showTasksEntryFab` is true only when `TopDestination.Schedule`
+      is selected (the destination that owns the bottom-right slot).
+
+      Implementation notes:
+      - `NowPlayingSheetHost` no longer gates the entire sheet
+        container on `showMiniPlayer`; only the peek mini-player is
+        gated. The sheet body can now be opened to progress=1 via
+        the D.7 FAB even with no active task. When `!hasMedia` the
+        body renders without the hero card (per D.1).
+      - **D.4 persistence target:** `TasksUiState` exposes no
+        per-task ordering field today (only `tasks: List<TaskItem>`,
+        ordered by underlying source). Per the plan's "skip
+        persistence in Phase D, document follow-up" branch:
+        drag-reorder is **deferred to Round 2.17** along with
+        persistence; the ported `QueueReorderLogic` + `DragReorderColumn`
+        stay in place from Phase A unused by D, ready for the next
+        round once `TasksViewState` gains an ordering field. Marked
+        TODO in `ExpandedNowPlayingTaskBody.kt`.
+      - **D.5 Temp Start affordance** retained — `TaskRow`'s trailing
+        Play IconButton (Phase B) still drives `ActiveTaskController.start`.
+        No new gesture added.
+      - `TaskDetailSheet` + `TaskQuickAddSheet` overlays moved into
+        `NowPlayingSheetHost` (sibling of the sheet container) so
+        modal-bottom-sheet z-order layers them above NowPlayingScreen.
+      - `TaskQuickAddFab` (the in-sheet `+` FAB) anchored to
+        bottom-end of the host with `alpha = nowPlayingAlpha` so it
+        fades in with the expanded screen; tapping toggles a local
+        `quickAddOpen` flag — sheet itself doesn't collapse.
 
 ## Phase E — Delete Tasks tab + remove top-of-Schedule tab toggle
 

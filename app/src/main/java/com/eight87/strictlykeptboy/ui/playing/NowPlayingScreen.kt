@@ -77,11 +77,37 @@ fun NowPlayingScreen(
   queueCommands: TaskQueueCommands,
   onBack: () -> Unit,
   nowPlayingListState: LazyListState? = null,
+  /**
+   * Round 2.16.D — body slot. Inserted in the merged surface where the
+   * music queue used to live. Receives a `LazyItemScope` so the body
+   * can use `fillParentMaxHeight` / `fillParentMaxWidth` if it needs
+   * to. When null (verbatim-port shape / tests), the legacy
+   * `QueueSection` renders.
+   */
+  bodyContent: (@Composable androidx.compose.foundation.lazy.LazyItemScope.() -> Unit)? = null,
+  /**
+   * Round 2.16.D — when false, the hero card (task icon + 3-node info
+   * row + 2 progress bars) is hidden, leaving the body content as the
+   * primary content. Used by the D.7 entry-point: user reaches the
+   * sheet with no active task.
+   */
+  showHeroCard: Boolean = true,
 ) {
   val state by nowPlayingState.state.collectAsStateWithLifecycle()
   val queueSnapshot by nowPlayingState.queue.collectAsStateWithLifecycle()
   val fallbackListState = rememberLazyListState()
   val listState = nowPlayingListState ?: fallbackListState
+
+  // Round 2.16.D — when bodyContent is supplied, the screen has a
+  // reason to render the merged surface even with no active task
+  // (hasMedia=false): the D.7 entry-point opens the sheet to show
+  // todo views without a current task. Bypass the auto-pop
+  // `ConnectedEmpty` branch in that case.
+  val subState = if (bodyContent != null && !state.hasMedia) {
+    NowPlayingSubState.ConnectedWithMedia
+  } else {
+    resolveSubState(state)
+  }
 
   Scaffold(
     topBar = {
@@ -98,7 +124,7 @@ fun NowPlayingScreen(
       )
     },
   ) { innerPadding ->
-    when (resolveSubState(state)) {
+    when (subState) {
       NowPlayingSubState.Connecting -> NowPlayingConnecting(
         modifier = Modifier
           .fillMaxSize()
@@ -128,6 +154,8 @@ fun NowPlayingScreen(
           onJumpToQueueIndex = queueCommands::seekToQueueIndex,
           onRemoveQueueItem = queueCommands::removeQueueItem,
           onMoveQueueItem = queueCommands::moveQueueItem,
+          bodyContent = bodyContent,
+          showHeroCard = showHeroCard && state.hasMedia,
           modifier = Modifier
             .fillMaxSize()
             .padding(innerPadding)
@@ -155,6 +183,8 @@ internal fun NowPlayingMergedSurface(
   onRemoveQueueItem: (Int) -> Unit,
   onMoveQueueItem: (Int, Int) -> Unit,
   modifier: Modifier = Modifier,
+  bodyContent: (@Composable androidx.compose.foundation.lazy.LazyItemScope.() -> Unit)? = null,
+  showHeroCard: Boolean = true,
 ) {
   var isQueueDragging by remember { mutableStateOf(false) }
   DisposableEffect(Unit) {
@@ -181,7 +211,7 @@ internal fun NowPlayingMergedSurface(
       ),
       userScrollEnabled = !isQueueDragging,
     ) {
-      item(key = "now_playing_card") {
+      if (showHeroCard) item(key = "now_playing_card") {
         Column(
           modifier = Modifier
             .fillMaxWidth()
@@ -295,7 +325,7 @@ internal fun NowPlayingMergedSurface(
         }
       }
 
-      item(key = "transport_row") {
+      if (showHeroCard) item(key = "transport_row") {
         PlaybackTransportRow(
           state = state,
           iconSize = 36.dp,
@@ -330,15 +360,19 @@ internal fun NowPlayingMergedSurface(
       }
 
       item(key = "queue_section") {
-        QueueSection(
-          snapshot = queueSnapshot,
-          onJumpTo = onJumpToQueueIndex,
-          onRemove = onRemoveQueueItem,
-          onMove = onMoveQueueItem,
-          noMatchFillModifier = Modifier.fillParentMaxHeight(),
-          parentViewportHeight = viewport,
-          onDragStateChange = { isQueueDragging = it },
-        )
+        if (bodyContent != null) {
+          bodyContent()
+        } else {
+          QueueSection(
+            snapshot = queueSnapshot,
+            onJumpTo = onJumpToQueueIndex,
+            onRemove = onRemoveQueueItem,
+            onMove = onMoveQueueItem,
+            noMatchFillModifier = Modifier.fillParentMaxHeight(),
+            parentViewportHeight = viewport,
+            onDragStateChange = { isQueueDragging = it },
+          )
+        }
       }
     }
     com.eight87.strictlykeptboy.ui.common.FastScrollbar(
