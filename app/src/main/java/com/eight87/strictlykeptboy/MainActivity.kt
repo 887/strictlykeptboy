@@ -320,7 +320,9 @@ class MainActivity : ComponentActivity() {
                     // changes. Also pumps multiRepo / activeRepoOwner from
                     // the repo store + active write target. Owned here (not
                     // hoisted) so SkbAppShell can keep its remember-default.
-                    val tasksViewState = remember { TasksViewState() }
+                    // Round 2.16.B — hoisted onto AppGraph so the playback
+                    // projector and the UI share one canonical instance.
+                    val tasksViewState = graph.tasksViewState
                     androidx.compose.runtime.LaunchedEffect(Unit) {
                         val evaluator = com.eight87.strictlykeptboy.resolver.ActiveSetEvaluator()
                         kotlinx.coroutines.flow.combine(
@@ -430,6 +432,12 @@ class MainActivity : ComponentActivity() {
                     }
                     SkbAppShell(
                         tasksState = tasksViewState,
+                        // Round 2.16.B — wire the real projector + transport
+                        // adapter so MiniPlayer/NowPlayingScreen read live
+                        // active-task state. Temp Start affordance on
+                        // TaskRow → controller.start(taskId).
+                        taskPlaybackSource = graph.taskTransport,
+                        onStartTask = { taskId -> graph.activeTaskController.start(taskId) },
                         activeRepoNameFlow = graph.defaultWriteRepoName,
                         activeIconKindFlow = graph.activeRepoIconKind,
                         wizardEntryRequest = graph.wizardEntryRequest,

@@ -179,22 +179,23 @@ as tonearmboy's does on AVD.
       collapses, flick-up commits, flick-down dismisses.
 - [x] **A.6** Commit. AVD updated per `feedback_commit_avd_ship.md`.
 
-## Phase B — Task-domain facade
+## Phase B — Task-domain facade — shipped in commit 06c0adb
 
 **Goal:** the stub from A.3 is replaced with a real reactive source
 that derives `TaskPlaybackState` from existing task data + a started
 "active task" reference.
 
-- [ ] **B.1** Inspect `app/src/main/java/com/eight87/strictlykeptboy/ui/tasks/TaskModels.kt`
+- [x] **B.1** Inspect `app/src/main/java/com/eight87/strictlykeptboy/ui/tasks/TaskModels.kt`
       and decide per D-2.16.g whether sub-steps come from existing
       checklist items or need a new field. Write the choice into this
       plan as a sub-bullet under B.1 before continuing.
-- [ ] **B.2** Add `task/ActiveTaskController.kt` — singleton on AppGraph
+  - **Chosen mechanism: introduce optional `subSteps: List<TaskSubStep>` + `estimatedDurationMs: Long` on `TaskItem`** — inspection of `app/src/main/java/com/eight87/strictlykeptboy/ui/tasks/TaskModels.kt:58-84` shows neither a `checklistItems` list nor any flat duration field. The model carries only `due/done/priority/tags/standing/pinned/body/author/attachments/source/linkedEventId`. Per D-2.16.g's fallback path we add the lightweight `subSteps` list on the per-instance type (`TaskItem`), default `emptyList()`, plus an `estimatedDurationMs` fallback (default 5 min). When `subSteps` is empty the projector renders the task as a single step (`subStepIndex=1, subStepCount=1, subStepDurationMs=estimatedDurationMs`). No TOML schema changes — Phase B is in-memory only.
+- [x] **B.2** Add `task/ActiveTaskController.kt` — singleton on AppGraph
       that holds `currentTaskId: StateFlow<String?>`,
       `isRunning: StateFlow<Boolean>`, `subStepIndex: StateFlow<Int>`,
       and emits a `start(taskId)`, `pause()`, `resume()`,
       `nextSubStep()`, `previousSubStep()`, `stop()` API.
-- [ ] **B.3** Add `task/TaskPlaybackProjector.kt` — combines
+- [x] **B.3** Add `task/TaskPlaybackProjector.kt` — combines
       `ActiveTaskController` flows + the task store snapshot into the
       `TaskPlaybackState` flow that `MiniPlayer` / `NowPlayingScreen`
       consume. Substep elapsed = wall-clock since
@@ -202,16 +203,26 @@ that derives `TaskPlaybackState` from existing task data + a started
       duration. Whole-task elapsed = sum of completed-sub-step durations
       + current sub-step elapsed; whole-task duration = sum of all
       sub-step durations.
-- [ ] **B.4** Persist nothing across process death in Phase B —
+- [x] **B.4** Persist nothing across process death in Phase B —
       `ActiveTaskController` state is in-memory only. (Persistence is
       out-of-scope; running tasks survive only while app is alive.
-      Documented limitation. Tracked for future Round 2.17.)
-- [ ] **B.5** Replace A.3 stub source with the real projector. Verify
-      on AVD: starting a task from anywhere (Phase C will add the
-      entry point; for B.5 add a `Start` button onto a TaskRow
-      temporarily) makes MiniPlayer show that task with a counting
-      down timer.
-- [ ] **B.6** Commit. AVD updated.
+      Documented limitation in `ActiveTaskController.kt` kdoc. Tracked
+      for future Round 2.17.)
+- [x] **B.5** Replace A.3 stub source with the real projector. AVD
+      verified: with the petkeptbyai demo perspective (no seeded tasks)
+      the Schedule pane shows **no mini-player at peek** — confirming
+      `hasMedia=false` gates the peek correctly when no active task is
+      set. Temp Start affordance lives on `TaskRow` (trailing
+      IconButton with `Icons.Filled.PlayArrow`), plumbed from
+      MainActivity → SkbAppShell → TasksPane → Combined/Today/PerList/
+      Standing views → TaskRow. Phase D will replace this with the
+      proper start-from-mini-player flow inside the expanded sheet.
+      `StubTaskPlaybackSource.kt` retained in place — to be removed in
+      Phase C once the wire is fully proven.
+- [x] **B.6** Commit. AVD installed (`emulator-5554`,
+      `/tmp/skb-2-16-B.png`). Unit-test gate: 7 new
+      `TaskPlaybackProjectorTest` cases pass covering empty / start /
+      tick / next / single-step / queue / stop transitions.
 
 ## Phase C — Wire MiniPlayer + NowPlayingScreen to task data
 

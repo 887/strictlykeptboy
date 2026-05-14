@@ -30,6 +30,7 @@ fun TaskTodayView(
     onLongPress: (TaskItem) -> Unit = {},
     multiRepo: Boolean = false,
     activeRepoOwner: String = "",
+    onStartTask: ((String) -> Unit)? = null,
 ) {
     val forToday = tasks.forToday(today)
     if (forToday.isEmpty()) {
@@ -65,6 +66,7 @@ fun TaskTodayView(
                     onLongClick = { onLongPress(task) },
                     multiRepo = multiRepo,
                     activeRepoOwner = activeRepoOwner,
+                    onStartTask = onStartTask,
                 )
             }
         }
@@ -78,6 +80,7 @@ fun TaskTodayView(
                     onLongClick = { onLongPress(task) },
                     multiRepo = multiRepo,
                     activeRepoOwner = activeRepoOwner,
+                    onStartTask = onStartTask,
                 )
             }
         }
@@ -91,6 +94,7 @@ fun TaskTodayView(
                     onLongClick = { onLongPress(task) },
                     multiRepo = multiRepo,
                     activeRepoOwner = activeRepoOwner,
+                    onStartTask = onStartTask,
                 )
             }
         }

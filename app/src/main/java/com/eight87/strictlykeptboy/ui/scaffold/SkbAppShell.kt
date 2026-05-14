@@ -62,6 +62,9 @@ import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.git.auth.SecretsStore
 import com.eight87.strictlykeptboy.task.StubTaskPlaybackSource
+import com.eight87.strictlykeptboy.task.TaskNowPlayingState
+import com.eight87.strictlykeptboy.task.TaskQueueCommands
+import com.eight87.strictlykeptboy.task.TaskTransportCommands
 import com.eight87.strictlykeptboy.ui.playing.MiniPlayer
 import com.eight87.strictlykeptboy.ui.playing.NowPlayingScreen
 import androidx.compose.animation.core.Animatable
@@ -230,6 +233,18 @@ fun SkbAppShell(
      * Host opens [com.eight87.strictlykeptboy.ui.calendars.CalendarSettingsSheet].
      */
     onLongPressCalendar: ((com.eight87.strictlykeptboy.resolver.CalendarMeta) -> Unit)? = null,
+    /**
+     * Round 2.16.B — task-playback source feeding MiniPlayer +
+     * NowPlayingScreen. Defaults to the Phase A stub for previews /
+     * tests; MainActivity wires `appGraph.taskTransport`.
+     */
+    taskPlaybackSource: Any = StubTaskPlaybackSource,
+    /**
+     * Round 2.16.B — temporary "Start" affordance handler exposed on
+     * task rows. TODO Phase D — replace with proper start-from-mini-
+     * player flow inside the expanded sheet.
+     */
+    onStartTask: ((String) -> Unit)? = null,
 ) {
     ProvideWindowSizeClass(modifier = modifier) { _ ->
         SkbAppShellContent(
@@ -256,6 +271,8 @@ fun SkbAppShell(
             onShareWithDom = onShareWithDom,
             calendarVisibility = calendarVisibility,
             onLongPressCalendar = onLongPressCalendar,
+            taskPlaybackSource = taskPlaybackSource,
+            onStartTask = onStartTask,
         )
     }
 }
@@ -287,6 +304,8 @@ private fun SkbAppShellContent(
     onShareWithDom: () -> Unit = {},
     calendarVisibility: com.eight87.strictlykeptboy.ui.settings.CalendarVisibilityPrefs? = null,
     onLongPressCalendar: ((com.eight87.strictlykeptboy.resolver.CalendarMeta) -> Unit)? = null,
+    taskPlaybackSource: Any = StubTaskPlaybackSource,
+    onStartTask: ((String) -> Unit)? = null,
 ) {
     var selected by rememberSaveable { mutableStateOf(TopDestination.Schedule) }
     // Phase 2.1.I.2 — observe wizard re-entry requests.
@@ -352,7 +371,7 @@ private fun SkbAppShellContent(
     // redundant — destination is the right granularity here.
     val title = selected.labelString()
 
-    NowPlayingSheetHost {
+    NowPlayingSheetHost(source = taskPlaybackSource) {
       Surface(
         color = MaterialTheme.colorScheme.background,
         modifier = Modifier.fillMaxSize().testTag(TestTagAppShell),
@@ -405,6 +424,7 @@ private fun SkbAppShellContent(
                             selectedTab = tasksTab,
                             onSelectTab = { tasksTab = it },
                             onWriteTask = onWriteTask,
+                            onStartTask = onStartTask,
                             // Phase 2.1.D.7 — long-press → schedule-as-timebox
                             // routes through the existing EventCreateController.
                             // No-op when no controller is wired (tests, previews).
@@ -805,9 +825,19 @@ private fun taskTabLabelRes(tab: TaskViewTab): Int = when (tab) {
  * the real projector.
  */
 @Composable
-private fun NowPlayingSheetHost(content: @Composable () -> Unit) {
-    val source = StubTaskPlaybackSource
-    val playbackState by source.state.collectAsState()
+private fun NowPlayingSheetHost(
+    source: Any = StubTaskPlaybackSource,
+    content: @Composable () -> Unit,
+) {
+    // Round 2.16.B — the source is one object satisfying the three
+    // facets the ported composables consume. Phase A used the singleton
+    // [StubTaskPlaybackSource]; Phase B injects the real
+    // `TaskTransportAdapter` from AppGraph (or anything else
+    // satisfying the union of the three interfaces).
+    val now = source as TaskNowPlayingState
+    val transport = source as TaskTransportCommands
+    val queue = source as TaskQueueCommands
+    val playbackState by now.state.collectAsState()
 
     val sheetProgress = remember { Animatable(0f) }
     val coroutineScope = rememberCoroutineScope()
@@ -974,9 +1004,9 @@ private fun NowPlayingSheetHost(content: @Composable () -> Unit) {
                             .alpha(nowPlayingAlpha),
                     ) {
                         NowPlayingScreen(
-                            nowPlayingState = source,
-                            transport = source,
-                            queueCommands = source,
+                            nowPlayingState = now,
+                            transport = transport,
+                            queueCommands = queue,
                             onBack = closeSheet,
                             nowPlayingListState = nowPlayingListState,
                         )
@@ -991,15 +1021,15 @@ private fun NowPlayingSheetHost(content: @Composable () -> Unit) {
                     ) {
                         MiniPlayer(
                             state = playbackState,
-                            onTogglePlayPause = source::togglePlayPause,
-                            onClose = source::stop,
+                            onTogglePlayPause = transport::togglePlayPause,
+                            onClose = transport::stop,
                             onExpand = openNowPlayingSheet,
-                            onSkipNext = source::seekToNext,
-                            onSkipPrevious = source::seekToPrevious,
-                            onPlayButtonLongPress = { /* Phase A stub */ },
-                            onToggleShuffle = source::toggleShuffle,
-                            onCycleRepeat = source::cycleRepeatMode,
-                            onSeekTo = source::seekTo,
+                            onSkipNext = transport::seekToNext,
+                            onSkipPrevious = transport::seekToPrevious,
+                            onPlayButtonLongPress = { transport.stop() },
+                            onToggleShuffle = transport::toggleShuffle,
+                            onCycleRepeat = transport::cycleRepeatMode,
+                            onSeekTo = transport::seekTo,
                             onSheetDragDelta = onSheetDragDelta,
                             onSheetDragSettle = onSheetDragSettle,
                         )

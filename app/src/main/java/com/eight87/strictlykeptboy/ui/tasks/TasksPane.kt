@@ -52,6 +52,14 @@ fun TasksPane(
      * with the task title + relatedTaskId.
      */
     onScheduleAsTimebox: (TaskItem) -> Unit = {},
+    /**
+     * Round 2.16.B — temporary start-task affordance. When non-null,
+     * each [TaskRow] paints a small Play IconButton at its trailing
+     * edge; tapping it invokes this callback with the task id.
+     * TODO Phase D — replace with proper start-from-mini-player flow
+     * inside the expanded sheet.
+     */
+    onStartTask: ((String) -> Unit)? = null,
 ) {
     val widthClass = LocalWindowWidthSizeClass.current
     // Nav-swap polish: when the shell owns the rail it hoists `selectedTab`
@@ -122,6 +130,7 @@ fun TasksPane(
                         onLongPress = { longPressTask = it },
                         multiRepo = uiState.multiRepo,
                         activeRepoOwner = uiState.activeRepoOwner,
+                        onStartTask = onStartTask,
                     )
                     TaskViewTab.Today -> TaskTodayView(
                         tasks = visibleTasks,
@@ -130,6 +139,7 @@ fun TasksPane(
                         onLongPress = { longPressTask = it },
                         multiRepo = uiState.multiRepo,
                         activeRepoOwner = uiState.activeRepoOwner,
+                        onStartTask = onStartTask,
                     )
                     TaskViewTab.PerList -> TaskPerListView(
                         tasks = visibleTasks,
@@ -141,6 +151,7 @@ fun TasksPane(
                         onOpen = { openTask = it },
                         multiRepo = uiState.multiRepo,
                         activeRepoOwner = uiState.activeRepoOwner,
+                        onStartTask = onStartTask,
                     )
                     TaskViewTab.Shopping -> TaskShoppingView(
                         tasks = if (selectedListId != null) uiState.tasks.filter { it.todolist.id == selectedListId }
@@ -152,6 +163,7 @@ fun TasksPane(
                         onToggleDone = { state.toggleDone(it.id) },
                         onOpen = { openTask = it },
                         onPinToday = { task, pin -> state.pinStanding(task.id, pin) },
+                        onStartTask = onStartTask,
                     )
                 }
             }
