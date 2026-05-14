@@ -30,7 +30,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.RateReview
@@ -368,7 +367,6 @@ private fun SkbAppShellContent(
         tasksState = tasksState,
         onWriteTask = onWriteTask,
         onStartTask = onStartTask,
-        showTasksEntryFab = selected == TopDestination.Schedule,
     ) {
       Surface(
         color = MaterialTheme.colorScheme.background,
@@ -818,14 +816,6 @@ private fun NowPlayingSheetHost(
     tasksState: TasksViewState = remember { TasksViewState() },
     onWriteTask: (TaskQuickAddRequest) -> Unit = {},
     onStartTask: ((String) -> Unit)? = null,
-    /**
-     * Round 2.16.D.7 — when true, render a stacked-FAB entry point at
-     * bottom-end of the host. Only meaningful when the active top
-     * destination is the one whose chrome owns the bottom-right slot
-     * (Schedule today). When `hasMedia` is false (no mini-player peek)
-     * this is the only way the user can reach the expanded sheet.
-     */
-    showTasksEntryFab: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     // Round 2.16.B — the source is one object satisfying the three
@@ -857,7 +847,11 @@ private fun NowPlayingSheetHost(
         { coroutineScope.launch { sheetProgress.animateTo(0f) }; Unit }
     }
 
-    val showMiniPlayer = playbackState.hasMedia
+    // Round 2.16 post-DONE — peek is always visible on Schedule. When no
+    // task is active, the MiniPlayer renders an empty-state row (checklist
+    // icon + "No active task / Tap to pick one") that opens the sheet on
+    // tap. This obsoletes the D.7 stacked Tasks FAB.
+    val showMiniPlayer = true
 
     BackHandler(enabled = sheetProgress.value > 0f) {
         closeSheet()
@@ -904,31 +898,6 @@ private fun NowPlayingSheetHost(
         val libraryBottomPad = if (showMiniPlayer) peekDp else 0.dp
         Box(modifier = Modifier.fillMaxSize().padding(bottom = libraryBottomPad)) {
             content()
-        }
-
-        // Round 2.16.D.7 — second FAB above the Schedule new-event FAB,
-        // visible only when there's no active task (no mini-player peek)
-        // and we're on a destination whose chrome owns the bottom-right
-        // (Schedule today). Tapping animates the sheet open so the user
-        // can reach the todo views without first starting a task.
-        if (showTasksEntryFab && !showMiniPlayer && sheetProgress.value < 0.5f) {
-            androidx.compose.material3.SmallFloatingActionButton(
-                onClick = { openNowPlayingSheet() },
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    // Stack above the EventCreateFab (56dp FAB +
-                    // 16dp host pad + 12dp gap = 84dp lift).
-                    .padding(end = 16.dp, bottom = 84.dp)
-                    .testTag(TestTagTasksEntryFab)
-                    .semantics {
-                        contentDescription = "Open tasks"
-                    },
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Checklist,
-                    contentDescription = null,
-                )
-            }
         }
 
         // ---- Layer 2: bottom-anchored sheet (Auxio-style). ----
@@ -1149,4 +1118,3 @@ private fun NowPlayingSheetHost(
     }
 }
 
-const val TestTagTasksEntryFab = "TasksEntryFab"

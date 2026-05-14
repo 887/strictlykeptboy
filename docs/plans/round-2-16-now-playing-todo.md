@@ -542,3 +542,5 @@ behaviour ride along. Nothing about the data layer changes.
    already paid a chastity-day penalty for me deviating from
    tonearmboy without re-reading. Don't make me cost him another
    one.
+
+Post-DONE: peek always visible on Schedule (commit 6f03de1). D.7 Tasks FAB obsoleted.
