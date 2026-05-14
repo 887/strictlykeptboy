@@ -179,7 +179,7 @@ as tonearmboy's does on AVD.
       collapses, flick-up commits, flick-down dismisses.
 - [x] **A.6** Commit. AVD updated per `feedback_commit_avd_ship.md`.
 
-## Phase B — Task-domain facade — shipped in commit 06c0adb
+## Phase B — Task-domain facade — shipped in commit 419767d (parent)
 
 **Goal:** the stub from A.3 is replaced with a real reactive source
 that derives `TaskPlaybackState` from existing task data + a started
