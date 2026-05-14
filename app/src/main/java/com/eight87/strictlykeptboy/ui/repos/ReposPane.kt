@@ -411,18 +411,15 @@ private fun ReposList(
                     contentDescription = "Set up a new account",
                 )
             }
-            // Round 2.4 — global app settings cog. Moved from the top-bar
-            // into the Repos header per user direction. Per-repo settings
-            // still open via row-tap → Mode.Settings(repoId) above.
-            androidx.compose.material3.IconButton(
-                onClick = onOpenAppSettings,
-                modifier = Modifier.testTag("ReposAppSettings"),
-            ) {
-                androidx.compose.material3.Icon(
-                    imageVector = Icons.Filled.Settings,
-                    contentDescription = "App settings",
-                )
-            }
+            // Round 2.16.F — global app settings cog removed from the
+            // Repos pane top-bar; it moved back into the shell top-bar
+            // action row (immediately before the avatar) — its
+            // pre-Round-2.1 location. Per-repo settings still open via
+            // row-tap → Mode.Settings(repoId) above.
+            // The `onOpenAppSettings` parameter is retained on the
+            // composable signature so existing call-sites remain stable;
+            // it's no longer wired to a Repos-pane affordance.
+            @Suppress("UNUSED_EXPRESSION") onOpenAppSettings
         }
 
         HorizontalDivider()
