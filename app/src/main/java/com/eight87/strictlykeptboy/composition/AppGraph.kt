@@ -33,7 +33,12 @@ import com.eight87.strictlykeptboy.notif.NotificationPrefs
 import com.eight87.strictlykeptboy.prefs.RepoStoragePrefs
 import com.eight87.strictlykeptboy.sync.MirrorReconciler
 import com.eight87.strictlykeptboy.theme.AppearancePrefs
+import com.eight87.strictlykeptboy.task.ActiveTaskController
+import com.eight87.strictlykeptboy.task.TaskPlaybackProjector
+import com.eight87.strictlykeptboy.task.TaskTransportAdapter
 import com.eight87.strictlykeptboy.ui.repos.ReposViewState
+import com.eight87.strictlykeptboy.ui.tasks.TaskItem
+import com.eight87.strictlykeptboy.ui.tasks.TasksViewState
 import com.eight87.strictlykeptboy.ui.schedule.ScheduleViewModePrefs
 import com.eight87.strictlykeptboy.ui.settings.CalendarVisibilityPrefs
 import com.eight87.strictlykeptboy.ui.settings.IdentityPrefs
@@ -657,4 +662,52 @@ class AppGraph(private val appContext: Context) {
      * changing call sites.
      */
     val appScope: CoroutineScope get() = GlobalScope
+
+    // ----------------------------------------------------------------
+    // Round 2.16.B — active task playback (in-memory only).
+    //
+    // [tasksViewState] is hoisted onto AppGraph so the projector can
+    // read the same task list the UI renders. MainActivity previously
+    // owned this as a `remember { TasksViewState() }`; the projector
+    // would diverge from the UI if we kept two instances, so we own
+    // the canonical instance here.
+    // ----------------------------------------------------------------
+
+    /** Round 2.16.B — single canonical tasks UI state, shared between
+     *  the schedule shell's task views and the playback projector. */
+    val tasksViewState: TasksViewState by lazy { TasksViewState() }
+
+    /** Round 2.16.B — derived flow of just the tasks list (for the
+     *  projector — narrow ISP surface). */
+    @Suppress("OPT_IN_USAGE")
+    val tasksFlow: StateFlow<List<TaskItem>> by lazy {
+        tasksViewState.state
+            .map { it.tasks }
+            .stateIn(appScope, SharingStarted.Eagerly, tasksViewState.state.value.tasks)
+    }
+
+    /** Round 2.16.B — in-memory active-task controller. NOT persisted. */
+    val activeTaskController: ActiveTaskController by lazy {
+        ActiveTaskController(scope = appScope)
+    }
+
+    /** Round 2.16.B — read-only projection consumed by MiniPlayer /
+     *  NowPlayingScreen via [taskTransport]. */
+    val taskPlaybackProjector: TaskPlaybackProjector by lazy {
+        TaskPlaybackProjector(
+            controller = activeTaskController,
+            tasksFlow = tasksFlow,
+            scope = appScope,
+        )
+    }
+
+    /** Round 2.16.B — facet adapter that the sheet host passes into
+     *  MiniPlayer / NowPlayingScreen / QueueSection. Replaces the
+     *  Phase A `StubTaskPlaybackSource`. */
+    val taskTransport: TaskTransportAdapter by lazy {
+        TaskTransportAdapter(
+            controller = activeTaskController,
+            projector = taskPlaybackProjector,
+        )
+    }
 }

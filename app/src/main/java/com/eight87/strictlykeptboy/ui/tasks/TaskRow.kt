@@ -11,7 +11,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -36,6 +40,7 @@ const val TestTagDueChip = "TaskDueChip"
 const val TestTagTaskAuthor = "TaskAuthor"
 const val TestTagTaskRepoDot = "TaskRepoDot"
 const val TestTagTaskLinkedTimebox = "TaskLinkedTimebox"
+const val TestTagTaskStartButton = "TaskStartButton"
 
 /**
  * UI-J row layout — 4dp left accent, checkbox, title, due chip, list chip.
@@ -63,6 +68,16 @@ fun TaskRow(
      * bubble when `item.author` is non-empty.
      */
     activeRepoOwner: String = "",
+    /**
+     * Round 2.16.B — temporary "Start" affordance. When non-null, a
+     * small Play IconButton renders at the trailing edge of the row;
+     * tapping it invokes this callback with the task id, which
+     * MainActivity wires to `ActiveTaskController.start`.
+     *
+     * TODO Phase D — replace with proper start-from-mini-player flow
+     * inside the expanded NowPlayingScreen sheet.
+     */
+    onStartTask: ((String) -> Unit)? = null,
 ) {
     val accent = colorFromSeed(item.todolist.colorSeed.ifBlank { item.todolist.id })
     val dim = item.done
@@ -162,6 +177,20 @@ fun TaskRow(
             if (item.priority > 0) {
                 PriorityDot(level = item.priority)
                 Spacer(Modifier.width(8.dp))
+            }
+            if (onStartTask != null && !item.done) {
+                // Round 2.16.B — temp start affordance. Phase D removes
+                // this in favour of the expanded-sheet start flow.
+                IconButton(
+                    onClick = { onStartTask(item.id) },
+                    modifier = Modifier.testTag("$TestTagTaskStartButton-${item.id}"),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.PlayArrow,
+                        contentDescription = "Start task",
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
             }
         }
     }

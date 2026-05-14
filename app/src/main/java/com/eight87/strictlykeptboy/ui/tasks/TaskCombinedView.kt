@@ -29,6 +29,7 @@ fun TaskCombinedView(
     onLongPress: (TaskItem) -> Unit = {},
     multiRepo: Boolean = false,
     activeRepoOwner: String = "",
+    onStartTask: ((String) -> Unit)? = null,
 ) {
     val sorted = tasks.sortedForCombined()
     if (sorted.isEmpty()) {
@@ -53,6 +54,7 @@ fun TaskCombinedView(
                 onLongClick = { onLongPress(task) },
                 multiRepo = multiRepo,
                 activeRepoOwner = activeRepoOwner,
+                onStartTask = onStartTask,
             )
         }
         if (done.isNotEmpty()) {

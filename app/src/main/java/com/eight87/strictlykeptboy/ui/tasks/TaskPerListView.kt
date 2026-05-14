@@ -38,6 +38,7 @@ fun TaskPerListView(
     activeTodolistIds: Set<String> = emptySet(),
     multiRepo: Boolean = false,
     activeRepoOwner: String = "",
+    onStartTask: ((String) -> Unit)? = null,
 ) {
     Column(modifier = modifier.fillMaxSize().testTag(TestTagPerListView)) {
         val scroll = rememberScrollState()
@@ -112,6 +113,7 @@ fun TaskPerListView(
                     onClick = { onOpen(task) },
                     multiRepo = multiRepo,
                     activeRepoOwner = activeRepoOwner,
+                    onStartTask = onStartTask,
                 )
             }
         }

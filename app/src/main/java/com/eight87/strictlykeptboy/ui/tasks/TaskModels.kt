@@ -55,6 +55,26 @@ data class TodolistInfo(
     val tzId: ZoneId = ZoneId.systemDefault(),
 )
 
+/**
+ * Round 2.16.B — execution-time sub-step on a [TaskItem].
+ *
+ * Per D-2.16.g: inspection of [TaskItem] showed no existing
+ * checklist-items field carrying ordered sub-steps; only a flat task
+ * shape with no per-step structure. Per the fallback path in the
+ * locked decision, we introduce a lightweight optional list on the
+ * per-instance type ([TaskItem]) — NOT on a template / TOML schema.
+ * Phase B is in-memory only; persistence is deferred.
+ *
+ * When [TaskItem.subSteps] is empty, the projector treats the task as
+ * a single step (`subStepIndex = 1`, `subStepCount = 1`,
+ * `subStepDurationMs` = whole-task estimated duration).
+ */
+@Immutable
+data class TaskSubStep(
+    val name: String,
+    val durationMs: Long,
+)
+
 @Immutable
 data class TaskItem(
     val id: String,
@@ -79,6 +99,20 @@ data class TaskItem(
     val linkedEventId: String = "",
     /** Display-only — the linked timebox's start for the inline chip. */
     val linkedEventStart: ZonedDateTime? = null,
+    /**
+     * Round 2.16.B — optional ordered execution-time sub-steps. Empty
+     * (default) means the projector renders the task as a single step
+     * with its [estimatedDurationMs] (or a 5-minute fallback) as the
+     * sole step duration. See [TaskSubStep] kdoc for the decision
+     * trail.
+     */
+    val subSteps: List<TaskSubStep> = emptyList(),
+    /**
+     * Round 2.16.B — whole-task estimate fallback used when [subSteps]
+     * is empty. Default 5 minutes. (TaskModels has no flat duration
+     * field today; a TOML-schema-adding round may replace this.)
+     */
+    val estimatedDurationMs: Long = 5L * 60_000L,
 ) {
     val isOverdue: Boolean get() = !done && due != null && due.isBefore(LocalDate.now())
 }
