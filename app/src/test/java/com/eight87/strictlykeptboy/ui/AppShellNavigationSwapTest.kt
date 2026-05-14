@@ -18,7 +18,6 @@ import com.eight87.strictlykeptboy.ui.scaffold.TestTagShellRailItemPrefix
 import com.eight87.strictlykeptboy.ui.scaffold.TestTagShellTopBar
 import com.eight87.strictlykeptboy.ui.scaffold.TopDestination
 import com.eight87.strictlykeptboy.ui.schedule.ScheduleViewState
-import com.eight87.strictlykeptboy.ui.tasks.TaskViewTab
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,15 +30,14 @@ import org.robolectric.annotation.Config
 /**
  * Nav-swap polish — asserts the inverted layout.
  *
- *  - Phase 2.2.A.2: the top-bar icon row is restricted to READ surfaces
- *    (Schedule / Tasks / Reviews). The full `TopDestination` enum stays
- *    at 7 cases — Wizard / Together / Repos / Settings are still valid
- *    routing targets, just not rendered as icon-buttons in the row.
- *    Pinned at 3 buttons so accidental re-additions get caught.
+ *  - Phase 2.2.A.2 / Round 2.16.E: the top-bar icon row is restricted to
+ *    READ surfaces (Schedule / Reviews). The full `TopDestination` enum
+ *    now has 6 cases — Tasks was deleted in Round 2.16.E (todolist UI
+ *    moved into the expanded NowPlayingScreen sheet); Wizard / Together
+ *    / Repos / Settings are still valid routing targets, just not
+ *    rendered as icon-buttons in the row.
  *  - The left rail shows view-mode entries per the active destination.
  *  - Schedule rail has 5 entries (Day / Week / Month / Agenda / Year).
- *  - Tasks rail has 5 entries (Combined / Today / Per-list / Shopping /
- *    Standing).
  *  - Together / Repos / Wizard / Reviews / Settings contribute zero
  *    rail entries.
  */
@@ -72,14 +70,13 @@ class AppShellNavigationSwapTest {
         setShell()
         composeRule.onNodeWithTag(TestTagAppShell).assertExists()
         composeRule.onNodeWithTag(TestTagShellTopBar).assertExists()
-        // Phase 2.2.A.2 — the enum stays at 7 cases (routing-only for the
-        // hidden four), but only the 3 READ surfaces render as buttons.
-        assert(TopDestination.entries.size == 7) {
-            "Expected 7 TopDestination entries, got ${TopDestination.entries.size}"
+        // Round 2.16.E — enum drops Tasks (6 cases). Only the 2 READ
+        // surfaces render as buttons.
+        assert(TopDestination.entries.size == 6) {
+            "Expected 6 TopDestination entries, got ${TopDestination.entries.size}"
         }
         val rendered = listOf(
             TopDestination.Schedule,
-            TopDestination.Tasks,
             TopDestination.Reviews,
         )
         rendered.forEach { dest ->
@@ -114,21 +111,11 @@ class AppShellNavigationSwapTest {
         }
     }
 
-    @Test fun selecting_tasks_destination_swaps_rail_to_task_view_modes() {
-        setShell()
-        composeRule
-            .onNodeWithTag("$TestTagShellDestPrefix${TopDestination.Tasks.name}")
-            .performClick()
-        TaskViewTab.entries.forEach { tab ->
-            composeRule
-                .onNodeWithTag("$TestTagShellRailItemPrefix${tab.name}")
-                .assertExists()
-        }
-        // And the schedule rail entries should no longer be in the tree.
-        composeRule
-            .onNodeWithTag("$TestTagShellRailItemPrefix${ScheduleViewTab.Day.name}")
-            .assertDoesNotExist()
-    }
+    // Round 2.16.E — `selecting_tasks_destination_swaps_rail_to_task_view_modes`
+    // deleted along with the `TopDestination.Tasks` enum case. Task view-
+    // mode selection now lives inside the expanded NowPlayingScreen
+    // sheet (ExpandedNowPlayingTaskBody) and is covered by its own
+    // composable tests, not the shell-rail tests.
 
     @Test fun wizard_entry_request_routes_to_wizard_pane_without_top_bar_button() {
         // Phase 2.2.A.3 — even though `TopDestination.Wizard` no longer
@@ -176,7 +163,7 @@ class AppShellNavigationSwapTest {
         // icon row; hidden destinations are reached via other affordances
         // (bat avatar → Repos, Repos "+" → Wizard, gear → Settings) which
         // route through `selected = TopDestination.X` directly.
-        listOf(TopDestination.Schedule, TopDestination.Tasks, TopDestination.Reviews)
+        listOf(TopDestination.Schedule, TopDestination.Reviews)
             .forEach { dest ->
                 composeRule
                     .onNodeWithTag("$TestTagShellDestPrefix${dest.name}")

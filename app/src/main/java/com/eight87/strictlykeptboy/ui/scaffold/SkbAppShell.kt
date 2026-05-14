@@ -30,7 +30,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Groups
@@ -100,8 +99,6 @@ import com.eight87.strictlykeptboy.ui.schedule.ScheduleViewState
 import com.eight87.strictlykeptboy.ui.settings.SettingsAccess
 import com.eight87.strictlykeptboy.ui.settings.SettingsPane
 import com.eight87.strictlykeptboy.ui.tasks.TaskQuickAddRequest
-import com.eight87.strictlykeptboy.ui.tasks.TaskViewTab
-import com.eight87.strictlykeptboy.ui.tasks.TasksPane
 import com.eight87.strictlykeptboy.ui.tasks.TasksViewState
 import com.eight87.strictlykeptboy.ui.together.TogetherPane
 import com.eight87.strictlykeptboy.ui.together.TogetherViewModel
@@ -154,13 +151,14 @@ const val TestTagShellRailItemPrefix = "ShellRail-"
  */
 enum class TopDestination(val label: String, val icon: ImageVector) {
     Schedule("Schedule", Icons.Filled.CalendarMonth),
-    Tasks("Tasks", Icons.Filled.CheckCircle),
+    // Round 2.16.E — `Tasks` destination deleted. All todolist surface
+    // area now lives inside the expanded NowPlayingScreen sheet
+    // (reachable via the Schedule "Open tasks" FAB or the mini-player
+    // peek when a task is active).
     Together("Together", Icons.Filled.Groups),
     Repos("Repos", Icons.Filled.Folder),
     Wizard("Wizard", Icons.Filled.AutoAwesome),
-    // Phase DDD.13 / UI-SS — dom-/boy-side review feed surface. Added in
-    // the F45 fix-up round; the rail expansion from 6 -> 7 destinations
-    // lands together with `AppShellNavigationSwapTest`'s updated assertion.
+    // Phase DDD.13 / UI-SS — dom-/boy-side review feed surface.
     Reviews("Reviews", Icons.Filled.RateReview),
     Settings("Settings", Icons.Filled.Settings),
 }
@@ -324,10 +322,8 @@ private fun SkbAppShellContent(
         ?: MutableStateFlow(com.eight87.strictlykeptboy.ui.theming.RepoIconKind.Sticker("bat") as com.eight87.strictlykeptboy.ui.theming.RepoIconKind))
         .collectAsState()
 
-    // Tasks owns its tab here so the rail (which lives in the shell) can
-    // drive it. ISP: only the tab + setter are hoisted; quick-add /
-    // detail sheets continue to live inside [TasksPane].
-    var tasksTab by rememberSaveable { mutableStateOf(TaskViewTab.Combined) }
+    // Round 2.16.E — `tasksTab` removed along with the Tasks destination.
+    // Task view-mode selection now lives inside ExpandedNowPlayingTaskBody.
 
     val scheduleTab by scheduleState.selectedTab.collectAsState()
 
@@ -345,14 +341,6 @@ private fun SkbAppShellContent(
                     scheduleState.setSelectedTab(tab)
                     onPersistTab(tab)
                 },
-            )
-        }
-        TopDestination.Tasks -> TaskViewTab.entries.map { tab ->
-            RailItem(
-                key = tab.name,
-                labelRes = taskTabLabelRes(tab),
-                selected = tab == tasksTab,
-                onClick = { tasksTab = tab },
             )
         }
         TopDestination.Together,
@@ -425,32 +413,6 @@ private fun SkbAppShellContent(
                             onPlanTrip = { tripWizardOpen = true },
                             calendarVisibility = calendarVisibility,
                             onLongPressCalendar = onLongPressCalendar,
-                        )
-                        TopDestination.Tasks -> TasksPane(
-                            activeRepoName = activeRepoName,
-                            state = tasksState,
-                            selectedTab = tasksTab,
-                            onSelectTab = { tasksTab = it },
-                            onWriteTask = onWriteTask,
-                            onStartTask = onStartTask,
-                            // Phase 2.1.D.7 — long-press → schedule-as-timebox
-                            // routes through the existing EventCreateController.
-                            // No-op when no controller is wired (tests, previews).
-                            onScheduleAsTimebox = { task ->
-                                eventCreateController?.let { ctl ->
-                                    ctl.onTaskLinked = { taskId, eventId, start ->
-                                        tasksState.linkToEvent(
-                                            taskId = taskId,
-                                            eventId = eventId,
-                                            start = start.atZoneSameInstant(java.time.ZoneId.systemDefault()),
-                                        )
-                                    }
-                                    ctl.openSheetForTask(
-                                        taskId = task.id,
-                                        taskTitle = task.title,
-                                    )
-                                }
-                            },
                         )
                         TopDestination.Together -> if (togetherViewModel != null) {
                             TogetherPane(vm = togetherViewModel, neutralMode = neutralMode)
@@ -568,9 +530,11 @@ private fun ShellTopBar(
         // The `modePrefs` + `onSyncClick` params remain on the function
         // signature (null-allowed) to avoid breaking call-sites, but
         // they no longer render anything here.
+        // Round 2.16.E — Tasks removed from the top-bar icon row (the
+        // destination is gone; todolist UI lives in the expanded
+        // NowPlayingScreen sheet now).
         val topBarDestinations = listOf(
             TopDestination.Schedule,
-            TopDestination.Tasks,
             TopDestination.Reviews,
         )
         Row(
@@ -805,15 +769,6 @@ private fun scheduleTabLabelRes(tab: ScheduleViewTab): Int = when (tab) {
     ScheduleViewTab.Month -> R.string.schedule_view_tab_month
     ScheduleViewTab.Agenda -> R.string.schedule_view_tab_agenda
     ScheduleViewTab.Year -> R.string.schedule_view_tab_year
-}
-
-@StringRes
-private fun taskTabLabelRes(tab: TaskViewTab): Int = when (tab) {
-    TaskViewTab.Combined -> R.string.task_view_tab_combined
-    TaskViewTab.Today -> R.string.task_view_tab_today
-    TaskViewTab.PerList -> R.string.task_view_tab_per_list
-    TaskViewTab.Shopping -> R.string.task_view_tab_shopping
-    TaskViewTab.Standing -> R.string.task_view_tab_standing
 }
 
 /**

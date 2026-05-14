@@ -51,7 +51,6 @@ import com.eight87.strictlykeptboy.ui.wizard.ToneRegister
 val TopDestination.labelRes: Int
     get() = when (this) {
         TopDestination.Schedule -> R.string.dest_schedule
-        TopDestination.Tasks -> R.string.dest_tasks
         TopDestination.Together -> R.string.dest_together
         TopDestination.Repos -> R.string.dest_repos
         TopDestination.Wizard -> R.string.dest_wizard

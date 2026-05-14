@@ -332,25 +332,50 @@ behaviour ride along. Nothing about the data layer changes.
         fades in with the expanded screen; tapping toggles a local
         `quickAddOpen` flag — sheet itself doesn't collapse.
 
-## Phase E — Delete Tasks tab + remove top-of-Schedule tab toggle
+## Phase E — Delete Tasks tab + remove top-of-Schedule tab toggle — shipped in commit <pending-E>
 
-- [ ] **E.1** Delete `TopDestination.Tasks` from `SkbAppShell.kt`.
-      Schedule becomes the only default landing.
-- [ ] **E.2** Remove any top-of-Schedule Schedule/Tasks toggle UI
-      (search for the toggle pattern in `SchedulePane.kt` and
-      neighbours).
-- [ ] **E.3** Delete `TasksPane.kt` ONLY after confirming every
-      `TaskXxxView` it composes is now imported by `NowPlayingScreen`.
-      Keep `TaskModels.kt`, `TasksViewState.kt`, `TaskRow.kt`,
-      `TaskQuickAddFab.kt`, `TaskDetailSheet.kt`,
-      `TasksDemoSeed.kt`, `TaskSourceRail.kt`,
-      `FromEventsProjector.kt`, `EmptyTasksState.kt`,
-      `TaskCombinedView.kt`, `TaskTodayView.kt`,
-      `TaskPerListView.kt`, `TaskStandingView.kt`,
-      `TaskShoppingView.kt` — all still used.
-- [ ] **E.4** Update any deep-links / tests that pointed at the Tasks
-      tab to point at the expanded sheet instead.
-- [ ] **E.5** Commit. AVD: launch → Schedule, no tabs at top.
+- [x] **E.1** Delete `TopDestination.Tasks` from `SkbAppShell.kt`.
+      Schedule remains the default landing. The `tasksTab` rememberSaveable
+      state + the `TaskViewTab` rail-branch + the `TasksPane(...)` invocation
+      from the destination `when` are all removed; the `TaskViewTab` and
+      `TasksPane` imports along with the `taskTabLabelRes` helper drop out.
+      `EnumLabels.kt`'s `TopDestination.labelRes` switch loses its `Tasks`
+      branch (still exhaustive after the enum case is gone).
+- [x] **E.2** Remove the top-of-Schedule destination icon-button for
+      Tasks. The Check (Tasks) icon was rendered as part of the shell's
+      `topBarDestinations` icon row (Schedule / Tasks / Reviews); Round
+      2.16.E drops it to `(Schedule / Reviews)`. No SchedulePane-internal
+      toggle existed — the user's "icon row above Day/Week/Month rail"
+      was the shell top-bar action row itself.
+- [x] **E.3** `TasksPane.kt` deleted. ExpandedNowPlayingTaskBody.kt
+      already imports `TaskCombinedView`, `TaskTodayView`, `TaskPerListView`,
+      `TaskShoppingView`, `TaskStandingView`, `TaskViewTab`, `TaskItem`,
+      `TasksViewState`, `TodolistMode`, `visibleTasks` directly from
+      `ui.tasks.*` — verified by grep before deletion. The
+      `TaskQuickAddRequest` data class previously defined inside
+      `TasksPane.kt` was moved to its own file
+      `ui/tasks/TaskQuickAddRequest.kt` (still consumed by SkbAppShell,
+      TasksDemoSeed, TaskQuickAddSheet). All sister files listed for
+      preservation (`TaskModels.kt`, `TasksViewState.kt`, `TaskRow.kt`,
+      `TaskQuickAddFab.kt`, `TaskDetailSheet.kt`, `TasksDemoSeed.kt`,
+      `TaskSourceRail.kt`, `FromEventsProjector.kt`, `EmptyTasksState.kt`,
+      `TaskCombinedView.kt`, `TaskTodayView.kt`, `TaskPerListView.kt`,
+      `TaskStandingView.kt`, `TaskShoppingView.kt`) untouched.
+- [x] **E.4** Tests updated.
+      `app/src/test/java/com/eight87/strictlykeptboy/ui/AppShellNavigationSwapTest.kt`
+      asserts `TopDestination.entries.size == 6` (was 7), renders only
+      `Schedule + Reviews` in the top-bar (was Schedule + Tasks + Reviews),
+      and drops `selecting_tasks_destination_swaps_rail_to_task_view_modes`
+      (TaskViewTab now lives inside ExpandedNowPlayingTaskBody and is
+      covered by its own composable test). Deleted
+      `app/src/test/java/com/eight87/strictlykeptboy/ui/tasks/TasksMasterDetailTest.kt`
+      since TasksPane no longer exists. No deep-link handlers reference
+      `TopDestination.Tasks` (grep clean across `app/src/main`).
+- [x] **E.5** AVD verified — Schedule top bar shows
+      `[calendar] [review] [avatar]` (Tasks/CheckCircle icon gone), task
+      view-modes still reachable via the bottom-right Checklist FAB
+      (D.7) which opens the expanded NowPlayingScreen sheet. Screenshot:
+      `/tmp/skb-2-16-E-no-tab.png`.
 
 ## Phase F — Move Settings cog back next to account avatar
 
