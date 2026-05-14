@@ -266,7 +266,7 @@ play/pause/next-substep/prev-substep/stop per D-2.16.h.
       `/tmp/skb-2-16-C-next.png`, `/tmp/skb-2-16-C-collapsed.png`,
       `/tmp/skb-2-16-C-stopped.png`.
 
-## Phase D — Move all todolist UI into expanded NowPlayingScreen — shipped in commit (worktree round2/phase-2-16-D)
+## Phase D — Move all todolist UI into expanded NowPlayingScreen — shipped in commit f00418b
 
 **Goal:** the `ui/tasks/` view-mode tabs (Combined / Today / Per-list
 / Standing / Shopping) all move into the expanded NowPlayingScreen
