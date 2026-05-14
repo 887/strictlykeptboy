@@ -45,4 +45,8 @@
   <string name="playing_queue_remove_dialog_text">Remove \'%1$s\' from the queue?</string>
   <string name="playing_queue_remove_confirm">Remove</string>
   <string name="playing_queue_remove_cancel">Cancel</string>
+  <!-- Round 2.16 post-DONE — empty-state MiniPlayer copy (peek visible on
+       Schedule when no task is active; tapping opens the sheet picker). -->
+  <string name="playing_no_active_task_title">No active task</string>
+  <string name="playing_no_active_task_hint">Tap to pick one</string>
 </resources>

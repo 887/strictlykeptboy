@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Task
 import androidx.compose.material3.Icon
@@ -70,12 +71,62 @@ fun MiniPlayer(
   onSheetDragDelta: (Float) -> Unit = {},
   onSheetDragSettle: () -> Unit = {},
 ) {
-  if (!state.hasMedia) return
   Column(
     modifier = Modifier
       .fillMaxSize()
       .background(MaterialTheme.colorScheme.surfaceContainerHigh),
   ) {
+    if (!state.hasMedia) {
+      // Round 2.16 post-DONE — empty-state peek shown on Schedule when
+      // there is no active task. Tap (or drag-up) opens the sheet so the
+      // user can pick a task. No transport row, no progress bars.
+      Row(
+        modifier = Modifier
+          .fillMaxSize()
+          .clickable(onClick = onExpand)
+          .pointerInput(Unit) {
+            detectVerticalDragGestures(
+              onDragEnd = onSheetDragSettle,
+              onDragCancel = onSheetDragSettle,
+            ) { _, delta -> onSheetDragDelta(delta) }
+          }
+          .padding(horizontal = 12.dp, vertical = 6.dp)
+          .semantics { testTag = "mini_player" },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+      ) {
+        Box(
+          modifier = Modifier
+            .size(48.dp)
+            .clip(RoundedCornerShape(6.dp))
+            .background(MaterialTheme.colorScheme.primaryContainer)
+            .semantics { testTag = "mini_player_cover" },
+          contentAlignment = Alignment.Center,
+        ) {
+          Icon(
+            imageVector = Icons.Filled.Checklist,
+            contentDescription = null,
+            modifier = Modifier.size(28.dp),
+          )
+        }
+        Column(modifier = Modifier.weight(1f)) {
+          Text(
+            text = stringResource(R.string.playing_no_active_task_title),
+            style = MaterialTheme.typography.bodyLarge,
+            maxLines = 1,
+            modifier = Modifier.semantics { testTag = "mini_player_title" },
+          )
+          Text(
+            text = stringResource(R.string.playing_no_active_task_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            modifier = Modifier.semantics { testTag = "mini_player_subtitle" },
+          )
+        }
+      }
+      return@Column
+    }
     Row(
       modifier = Modifier
         .fillMaxWidth()
