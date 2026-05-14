@@ -377,9 +377,21 @@ class MainActivity : ComponentActivity() {
                             val nonFromEvents = cur.tasks.filter {
                                 it.source != com.eight87.strictlykeptboy.ui.tasks.TaskSource.FromEvents
                             }
+                            // Round 2.16.C — temp sub-stepped demo tasks so
+                            // the mini-player has visible content on the AVD
+                            // (petkeptbyai demo perspective ships no tasks).
+                            // TODO Phase D — remove once in-sheet creation
+                            // can author sub-stepped tasks directly.
+                            val demoSubstepped =
+                                com.eight87.strictlykeptboy.ui.tasks.TasksDemoSeed.substeppedDemoTasks
+                            val hasDemo = nonFromEvents.any { t ->
+                                demoSubstepped.any { it.id == t.id }
+                            }
+                            val withDemo = if (hasDemo) nonFromEvents
+                            else nonFromEvents + demoSubstepped
                             tasksViewState.set(
                                 cur.copy(
-                                    tasks = nonFromEvents + fromEvents,
+                                    tasks = withDemo + fromEvents,
                                     activeTodolistIds = ids,
                                     multiRepo = repos.size > 1,
                                     activeRepoOwner = owner,

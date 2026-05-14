@@ -224,29 +224,47 @@ that derives `TaskPlaybackState` from existing task data + a started
       `TaskPlaybackProjectorTest` cases pass covering empty / start /
       tick / next / single-step / queue / stop transitions.
 
-## Phase C — Wire MiniPlayer + NowPlayingScreen to task data
+## Phase C — Wire MiniPlayer + NowPlayingScreen to task data — shipped in commit (pending)
 
 **Goal:** all three info-row text nodes render task data per D-2.16.d;
 both progress bars per D-2.16.c; transport row buttons do
 play/pause/next-substep/prev-substep/stop per D-2.16.h.
 
-- [ ] **C.1** MiniPlayer info row: top line = `"$taskName  $i/$n"`
-      (task name + step-count chip — render the `i/n` as a small
-      pill/Surface, NOT as parens text), second line = sub-step name,
-      right-aligned mono countdown `mm:ss` derived from
-      `subStepDurationMs - subStepElapsedMs`.
-- [ ] **C.2** MiniPlayer 2-dp pinned bar = whole-task progress (matches
-      tonearmboy's 2-dp progress-line position exactly). The wide
-      drag-bar above = sub-step progress with darker/brighter split at
-      the `subStepElapsedMs/subStepDurationMs` ratio.
-- [ ] **C.3** Transport row: play → `resume`/`start`, pause → `pause`,
-      next → `nextSubStep` (or finish-task if last sub-step),
-      previous → `previousSubStep`, long-press play/pause → `stop`.
-      Match tonearmboy icon set exactly.
-- [ ] **C.4** NowPlayingScreen (expanded) renders the same task data
-      at full size, with a large countdown and the QueueSection below.
-- [ ] **C.5** Commit. AVD: start a task, see mini + bars + countdown
-      update each second, expand sheet to see the same at full size.
+- [x] **C.1** MiniPlayer info row: three Compose Text nodes — top line
+      = taskName + small `Surface` step-count pill (rounded 50%, padded
+      6dp h / 2dp v, hidden when subStepCount ≤ 1), second line =
+      subStepName (bodySmall, single-line), trailing = right-aligned
+      mono titleMedium countdown `mm:ss` = `subStepDurationMs -
+      subStepElapsedMs` clamped at 0.
+- [x] **C.2** Replaced the single 2-dp `LinearProgressIndicator` with
+      two stacked bars: wide 4-dp sub-step bar (primary + 30% primary
+      track, custom `Box.fillMaxWidth(progress)` overlay for the
+      darker/brighter split aesthetic), thin 2-dp whole-task bar
+      flush at the bottom (tertiary + 30% tertiary track).
+- [x] **C.3** Transport row mapping verified via `TaskTransportAdapter`:
+      togglePlayPause → pause/resume, seekToNext → nextSubStep,
+      seekToPrevious → previousSubStep, long-press play → stop. Added
+      `showShuffleAndRepeat: Boolean = true` parameter to
+      `PlaybackTransportRow`; skb call-sites pass `false` (verbatim-port
+      shape kept; gating is additive).
+- [x] **C.4** NowPlayingScreen expanded body: three-node info row at
+      larger sizes (headlineSmall taskName + step-count pill,
+      titleSmall subStepName, displaySmall mono countdown). The
+      seekable Slider replaced by the non-draggable
+      `SubStepProgressBar` + `0:14 / 3:00` mm:ss labels. Whole-task
+      progress row added below: 2-dp `TaskProgressBar` + mono
+      `"task: mm:ss / mm:ss"` label.
+- [x] **C.5** Commit + AVD smoke. Sub-stepped demo tasks added to
+      `TasksDemoSeed.substeppedDemoTasks` (`Grooming` 6 substeps,
+      `Bedtime routine` 3 substeps) and seeded into `tasksViewState`
+      via MainActivity (idempotent merge; TODO Phase D removal). AVD
+      verified all six scenarios (mini appears with pill+countdown,
+      both bars tick, expand shows three-node info, pause freezes,
+      next advances substep without resetting task elapsed, long-press
+      play stops). Screenshots: `/tmp/skb-2-16-C-mini.png`,
+      `/tmp/skb-2-16-C-expanded.png`, `/tmp/skb-2-16-C-paused.png`,
+      `/tmp/skb-2-16-C-next.png`, `/tmp/skb-2-16-C-collapsed.png`,
+      `/tmp/skb-2-16-C-stopped.png`.
 
 ## Phase D — Move all todolist UI into expanded NowPlayingScreen
 

@@ -87,6 +87,41 @@ object TasksDemoSeed {
         )
     }
 
+    /**
+     * Round 2.16.C — sub-stepped demo tasks so the Phase-C mini-player
+     * has visible content on the AVD when the petkeptbyai demo
+     * perspective is active (its real seeder ships no tasks). Two
+     * tasks: Grooming (6 sub-steps) and Bedtime routine (3 sub-steps).
+     * TODO Phase D — remove once the in-sheet todolist UI lets the
+     * user create sub-stepped tasks directly.
+     */
+    val groomingDemoTask: TaskItem = TaskItem(
+        id = "demo-grooming",
+        title = "Grooming",
+        todolist = house,
+        subSteps = listOf(
+            TaskSubStep("brush teeth", 3L * 60_000L),
+            TaskSubStep("floss", 2L * 60_000L),
+            TaskSubStep("shower", 8L * 60_000L),
+            TaskSubStep("dry off", 2L * 60_000L),
+            TaskSubStep("apply lotion", 3L * 60_000L),
+            TaskSubStep("brush hair", 2L * 60_000L),
+        ),
+    )
+    val bedtimeDemoTask: TaskItem = TaskItem(
+        id = "demo-bedtime",
+        title = "Bedtime routine",
+        todolist = house,
+        subSteps = listOf(
+            TaskSubStep("wash face", 4L * 60_000L),
+            TaskSubStep("set alarm", 1L * 60_000L),
+            TaskSubStep("read", 15L * 60_000L),
+        ),
+    )
+
+    /** Tasks-with-substeps demo set for Phase C AVD scenarios. */
+    val substeppedDemoTasks: List<TaskItem> = listOf(groomingDemoTask, bedtimeDemoTask)
+
     fun materialize(req: TaskQuickAddRequest): TaskItem {
         val target = req.target
         val list = when (target) {
