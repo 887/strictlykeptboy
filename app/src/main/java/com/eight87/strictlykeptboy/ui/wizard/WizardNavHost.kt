@@ -32,7 +32,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -433,70 +437,57 @@ private fun SpeciesScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        // Round 2.11 — non-lazy 2-col grid so the whole screen can be
-        // verticalScrolled (LazyVerticalGrid can't nest in a verticalScroll
-        // without explicit height). N=9 cards, perf is irrelevant.
+        // Round 2.13 — carousel: prev / [current species card] / next.
+        // One-at-a-time spotlight beats a 2-col grid for ~9 choices; the
+        // current pick reads as the hero, others are one tap away.
         val cards = SpeciesChoice.entries.toList()
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            cards.chunked(2).forEach { row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    row.forEach { species ->
-                        val selected = draft.species == species
-                        Card(
-                            onClick = { onUpdate(draft.copy(species = species)) },
-                            colors = if (selected) CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            ) else CardDefaults.cardColors(),
-                            modifier = Modifier
-                                .weight(1f)
-                                .testTag("Wizard-Species-${species.id}"),
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(12.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp),
-                            ) {
-                                Text(species.labelString(), style = MaterialTheme.typography.titleMedium)
-                                if (selected) Icon(Icons.Filled.Check, contentDescription = null)
-                            }
-                        }
-                    }
-                    // Pad the trailing empty cell on an odd-count row so the
-                    // last card doesn't stretch full-width.
-                    if (row.size == 1) Spacer(modifier = Modifier.weight(1f))
-                }
-            }
-        }
-        // Round 2.11 — single preview card for the currently-selected
-        // species. Stock placeholder (large species emoji) until the user
-        // ships AI-generated artwork to replace it.
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("Wizard-Species-Preview"),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            ),
+        val currentIdx = cards.indexOf(draft.species).coerceAtLeast(0)
+        val prevSpecies = cards[(currentIdx - 1 + cards.size) % cards.size]
+        val nextSpecies = cards[(currentIdx + 1) % cards.size]
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = ComposeAlign.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Row(
-                verticalAlignment = ComposeAlign.CenterVertically,
-                modifier = Modifier.padding(16.dp).fillMaxWidth(),
+            FilledIconButton(
+                onClick = { onUpdate(draft.copy(species = prevSpecies)) },
+                modifier = Modifier.testTag("Wizard-Species-Prev"),
             ) {
-                Text(
-                    text = speciesPreviewEmoji(draft.species),
-                    style = MaterialTheme.typography.displayLarge,
-                    modifier = Modifier.padding(end = 16.dp),
-                )
-                Column(modifier = Modifier.weight(1f)) {
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Previous species")
+            }
+            Card(
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag("Wizard-Species-Carousel"),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                ),
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp).fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalAlignment = ComposeAlign.CenterHorizontally,
+                ) {
+                    Text(
+                        text = speciesPreviewEmoji(draft.species),
+                        style = MaterialTheme.typography.displayLarge,
+                    )
                     Text(
                         draft.species.labelString(),
                         style = MaterialTheme.typography.titleLarge,
                     )
                     Text(
-                        "Preview — stock placeholder. Customize via Repo Settings.",
-                        style = MaterialTheme.typography.bodySmall,
+                        "${currentIdx + 1} / ${cards.size}",
+                        style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+            }
+            FilledIconButton(
+                onClick = { onUpdate(draft.copy(species = nextSpecies)) },
+                modifier = Modifier.testTag("Wizard-Species-Next"),
+            ) {
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Next species")
             }
         }
         // Round 2.10 — customization explainer is always visible.
