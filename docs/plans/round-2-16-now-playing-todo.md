@@ -377,7 +377,7 @@ behaviour ride along. Nothing about the data layer changes.
       (D.7) which opens the expanded NowPlayingScreen sheet. Screenshot:
       `/tmp/skb-2-16-E-no-tab.png`.
 
-## Phase F — Move Settings cog back next to account avatar — shipped in commit <pending-F>
+## Phase F — Move Settings cog back next to account avatar — shipped in commit d62c58f
 
 - [x] **F.1** Located the cog in `ReposPane.kt` (Round 2.4 migration)
       at the right end of the "Repositories" header row, wired to the
