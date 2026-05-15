@@ -341,7 +341,7 @@ repos slot in identically.
 - **Phase J** — Tests + AVD smoke.
 - **Phase K** — Plan-file close.
 
-## Phase A — Bridge data layer — shipped in 8566d1d
+## Phase A — Bridge data layer — shipped in 6d29a4e
 
 > Caveat on A.4: the codebase had no pre-existing `RepoKind` enum and
 > no exhaustive `when (repoKind)` sites. Rather than introduce one
