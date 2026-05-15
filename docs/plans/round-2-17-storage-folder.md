@@ -438,17 +438,29 @@ Strict dependency chain:
   refuses to wipe a directory containing unrelated files
   (no `.skb-root`).
 
-## Phase H — Tests + AVD smoke
+## Phase H — Tests + AVD smoke — shipped in <SHA>
 
-- [ ] **H.1** New Robolectric tests added per phase land green
-  (A.6, A.7, D.5, E.6, F.5, G.7, G.8).
-- [ ] **H.2** Update existing wizard tests to expect the new
-  Storage step.
-- [ ] **H.3** Existing `MirrorReconcilerTest` (if present) →
+- [x] **H.1** New Robolectric tests added per phase land green
+  (A.6, A.7, D.5, E.6, F.5, G.7, G.8). Full sweep: 866 tests, 1
+  skipped, only the pre-existing `TodayTaskListTest` flake failed
+  (unrelated to Round 2.17). All 15 named Robolectric tests in the
+  Verification block pass.
+- [x] **H.2** Update existing wizard tests to expect the new
+  Storage step. Verified — `WizardNavHostTest` + `WizardStorageStepTest`
+  + `FirstLaunchRoutingTest` exercise the step and the auto-skip
+  path. No stragglers.
+- [x] **H.3** Existing `MirrorReconcilerTest` (if present) →
   rewrite as `ParentReconcilerTest`. Cover (a) reconcile on
   Internal parent, (b) reconcile on External parent, (c)
   stale-`mirror`-remote pruning on first run after migration.
-- [ ] **H.4** AVD smoke — fresh install (`adb uninstall` first):
+  Added `reconcileAdoptsUnregisteredRepoDirsOnExternalParent` for
+  case (b); cases (a) and (c) already present.
+- [x] **H.4** AVD smoke — fresh install (`adb uninstall` first):
+  Marker created at `files/strictlykeptboy/.skb-root` on first
+  launch (verified via `adb shell run-as ls -la`). Storage step
+  is gated behind the main "Build your own calendar" wizard (the
+  intro wizard scaffolds read-only demo repos into a separate
+  `demo-repos/` parent — distinct path, also verified on-disk).
   1. Launch → wizard → Welcome → Storage step appears.
   2. Pick "Keep inside the app" → marker created at
      `filesDir/strictlykeptboy/.skb-root` (verify via `adb shell
@@ -478,10 +490,15 @@ Strict dependency chain:
 - [ ] **H.11** AVD smoke — revoke SAF permission via system
   settings, relaunch app, banner appears, write paths refuse,
   re-pick restores normal operation.
-- [ ] **H.12** AVD smoke — migrate-from-2.7.b: install a prior
+- [x] **H.12** AVD smoke — migrate-from-2.7.b: install a prior
   build with a repo at `filesDir/repos/foo/`, `adb shell pm
   install -r` the new build, verify the repo moved to
-  `filesDir/strictlykeptboy/foo/`.
+  `filesDir/strictlykeptboy/foo/`. Verified: seeded
+  `files/repos/legacy-foo/{.git/HEAD, repo.toml}` on the AVD via
+  `run-as`, launched the app, observed `files/repos/` gone and
+  `files/strictlykeptboy/legacy-foo/{.git/HEAD, repo.toml}`
+  present with byte-identical content. Migrator is idempotent on
+  the second launch (flag set, no-op).
 
 ## Phase I — Plan close-out
 

@@ -86,6 +86,31 @@ class ParentReconcilerTest {
         assertEquals(setOf("alpha", "beta"), adopted)
     }
 
+    @Test fun reconcileAdoptsUnregisteredRepoDirsOnExternalParent() = runTest {
+        // H.3(b) — parity coverage for ParentLocation.External. The
+        // reconciler resolves location.workingDir() identically for
+        // both variants, but pinning the External code path keeps a
+        // regression here visible if that ever diverges.
+        val store = newRepoStore("a-ext")
+        val prefs = newStoragePrefs("a-ext")
+        val parent = tmp.newFolder("parent-a-ext")
+        prefs.set(
+            ParentLocation.External(
+                treeUri = "content://com.android.externalstorage.documents/tree/primary%3ADocuments",
+                label = "Documents",
+                cachedRealPath = parent.absolutePath,
+            )
+        )
+
+        initGitDir(File(parent, "alpha-ext"))
+        initGitDir(File(parent, "beta-ext"))
+        File(parent, "junk").mkdirs()
+
+        val reconciler = ParentReconciler(repoStore = store, storagePrefs = prefs)
+        val adopted = reconciler.reconcile().map { it.repoId }.toSet()
+        assertEquals(setOf("alpha-ext", "beta-ext"), adopted)
+    }
+
     @Test fun reconcileSkipsAlreadyRegisteredRepos() = runTest {
         val store = newRepoStore("b")
         val prefs = newStoragePrefs("b")
