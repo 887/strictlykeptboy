@@ -332,7 +332,7 @@ Strict dependency chain:
 - [x] **D.6** Update existing wizard tests that drive Welcome → next
   to expect the new Storage step in between.
 
-## Phase E — Repos pane gate + settings folder management — shipped in TBD
+## Phase E — Repos pane gate + settings folder management — shipped in 9573c77
 
 - [x] **E.1** In `ui/repos/AddRepoNavHost.kt`, gate the entry on
   `ParentLocationGate.Confirmed`. If not confirmed, render a
