@@ -40,5 +40,20 @@ object SafTreeUriResolver {
         return if (subPath.isEmpty()) base else "$base/$subPath"
     }
 
+    /**
+     * Round 2.17.B.3 — derive a human-readable label from a SAF tree URI
+     * without pulling in `androidx.documentfile`. Doc-ids look like
+     * `"primary:Documents/foo"`; we take the leaf segment of the sub-path.
+     * Falls back to `"selected folder"` for volume-root, non-primary
+     * picks, or when the doc-id can't be parsed.
+     */
+    fun deriveLabel(uri: Uri): String {
+        return runCatching {
+            val docId = DocumentsContract.getTreeDocumentId(uri)
+            val sub = docId.substringAfter(':', "")
+            sub.substringAfterLast('/', sub).ifBlank { null }
+        }.getOrNull() ?: "selected folder"
+    }
+
     private const val PRIMARY_VOLUME = "primary"
 }
