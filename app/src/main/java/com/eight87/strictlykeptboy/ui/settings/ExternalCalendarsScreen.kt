@@ -62,6 +62,10 @@ const val TestTagExternalCalendarsOpenSettingsButton = "ExternalCalendars-OpenSe
 /** Round 2.18.F.7 — Settings → "Suppress system notifications" section. */
 const val TestTagExternalCalendarsSuppressSection = "ExternalCalendars-SuppressSection"
 const val TestTagExternalCalendarsSuppressRow = "ExternalCalendars-SuppressRow-"
+/** Round 2.18 Phase I — "You're the default calendar app" badge + power-user shortcut row. */
+const val TestTagExternalCalendarsDefaultAppBadge = "ExternalCalendars-DefaultAppBadge"
+const val TestTagExternalCalendarsCalendarDefaultsRow = "ExternalCalendars-CalendarDefaultsRow"
+const val TestTagExternalCalendarsCalendarDefaultsButton = "ExternalCalendars-CalendarDefaultsButton"
 
 /**
  * Round 2.18.B.2/B.4/B.5 — External (CalendarContract) calendars
@@ -107,6 +111,16 @@ fun ExternalCalendarsScreen(
      * probes (DAVx5 + F-Droid + Exchange detection).
      */
     connectAccountsProbes: ExternalAccountsProbes = ExternalAccountsProbes(),
+    /**
+     * Round 2.18 Phase I — test seam for "am I the default calendar
+     * app?" probe. Production callers pass
+     * [com.eight87.strictlykeptboy.system.DefaultCalendarAppDetector.isDefaultCalendarApp];
+     * tests can stub `true` / `false` directly.
+     */
+    isDefaultCalendarApp: (android.content.Context) -> Boolean = { ctx ->
+        com.eight87.strictlykeptboy.system.DefaultCalendarAppDetector
+            .isDefaultCalendarApp(ctx)
+    },
 ) {
     val ctx = LocalContext.current
     // Round 2.18.H — local nav between the main external-calendars
@@ -177,6 +191,21 @@ fun ExternalCalendarsScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(16.dp))
+
+            // Round 2.18 Phase I — "You're the default calendar app"
+            // badge. Surfaced near the top so the user knows where they
+            // stand without scrolling. Absent when skb isn't the default
+            // (the common case until the user wins an .ics chooser).
+            val isDefaultApp = remember(ctx) { isDefaultCalendarApp(ctx) }
+            if (isDefaultApp) {
+                Text(
+                    stringResource(R.string.settings_external_calendars_default_app_badge),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.testTag(TestTagExternalCalendarsDefaultAppBadge),
+                )
+                Spacer(Modifier.height(12.dp))
+            }
 
             SwitchRow(
                 label = stringResource(R.string.settings_external_calendars_show_label),
@@ -445,6 +474,44 @@ fun ExternalCalendarsScreen(
                     }
                 }
             }
+            // Round 2.18 Phase I — power-user shortcut. Always visible,
+            // distinct from the one-shot wizard card. Opens Android's
+            // default-apps screen so the user can pick (or change) the
+            // .ics handler.
+            Spacer(Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(16.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+                    .testTag(TestTagExternalCalendarsCalendarDefaultsRow),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.settings_external_calendars_calendar_defaults_label),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    Text(
+                        stringResource(R.string.settings_external_calendars_calendar_defaults_helper),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                OutlinedButton(
+                    onClick = {
+                        val intent = Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        runCatching { ctx.startActivity(intent) }
+                    },
+                    modifier = Modifier.testTag(TestTagExternalCalendarsCalendarDefaultsButton),
+                ) {
+                    Text(stringResource(R.string.settings_external_calendars_calendar_defaults_action))
+                }
+            }
+
             Spacer(Modifier.height(64.dp))
         }
         SnackbarHost(
