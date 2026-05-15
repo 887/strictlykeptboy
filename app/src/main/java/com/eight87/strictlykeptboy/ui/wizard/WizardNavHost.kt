@@ -100,6 +100,10 @@ private val SCREEN_ORDER: List<WizardScreen> = listOf(
     WizardScreen.Roles,
     WizardScreen.Templates,
     WizardScreen.Git,
+    // Round 2.18 Phase I — default-calendar-app onboarding card. Auto-
+    // skipped when SystemCalendarGlobalPrefs.defaultCalendarOnboardingShown
+    // is already true (every run after the first).
+    WizardScreen.DefaultCalendar,
     WizardScreen.Scaffold,
     WizardScreen.Done,
     WizardScreen.ShareWithDom,
@@ -166,6 +170,15 @@ fun WizardNavHost(
      * `.skb-root` marker; the wizard auto-advances when the prefs flip.
      */
     onPickInternalStorage: () -> Unit = {},
+    /**
+     * Round 2.18 Phase I — prefs surface backing the default-calendar
+     * onboarding card. When null (tests, unconfigured callers) the
+     * step renders unconditionally and "mark shown" is a no-op so the
+     * UI is still testable in isolation. When non-null, the wizard
+     * auto-skips the step if [com.eight87.strictlykeptboy.system.SystemCalendarGlobalPrefs.defaultCalendarOnboardingShown]
+     * is already true, and marks it true on first arrival.
+     */
+    systemCalendarPrefs: com.eight87.strictlykeptboy.system.SystemCalendarPrefsStore? = null,
 ) {
     // v1: in-memory draft only. SavedStateHandle-backed persistence is a
     // follow-up (LW-A.5 mid-wizard exit safety beyond config-change is
@@ -225,6 +238,22 @@ fun WizardNavHost(
                 storageStateValue != initialStorageValue)
         if (shouldAdvance) {
             val idx = SCREEN_ORDER.indexOf(WizardScreen.Storage)
+            if (idx in 0 until SCREEN_ORDER.size - 1) current = SCREEN_ORDER[idx + 1]
+        }
+    }
+
+    // Round 2.18 Phase I — auto-skip the DefaultCalendar step when the
+    // one-shot tracker has already flipped. The skip decision is taken
+    // ONCE on first arrival (the LaunchedEffect re-keys only when
+    // `current` changes), so the user's own "mark shown" on advance
+    // doesn't yank the card out from under them mid-interaction. The
+    // tracker flip happens when the user advances OFF the step, not on
+    // arrival, so the card actually stays visible for them to read.
+    LaunchedEffect(current) {
+        if (current != WizardScreen.DefaultCalendar) return@LaunchedEffect
+        val prefs = systemCalendarPrefs ?: return@LaunchedEffect
+        if (prefs.globalState.value.defaultCalendarOnboardingShown) {
+            val idx = SCREEN_ORDER.indexOf(WizardScreen.DefaultCalendar)
             if (idx in 0 until SCREEN_ORDER.size - 1) current = SCREEN_ORDER[idx + 1]
         }
     }
@@ -317,6 +346,12 @@ fun WizardNavHost(
                     draft = draft,
                     onUpdate = { draft = it.normalize() },
                 )
+                WizardScreen.DefaultCalendar -> DefaultCalendarStep(
+                    onAdvance = {
+                        systemCalendarPrefs?.markDefaultCalendarOnboardingShown()
+                        goNext()
+                    },
+                )
                 WizardScreen.Scaffold -> {
                     ScaffoldScreen(progress = scaffoldProgress, error = scaffoldError)
                     if (scaffoldProgress == ScaffoldProgress.Idle) {
@@ -386,7 +421,8 @@ fun WizardNavHost(
         if (current != WizardScreen.Scaffold &&
             current != WizardScreen.Done &&
             current != WizardScreen.ShareWithDom &&
-            current != WizardScreen.Storage
+            current != WizardScreen.Storage &&
+            current != WizardScreen.DefaultCalendar
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(

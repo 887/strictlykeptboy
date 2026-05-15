@@ -104,6 +104,15 @@ class SystemCalendarPrefsStore internal constructor(private val prefs: SharedPre
      */
     fun setPublishToOs(value: Boolean) = mutateGlobal { it.copy(publishToOs = value) }
 
+    /**
+     * Round 2.18 Phase I — one-shot tracker for the wizard's
+     * "Make skb your default calendar app?" card. Once set the wizard
+     * never shows the card again, regardless of whether the user
+     * actually picked skb in the chooser.
+     */
+    fun markDefaultCalendarOnboardingShown() =
+        mutateGlobal { it.copy(defaultCalendarOnboardingShown = true) }
+
     // ----------------------------------------------------------------
     // Round 2.18.G.8 — Calendar-row idempotency map.
     //
@@ -244,4 +253,11 @@ data class SystemCalendarGlobalPrefs(
      * list before the user opts in.
      */
     val publishToOs: Boolean = false,
+    /**
+     * Round 2.18 Phase I — one-shot tracker for the intro-wizard
+     * "Make skb your default calendar app?" card. Default `false` so a
+     * fresh install shows the card once; flipped `true` on first arrival
+     * or skip. Never reset.
+     */
+    val defaultCalendarOnboardingShown: Boolean = false,
 )

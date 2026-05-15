@@ -471,6 +471,9 @@ private fun SkbAppShellContent(
                             repoStoragePrefs = settingsAccess.repoStoragePrefs,
                             onPickExternalStorage = settingsAccess.onPickBackupFolder,
                             onPickInternalStorage = onPickInternalStorage,
+                            // Round 2.18 Phase I — default-calendar-app
+                            // onboarding card backing store.
+                            systemCalendarPrefs = settingsAccess.systemCalendarPrefs,
                         )
                         TopDestination.Reviews -> {
                             // Phase DDD.13 wiring (F45 follow-up). Items list is

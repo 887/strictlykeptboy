@@ -776,24 +776,36 @@ repos slot in identically.
 
 ## Phase I — Default-app discovery onboarding
 
-- [ ] **I.1** Onboarding step (one-shot card in the existing intro
+Shipped in commit `d1eb974`.
+
+- [x] **I.1** Onboarding step (one-shot card in the existing intro
   wizard from Round 2.15): "Make skb your default calendar app?"
-  with a button that opens `Settings.ACTION_MANAGE_DEFAULT_APPS` or
-  the closest available analog. Since `RoleManager.ROLE_CALENDAR`
-  doesn't exist, the actual mechanism is: the user is shown the
-  intent-chooser the next time they tap a `.ics` and picks "Always".
-  The onboarding card explains this instead of promising a
-  one-click default.
-- [ ] **I.2** Detection of "is skb the default?" — heuristic via
+  with a button that opens `Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS`
+  (the actual Android constant — `ACTION_MANAGE_DEFAULT_APPS` does
+  not exist). Since `RoleManager.ROLE_CALENDAR` doesn't exist, the
+  actual mechanism is: the user is shown the intent-chooser the next
+  time they tap a `.ics` and picks "Always". The onboarding card
+  explains this instead of promising a one-click default. New step
+  inserted into `WizardNavHost` (10-step wizard, between Git and
+  Scaffold) at `WizardScreen.DefaultCalendar`; test tag
+  `Wizard-DefaultCalendar`. Lives in
+  `app/src/main/java/com/eight87/strictlykeptboy/ui/wizard/WizardDefaultCalendarStep.kt`.
+- [x] **I.2** Detection of "is skb the default?" — heuristic via
   `PackageManager.resolveActivity(Intent(ACTION_VIEW).setType("text/calendar"), MATCH_DEFAULT_ONLY)`
-  and comparing the resolved package to ours. Surface a
-  "You're the default" badge on the External Calendars
-  settings screen when true.
-- [ ] **I.3** Re-prompt logic — never. Show the card once during
-  Round-2.15-style intro; if dismissed, never re-show.
-- [ ] **I.4** Power-user shortcut in Settings: "Calendar app
-  defaults" row that opens
-  `Settings.ACTION_MANAGE_DEFAULT_APPS`.
+  and comparing the resolved package to ours.
+  `DefaultCalendarAppDetector` in
+  `app/src/main/java/com/eight87/strictlykeptboy/system/DefaultCalendarAppDetector.kt`.
+  "You're the default calendar app ✓" badge surfaces at the top of
+  `ExternalCalendarsScreen` when true.
+- [x] **I.3** Re-prompt logic — `SystemCalendarGlobalPrefs` gains
+  `defaultCalendarOnboardingShown: Boolean` (default `false`); flipped
+  `true` when the user advances off the step via "Got it" or
+  "Open default apps now". `WizardNavHost`'s LaunchedEffect auto-skips
+  the step on every subsequent run.
+- [x] **I.4** Power-user shortcut in Settings: "Calendar app
+  defaults" row at the bottom of `ExternalCalendarsScreen` that opens
+  `Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS`. Always visible,
+  not gated on `defaultCalendarOnboardingShown`.
 
 ## Phase J — Tests + AVD smoke
 

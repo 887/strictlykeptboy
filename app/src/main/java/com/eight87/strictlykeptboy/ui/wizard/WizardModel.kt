@@ -513,6 +513,10 @@ enum class WizardScreen(val stickerKey: String) {
     Roles("roles-notebook"),
     Templates("templates-checklist"),
     Git("git-setup"),
+    // Round 2.18 Phase I — one-shot "Make skb your default calendar app?"
+    // card. Gated by SystemCalendarGlobalPrefs.defaultCalendarOnboardingShown
+    // — auto-skipped on every wizard run after the first.
+    DefaultCalendar("default-calendar"),
     Scaffold("scaffold-pleased"),
     Done("handoff-wave"),
     // Phase 2.1.I.4 — Share-with-dom screen only renders on Done path when
