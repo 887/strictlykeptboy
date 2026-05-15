@@ -332,14 +332,14 @@ Strict dependency chain:
 - [x] **D.6** Update existing wizard tests that drive Welcome → next
   to expect the new Storage step in between.
 
-## Phase E — Repos pane gate + settings folder management
+## Phase E — Repos pane gate + settings folder management — shipped in TBD
 
-- [ ] **E.1** In `ui/repos/AddRepoNavHost.kt`, gate the entry on
+- [x] **E.1** In `ui/repos/AddRepoNavHost.kt`, gate the entry on
   `ParentLocationGate.Confirmed`. If not confirmed, render a
   small `StorageStepInline` composable (reuses the wizard's
   composable) instead of the form. After the user picks, the form
   appears.
-- [ ] **E.2** Add a Settings category `StorageCategory` under the
+- [x] **E.2** Add a Settings category `StorageCategory` under the
   existing settings host (find via grep for `BackupLocationCategory`
   — that's the 2.7.D surface to replace). New rows:
   - "Storage folder" — current label (`label` for External,
@@ -347,26 +347,29 @@ Strict dependency chain:
     `StorageFolderScreen`.
   - "Adopt existing folder" — sub-action below.
   - "Backup / Restore" — opens `BackupRestoreScreen` (Phase F+G).
-- [ ] **E.3** Build `StorageFolderScreen`: shows current
+  File rename: `BackupLocationCategory.kt` → `StorageCategory.kt`
+  via `git mv` (D-2.17.l). `SettingsCategory.BackupLocation` →
+  `SettingsCategory.Storage` (testTag bumped).
+- [x] **E.3** Build `StorageFolderScreen`: shows current
   parent + path + repo count, button "Change folder" (fires
   `parentPickerHandle`), button "Switch to internal".
-- [ ] **E.4** "Adopt existing folder" entry: fires the parent
+- [x] **E.4** "Adopt existing folder" entry: fires the parent
   picker, but on grant DOES NOT change the parent — instead runs
   `ParentReconciler.reconcileExternal(uri)` against that one
   folder, presents a confirmation list of discovered repos, and
   on confirm switches the parent to that folder + registers the
   repos. Marker must be present for the action to enable.
-- [ ] **E.5** Move-job: when "Change folder" changes the parent
+- [x] **E.5** Move-job: when "Change folder" changes the parent
   (Internal↔External or External→External), schedule a
   `RepoMover` worker that copies (then deletes) every existing
   `<oldParent>/<repoId>/` to `<newParent>/<repoId>/`, updates
   `RepoConfig.rootDir` for each, surfaces a progress dialog with
   cancel. On cancel, revert prefs to old parent.
-- [ ] **E.6** Move-job unit test
+- [x] **E.6** Move-job unit test
   (`RepoMoverTest`) — pre-seed two repos, move them, assert
   rootDirs updated + old paths gone + new paths exist + marker
   carried over.
-- [ ] **E.7** Banner on Repos pane when SAF permission is revoked
+- [x] **E.7** Banner on Repos pane when SAF permission is revoked
   (per D-2.17.k) — "Strictlykeptboy lost access to its folder",
   tap to re-pick. Wired via boot-time
   `contentResolver.persistedUriPermissions` check in
