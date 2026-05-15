@@ -54,6 +54,13 @@ markwon = "4.6.2"
 # ZXing core, Apache-2.0. Pure-Java QR encoder; no Android deps.
 zxing = "3.5.3"
 
+# Round 2.17 Phase F — backup tar.gz via Apache Commons Compress (Apache-2.0).
+# JGit does NOT pull this in transitively (verified in Round 2.17.A.1 — the
+# only `org.apache` chain on the classpath is sshd/bouncycastle). Wiring it
+# explicitly here so Phase F's `BackupArchiver` has TarArchiveOutputStream
+# + GzipCompressorOutputStream available without another dep wave.
+commonsCompress = "1.27.1"
+
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidxActivity" }
@@ -126,6 +133,9 @@ markwon-linkify = { module = "io.noties.markwon:linkify", version.ref = "markwon
 
 # Phase RR — ZXing core (Apache-2.0). Pure-Java QR encoder.
 zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
+
+# Round 2.17 Phase F — Apache Commons Compress (Apache-2.0).
+commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commonsCompress" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }

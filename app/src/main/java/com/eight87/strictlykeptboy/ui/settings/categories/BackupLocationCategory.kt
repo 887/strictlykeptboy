@@ -18,7 +18,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
-import com.eight87.strictlykeptboy.prefs.MirrorLocation
+import com.eight87.strictlykeptboy.prefs.ParentLocation
 import com.eight87.strictlykeptboy.prefs.RepoStoragePrefs
 
 const val TestTagCatBackup = "Cat-BackupLocation"
@@ -27,17 +27,19 @@ const val TestTagCatBackupChangeButton = "Cat-BackupLocation-Change"
 const val TestTagCatBackupRemoveButton = "Cat-BackupLocation-Remove"
 
 /**
- * Round 2.7.B.4-UI — Settings → Behaviour → Backup location.
+ * Round 2.17.A — temporary compile-shim of the old "Backup location"
+ * settings surface so the build stays green while Phase E replaces it
+ * with the full Storage / Adopt / Backup-Restore tree.
  *
- * Renders the current [MirrorLocation] and offers:
- *   - [MirrorLocation.None]: blurb + "Pick a folder" button.
- *   - [MirrorLocation.External]: shows label + URI + "Change folder"
- *     and "Remove backup" buttons. (Remove sets prefs back to None.)
+ * Renders the current [ParentLocation] and offers:
+ *   - `null` (NeedsPicking): blurb + "Pick a folder" button.
+ *   - [ParentLocation.Internal]: "Inside the app" label + "Change folder".
+ *   - [ParentLocation.External]: shows label + URI + "Change folder"
+ *     and "Remove backup" buttons.
  *
- * Per the 2.7.D.1 design call, picking a folder does NOT pop a separate
- * "Apply to existing repos?" dialog — the picker action IS the consent.
- * The launcher in `MainActivity` fires `MirrorReconciler.applyToAll()`
- * + Toasts the count after the prefs flip lands.
+ * Phase B rewrites the picker so it creates `<picked>/strictlykeptboy/`
+ * + writes the `.skb-root` marker + caches the real path. Phase E
+ * rewrites this category into `StorageCategory` per the plan.
  */
 @Composable
 fun BackupLocationCategory(
@@ -58,7 +60,7 @@ fun BackupLocationCategory(
         )
         Spacer(Modifier.height(16.dp))
         when (val loc = state) {
-            is MirrorLocation.None -> {
+            null -> {
                 Text(
                     stringResource(R.string.settings_backup_none_subtitle),
                     style = MaterialTheme.typography.bodyMedium,
@@ -72,7 +74,26 @@ fun BackupLocationCategory(
                     Text(stringResource(R.string.settings_backup_pick_button))
                 }
             }
-            is MirrorLocation.External -> {
+            is ParentLocation.Internal -> {
+                Text(
+                    text = "Inside the app",
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    loc.absPath,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(12.dp))
+                Button(
+                    onClick = onPickFolder,
+                    modifier = Modifier.testTag(TestTagCatBackupChangeButton),
+                ) {
+                    Text(stringResource(R.string.settings_backup_change_button))
+                }
+            }
+            is ParentLocation.External -> {
                 Text(
                     stringResource(R.string.settings_backup_current_label, loc.label),
                     style = MaterialTheme.typography.titleSmall,

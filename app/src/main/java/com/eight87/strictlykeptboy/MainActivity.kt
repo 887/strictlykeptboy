@@ -83,10 +83,17 @@ class MainActivity : ComponentActivity() {
      * STARTED state. On grant we take the persistable permission, derive
      * a human label by parsing the SAF tree document-id (avoids pulling
      * in `androidx.documentfile`),
-     * write `MirrorLocation.External` into [com.eight87.strictlykeptboy.prefs.RepoStoragePrefs],
-     * then (per the 2.7.D.1 design choice — no separate confirm dialog)
-     * fire [com.eight87.strictlykeptboy.sync.MirrorReconciler.applyToAll]
-     * and Toast the count.
+     * write `ParentLocation.External` into
+     * [com.eight87.strictlykeptboy.prefs.RepoStoragePrefs], then Toast
+     * the count of repos discovered under the new parent by calling
+     * [com.eight87.strictlykeptboy.sync.ParentReconciler.reconcile].
+     *
+     * Note: Phase A keeps this launcher's structure intact for compile
+     * continuity; Phase B.1–B.5 replaces it with a proper "pick parent"
+     * launcher that creates `<picked>/strictlykeptboy/`, writes the
+     * marker, and stores the cached real path. Until Phase B ships,
+     * the launcher writes External with a `null` cachedRealPath so the
+     * gate keeps surfacing the question until the user re-picks.
      */
     private var pendingAppGraph: com.eight87.strictlykeptboy.composition.AppGraph? = null
 
@@ -110,17 +117,22 @@ class MainActivity : ComponentActivity() {
             val sub = docId.substringAfter(':', "")
             sub.substringAfterLast('/', sub).ifBlank { null }
         }.getOrNull() ?: "selected folder"
+        // Round 2.17.A.2 — write a placeholder External shell; Phase B
+        // adds the SafTreeUriResolver.resolveRealPath dance + marker
+        // creation. With `cachedRealPath = null`, the gate still
+        // returns NeedsPicking, which keeps Phase A's data-layer-only
+        // semantics honest (no UI surface yet to drive the new flow).
         graph.repoStoragePrefs.set(
-            com.eight87.strictlykeptboy.prefs.MirrorLocation.External(
+            com.eight87.strictlykeptboy.prefs.ParentLocation.External(
                 treeUri = uri.toString(),
                 label = label,
+                cachedRealPath = null,
             ),
         )
-        // 2.7.D.1 design call — when the user explicitly opts in via the
-        // Settings/banner picker, apply immediately + Toast the count.
-        // No separate "Apply?" dialog: the picker action IS the consent.
+        // Round 2.17.A.8 — surface how many repos got discovered under
+        // the new parent (zero until Phase B populates `cachedRealPath`).
         kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            val count = runCatching { graph.mirrorReconciler.applyToAll() }.getOrDefault(0)
+            val count = runCatching { graph.parentReconciler.reconcile().size }.getOrDefault(0)
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                 Toast.makeText(
                     this@MainActivity,
@@ -539,8 +551,16 @@ class MainActivity : ComponentActivity() {
                                 graph.backupPickerHandle?.invoke()
                             },
                             onRemoveBackupFolder = {
+                                // Round 2.17.A — "Remove backup" now means
+                                // "switch parent back to internal". Phase E
+                                // replaces this surface with the proper
+                                // "Switch to internal" flow + move-job; for
+                                // now we just flip the prefs so the build
+                                // is green.
                                 graph.repoStoragePrefs.set(
-                                    com.eight87.strictlykeptboy.prefs.MirrorLocation.None,
+                                    com.eight87.strictlykeptboy.prefs.ParentLocation.Internal(
+                                        absPath = filesDir.resolve("strictlykeptboy").absolutePath,
+                                    ),
                                 )
                             },
                             // Round 2.15 — demo-mode toggle access.
