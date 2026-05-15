@@ -519,7 +519,7 @@ repos slot in identically.
   `CalendarContract.Reminders` for the event; render skb-style
   reminder cards.
 
-## Phase D — Two-way edit — shipped in PHASE_D_SHA
+## Phase D — Two-way edit — shipped in d3dbbdb
 
 - [x] **D.1** New `system/CalendarContractWriter.kt` — pure write
   surface: `insertEvent`, `updateEvent`, `deleteEvent`,
