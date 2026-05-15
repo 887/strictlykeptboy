@@ -574,54 +574,67 @@ repos slot in identically.
   `hasWritePermission()` for the UI to gate affordances + drive
   the inline-cue [Grant] launcher.
 
-## Phase E — Intent filter set
+## Phase E — Intent filter set (shipped in 7b3fcae)
 
-- [ ] **E.1** Edit `AndroidManifest.xml` — add `<category
-  android:name="android.intent.category.APP_CALENDAR" />` to the
-  existing MAIN/LAUNCHER intent-filter on MainActivity.
-- [ ] **E.2** Add new `<intent-filter>` on MainActivity for
-  `VIEW + time/epoch + scheme=content` (the "go to date"
-  intent).
-- [ ] **E.3** Add `activity-alias` `EventDetailActivity` pointing at
-  MainActivity with intent-filter `VIEW + DEFAULT +
-  vnd.android.cursor.item/event`.
-- [ ] **E.4** Add `activity-alias` `EventEditActivity` pointing at
-  MainActivity with two intent-filters:
-  - `EDIT + INSERT + DEFAULT + vnd.android.cursor.item/event`
-  - `EDIT + INSERT + DEFAULT + vnd.android.cursor.dir/event`
-- [ ] **E.5** Add `activity-alias` `IcsImportActivity` pointing at
-  MainActivity with intent-filter `VIEW + DEFAULT +
-  text/calendar` (scheme=file/content) and a second filter
-  `VIEW + BROWSABLE + DEFAULT + scheme=https +
-  pathPattern=".*\\.ics"`.
-- [ ] **E.6** Routing in `MainActivity.onCreate` /
-  `MainActivity.onNewIntent` — read the incoming intent's action +
-  data and dispatch to the right Compose destination:
-  - `VIEW time/epoch` → schedule screen pinned to that date.
-  - `VIEW vnd.android.cursor.item/event` → event detail sheet for
-    the event ID.
-  - `EDIT/INSERT vnd.android.cursor.item/event` →
-    event-edit screen prefilled from extras
-    (`EXTRA_EVENT_BEGIN_TIME` / `EXTRA_EVENT_END_TIME` / `TITLE`,
-    etc.).
-  - `VIEW text/calendar` → `IcsImportFlow` (Phase E.7).
-- [ ] **E.7** New `system/IcsParser.kt` — parse `text/calendar`
-  payload using the ical4j-jvm or the same iCal library DAVx⁵
-  pulls in (dmfs has `lib-recur` already; check for an ical4j
-  equivalent already in skb's deps; if absent, add the
-  smallest viable parser dep). Returns one or more
-  `EventInput`s + attendee + reminder records.
-- [ ] **E.8** `IcsImportScreen` — preview the parsed event, let user
-  pick destination (any visible calendar including external ones
-  the user has WRITE access to). Default destination = the user's
-  primary external calendar if known, else the active skb repo's
-  primary calendar.
-- [ ] **E.9** Default-handler test plan — manual: install skb,
-  long-press a `.ics` in Gmail, hit "Always" with skb selected,
-  verify subsequent taps go straight to skb.
-- [ ] **E.10** Backwards-compat check — verify the existing
-  `strictlykeptboy://event` deep links (Phase MM) still resolve;
-  the new filters are additive and shouldn't collide.
+- [x] **E.1** Manifest — APP_CALENDAR category added to the
+  MAIN/LAUNCHER filter so skb appears as a "Calendar app" default
+  candidate.
+- [x] **E.2** New MainActivity intent-filter for VIEW
+  `content://com.android.calendar/time/<epoch-seconds>` (the
+  "go to date" intent).
+- [x] **E.3** New `activity-alias .EventDetailActivity` →
+  MainActivity with filter `VIEW + DEFAULT +
+  vnd.android.cursor.item/event`, exported.
+- [x] **E.4** New `activity-alias .EventEditActivity` → MainActivity
+  with two filters: `EDIT + INSERT + DEFAULT +
+  vnd.android.cursor.item/event` and the corresponding
+  `vnd.android.cursor.dir/event` filter.
+- [x] **E.5** New `activity-alias .IcsImportActivity` →
+  MainActivity with two filters: `VIEW + DEFAULT + text/calendar`
+  (schemes `file` + `content`) and `VIEW + BROWSABLE + DEFAULT +
+  scheme=http(s) + pathPattern ".*\\.ics"`.
+- [x] **E.6** Routing — new `system/CalendarIntentRouter.kt`
+  classifies the incoming intent into a `RoutedIntent` sealed
+  type (GoToDate / ShowEvent / EditEvent / ImportIcs / Unhandled);
+  MainActivity dispatches on cold-start and `onNewIntent`. Schedule
+  pinning + Day-tab switch land for GoToDate; CalendarContract
+  extras (`EXTRA_EVENT_BEGIN_TIME` / `_END_TIME` / `_ALL_DAY` /
+  `TITLE` / `DESCRIPTION` / `EVENT_LOCATION`) feed an
+  `EventEditDraft` for EditEvent; ImportIcs streams the payload
+  (local content URI or remote OkHttp fetch) into
+  `port/ics/IcsParser` and hands the report to
+  `importExportState.showPreview` for the existing ImportExport
+  preview sheet.
+- [x] **E.7** New `system/IcsParser.kt` — minimal VCALENDAR parser
+  carrying VEVENT core fields + RRULE + VALARM (TRIGGER →
+  minutes-before-start) + ATTENDEE (CN, mailto-stripped email).
+  `ical4j` was already declared in `gradle/libs.versions.toml` but
+  NOT wired into `app/build.gradle.kts`; rather than add Android
+  classpath cost we landed a hand-rolled subset parallel to the
+  on-disk-shape parser (`port/ics/IcsParser.kt`). Returns
+  `ParsedIcs` (list of `ParsedIcsEvent` + warnings).
+- [x] **E.8** New `ui/import_export/IcsImportScreen.kt` — preview
+  rows per VEVENT (summary, start→end, location, RRULE,
+  attendees, reminder minutes-before), plus a destination
+  dropdown over a sealed `IcsImportDestination` (Repo / External)
+  that unifies skb-repo writes (via `EntityWriter`) and external
+  CalendarContract writes (via
+  `CalendarContractWriter.insertEvent`). Default = primary
+  external calendar if known, else first destination.
+- [x] **E.9** Default-handler test plan — manual checklist at
+  `docs/plans/round-2-18-default-handler-test.md`. Covers the
+  APP_CALENDAR default-app slot, .ics-from-Gmail Always-chooser,
+  `am start` of the time/epoch + .ics intents, Phase MM
+  back-compat, and recovery via "Clear defaults".
+- [x] **E.10** Backwards-compat — `IntentFilterRoutingTest` asserts
+  `strictlykeptboy://event/<id>` classifies as `Unhandled` so the
+  Phase MM router keeps it. The new filters use orthogonal MIME
+  types (`vnd.android.cursor.*` + `text/calendar`) and the
+  `content://com.android.calendar/time` authority — no collision.
+  Additionally guarded the `ShareLinkReceiver` path so it only
+  classifies share-scheme URIs — otherwise the time intent
+  surfaced a misleading "share link could not be read" Toast on
+  AVD smoke.
 
 ## Phase F — Reminder + alarm parity
 

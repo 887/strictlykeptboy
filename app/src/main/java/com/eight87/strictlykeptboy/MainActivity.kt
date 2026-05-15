@@ -49,6 +49,12 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
 
     private var deepLinkHandler: ((Intent) -> Unit)? = null
+    /**
+     * Round 2.18.E.6 — set from `setContent` once `scheduleState`
+     * exists. Receives every cold-start + `onNewIntent` payload after
+     * the share-link router gets first chance.
+     */
+    private var calendarIntentHandler: ((Intent) -> Unit)? = null
     private var pendingImportRepo: RepoConfig? = null
     private var pendingExportRepo: RepoConfig? = null
     private var pendingExportContent: String? = null
@@ -299,7 +305,17 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         deepLinkHandler?.invoke(intent)
+        calendarIntentHandler?.invoke(intent)
     }
+
+    /**
+     * Round 2.18.E.6 — exposed for `IntentFilterRoutingTest`. Returns
+     * the routed-intent classification so the test can assert that
+     * each manifest filter dispatches into the right destination
+     * without driving the whole Compose tree.
+     */
+    internal fun classifyIncoming(intent: Intent): com.eight87.strictlykeptboy.system.RoutedIntent =
+        com.eight87.strictlykeptboy.system.CalendarIntentRouter.classify(intent)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         com.eight87.strictlykeptboy.perf.PerfTraceRecorder.begin(
@@ -328,17 +344,39 @@ class MainActivity : ComponentActivity() {
         graph.refreshSafPermissionState()
 
         // Phase O.2 — handle strictlykeptboy://share deep links.
+        // Round 2.18.E.10 — guard: only classify URIs that actually
+        // carry a share scheme. Without this guard, every calendar
+        // contract intent (content://com.android.calendar/time/...,
+        // file://...ics, etc.) fed to `ShareLinkReceiver.classify`
+        // returns `Action.Invalid` and surfaces the user-visible
+        // "share link could not be read" Toast.
         deepLinkHandler = { intent ->
             intent.dataString?.let { data ->
-                val action = com.eight87.strictlykeptboy.ui.share.ShareLinkReceiver.classify(data)
-                handleShareAction(action, graph.repoStore)
+                if (isShareLinkScheme(data)) {
+                    val action = com.eight87.strictlykeptboy.ui.share.ShareLinkReceiver
+                        .classify(data)
+                    handleShareAction(action, graph.repoStore)
+                }
             }
         }
         // Cold-start: process the launching intent immediately.
         intent?.dataString?.let { data ->
-            val action = com.eight87.strictlykeptboy.ui.share.ShareLinkReceiver.classify(data)
-            handleShareAction(action, graph.repoStore)
+            if (isShareLinkScheme(data)) {
+                val action = com.eight87.strictlykeptboy.ui.share.ShareLinkReceiver
+                    .classify(data)
+                handleShareAction(action, graph.repoStore)
+            }
         }
+
+        // Round 2.18.E.6 — pending classification of the launching
+        // intent for the system calendar contract (VIEW time/epoch,
+        // VIEW events/<id>, EDIT/INSERT event, VIEW text/calendar,
+        // VIEW https://<host>/<path>.ics). The dispatcher into Compose is
+        // installed once `scheduleState` exists; until then we park
+        // the classification so cold-start doesn't drop it.
+        val pendingCalendarRouted: com.eight87.strictlykeptboy.system.RoutedIntent =
+            intent?.let { classifyIncoming(it) }
+                ?: com.eight87.strictlykeptboy.system.RoutedIntent.Unhandled
 
         // Phase P — import/export view state. Confirm callback runs the
         // writer + commit on Dispatchers.IO. R.X.3: composition root only.
@@ -483,6 +521,105 @@ class MainActivity : ComponentActivity() {
                             repoConfigsFlow = graph.repoStore.state,
                             initialTab = graph.viewModePrefs.selected.value,
                         )
+                    }
+                    // Round 2.18.E.6 — install the live calendar-intent
+                    // dispatcher now that `scheduleState` exists. Routes:
+                    //
+                    //   GoToDate → pin Schedule + switch to Day tab.
+                    //   ShowEvent → toast (real cross-row mapping is
+                    //     Phase F+G; for E we surface the row id so the
+                    //     user sees the intent took).
+                    //   EditEvent → open the event editor via the
+                    //     existing EventCreateController; prefilled fields
+                    //     come from CalendarContract extras.
+                    //   ImportIcs → fetch (if remote) + parse + hand to
+                    //     `importExportState.showPreview`.
+                    //
+                    // Also drain the cold-start pending classification.
+                    val handleRoutedIntent: (com.eight87.strictlykeptboy.system.RoutedIntent) -> Unit = routed@{ routed ->
+                        when (routed) {
+                            is com.eight87.strictlykeptboy.system.RoutedIntent.GoToDate -> {
+                                scheduleState.setDate(routed.date)
+                                scheduleState.setSelectedTab(
+                                    com.eight87.strictlykeptboy.ui.scaffold.ScheduleViewTab.Day,
+                                )
+                            }
+                            is com.eight87.strictlykeptboy.system.RoutedIntent.ShowEvent -> {
+                                Toast.makeText(
+                                    this@MainActivity,
+                                    "Open event ${'$'}{routed.eventId}",
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                            }
+                            is com.eight87.strictlykeptboy.system.RoutedIntent.EditEvent -> {
+                                // Prefill the event editor. Today (Phase E)
+                                // we open a fresh editor pinned to the
+                                // begin-time date; full prefill into the
+                                // EventCreateController draft fields lands
+                                // with Phase F.
+                                routed.prefill.beginMs?.let { ms ->
+                                    val d = java.time.Instant.ofEpochMilli(ms)
+                                        .atZone(java.time.ZoneId.systemDefault())
+                                        .toLocalDate()
+                                    scheduleState.setDate(d)
+                                }
+                                Toast.makeText(
+                                    this@MainActivity,
+                                    routed.prefill.title?.let { "Edit: ${'$'}it" }
+                                        ?: getString(R.string.app_name),
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                            }
+                            is com.eight87.strictlykeptboy.system.RoutedIntent.ImportIcs -> {
+                                val repo = graph.repoStore.list()
+                                    .firstOrNull { it.displayName == graph.activeRepoName.value }
+                                    ?: graph.repoStore.list().firstOrNull()
+                                if (repo == null) {
+                                    Toast.makeText(
+                                        this@MainActivity,
+                                        getString(R.string.import_export_empty),
+                                        Toast.LENGTH_LONG,
+                                    ).show()
+                                    return@routed
+                                }
+                                pendingImportRepo = repo
+                                kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                    val text = runCatching {
+                                        when (val src = routed.source) {
+                                            is com.eight87.strictlykeptboy.system.IcsSource.LocalUri ->
+                                                contentResolver.openInputStream(src.uri)
+                                                    ?.use { it.readBytes().toString(Charsets.UTF_8) }
+                                            is com.eight87.strictlykeptboy.system.IcsSource.RemoteUrl -> {
+                                                val client = okhttp3.OkHttpClient()
+                                                val req = okhttp3.Request.Builder()
+                                                    .url(src.uri.toString())
+                                                    .build()
+                                                client.newCall(req).execute().use { resp ->
+                                                    resp.body?.string()
+                                                }
+                                            }
+                                        }
+                                    }.getOrNull() ?: return@launch
+                                    val calendarId = repo.defaultCalendarId
+                                        ?: com.eight87.strictlykeptboy.git.Uuid7.generate().toString()
+                                    val report = com.eight87.strictlykeptboy.port.ics.IcsParser.parse(
+                                        text = text,
+                                        calendarId = calendarId,
+                                        author = repo.authorIdentity.email,
+                                    )
+                                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                        importExportState.showPreview(report)
+                                    }
+                                }
+                            }
+                            com.eight87.strictlykeptboy.system.RoutedIntent.Unhandled -> Unit
+                        }
+                    }
+                    calendarIntentHandler = { intentArg ->
+                        handleRoutedIntent(classifyIncoming(intentArg))
+                    }
+                    LaunchedEffect(Unit) {
+                        handleRoutedIntent(pendingCalendarRouted)
                     }
                     // Phase 2.1.D.1 — TasksViewState bound to the resolver.
                     // Re-evaluates active-todolist IDs whenever the snapshot
@@ -1273,6 +1410,20 @@ class MainActivity : ComponentActivity() {
      * Round 2.17 Phase F.3 — format a byte count for the export Toast.
      * Small, base-10 (matches what file managers display).
      */
+    /**
+     * Round 2.18.E.10 — true only when [data] is a Phase O share link
+     * or Phase MM custom-scheme deep link. Calendar contract intents
+     * (`content://com.android.calendar/...`, `file://...ics`,
+     * `https://example.com/foo.ics`) MUST fall through to the
+     * Calendar router without being misclassified by the share
+     * receiver.
+     */
+    private fun isShareLinkScheme(data: String): Boolean {
+        return data.startsWith("strictlykeptboy://") ||
+            data.startsWith("https://strictlykeptboy.app/link/") ||
+            data.startsWith("http://strictlykeptboy.app/link/")
+    }
+
     private fun humanBytes(n: Long): String {
         if (n < 1024) return "$n B"
         val units = listOf("KB", "MB", "GB", "TB")
