@@ -7,43 +7,68 @@ import androidx.security.crypto.MasterKey
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.io.File
 
 /**
- * Round 2.7.B.1 — app-wide repo storage prefs.
+ * Round 2.17.A.2 — app-wide *parent folder* prefs.
  *
- * Per locked decision D-2.7.b: repos always live in `filesDir/repos/<repoId>/`.
- * This prefs surface stores the user-picked *backup mirror location*: a SAF
- * tree URI (e.g. `/storage/emulated/0/Documents/strictlykeptboy/`). On every
- * sync the [com.eight87.strictlykeptboy.sync.MirrorReconciler] ensures each
- * repo has a `file://`-transport remote named `"mirror"` pointing at
- * `<resolvedPath>/<repoId>.git`, and the sync runtime pushes there
- * alongside the user's primary remote.
+ * D-2.17.a: there is exactly one parent folder for the whole app; every
+ * repo is a direct subfolder of it. The parent is either internal (a
+ * fixed path under `filesDir/strictlykeptboy/`) or external (a SAF
+ * tree URI the user picked outside the sandbox + the cached real path
+ * that we hand to JGit).
  *
- * Storage: EncryptedSharedPreferences (`repo_storage_v1.xml`). We encrypt
- * because the picked folder path can carry useful filesystem fingerprinting
- * info we'd rather keep at the same trust level as `RepoStore`.
+ * Schema bumped to `repo_storage_v2.xml`. On first construction we read
+ * v1 once (the legacy `MirrorLocation` keys) and upgrade an `external`
+ * mirror into an `External` parent shell — see [ParentLocationMigrator]
+ * for the full move-on-disk behaviour. v2 also remembers the legacy
+ * "skipped during wizard" boolean so the post-wizard reminder banner
+ * keeps working for the upgrade-from-2.7 cohort until Phase D ships
+ * its own gate.
  *
- * Keys:
- *  - `mirror.kind`              `"none"` | `"external"`
- *  - `mirror.tree_uri`          String (external only)
- *  - `mirror.label`             String (external only — DocumentFile.name)
- *  - `mirror.skipped_in_wizard` Boolean (D-2.7.c — wizard "Skip — decide later")
+ * Storage: EncryptedSharedPreferences. The picked folder path can carry
+ * filesystem-fingerprinting info we keep at the same trust level as
+ * `RepoStore`.
+ *
+ * Keys (v2):
+ *  - `parent.kind`              `"internal"` | `"external"`
+ *  - `parent.abs_path`          String (internal only — absolute path)
+ *  - `parent.tree_uri`          String (external only)
+ *  - `parent.label`             String (external only)
+ *  - `parent.cached_real_path`  String? (external only — resolved File path)
+ *  - `parent.skipped_in_wizard` Boolean (upgrade tail from 2.7)
+ *  - `migrated_from_d_2_7_b`    Boolean (set once by ParentLocationMigrator)
  */
 class RepoStoragePrefs internal constructor(private val prefs: SharedPreferences) {
 
+    init {
+        // Round 2.17.A.2 — one-time upgrade from the v1 `mirror.*` keyspace.
+        // Idempotent: marked by [KEY_V1_UPGRADED]. We don't move repos on
+        // disk here — that's [ParentLocationMigrator]'s job; this only
+        // promotes a v1 External mirror into a v2 External parent shell so
+        // the v1 cohort sees their previously-picked folder pre-filled.
+        if (!prefs.getBoolean(KEY_V1_UPGRADED, false)) {
+            upgradeFromV1IfPresent()
+        }
+    }
+
     private val _state = MutableStateFlow(load())
 
-    /** Currently-configured mirror location. */
-    val state: StateFlow<MirrorLocation> = _state.asStateFlow()
-
-    /** Current value, lock-free. */
-    val location: MirrorLocation get() = _state.value
+    /** Currently-configured parent location. */
+    val state: StateFlow<ParentLocation?> = _state.asStateFlow()
 
     /**
-     * True iff the user picked "Skip — decide later" on the wizard mirror
-     * screen. Drives the post-wizard reminder banner on the Repos pane
-     * (2.7.D.2). Cleared automatically when the user later sets a real
-     * mirror location.
+     * Current value, lock-free. `null` means the user has not yet
+     * confirmed any parent — wizard / add-repo flow must surface the
+     * "where to store?" question before scaffolding.
+     */
+    val location: ParentLocation? get() = _state.value
+
+    /**
+     * Upgrade tail: true iff the user picked "Skip — decide later" on the
+     * 2.7 mirror screen. Used by the Repos pane reminder banner until
+     * Phase D ships its own gate. Cleared automatically when the user
+     * confirms a real parent.
      */
     var skippedDuringWizard: Boolean
         get() = prefs.getBoolean(KEY_SKIPPED, false)
@@ -51,51 +76,121 @@ class RepoStoragePrefs internal constructor(private val prefs: SharedPreferences
             prefs.edit().putBoolean(KEY_SKIPPED, value).apply()
         }
 
-    /** Persist a new mirror location. Idempotent. */
-    fun set(location: MirrorLocation) {
+    /** True once [ParentLocationMigrator] has run successfully. */
+    var migratedFromD27b: Boolean
+        get() = prefs.getBoolean(KEY_MIGRATED_D27B, false)
+        set(value) {
+            prefs.edit().putBoolean(KEY_MIGRATED_D27B, value).apply()
+        }
+
+    /** Persist a new parent location. Idempotent. */
+    fun set(location: ParentLocation) {
         val editor = prefs.edit()
         when (location) {
-            is MirrorLocation.None -> {
-                editor.putString(KEY_KIND, KIND_NONE)
+            is ParentLocation.Internal -> {
+                editor.putString(KEY_KIND, KIND_INTERNAL)
+                editor.putString(KEY_ABS_PATH, location.absPath)
                 editor.remove(KEY_TREE_URI)
                 editor.remove(KEY_LABEL)
+                editor.remove(KEY_CACHED_REAL_PATH)
             }
-            is MirrorLocation.External -> {
+            is ParentLocation.External -> {
                 editor.putString(KEY_KIND, KIND_EXTERNAL)
                 editor.putString(KEY_TREE_URI, location.treeUri)
                 editor.putString(KEY_LABEL, location.label)
-                // 2.7.D — once the user picks a real folder the
-                // wizard-skip reminder no longer applies.
-                editor.putBoolean(KEY_SKIPPED, false)
+                if (location.cachedRealPath != null) {
+                    editor.putString(KEY_CACHED_REAL_PATH, location.cachedRealPath)
+                } else {
+                    editor.remove(KEY_CACHED_REAL_PATH)
+                }
+                editor.remove(KEY_ABS_PATH)
             }
         }
+        // Confirming a parent clears the legacy wizard-skip reminder.
+        editor.putBoolean(KEY_SKIPPED, false)
         editor.apply()
         _state.value = location
     }
 
-    private fun load(): MirrorLocation {
-        val kind = prefs.getString(KEY_KIND, null) ?: return MirrorLocation.None
+    private fun load(): ParentLocation? {
+        val kind = prefs.getString(KEY_KIND, null) ?: return null
         return when (kind) {
+            KIND_INTERNAL -> {
+                val abs = prefs.getString(KEY_ABS_PATH, null) ?: return null
+                ParentLocation.Internal(absPath = abs)
+            }
             KIND_EXTERNAL -> {
                 val uri = prefs.getString(KEY_TREE_URI, null)
                 val label = prefs.getString(KEY_LABEL, null)
                 if (uri != null && label != null) {
-                    MirrorLocation.External(treeUri = uri, label = label)
-                } else MirrorLocation.None
+                    ParentLocation.External(
+                        treeUri = uri,
+                        label = label,
+                        cachedRealPath = prefs.getString(KEY_CACHED_REAL_PATH, null),
+                    )
+                } else null
             }
-            else -> MirrorLocation.None
+            else -> null
         }
     }
 
-    companion object {
-        private const val PREFS_FILE = "repo_storage_v1"
-        private const val KEY_KIND = "mirror.kind"
-        private const val KEY_TREE_URI = "mirror.tree_uri"
-        private const val KEY_LABEL = "mirror.label"
-        private const val KEY_SKIPPED = "mirror.skipped_in_wizard"
+    private fun upgradeFromV1IfPresent() {
+        // v1 used `mirror.kind` = `"none"` | `"external"`. If the user had
+        // picked an external mirror, promote it to a v2 External parent
+        // shell (no cached real path yet; the Phase B picker rewrite or
+        // ParentLocationMigrator will populate it). Otherwise leave v2
+        // unset so the gate surfaces the question.
+        val v1Kind = prefs.getString(V1_KEY_KIND, null)
+        val editor = prefs.edit()
+        if (v1Kind == V1_KIND_EXTERNAL) {
+            val uri = prefs.getString(V1_KEY_TREE_URI, null)
+            val label = prefs.getString(V1_KEY_LABEL, null)
+            if (uri != null && label != null && prefs.getString(KEY_KIND, null) == null) {
+                editor.putString(KEY_KIND, KIND_EXTERNAL)
+                editor.putString(KEY_TREE_URI, uri)
+                editor.putString(KEY_LABEL, label)
+            }
+        }
+        // Carry the v1 wizard-skip flag forward. v1 stored it at
+        // `mirror.skipped_in_wizard`; v2 reads from `parent.skipped_in_wizard`.
+        if (prefs.contains(V1_KEY_SKIPPED) && !prefs.contains(KEY_SKIPPED)) {
+            editor.putBoolean(KEY_SKIPPED, prefs.getBoolean(V1_KEY_SKIPPED, false))
+        }
+        editor.putBoolean(KEY_V1_UPGRADED, true)
+        editor.apply()
+    }
 
-        private const val KIND_NONE = "none"
+    companion object {
+        // Round 2.17.A.2 — bumped to v2 to mark the ParentLocation rework.
+        // EncryptedSharedPreferences is keyed by file name, so v1's bytes
+        // are not lost; v2 reads them via [upgradeFromV1IfPresent] on
+        // first construction.
+        const val PREFS_FILE: String = "repo_storage_v2"
+
+        private const val KEY_KIND = "parent.kind"
+        private const val KEY_ABS_PATH = "parent.abs_path"
+        private const val KEY_TREE_URI = "parent.tree_uri"
+        private const val KEY_LABEL = "parent.label"
+        private const val KEY_CACHED_REAL_PATH = "parent.cached_real_path"
+        private const val KEY_SKIPPED = "parent.skipped_in_wizard"
+        private const val KEY_V1_UPGRADED = "v1_upgraded"
+        private const val KEY_MIGRATED_D27B = "migrated_from_d_2_7_b"
+
+        // Legacy v1 keys retained for one-shot read.
+        private const val V1_KEY_KIND = "mirror.kind"
+        private const val V1_KEY_TREE_URI = "mirror.tree_uri"
+        private const val V1_KEY_LABEL = "mirror.label"
+        private const val V1_KEY_SKIPPED = "mirror.skipped_in_wizard"
+        private const val V1_KIND_EXTERNAL = "external"
+
+        private const val KIND_INTERNAL = "internal"
         private const val KIND_EXTERNAL = "external"
+
+        /**
+         * Default absolute path for an Internal parent — `filesDir/strictlykeptboy`.
+         */
+        fun defaultInternalDir(context: Context): File =
+            File(context.filesDir, "strictlykeptboy")
 
         fun open(context: Context): RepoStoragePrefs {
             val masterKey = MasterKey.Builder(context)
@@ -118,20 +213,47 @@ class RepoStoragePrefs internal constructor(private val prefs: SharedPreferences
 }
 
 /**
- * Per D-2.7.b. Two states only — repos themselves never move, so there's no
- * `Internal(...)` discriminating between sub-paths of `filesDir`.
+ * Round 2.17 — D-2.17.a. Exactly one parent folder for the whole app;
+ * every repo lives directly underneath as a subfolder.
  */
-sealed interface MirrorLocation {
-    /** No external mirror; repos still live in `filesDir/repos/`. */
-    data object None : MirrorLocation
+sealed interface ParentLocation {
+    /**
+     * Concrete on-disk directory the parent resolves to. For Internal this
+     * is the configured absolute path under `filesDir`; for External, the
+     * `cachedRealPath` derived by `SafTreeUriResolver.resolveRealPath`
+     * when the user picked. May be `null` for External when the cache
+     * was never populated (legacy v1 upgrade, or SAF on a non-primary
+     * volume) — callers must guard.
+     */
+    fun workingDir(): File?
 
     /**
-     * SAF tree URI the user granted via `OPEN_DOCUMENT_TREE`. The persistable
-     * URI permission must already have been taken before this is stored, or
-     * the URI is unusable after process restart.
+     * App-private parent. Default route for users who pick "Keep inside
+     * the app". Stickers, recordings, and other media are easier to keep
+     * here per the user's brief; the trade-off is uninstall-deletes-data.
      *
-     * @param treeUri stringified `content://com.android.externalstorage…` URI
-     * @param label display name for the folder (e.g. `"strictlykeptboy"`)
+     * @param absPath absolute path on disk, typically `filesDir/strictlykeptboy`.
      */
-    data class External(val treeUri: String, val label: String) : MirrorLocation
+    data class Internal(val absPath: String) : ParentLocation {
+        override fun workingDir(): File = File(absPath)
+    }
+
+    /**
+     * User-picked SAF tree URI + resolved real path. JGit reads/writes
+     * via `cachedRealPath`; the URI is held so we can re-verify
+     * `contentResolver.persistedUriPermissions` after process restart
+     * (D-2.17.k).
+     *
+     * @param treeUri stringified `content://com.android.externalstorage…`
+     * @param label display name for the folder (e.g. `"Documents"`)
+     * @param cachedRealPath absolute `File` path the SAF URI resolves to
+     *   on the primary internal volume, or `null` if unresolved.
+     */
+    data class External(
+        val treeUri: String,
+        val label: String,
+        val cachedRealPath: String?,
+    ) : ParentLocation {
+        override fun workingDir(): File? = cachedRealPath?.let { File(it) }
+    }
 }

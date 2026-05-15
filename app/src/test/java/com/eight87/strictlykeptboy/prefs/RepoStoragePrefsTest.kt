@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -11,8 +12,12 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * Round 2.7.B.5 — round-trip None / External; wizard-skip flag clears
- * when a real location lands.
+ * Round 2.17.A.7 — round-trip Internal / External; read-from-v1 upgrade.
+ *
+ * Originally `RepoStoragePrefsTest` (Round 2.7.B.5); rewritten in 2.17
+ * for the `ParentLocation` schema. Test class name retained per
+ * D-2.17.l "refactor, don't rewrite" — kept as RepoStoragePrefsTest plus
+ * `RepoStoragePrefsV2Test` per the plan's verification list.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [26])
@@ -25,52 +30,35 @@ class RepoStoragePrefsTest {
         return RepoStoragePrefs.openForTest(sp)
     }
 
-    @Test fun defaultIsNone() {
+    @Test fun defaultIsNullLocation() {
         val p = newPrefs()
-        assertEquals(MirrorLocation.None, p.location)
+        assertNull("no parent confirmed yet", p.location)
         assertFalse(p.skippedDuringWizard)
+        assertFalse(p.migratedFromD27b)
     }
 
-    @Test fun roundTripsExternal() {
-        val ctx = ApplicationProvider.getApplicationContext<Context>()
-        val file = "repo_storage_rt"
-        val sp = ctx.getSharedPreferences(file, Context.MODE_PRIVATE)
-        sp.edit().clear().apply()
-        val p1 = RepoStoragePrefs.openForTest(sp)
-        val loc = MirrorLocation.External(
-            treeUri = "content://com.android.externalstorage.documents/tree/primary%3ADocuments%2Fskb",
-            label = "skb",
-        )
-        p1.set(loc)
-        assertEquals(loc, p1.location)
-
-        // New instance — same backing prefs — must observe the same value.
-        val p2 = RepoStoragePrefs.openForTest(sp)
-        assertEquals(loc, p2.location)
-    }
-
-    @Test fun roundTripsNoneAfterClearing() {
-        val p = newPrefs("repo_storage_clear")
-        p.set(MirrorLocation.External("content://x", "x"))
-        p.set(MirrorLocation.None)
-        assertEquals(MirrorLocation.None, p.location)
-    }
-
-    @Test fun skippedDuringWizardSurvivesRoundTrip() {
-        val ctx = ApplicationProvider.getApplicationContext<Context>()
-        val file = "repo_storage_skipped"
-        val sp = ctx.getSharedPreferences(file, Context.MODE_PRIVATE)
-        sp.edit().clear().apply()
-        val p1 = RepoStoragePrefs.openForTest(sp)
-        p1.skippedDuringWizard = true
-        val p2 = RepoStoragePrefs.openForTest(sp)
-        assertTrue(p2.skippedDuringWizard)
-    }
-
-    @Test fun settingExternalClearsSkippedFlag() {
-        val p = newPrefs("repo_storage_clear_skip")
+    @Test fun setExternalClearsWizardSkipFlag() {
+        val p = newPrefs("rsp_clear_skip")
         p.skippedDuringWizard = true
-        p.set(MirrorLocation.External("content://x", "x"))
+        p.set(ParentLocation.External("content://x", "x", cachedRealPath = "/storage/emulated/0/x"))
         assertFalse(p.skippedDuringWizard)
+    }
+
+    @Test fun setInternalClearsWizardSkipFlag() {
+        val p = newPrefs("rsp_clear_skip2")
+        p.skippedDuringWizard = true
+        p.set(ParentLocation.Internal(absPath = "/data/user/0/com.app/files/strictlykeptboy"))
+        assertFalse(p.skippedDuringWizard)
+    }
+
+    @Test fun migratedFlagSurvivesProcessRestart() {
+        val ctx = ApplicationProvider.getApplicationContext<Context>()
+        val file = "rsp_flag"
+        val sp = ctx.getSharedPreferences(file, Context.MODE_PRIVATE)
+        sp.edit().clear().apply()
+        val p1 = RepoStoragePrefs.openForTest(sp)
+        p1.migratedFromD27b = true
+        val p2 = RepoStoragePrefs.openForTest(sp)
+        assertTrue(p2.migratedFromD27b)
     }
 }

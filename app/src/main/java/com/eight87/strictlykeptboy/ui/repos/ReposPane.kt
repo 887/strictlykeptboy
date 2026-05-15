@@ -475,10 +475,14 @@ private fun ReposList(
         // Conditions: mirror still None AND user skipped during wizard
         // AND not already dismissed. Recomposed when prefs flip.
         if (repoStoragePrefs != null && notificationPrefs != null && onPickBackupFolder != null) {
-            val mirror by repoStoragePrefs.state.collectAsState()
+            val parent by repoStoragePrefs.state.collectAsState()
             val dismissed = notificationPrefs.dismissedReminders
             val skippedDuringWizard = repoStoragePrefs.skippedDuringWizard
-            val show = mirror is com.eight87.strictlykeptboy.prefs.MirrorLocation.None &&
+            // Round 2.17.A — "no parent confirmed yet" replaces the
+            // 2.7 `MirrorLocation.None` check. The wizard-skip reminder
+            // still drives the banner; Phase D/E replace it with the
+            // proper Storage step gate.
+            val show = parent == null &&
                 skippedDuringWizard &&
                 com.eight87.strictlykeptboy.notif.NotificationPrefs.REMINDER_BACKUP_FOLDER !in dismissed
             if (show) {

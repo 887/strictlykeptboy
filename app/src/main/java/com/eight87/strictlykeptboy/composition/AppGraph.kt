@@ -30,8 +30,10 @@ import com.eight87.strictlykeptboy.sync.SyncRuntime
 import com.eight87.strictlykeptboy.sync.SyncScheduler
 import com.eight87.strictlykeptboy.sync.SyncStatusStore
 import com.eight87.strictlykeptboy.notif.NotificationPrefs
+import com.eight87.strictlykeptboy.prefs.ParentLocation
+import com.eight87.strictlykeptboy.prefs.ParentLocationMigrator
 import com.eight87.strictlykeptboy.prefs.RepoStoragePrefs
-import com.eight87.strictlykeptboy.sync.MirrorReconciler
+import com.eight87.strictlykeptboy.sync.ParentReconciler
 import com.eight87.strictlykeptboy.theme.AppearancePrefs
 import com.eight87.strictlykeptboy.task.ActiveTaskController
 import com.eight87.strictlykeptboy.task.TaskPlaybackProjector
@@ -56,6 +58,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
@@ -282,27 +285,59 @@ class AppGraph(private val appContext: Context) {
     }
 
     /**
-     * Round 2.7.C — bridges [RepoStoragePrefs] to [RepoStore] by
-     * ensuring each repo carries a `file://`-transport `"mirror"` remote
-     * whenever a backup folder is configured. Invoked pre-sync from
-     * [scheduler]'s repoProvider hook.
+     * Round 2.17.A.8 — reconciler over the configured parent folder.
+     * Replaces the Round 2.7.C `MirrorReconciler` (renamed via `git mv`).
+     * No longer participates in the per-sync push fan-out — the parent
+     * IS the working tree, so there's no separate mirror to keep
+     * coherent. Surface is used by Phase E's adoption flow + the
+     * one-time `pruneStaleMirrorRemotes` call after migration.
      */
-    val mirrorReconciler: MirrorReconciler by lazy {
-        MirrorReconciler(repoStore = repoStore, storagePrefs = repoStoragePrefs)
+    val parentReconciler: ParentReconciler by lazy {
+        ParentReconciler(repoStore = repoStore, storagePrefs = repoStoragePrefs)
     }
 
     /**
-     * Round 2.7.B.2-UI — parked handle so Compose surfaces (Settings →
-     * Backup location, Repos pane reminder banner) can trigger the
-     * `OpenDocumentTree` launcher that's `ComponentActivity`-scoped.
+     * Round 2.17.A.5 — fire-once migrator from D-2.7.b's
+     * `filesDir/repos/` layout to D-2.17.a's `<parent>/<repoId>/` layout.
+     * Idempotent at the prefs-flag level; safe to call repeatedly.
      *
-     * MainActivity sets this to `{ openTreeLauncher.launch(null) }` after
-     * registering the launcher in `onCreate`. Composables call
-     * `appGraph.backupPickerHandle?.invoke()`. Null = not yet wired
+     * Called from [runOneShotMigrations] on the IO dispatcher during
+     * [parkRuntimes] so process-start doesn't block on disk work.
+     */
+    val parentLocationMigrator: ParentLocationMigrator by lazy {
+        ParentLocationMigrator(
+            storagePrefs = repoStoragePrefs,
+            repoStore = repoStore,
+            filesDir = appContext.filesDir,
+            deviceName = android.os.Build.MODEL ?: "",
+        )
+    }
+
+    /**
+     * Round 2.17.B.5 — parked handle so Compose surfaces can fire the
+     * SAF "pick parent" launcher that's `ComponentActivity`-scoped.
+     *
+     * (Renamed from `backupPickerHandle` per Phase B.5; Phase A keeps
+     * the old name as a compatibility alias because Phase B has the
+     * full picker-launcher rewrite — only the property name flips here
+     * to leave `main` buildable.)
+     *
+     * MainActivity sets this to `{ openTreeLauncher.launch(null) }`
+     * after registering the launcher in `onCreate`. Composables call
+     * `appGraph.parentPickerHandle?.invoke()`. Null = not yet wired
      * (previews / tests).
      */
     @Volatile
-    var backupPickerHandle: (() -> Unit)? = null
+    var parentPickerHandle: (() -> Unit)? = null
+
+    /** Compatibility alias retained until Phase B renames callsites. */
+    @Deprecated(
+        message = "Use parentPickerHandle (2.17.B.5 rename).",
+        replaceWith = ReplaceWith("parentPickerHandle"),
+    )
+    var backupPickerHandle: (() -> Unit)?
+        get() = parentPickerHandle
+        set(value) { parentPickerHandle = value }
 
     /** Phase J — per-process sync scheduler. */
     val scheduler: SyncScheduler by lazy {
@@ -310,33 +345,12 @@ class AppGraph(private val appContext: Context) {
             repoStore = repoStore,
             statusStore = statusStore,
             repoProvider = { cfg ->
-                // Round 2.7.C.1 — reconcile mirror remote before each sync
-                // pass so repos created before the user picked a folder
-                // catch up on their first tick. Idempotent + safe to call
-                // when no mirror is configured (no-op).
-                try {
-                    mirrorReconciler.reconcile(cfg.repoId)
-                } catch (_: Throwable) {
-                    // Don't fail the primary sync if mirror setup glitches —
-                    // the SyncStatusStore.MirrorPushFailure event surfaces
-                    // the user-visible signal on the next push attempt.
-                }
+                // Round 2.17.A.8 — the per-sync mirror reconcile is gone.
+                // The parent IS the working tree, so push fan-out only
+                // covers the user-configured remotes; the legacy `mirror`
+                // remote was pruned during migration.
                 val fresh = repoStore.get(cfg.repoId) ?: cfg
-                GitRepoRegistry.get(fresh.repoId)?.also { existing ->
-                    // Best-effort: if the repo already exists in the
-                    // registry but its remotes list grew (the reconciler
-                    // just added `mirror`), patch the in-memory GitRepo so
-                    // the upcoming push fan-out covers the mirror.
-                    val mirrorBinding = fresh.remotes
-                        .firstOrNull { it.name.value == MirrorReconciler.MIRROR_REMOTE_NAME }
-                    if (mirrorBinding != null && existing.remotes.none { it.name == mirrorBinding.name }) {
-                        try {
-                            existing.addRemote(mirrorBinding)
-                        } catch (_: Throwable) {
-                            // already added by a concurrent pass — ignore.
-                        }
-                    }
-                } ?: runCatching {
+                GitRepoRegistry.get(fresh.repoId) ?: runCatching {
                     GitRepo.open(
                         rootDir = File(fresh.rootDir),
                         repoId = fresh.repoId,
@@ -610,6 +624,21 @@ class AppGraph(private val appContext: Context) {
      * the singletons created here without a DI framework.
      */
     fun parkRuntimes() {
+        // Round 2.17.A.5 — one-shot migration of D-2.7.b's
+        // `filesDir/repos/` layout into D-2.17.a's `<parent>/<repoId>/`
+        // layout. Idempotent at the prefs-flag level. Runs on IO,
+        // fire-and-forget — the migrator's own [migrate] uses
+        // `withContext(Dispatchers.IO)` internally. After migrating we
+        // also drop the dead `mirror` remote from every repo so the
+        // post-2.17 push fan-out doesn't try to publish to it.
+        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching {
+                val result = parentLocationMigrator.migrate()
+                if (result is ParentLocationMigrator.Result.Migrated) {
+                    runCatching { parentReconciler.pruneStaleMirrorRemotes() }
+                }
+            }
+        }
         scheduler.startPeriodicTicks()
         SyncRuntime.scheduler = scheduler
         SyncRuntime.statusStore = statusStore

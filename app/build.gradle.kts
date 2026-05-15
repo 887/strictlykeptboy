@@ -219,6 +219,11 @@ dependencies {
   // Phase RR — ZXing core for QR code generation in the share sheet (Apache-2.0).
   implementation(libs.zxing.core)
 
+  // Round 2.17 Phase F — Apache Commons Compress (Apache-2.0).
+  // JGit does NOT pull commons-compress in transitively (verified in 2.17.A.1);
+  // wired explicitly so Phase F's BackupArchiver has Tar/Gzip streams.
+  implementation(libs.commons.compress)
+
   // Local tests
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)

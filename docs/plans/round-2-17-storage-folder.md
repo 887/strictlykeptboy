@@ -178,40 +178,49 @@ Strict dependency chain:
 - **Phase H** — tests + AVD smoke.
 - **Phase I** — plan close-out + supersede D-2.7.b in older plans.
 
-## Phase A — Data layer rework
+## Phase A — Data layer rework — shipped in 870c884
 
-- [ ] **A.1** Inventory `apache-commons-compress` availability on the
+- [x] **A.1** Inventory `apache-commons-compress` availability on the
   app classpath (transitive via JGit?). If absent, add
   `org.apache.commons:commons-compress` to `app/build.gradle.kts`
-  with a comment naming Phase F (backup tar.gz).
-- [ ] **A.2** Rename `prefs/RepoStoragePrefs.kt` → keep filename,
+  with a comment naming Phase F (backup tar.gz). — Not present
+  transitively (only JGit + sshd + bouncycastle on the `org.apache`
+  chain); wired explicitly at `commonsCompress = "1.27.1"`.
+- [x] **A.2** Rename `prefs/RepoStoragePrefs.kt` → keep filename,
   bump `PREFS_FILE` to `repo_storage_v2`, replace `MirrorLocation`
   sealed type at `RepoStoragePrefs.kt:124-137` with
   `ParentLocation { Internal(absPath) | External(treeUri, label,
   cachedRealPath?) }`. Update all call-sites; expect compile errors
   in `MainActivity.kt:79-170`, `MainActivity.kt:540-555`,
-  `sync/MirrorReconciler.kt:35-106`, settings screens.
-- [ ] **A.3** Add `prefs/SkbRootMarker.kt` — helpers
+  `sync/MirrorReconciler.kt:35-106`, settings screens. Compile sweep
+  fixed `MainActivity`, `BackupLocationCategory`, `ReposPane`,
+  `AppGraph`.
+- [x] **A.3** Add `prefs/SkbRootMarker.kt` — helpers
   `read(parent: File)`, `write(parent: File, deviceName: String)`,
   `isSkbRoot(parent: File): Boolean`. Marker format per D-2.17.d.
   Reuse the hand-rolled TOML codec in `store/`.
-- [ ] **A.4** Add `prefs/ParentLocationMigrator.kt`: idempotent
+- [x] **A.4** Add `prefs/ParentLocationMigrator.kt`: idempotent
   one-shot. Reads `repo_storage_v1.xml`, reads existing
   `filesDir/repos/<x>/` children, moves them under
   `filesDir/strictlykeptboy/<x>/`, writes the marker, writes
   `Internal` into v2 prefs, sets `migrated_from_d_2_7_b = true`.
   Survives partial completion (`mv -n` semantics).
-- [ ] **A.5** Wire the migrator into `composition/AppGraph.kt`'s init
+- [x] **A.5** Wire the migrator into `composition/AppGraph.kt`'s init
   block (run on `Dispatchers.IO`, idempotent guard via prefs flag).
-- [ ] **A.6** Robolectric test:
+  Migrator runs from `parkRuntimes()`; on success the migrator
+  also fires `ParentReconciler.pruneStaleMirrorRemotes()` to drop
+  the now-dead `mirror` remote from every repo.
+- [x] **A.6** Robolectric test:
   `ParentLocationMigratorTest` — pre-seed `filesDir/repos/{a,b}/`,
   run migrator, assert (a) both repos now under
   `filesDir/strictlykeptboy/`, (b) marker present, (c) prefs
-  records `Internal`, (d) running it twice is a no-op.
-- [ ] **A.7** Robolectric test: `RepoStoragePrefsV2Test` —
+  records `Internal`, (d) running it twice is a no-op. Added
+  4 tests including a partial-recovery (mv -n) scenario.
+- [x] **A.7** Robolectric test: `RepoStoragePrefsV2Test` —
   round-trip `Internal`, round-trip `External`, read-from-v1-then-
-  upgrade.
-- [ ] **A.8** Rename `sync/MirrorReconciler.kt` →
+  upgrade. Added 5 tests; `RepoStoragePrefsTest` also rewritten
+  for v2 (4 tests) plus 5 `SkbRootMarkerTest` cases.
+- [x] **A.8** Rename `sync/MirrorReconciler.kt` →
   `sync/ParentReconciler.kt`. Drop bare-mirror logic
   (`ensureBareMirror`, `bareFileFor`, the `mirror` remote
   manipulation). New surface: `suspend fun reconcile():
@@ -219,7 +228,9 @@ Strict dependency chain:
   newly-adoptable repos (not yet in `RepoStore`). Keep
   `applyToAll()` as a `pruneStaleMirrorRemotes()` helper that runs
   once during migration to clean up the dead `"mirror"` remotes.
-- [ ] **A.9** Add `prefs/ParentLocationGate.kt` — single source of
+  `MirrorReconcilerTest` rewritten as `ParentReconcilerTest`
+  (5 tests).
+- [x] **A.9** Add `prefs/ParentLocationGate.kt` — single source of
   truth for "do we have a confirmed parent yet?" used by wizard
   + add-repo to short-circuit the question. Returns `Confirmed |
   NeedsPicking`. Confirmed iff `ParentLocation` is set AND (for
