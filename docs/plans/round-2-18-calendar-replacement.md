@@ -702,7 +702,7 @@ repos slot in identically.
   then defers to `ExternalReminderScheduler.refresh` for the
   same diff + arm path used at runtime.
 
-## Phase G — Sync adapter (skb as Android Account) — shipped in <pending-sha>
+## Phase G — Sync adapter (skb as Android Account) — shipped in 8ff9d72
 
 - [x] **G.1** New `system/SkbAccountAuthenticator.kt` extends
   `AbstractAccountAuthenticator`. Account type
