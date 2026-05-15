@@ -428,7 +428,7 @@ repos slot in identically.
   prefs overrides to the synthesized `CalendarMeta` before emit.
   Mirrors `CalendarRegistry.applyOverlay` semantically.
 
-## Phase B — Permission UX + Settings toggle — shipped in PHASE_B_SHA
+## Phase B — Permission UX + Settings toggle — shipped in 6ec21a5
 
 - [x] **B.1** Add `<uses-permission android:name="android.permission.READ_CALENDAR" />`
   and `WRITE_CALENDAR` to `AndroidManifest.xml`. Comment them with
