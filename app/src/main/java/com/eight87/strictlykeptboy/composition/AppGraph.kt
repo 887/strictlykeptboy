@@ -507,6 +507,24 @@ class AppGraph(private val appContext: Context) {
         com.eight87.strictlykeptboy.system.AccountChangeNudge.open(appContext).also { it.start() }
     }
 
+    /** Round 2.18.F.6 — external (CalendarContract) reminder scheduler. */
+    val externalReminderScheduler: com.eight87.strictlykeptboy.notif.ExternalReminderScheduler by lazy {
+        com.eight87.strictlykeptboy.notif.ExternalReminderScheduler(appContext)
+    }
+
+    /**
+     * Round 2.18.G.6 / G.7 — AccountManager facade for skb's local-only
+     * accounts. Creates / removes the `<repoId>@local` accounts when the
+     * Settings toggle flips and fires sync requests on every commit.
+     */
+    val skbAccountManager: com.eight87.strictlykeptboy.system.SkbAccountManager by lazy {
+        com.eight87.strictlykeptboy.system.SkbAccountManager(
+            context = appContext,
+            repoStore = repoStore,
+            systemCalendarPrefs = systemCalendarPrefsStore,
+        )
+    }
+
     /** Round 2.18.A.5 / A.15 — synthesized [CalendarMeta] for system calendars. */
     val systemCalendarsRepository: com.eight87.strictlykeptboy.system.SystemCalendarsRepository by lazy {
         com.eight87.strictlykeptboy.system.SystemCalendarsRepository(
@@ -793,6 +811,31 @@ class AppGraph(private val appContext: Context) {
         // edits + repo flips are picked up without restarting the worker.
         BriefingRuntime.source = briefingSource
         BriefingRuntime.identityProvider = { loadActiveIdentity() }
+
+        // Round 2.18.G.4 — park handles the sync adapter needs at runtime.
+        // The adapter runs in this process, so static lookup is safe.
+        com.eight87.strictlykeptboy.system.SkbSyncRuntime.repoStore = repoStore
+        com.eight87.strictlykeptboy.system.SkbSyncRuntime.cacheDatabase = cacheDatabase
+        com.eight87.strictlykeptboy.system.SkbSyncRuntime.systemCalendarPrefs = systemCalendarPrefsStore
+
+        // Round 2.18.G.7 — every successful `GitRepo.commitAll` requests a
+        // sync against the matching repo's account. No-op when the toggle
+        // is off or no account exists for that repoId.
+        com.eight87.strictlykeptboy.system.SkbCommitNotifier.hook = { repoId ->
+            skbAccountManager.requestSyncFor(repoId)
+        }
+
+        // Round 2.18.F deferred — wire externalEventsFlow into the
+        // ExternalReminderScheduler so reminders mirrored from
+        // CalendarContract get armed alongside file-backed events.
+        // Reuses SourcesPublisher's external feed (sources.events) but
+        // filters to entries whose `external` sidecar is non-null.
+        appScope.launch {
+            sources.collect { src ->
+                val externals = src.events.filter { it.external != null }
+                runCatching { externalReminderScheduler.refresh(externals) }
+            }
+        }
     }
 
     /**

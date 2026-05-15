@@ -1194,4 +1194,7 @@
     <!-- Round 2.18.D.2 — read-only header for external events whose
          CAL_ACCESS_LEVEL is below CAL_ACCESS_CONTRIBUTOR (500). -->
     <string name="event_detail_external_read_only">Read-only — owned by %1$s</string>
+    <!-- Round 2.18.G.6 — publish skb to OS toggle. -->
+    <string name="settings_external_calendars_publish_label">Make skb visible to other Android apps</string>
+    <string name="settings_external_calendars_publish_helper">Create one Android account per skb repo so other apps (Wear OS, the lockscreen Calendar) can see skb events. Off by default.</string>
 </resources>

@@ -268,6 +268,12 @@ data class SettingsAccess(
      */
     val systemCalendarPrefs: com.eight87.strictlykeptboy.system.SystemCalendarPrefsStore? = null,
     val systemCalendarsFlow: kotlinx.coroutines.flow.StateFlow<List<com.eight87.strictlykeptboy.system.SystemCalendar>>? = null,
+    /**
+     * Round 2.18.G.6 — fires when "Make skb visible to other Android
+     * apps" toggle flips. Caller invokes
+     * `SkbAccountManager.enableForAllRepos()` / `disableForAllRepos()`.
+     */
+    val onPublishToOsChanged: (Boolean) -> Unit = { _ -> },
 )
 
 @Composable
@@ -723,7 +729,11 @@ private fun SettingsCategoryContent(
                 val sp = access.systemCalendarPrefs
                 val sf = access.systemCalendarsFlow
                 if (sp != null && sf != null) {
-                    ExternalCalendarsScreen(prefs = sp, systemCalendarsFlow = sf)
+                    ExternalCalendarsScreen(
+                        prefs = sp,
+                        systemCalendarsFlow = sf,
+                        onPublishToOsChanged = access.onPublishToOsChanged,
+                    )
                 } else {
                     DiagnosticMissingPrefBanner(
                         category,

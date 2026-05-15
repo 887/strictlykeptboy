@@ -820,6 +820,11 @@ class MainActivity : ComponentActivity() {
                             // Round 2.18.B.3 — External Calendars wiring.
                             systemCalendarPrefs = graph.systemCalendarPrefsStore,
                             systemCalendarsFlow = graph.systemCalendarsRawFlow,
+                            // Round 2.18.G.6 — publish-to-OS toggle.
+                            onPublishToOsChanged = { on ->
+                                if (on) graph.skbAccountManager.enableForAllRepos()
+                                else graph.skbAccountManager.disableForAllRepos()
+                            },
                             syncPrefs = graph.syncSettingsPrefs,
                             statusStore = graph.statusStore,
                             notificationPrefs = graph.notificationPrefs,

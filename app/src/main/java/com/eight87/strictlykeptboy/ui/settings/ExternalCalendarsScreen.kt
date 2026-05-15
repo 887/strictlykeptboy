@@ -52,6 +52,8 @@ import kotlinx.coroutines.launch
 const val TestTagExternalCalendarsScreen = "ExternalCalendarsScreen"
 const val TestTagExternalCalendarsShowSwitch = "ExternalCalendars-Show"
 const val TestTagExternalCalendarsAllowEditSwitch = "ExternalCalendars-AllowEdit"
+/** Round 2.18.G.6 — "Make skb visible to other Android apps" toggle. */
+const val TestTagExternalCalendarsPublishSwitch = "ExternalCalendars-Publish"
 const val TestTagExternalCalendarsCalendarRow = "ExternalCalendars-Cal-"
 /** Round 2.18.C.6 — permission-needed empty state container. */
 const val TestTagExternalCalendarsPermissionNeeded = "ExternalCalendars-PermissionNeeded"
@@ -93,6 +95,13 @@ fun ExternalCalendarsScreen(
      */
     detectInstalledCalendarApps: (android.content.Context) -> List<SystemCalendarAppDetector.InstalledCandidate> =
         { ctx -> SystemCalendarAppDetector.detectInstalled(ctx) },
+    /**
+     * Round 2.18.G.6 — fires when the user flips the "Make skb visible
+     * to other Android apps" toggle. The activity wires this to
+     * `SkbAccountManager.enableForAllRepos()` / `disableForAllRepos()`.
+     * No-op default so previews + tests don't depend on AccountManager.
+     */
+    onPublishToOsChanged: (Boolean) -> Unit = { _ -> },
 ) {
     val ctx = LocalContext.current
     val global by prefs.globalState.collectAsState()
@@ -303,6 +312,29 @@ fun ExternalCalendarsScreen(
                     }
                 }
             }
+            // Round 2.18.G.6 — publish skb repos as Android accounts +
+            // run the sync adapter that mirrors events into
+            // CalendarContract. Off by default. Orthogonal to the
+            // toggles above (which control reading external calendars
+            // *into* skb); this one controls the reverse direction. We
+            // surface it AFTER the per-calendar list block so existing
+            // tag-locator tests for that block continue to address the
+            // same nodes.
+            Spacer(Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(16.dp))
+            SwitchRow(
+                label = stringResource(R.string.settings_external_calendars_publish_label),
+                helper = stringResource(R.string.settings_external_calendars_publish_helper),
+                checked = global.publishToOs,
+                onCheckedChange = { wantOn ->
+                    prefs.setPublishToOs(wantOn)
+                    onPublishToOsChanged(wantOn)
+                },
+                enabled = true,
+                testTag = TestTagExternalCalendarsPublishSwitch,
+            )
+
             // Round 2.18.F.7 — Suppress system calendar notifications.
             // List the candidate calendar apps installed on the device;
             // tapping a row opens the OS notification settings for that

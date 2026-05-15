@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Round 2.18.G.5 — sync-adapter descriptor. Pairs the
+     com.android.calendar provider authority with skb's account type,
+     so AccountManager rows of this type get a CalendarContract sync
+     adapter wired up automatically. -->
+<sync-adapter xmlns:android="http://schemas.android.com/apk/res/android"
+    android:contentAuthority="com.android.calendar"
+    android:accountType="com.eight87.strictlykeptboy"
+    android:userVisible="true"
+    android:supportsUploading="false"
+    android:allowParallelSyncs="false"
+    android:isAlwaysSyncable="true" />
