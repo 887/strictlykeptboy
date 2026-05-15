@@ -219,6 +219,9 @@ class GitRepo internal constructor(
                 .setCommitter(authorIdentity.name, authorIdentity.email)
                 .setMessage(message)
                 .call()
+            // Round 2.18.G.7 — best-effort hook for the sync adapter,
+            // wired by AppGraph.parkRuntimes; null in tests.
+            com.eight87.strictlykeptboy.system.SkbCommitNotifier.notifyCommit(repoId)
             CommitResult.Success(commit.id, message)
         } catch (t: Throwable) {
             CommitResult.Failed(SyncError.Unknown(t))

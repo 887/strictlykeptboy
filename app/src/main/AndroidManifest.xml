@@ -15,6 +15,13 @@
     <uses-permission android:name="android.permission.READ_CALENDAR" />
     <uses-permission android:name="android.permission.WRITE_CALENDAR" />
 
+    <!-- Round 2.18.G.1 — AccountManager + sync adapter surface -->
+    <uses-permission android:name="android.permission.GET_ACCOUNTS" />
+    <uses-permission android:name="android.permission.READ_SYNC_SETTINGS" />
+    <uses-permission android:name="android.permission.WRITE_SYNC_SETTINGS" />
+    <uses-permission android:name="android.permission.AUTHENTICATE_ACCOUNTS" />
+    <uses-permission android:name="android.permission.MANAGE_ACCOUNTS" />
+
     <application
         android:name=".SkbApp"
         android:allowBackup="true"
@@ -144,6 +151,34 @@
             android:name=".sync.SyncService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+
+        <!-- Round 2.18.G.2 — AccountManager authenticator. Exposes
+             SkbAccountAuthenticator under the `com.eight87.strictlykeptboy`
+             account type. The framework binds + queries this service
+             via the intent-filter below + the authenticator xml. -->
+        <service
+            android:name=".system.SkbAuthenticatorService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.accounts.AccountAuthenticator" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accounts.AccountAuthenticator"
+                android:resource="@xml/authenticator" />
+        </service>
+
+        <!-- Round 2.18.G.4 — sync adapter service. Pairs the
+             com.android.calendar authority with our account type. -->
+        <service
+            android:name=".system.SkbSyncService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.content.SyncAdapter" />
+            </intent-filter>
+            <meta-data
+                android:name="android.content.SyncAdapter"
+                android:resource="@xml/sync_calendar" />
+        </service>
 
         <!-- Phase Q — Android Auto template surface (UI-S / D.17). -->
         <service

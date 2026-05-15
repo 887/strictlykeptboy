@@ -702,16 +702,16 @@ repos slot in identically.
   then defers to `ExternalReminderScheduler.refresh` for the
   same diff + arm path used at runtime.
 
-## Phase G — Sync adapter (skb as Android Account)
+## Phase G — Sync adapter (skb as Android Account) — shipped in <pending-sha>
 
-- [ ] **G.1** New `system/SkbAccountAuthenticator.kt` extends
+- [x] **G.1** New `system/SkbAccountAuthenticator.kt` extends
   `AbstractAccountAuthenticator`. Account type
   `com.eight87.strictlykeptboy`. One account per skb repo, named
   `<repoId>@local`.
-- [ ] **G.2** New `system/SkbAuthenticatorService.kt` —
+- [x] **G.2** New `system/SkbAuthenticatorService.kt` —
   bound service exposing the authenticator. Manifest entry +
   `res/xml/authenticator.xml` (`accountType`, `icon`, `label`).
-- [ ] **G.3** New `system/SkbCalendarSyncAdapter.kt` extends
+- [x] **G.3** New `system/SkbCalendarSyncAdapter.kt` extends
   `AbstractThreadedSyncAdapter`. In `onPerformSync`:
   - Diff skb's repo events for this account against
     `CalendarContract.Events` rows where `ACCOUNT_TYPE =
@@ -721,31 +721,31 @@ repos slot in identically.
   - One Calendar row per repo's logical "calendar" (e.g.
     `routines`, `work`, `meetings`) — the Calendar Provider
     permits one account to own many `Calendars` rows.
-- [ ] **G.4** `SkbSyncService` — bound service exposing the
+- [x] **G.4** `SkbSyncService` — bound service exposing the
   sync adapter via `getSyncAdapterBinder()`.
-- [ ] **G.5** `res/xml/sync_calendar.xml` — sync-adapter metadata:
+- [x] **G.5** `res/xml/sync_calendar.xml` — sync-adapter metadata:
   `contentAuthority="com.android.calendar"`,
   `accountType="com.eight87.strictlykeptboy"`,
   `supportsUploading="false"` (data flows one way — skb → OS).
-- [ ] **G.6** Account creation flow — gated behind Settings toggle
+- [x] **G.6** Account creation flow — gated behind Settings toggle
   "Make skb visible to other Android apps". When toggled on, call
   `AccountManager.addAccountExplicitly` for each active repo;
   toggled off, `removeAccountExplicitly` cleans up.
-- [ ] **G.7** Trigger sync on disk change — when `GitRepo.commitAll`
+- [x] **G.7** Trigger sync on disk change — when `GitRepo.commitAll`
   lands, call `ContentResolver.requestSync` for the matching
   account / `com.android.calendar` authority.
-- [ ] **G.8** Calendar-row idempotency — store the `Calendars._ID`
+- [x] **G.8** Calendar-row idempotency — store the `Calendars._ID`
   per (repoId, skbCalendarId) in app prefs; reuse on subsequent
   syncs.
-- [ ] **G.9** Event idempotency — set `Events._SYNC_ID` to skb's
+- [x] **G.9** Event idempotency — set `Events._SYNC_ID` to skb's
   event UUIDv7 so subsequent syncs match without ambiguity.
-- [ ] **G.10** Access level — write `CAL_ACCESS_OWNER` on the
+- [x] **G.10** Access level — write `CAL_ACCESS_OWNER` on the
   Calendar row so other apps see the skb-published events as
   fully owned (and skb itself can still edit them through the
   normal write path).
-- [ ] **G.11** Color seed — pass `CALENDAR_COLOR` from the repo's
+- [x] **G.11** Color seed — pass `CALENDAR_COLOR` from the repo's
   `colorSeed` so external apps see the skb identity color.
-- [ ] **G.12** Reminders mirror — skb's repo reminders publish as
+- [x] **G.12** Reminders mirror — skb's repo reminders publish as
   `CalendarContract.Reminders` rows so other apps (Wear OS) see
   them.
 

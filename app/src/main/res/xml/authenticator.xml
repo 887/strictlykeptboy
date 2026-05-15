@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Round 2.18.G.2 — AccountManager authenticator descriptor. The
+     `accountType` MUST match SkbAccountAuthenticator.SKB_ACCOUNT_TYPE
+     and the sync-adapter descriptor's `accountType`. -->
+<account-authenticator xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accountType="com.eight87.strictlykeptboy"
+    android:icon="@mipmap/ic_launcher"
+    android:smallIcon="@mipmap/ic_launcher"
+    android:label="@string/app_name" />
