@@ -32,7 +32,10 @@ class AlarmHorizonExtenderWorker(
 ) : Worker(ctx, params) {
 
     override fun doWork(): Result {
-        return runCatching { rearm(applicationContext) }
+        return runCatching {
+            rearm(applicationContext)
+            rearmExternal(applicationContext)
+        }
             .map { Result.success() }
             .getOrElse { Result.success() }
     }
@@ -88,6 +91,33 @@ class AlarmHorizonExtenderWorker(
             val text = file.readText(Charsets.UTF_8)
             val doc = com.eight87.strictlykeptboy.store.FrontmatterReader.parse(text)
             return doc.frontmatter
+        }
+
+        /**
+         * Round 2.18.F.8 — re-arm AlarmManager alarms for external
+         * (CalendarContract) events visible in the next [EXTERNAL_REARM_WINDOW]
+         * forward window. Walks `CalendarContract.Instances` and
+         * `CalendarContract.Reminders` for each event, mapping through
+         * [ExternalReminderMapping].
+         *
+         * Per the Phase F constraint: do NOT use a persisted snapshot —
+         * the source might have changed across reboot; re-read it.
+         */
+        val EXTERNAL_REARM_WINDOW_MS: Long = 14L * 24L * 60L * 60L * 1000L
+
+        fun rearmExternal(context: Context): Int {
+            val app = context.applicationContext
+            val bridge = com.eight87.strictlykeptboy.system.SystemEventsBridge(app)
+            val calBridge = com.eight87.strictlykeptboy.system.CalendarContractBridge(app)
+            val calendars = runCatching { calBridge.readOnce() }.getOrNull() ?: return 0
+            if (calendars.isEmpty()) return 0
+            val now = System.currentTimeMillis()
+            val toMs = now + EXTERNAL_REARM_WINDOW_MS
+            val events = runCatching { bridge.readOnce(now, toMs, calendars) }
+                .getOrDefault(emptyList())
+            if (events.isEmpty()) return 0
+            val extSched = ExternalReminderScheduler(app)
+            return extSched.refresh(events).armedAlarmIds.size
         }
     }
 }

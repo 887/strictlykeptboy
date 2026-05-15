@@ -1171,6 +1171,11 @@
     <string name="settings_external_calendars_permission_required_body">skb needs the Calendar permission to see your system calendars.</string>
     <string name="settings_external_calendars_permission_grant">Grant</string>
     <string name="settings_external_calendars_open_system_settings">Open Settings</string>
+    <!-- Round 2.18.F.7 — suppress system calendar notifications. -->
+    <string name="settings_external_calendars_suppress_header">Suppress system notifications</string>
+    <string name="settings_external_calendars_suppress_body">skb mirrors reminders for the external events it shows. Mute the source apps below to avoid double-buzzing.</string>
+    <string name="settings_external_calendars_suppress_empty">No calendar apps detected on this device.</string>
+    <string name="settings_external_calendars_suppress_row_action">Open notification settings</string>
     <!-- Round 2.18.C.7 — source attribution for external events. -->
     <string name="event_detail_external_source_google">From Google Calendar (%1$s)</string>
     <string name="event_detail_external_source_exchange">From Exchange (%1$s)</string>

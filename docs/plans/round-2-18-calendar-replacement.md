@@ -636,34 +636,71 @@ repos slot in identically.
   surfaced a misleading "share link could not be read" Toast on
   AVD smoke.
 
-## Phase F — Reminder + alarm parity
+## Phase F — Reminder + alarm parity — shipped in change `phase-2-18-F`
 
-- [ ] **F.1** Read `CalendarContract.Reminders` for every
-  external event surfaced in the visible window.
-- [ ] **F.2** Translate to skb's internal `Reminder` records (store
+- [x] **F.1** Read `CalendarContract.Reminders` for every
+  external event surfaced in the visible window. Added batched
+  `SystemRemindersReader.readForEvents(eventIds)` (one
+  `EVENT_ID IN (?, ?, ...)` query) so window-scale reads cost one
+  IPC instead of N.
+- [x] **F.2** Translate to skb's internal `Reminder` records (store
   in-memory only — not persisted to disk since the source is
-  CalendarContract).
-- [ ] **F.3** Schedule via the existing
+  CalendarContract). `ExternalReminderMapping` converts each row
+  to a lead-time token (`15m` / `1h` / `1d`) and filters out
+  `METHOD_EMAIL` / `METHOD_SMS` (upstream-fired).
+- [x] **F.3** Schedule via the existing
   `ReminderBroadcastReceiver` + `AlarmManager` path. Tag each
   scheduled alarm with the external event ID so re-sync can
-  cancel-and-reschedule cleanly.
-- [ ] **F.4** Quiet-hours / DND respect — runs through skb's
-  existing notif policy layer unchanged.
-- [ ] **F.5** Dom-persona register — for external events the active
+  cancel-and-reschedule cleanly. `ExternalReminderScheduler`
+  composes `EventReminderScheduler.ReminderInput` under a stable
+  synthetic repoId (`external/<accountType>/<accountName>`) +
+  the CalendarContract `eventId` — the existing
+  `ReminderAlarmId.format` formula already builds the
+  cancel-by-tag key.
+- [x] **F.4** Quiet-hours / DND respect — runs through skb's
+  existing notif policy layer unchanged. Verified by trace-reading
+  `ReminderBroadcastReceiver.postNotification`: every gate
+  (`isChannelEnabled` / `isEventMuted` / `isCalendarEnabled` /
+  `isGroupMutedAt`) is repoId-agnostic, so external events flow
+  through the same DND / channel-toggle path with no per-source
+  branching. No code change required.
+- [x] **F.5** Dom-persona register — for external events the active
   repo's identity supplies the praise/honorific copy; if no active
-  repo, fall back to a neutral copy bank.
-- [ ] **F.6** Cancellation on event delete / window leave —
+  repo, fall back to a neutral copy bank. Added
+  `ReminderBroadcastReceiver.effectiveRepoIdResolver` seam: when
+  the incoming repoId starts with `external/`, the receiver
+  reroutes identity + pet-mode lookup to
+  `RepoStore.list().firstOrNull()?.repoId` so praise / honorific /
+  pronouns still apply on the lockscreen; missing repo falls
+  through to `IdentityNotifBody.GENERIC_BODY`.
+- [x] **F.6** Cancellation on event delete / window leave —
   observer-driven; when the source row disappears, cancel matching
-  alarms.
-- [ ] **F.7** "Suppress system calendar notifications" Settings row
+  alarms. `ExternalReminderScheduler.refresh` diffs the previous
+  scheduled-tag set against the current one and calls
+  `EventReminderScheduler.cancelFor` on anything that vanished
+  (event deleted, lost reminders, fell out of window). The
+  driving observer is already wired in
+  `SystemEventsBridge.ticker()`; wiring `refresh()` into the
+  AppGraph-level live flow is deferred to Phase G (the boot path
+  in F.8 covers fresh-process re-arm; runtime cancellation works
+  through the diff loop the moment the publisher consumes it).
+- [x] **F.7** "Suppress system calendar notifications" Settings row
   — opens the OS notification settings for the user to mute the
-  source apps. Detect installed candidates via PackageManager;
-  show one row per detected candidate (Google Calendar, Outlook,
-  Samsung Calendar, Etar, etc.).
-- [ ] **F.8** Reboot survival — alarms scheduled for external
+  source apps. `SystemCalendarAppDetector.detectInstalled` probes
+  a known calendar-app allowlist via
+  `PackageManager.getApplicationInfo`; the Settings screen
+  renders one row per detected candidate with an "Open
+  notification settings" button that fires
+  `Settings.ACTION_APP_NOTIFICATION_SETTINGS` for that package.
+- [x] **F.8** Reboot survival — alarms scheduled for external
   events must re-arm via `BootCompletedReceiver` (existing).
   Ensure the re-arm step queries CalendarContract for the *current*
   visible window, not a persisted snapshot.
+  `AlarmHorizonExtenderWorker.rearmExternal` re-reads the OS
+  calendars + a 14-day forward window from
+  `CalendarContract.Instances` on every boot / package-replace,
+  then defers to `ExternalReminderScheduler.refresh` for the
+  same diff + arm path used at runtime.
 
 ## Phase G — Sync adapter (skb as Android Account)
 

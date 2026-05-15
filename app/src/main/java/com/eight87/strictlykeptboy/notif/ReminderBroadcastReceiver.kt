@@ -96,8 +96,15 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
         // wizard actually reaches the lockscreen. Derivation reads the
         // active repo's `mode.toml`; private flag short-circuits inside
         // `bodyForPet` before any pet-mode phrasing applies.
-        val identity = if (priv) null else identityResolver(context, repoId)
-        val petMode = if (priv) PetMode.None else petModeResolver(context, repoId)
+        // Round 2.18.F.5 — external events (`external/<accountType>/...`)
+        // have no on-disk identity.toml; reroute to the active write-target
+        // repo so praise/honorific copy still applies. Plain repoIds pass
+        // through unchanged.
+        val resolvedRepoId = effectiveRepoIdResolver(context, repoId)
+        val identity = if (priv || resolvedRepoId == null) null
+            else identityResolver(context, resolvedRepoId)
+        val petMode = if (priv || resolvedRepoId == null) PetMode.None
+            else petModeResolver(context, resolvedRepoId)
         val identityBody = IdentityNotifBody.bodyForPet(
             identity = identity,
             title = title,
@@ -182,6 +189,23 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
         @JvmStatic
         internal var identityResolver: (Context, String) -> com.eight87.strictlykeptboy.store.IdentityTomlData? =
             { context, repoId -> IdentityNotifBody.loadFor(context, repoId) }
+
+        /**
+         * Round 2.18.F.5 — translate a possibly-synthetic external repoId
+         * to the active write-target repo for identity / pet-mode lookup.
+         * Pass-through for plain repoIds. Returns `null` only when there
+         * is no configured repo at all, which the receiver treats as the
+         * neutral-copy fallback (no praise / honorific applied).
+         */
+        @JvmStatic
+        internal var effectiveRepoIdResolver: (Context, String) -> String? = { context, repoId ->
+            if (repoId.startsWith("external/")) {
+                runCatching { RepoStore.open(context).list().firstOrNull()?.repoId }
+                    .getOrNull()
+            } else {
+                repoId
+            }
+        }
 
         const val ACTION_FIRE = "com.eight87.strictlykeptboy.notif.FIRE"
         const val ACTION_SNOOZE = "com.eight87.strictlykeptboy.notif.SNOOZE"
