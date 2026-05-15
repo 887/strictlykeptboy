@@ -1125,6 +1125,18 @@
     <string name="backuprestore_restore_placeholder">Restore coming in Phase G</string>
     <string name="backuprestore_export_failed">Export failed</string>
     <string name="backuprestore_export_done">Backup saved (%1$s)</string>
+    <string name="backuprestore_restore_folder_title">Restore from current folder</string>
+    <string name="backuprestore_restore_folder_subtitle">Re-scan the parent folder on disk and replace the repo list. Use this after manual edits (rename, drop in, move).</string>
+    <string name="backuprestore_restore_archive_title">Restore from backup archive</string>
+    <string name="backuprestore_restore_archive_subtitle">Pick a .tar.gz produced by Export and replace the parent folder contents.</string>
+    <string name="backuprestore_restore_dialog_title">Restore strictlykeptboy data?</string>
+    <string name="backuprestore_restore_folder_body">This will replace your current repo list with whatever\'s on disk under the parent folder. Existing repo configurations not found on disk will be removed.</string>
+    <string name="backuprestore_restore_archive_body">This will WIPE everything under the parent folder and extract the archive in its place. The current repo list will be replaced. This cannot be undone.</string>
+    <string name="backuprestore_restore_confirm">Restore</string>
+    <string name="backuprestore_restore_cancel">Cancel</string>
+    <string name="backuprestore_restore_done">Restore complete — %1$d repo(s)</string>
+    <string name="backuprestore_restore_failed">Restore failed</string>
+    <string name="backuprestore_restore_unsafe">Refusing to wipe: folder contains files not produced by strictlykeptboy</string>
 
     <!-- Move job -->
     <string name="repo_mover_title">Moving repos…</string>

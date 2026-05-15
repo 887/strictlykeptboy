@@ -141,6 +141,29 @@ class RepoStore internal constructor(
         update(existing.copy(drawTasksFrom = value))
     }
 
+    /**
+     * Round 2.17 Phase G.5 — wholesale replacement. Wipes every
+     * per-repo key + the index, then writes `list` back. Emits a
+     * single [state] update at the end.
+     *
+     * Used by the Restore flows (rescan + archive) to swap the entire
+     * configured repo set after the on-disk parent has been replaced.
+     *
+     * Caller's responsibility: ensure the new [RepoConfig.rootDir]
+     * paths actually exist on disk before calling — this only
+     * rewrites the prefs.
+     */
+    suspend fun replaceAll(list: List<RepoConfig>) = mutex.withLock {
+        val current = _state.value
+        prefs.edit().run {
+            for (cfg in current) remove(keyFor(cfg.repoId))
+            for (cfg in list) putString(keyFor(cfg.repoId), json.encodeToString(cfg))
+            putString(INDEX_KEY, json.encodeToString(list.map { it.repoId }))
+            apply()
+        }
+        _state.value = list
+    }
+
     suspend fun setPrimary(repoId: String, name: RemoteName) {
         val existing = get(repoId) ?: error("repo $repoId not in store")
         require(existing.remotes.any { it.name == name }) {

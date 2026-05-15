@@ -839,6 +839,133 @@ class MainActivity : ComponentActivity() {
                                     "strictlykeptboy-backup-$today.tar.gz",
                                 )
                             },
+                            // Round 2.17 Phase G.3 — "Restore from current
+                            // folder". Dialog has confirmed by the time
+                            // this runs. Rescan the parent on disk, replace
+                            // the RepoStore contents, then trigger a full
+                            // re-index over the new set.
+                            onRestoreFromFolder = restore@{
+                                val parentDir = graph.repoStoragePrefs.location
+                                    ?.workingDir(filesDir)
+                                if (parentDir == null || !parentDir.isDirectory) {
+                                    Toast.makeText(
+                                        this@MainActivity,
+                                        getString(R.string.backuprestore_restore_failed),
+                                        Toast.LENGTH_LONG,
+                                    ).show()
+                                    return@restore
+                                }
+                                kotlinx.coroutines.GlobalScope.launch(
+                                    kotlinx.coroutines.Dispatchers.IO,
+                                ) {
+                                    val result = runCatching {
+                                        val configs = com.eight87.strictlykeptboy.backup
+                                            .BackupRestorer.rescanParent(parentDir)
+                                        graph.repoStore.replaceAll(configs)
+                                        reindexAfterRestore(graph, configs)
+                                        configs.size
+                                    }
+                                    kotlinx.coroutines.withContext(
+                                        kotlinx.coroutines.Dispatchers.Main,
+                                    ) {
+                                        result.fold(
+                                            onSuccess = { n ->
+                                                Toast.makeText(
+                                                    this@MainActivity,
+                                                    getString(
+                                                        R.string.backuprestore_restore_done,
+                                                        n,
+                                                    ),
+                                                    Toast.LENGTH_LONG,
+                                                ).show()
+                                            },
+                                            onFailure = {
+                                                Toast.makeText(
+                                                    this@MainActivity,
+                                                    getString(R.string.backuprestore_restore_failed),
+                                                    Toast.LENGTH_LONG,
+                                                ).show()
+                                            },
+                                        )
+                                    }
+                                }
+                            },
+                            // Round 2.17 Phase G.3 — "Restore from backup
+                            // archive". Park a handler for the SAF picker
+                            // launcher; on grant, wipe + extract + replace
+                            // RepoStore + re-index. Dialog confirmed
+                            // already.
+                            onPickRestoreArchive = pick@{
+                                val parentDir = graph.repoStoragePrefs.location
+                                    ?.workingDir(filesDir)
+                                if (parentDir == null) {
+                                    Toast.makeText(
+                                        this@MainActivity,
+                                        getString(R.string.backuprestore_restore_failed),
+                                        Toast.LENGTH_LONG,
+                                    ).show()
+                                    return@pick
+                                }
+                                pendingRestoreArchiveHandler = handler@{ srcUri ->
+                                    kotlinx.coroutines.GlobalScope.launch(
+                                        kotlinx.coroutines.Dispatchers.IO,
+                                    ) {
+                                        val result = runCatching {
+                                            contentResolver.openInputStream(srcUri)?.use { input ->
+                                                com.eight87.strictlykeptboy.backup
+                                                    .BackupRestorer.restoreFromArchive(
+                                                        input = input,
+                                                        parent = parentDir,
+                                                        deviceName = android.os.Build.MODEL ?: "",
+                                                    )
+                                            } ?: error("openInputStream returned null")
+                                            val configs = com.eight87.strictlykeptboy.backup
+                                                .BackupRestorer.rescanParent(parentDir)
+                                            graph.repoStore.replaceAll(configs)
+                                            reindexAfterRestore(graph, configs)
+                                            configs.size
+                                        }
+                                        kotlinx.coroutines.withContext(
+                                            kotlinx.coroutines.Dispatchers.Main,
+                                        ) {
+                                            result.fold(
+                                                onSuccess = { n ->
+                                                    Toast.makeText(
+                                                        this@MainActivity,
+                                                        getString(
+                                                            R.string.backuprestore_restore_done,
+                                                            n,
+                                                        ),
+                                                        Toast.LENGTH_LONG,
+                                                    ).show()
+                                                },
+                                                onFailure = { err ->
+                                                    val msg =
+                                                        if (err is com.eight87.strictlykeptboy.backup
+                                                                .BackupRestorer.UnsafeWipeException
+                                                        ) {
+                                                            getString(R.string.backuprestore_restore_unsafe)
+                                                        } else {
+                                                            getString(R.string.backuprestore_restore_failed)
+                                                        }
+                                                    Toast.makeText(
+                                                        this@MainActivity,
+                                                        msg,
+                                                        Toast.LENGTH_LONG,
+                                                    ).show()
+                                                },
+                                            )
+                                        }
+                                    }
+                                }
+                                // application/gzip is the canonical type;
+                                // also allow */* so devices that surface
+                                // the file as `application/x-gzip` /
+                                // `octet-stream` can be picked.
+                                restoreArchivePickerLauncher.launch(
+                                    arrayOf("application/gzip", "application/x-gzip", "*/*"),
+                                )
+                            },
                             onSwitchToInternal = switch@{
                                 val oldLoc = graph.repoStoragePrefs.location ?: return@switch
                                 val oldDir = oldLoc.workingDir(filesDir)
@@ -1134,6 +1261,37 @@ class MainActivity : ComponentActivity() {
         var i = 0
         while (v >= 1024.0 && i < units.size - 1) { v /= 1024.0; i++ }
         return String.format(java.util.Locale.ROOT, "%.1f %s", v, units[i])
+    }
+
+    /**
+     * Round 2.17 Phase G.6 — invalidate the cache DB + full re-index
+     * the restored repos. Order matters: this MUST run AFTER the
+     * on-disk wipe/extract AND `RepoStore.replaceAll`, so the new
+     * configs are authoritative and we don't index a stale set.
+     *
+     * Implementation: clear all Room tables, drop the GitRepo handle
+     * cache (rootDirs may have changed), then `fullScan` each repo —
+     * which records a fresh `RepoStateRow` head SHA + schema version.
+     */
+    private suspend fun reindexAfterRestore(graph: AppGraph, configs: List<RepoConfig>) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching { graph.cacheDatabase.clearAllTables() }
+            GitRepoRegistry.clear()
+            val indexer = com.eight87.strictlykeptboy.cache.Indexer(graph.cacheDatabase)
+            for (cfg in configs) {
+                runCatching {
+                    val gitRepo = GitRepo.open(
+                        rootDir = File(cfg.rootDir),
+                        repoId = cfg.repoId,
+                        remotes = cfg.remotes,
+                        primaryRemote = cfg.primaryRemote,
+                        authorIdentity = cfg.authorIdentity,
+                        defaultBranch = cfg.defaultBranch,
+                    ).also(GitRepoRegistry::put)
+                    indexer.fullScan(cfg.repoId, gitRepo)
+                }
+            }
+        }
     }
 
     private suspend fun buildExportContent(repo: RepoConfig): String =

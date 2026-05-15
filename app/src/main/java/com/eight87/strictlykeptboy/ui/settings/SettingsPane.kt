@@ -237,6 +237,20 @@ data class SettingsAccess(
      * `Dispatchers.IO` once the user grants a destination URI.
      */
     val onExportBackup: () -> Unit = {},
+    /**
+     * Round 2.17 Phase G.3 — "Restore from current folder" row in
+     * BackupRestoreScreen. The dialog has already confirmed when this
+     * fires; callers do the rescan + RepoStore.replaceAll + cache
+     * invalidation on Dispatchers.IO.
+     */
+    val onRestoreFromFolder: () -> Unit = {},
+    /**
+     * Round 2.17 Phase G.3 — "Restore from backup archive" row in
+     * BackupRestoreScreen. The dialog has already confirmed when this
+     * fires; the activity parks a handler on the SAF
+     * OpenDocument launcher and consumes the picked URI.
+     */
+    val onPickRestoreArchive: () -> Unit = {},
     // Round 2.15 — demo-mode toggle prefs.
     val demoModePrefs: com.eight87.strictlykeptboy.prefs.DemoModePrefs? = null,
 )
@@ -692,6 +706,8 @@ private fun SettingsCategoryContent(
                     onAdoptExistingFolder = access.onAdoptExistingFolder,
                     onSwitchToInternal = access.onSwitchToInternal,
                     onExportBackup = access.onExportBackup,
+                    onRestoreFromFolder = access.onRestoreFromFolder,
+                    onPickRestoreArchive = access.onPickRestoreArchive,
                 )
             } ?: DiagnosticMissingPrefBanner(category, "repoStoragePrefs")
         }
@@ -746,6 +762,8 @@ private fun StorageCategoryHost(
     onAdoptExistingFolder: () -> Unit,
     onSwitchToInternal: () -> Unit,
     onExportBackup: () -> Unit = {},
+    onRestoreFromFolder: () -> Unit = {},
+    onPickRestoreArchive: () -> Unit = {},
 ) {
     var sub by remember { mutableStateOf(StorageSubScreen.Rows) }
     when (sub) {
@@ -766,6 +784,8 @@ private fun StorageCategoryHost(
         }
         StorageSubScreen.BackupRestore -> BackupRestoreScreen(
             onExportBackup = onExportBackup,
+            onRestoreFromFolder = onRestoreFromFolder,
+            onPickRestoreArchive = onPickRestoreArchive,
         )
     }
 }
