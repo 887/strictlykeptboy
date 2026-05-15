@@ -228,6 +228,22 @@ sealed interface ParentLocation {
     fun workingDir(): File?
 
     /**
+     * Round 2.17.C.6 — non-null overload for callers that have a
+     * [filesDir] handy and want a deterministic fallback. Internal
+     * returns its configured path (typically `filesDir/strictlykeptboy`);
+     * External returns the cached real path if present, otherwise falls
+     * back to `filesDir/strictlykeptboy` so the scaffolder never lands
+     * on a null parent. Use this from wizard / Add-Repo call sites; use
+     * the nullable [workingDir] when you actually want to react to the
+     * cache being unpopulated (e.g. surfacing a re-pick prompt).
+     */
+    fun workingDir(filesDir: File): File = when (this) {
+        is Internal -> File(absPath)
+        is External -> cachedRealPath?.let { File(it) }
+            ?: File(filesDir, "strictlykeptboy")
+    }
+
+    /**
      * App-private parent. Default route for users who pick "Keep inside
      * the app". Stickers, recordings, and other media are easier to keep
      * here per the user's brief; the trade-off is uninstall-deletes-data.

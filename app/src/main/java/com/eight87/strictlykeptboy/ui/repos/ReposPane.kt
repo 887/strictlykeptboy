@@ -171,6 +171,10 @@ fun ReposPane(
                         scope = scope,
                         onModeChange = { mode = it },
                         onShowShare = { showShareSheetForRepo = it },
+                        // Round 2.17.C.3 — tablet detail-pane Add-Repo lands
+                        // under the configured parent (same as compact).
+                        parentDir = repoStoragePrefs?.location?.workingDir(context.filesDir)
+                            ?: com.eight87.strictlykeptboy.prefs.RepoStoragePrefs.defaultInternalDir(context),
                     )
                 },
             )
@@ -230,14 +234,30 @@ fun ReposPane(
                 onCancel = { mode = Mode.List },
                 onFinish = { result ->
                     scope.launch {
+                        // Round 2.17.C.3 — working-tree path now lives under
+                        // the configured parent. Compact-pane branch.
+                        val parentDir = repoStoragePrefs?.location?.workingDir(context.filesDir)
+                            ?: com.eight87.strictlykeptboy.prefs.RepoStoragePrefs.defaultInternalDir(context)
                         when (result) {
                             is AddRepoResult.LocalOnly -> {
-                                val cfg = result.toRepoConfig(rootDir = "/tmp/${Uuid7.generate()}")
+                                val repoId = Uuid7.generate().toString()
+                                val cfg = result.toRepoConfig(
+                                    rootDir = java.io.File(parentDir, repoId).absolutePath,
+                                )
+                                com.eight87.strictlykeptboy.git.warnIfRepoOutsideParent(
+                                    cfg, parentDir.absolutePath,
+                                )
                                 state.store.add(cfg)
                                 state.setActive(cfg.repoId)
                             }
                             is AddRepoResult.Remote -> {
-                                val cfg = result.toRepoConfig(rootDir = "/tmp/${Uuid7.generate()}")
+                                val repoId = Uuid7.generate().toString()
+                                val cfg = result.toRepoConfig(
+                                    rootDir = java.io.File(parentDir, repoId).absolutePath,
+                                )
+                                com.eight87.strictlykeptboy.git.warnIfRepoOutsideParent(
+                                    cfg, parentDir.absolutePath,
+                                )
                                 state.store.add(cfg)
                                 state.setActive(cfg.repoId)
                                 if (result.pat != null) {
@@ -669,6 +689,12 @@ private fun ReposDetailPane(
     scope: kotlinx.coroutines.CoroutineScope,
     onModeChange: (Mode) -> Unit,
     onShowShare: (String) -> Unit,
+    /**
+     * Round 2.17.C.3 — strictlykeptboy parent directory for the Add-Repo
+     * branch. The Add flow lands new working trees under this folder so
+     * the on-disk layout matches the configured [ParentLocation].
+     */
+    parentDir: java.io.File,
 ) {
     when (mode) {
         Mode.List -> Column(
@@ -694,12 +720,24 @@ private fun ReposDetailPane(
                 scope.launch {
                     when (result) {
                         is AddRepoResult.LocalOnly -> {
-                            val cfg = result.toRepoConfig(rootDir = "/tmp/${Uuid7.generate()}")
+                            val repoId = Uuid7.generate().toString()
+                            val cfg = result.toRepoConfig(
+                                rootDir = java.io.File(parentDir, repoId).absolutePath,
+                            )
+                            com.eight87.strictlykeptboy.git.warnIfRepoOutsideParent(
+                                cfg, parentDir.absolutePath,
+                            )
                             state.store.add(cfg)
                             state.setActive(cfg.repoId)
                         }
                         is AddRepoResult.Remote -> {
-                            val cfg = result.toRepoConfig(rootDir = "/tmp/${Uuid7.generate()}")
+                            val repoId = Uuid7.generate().toString()
+                            val cfg = result.toRepoConfig(
+                                rootDir = java.io.File(parentDir, repoId).absolutePath,
+                            )
+                            com.eight87.strictlykeptboy.git.warnIfRepoOutsideParent(
+                                cfg, parentDir.absolutePath,
+                            )
                             state.store.add(cfg)
                             state.setActive(cfg.repoId)
                             if (result.pat != null) {

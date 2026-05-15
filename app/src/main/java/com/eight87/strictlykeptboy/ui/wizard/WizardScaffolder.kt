@@ -60,7 +60,14 @@ object WizardScaffolder {
     )
 
     /**
-     * @param parentDir parent directory under which the new repo dir gets created
+     * @param parentDir the **strictlykeptboy parent folder** under which
+     *   the new repo dir gets created. Round 2.17.C.1: callers now pass
+     *   the canonical parent — `graph.repoStoragePrefs.location.workingDir(filesDir)`
+     *   for production, `filesDir/demo-repos/...` for the demo seeder
+     *   (demos are app-private by design and intentionally bypass the
+     *   user-facing parent). The scaffolder writes `<parent>/<repoId>/`
+     *   inside whatever directory it is handed; it does NOT itself
+     *   resolve `filesDir/strictlykeptboy` or the SAF cache path.
      * @param draft normalized [WizardDraft]
      * @param author committer identity (Name <email>)
      * @param tzId default timezone for new calendars
