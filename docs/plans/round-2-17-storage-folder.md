@@ -269,26 +269,38 @@ Strict dependency chain:
   `pendingRestoreArchiveHandler: ((Uri) -> Unit)?` so Phase G can
   attach its handler without re-registering the launcher.
 
-## Phase C — Repo scaffolding honours the parent
+## Phase C — Repo scaffolding honours the parent — shipped in <sha-pending>
 
-- [ ] **C.1** `WizardScaffolder.materialize`: change `parentDir`
+- [x] **C.1** `WizardScaffolder.materialize`: change `parentDir`
   param semantics — caller now passes the *strictlykeptboy parent*,
   not `filesDir/repos`. Scaffolder writes
-  `<parent>/<repoId>/`. Update KDoc.
-- [ ] **C.2** Update both call sites at `MainActivity.kt:562`
-  (wizard) and the demo-seeder call at `MainActivity.kt:278-279`.
-  Wizard call now reads
-  `graph.repoStoragePrefs.location.workingDir()` (Internal returns
-  `filesDir/strictlykeptboy`, External returns `cachedRealPath`).
-  Demo seeder keeps `filesDir/demo-repos/` — demos are app-private
-  by design, not user-data.
-- [ ] **C.3** `AddRepoNavHost.kt` (Local + Remote branches): on
-  Finish, the resolved working tree path is now under the parent,
-  not `filesDir/repos/`. Search-and-replace the three usages.
-- [ ] **C.4** Add `RepoConfig.rootDir` invariant: any new repo's
-  `rootDir` must start with the current parent's absolute path.
-  Assert in a debug-only `Log.w` for now (proper enforcement comes
-  with Phase E.5 move-job).
+  `<parent>/<repoId>/`. KDoc updated to call out the new contract
+  (caller passes the canonical parent; scaffolder no longer
+  resolves `filesDir/strictlykeptboy` or the SAF cache path).
+- [x] **C.2** Both wizard call sites updated.
+  `MainActivity.kt` wizard-scaffold now reads
+  `graph.repoStoragePrefs.location?.workingDir(filesDir) ?:
+  RepoStoragePrefs.defaultInternalDir(this)` and passes that as
+  `parentDir`. Demo seeder kept at `filesDir/demo-repos/...` per
+  the brief — demos are app-private by design, not user-data.
+- [x] **C.3** `AddRepoNavHost` Local + Remote branches: working
+  tree path now lands under the parent. Threaded a `parentDir:
+  File` parameter through `ReposPane` → `ReposDetailPane`, derived
+  from `repoStoragePrefs?.location?.workingDir(context.filesDir)`
+  with the internal-default fallback. Both AddRepoNavHost call
+  sites (compact + tablet detail) updated; the third usage is the
+  wizard scaffold in MainActivity above.
+- [x] **C.4** Added the debug-only invariant as a top-level
+  helper `warnIfRepoOutsideParent(...)` in `git/RepoConfig.kt`,
+  invoked from all three new-repo construction sites (wizard +
+  both AddRepo branches). `BuildConfig.DEBUG`-gated `Log.w` only;
+  proper enforcement + a move-job for repos that violate the
+  invariant arrive with Phase E.5.
+- [x] **C.5** Helper `ParentLocation.workingDir(filesDir: File): File`
+  added on the sealed type. Non-null overload alongside the
+  existing nullable `workingDir()` — Internal returns its
+  configured path, External returns `cachedRealPath` or falls
+  back to `filesDir/strictlykeptboy` when the cache is unpopulated.
 
 ## Phase D — Wizard "Where to store?" screen
 

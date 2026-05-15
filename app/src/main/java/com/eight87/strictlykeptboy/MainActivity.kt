@@ -626,39 +626,56 @@ class MainActivity : ComponentActivity() {
                         ),
                         onWizardScaffold = { draft ->
                             runCatching {
+                                // Round 2.17.C.2 — wizard scaffold now lands
+                                // under the configured parent (Internal:
+                                // filesDir/strictlykeptboy/, External: the
+                                // SAF cachedRealPath) instead of the legacy
+                                // filesDir/repos/. Falls back to the
+                                // canonical internal default if the user
+                                // hasn't confirmed a parent yet — Phase D
+                                // adds the wizard storage step that makes
+                                // this explicit; until then, the default
+                                // matches what the v1 fallback would have
+                                // produced anyway.
+                                val parentDir = graph.repoStoragePrefs.location?.workingDir(filesDir)
+                                    ?: com.eight87.strictlykeptboy.prefs.RepoStoragePrefs.defaultInternalDir(this@MainActivity)
                                 val outcome = WizardScaffolder.materialize(
-                                    parentDir = filesDir.resolve("repos"),
+                                    parentDir = parentDir,
                                     draft = draft,
                                     author = AuthorIdentity("me", "me@example.com"),
                                     assetPackLoader = graph.assetPackLoader,
                                 )
-                                graph.repoStore.add(
-                                    RepoConfig(
-                                        repoId = outcome.repoId,
-                                        displayName = draft.displayName.ifBlank { "my calendar" },
-                                        rootDir = outcome.rootDir.absolutePath,
-                                        remotes = emptyList(),
-                                        primaryRemote = null,
-                                        authorIdentity = outcome.authorIdentity,
-                                        defaultCalendarId = outcome.calendarIds.values.firstOrNull(),
-                                        defaultTodolistId = outcome.todolistId,
-                                        iconEmoji = when (draft.species) {
-                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Bat -> "🦇"
-                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Bunny -> "🐰"
-                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Cat -> "🐱"
-                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.CatChan -> "🐱"
-                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Fox -> "🦊"
-                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.FoxChan -> "🦊"
-                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Lion -> "🦁"
-                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Tiger -> "🐯"
-                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Wolf -> "🐺"
-                                        },
-                                        // Per D.88 / F48 — the species drives the per-repo avatar.
-                                        // `Sticker(<species>)` falls back to about_bat for bat and
-                                        // to AutoInitials for others until Phase WW lands.
-                                        iconSpecies = draft.species.name,
-                                    ),
+                                val scaffoldedConfig = RepoConfig(
+                                    repoId = outcome.repoId,
+                                    displayName = draft.displayName.ifBlank { "my calendar" },
+                                    rootDir = outcome.rootDir.absolutePath,
+                                    remotes = emptyList(),
+                                    primaryRemote = null,
+                                    authorIdentity = outcome.authorIdentity,
+                                    defaultCalendarId = outcome.calendarIds.values.firstOrNull(),
+                                    defaultTodolistId = outcome.todolistId,
+                                    iconEmoji = when (draft.species) {
+                                        com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Bat -> "🦇"
+                                        com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Bunny -> "🐰"
+                                        com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Cat -> "🐱"
+                                        com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.CatChan -> "🐱"
+                                        com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Fox -> "🦊"
+                                        com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.FoxChan -> "🦊"
+                                        com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Lion -> "🦁"
+                                        com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Tiger -> "🐯"
+                                        com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Wolf -> "🐺"
+                                    },
+                                    // Per D.88 / F48 — the species drives the per-repo avatar.
+                                    // `Sticker(<species>)` falls back to about_bat for bat and
+                                    // to AutoInitials for others until Phase WW lands.
+                                    iconSpecies = draft.species.name,
                                 )
+                                // Round 2.17.C.4 — debug-only invariant.
+                                com.eight87.strictlykeptboy.git.warnIfRepoOutsideParent(
+                                    scaffoldedConfig,
+                                    parentDir.absolutePath,
+                                )
+                                graph.repoStore.add(scaffoldedConfig)
                                 graph.defaultWriteRepoName.value = draft.displayName.ifBlank { "my calendar" }
                                 Unit
                             }

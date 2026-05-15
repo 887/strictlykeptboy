@@ -1,8 +1,11 @@
 package com.eight87.strictlykeptboy.git
 
+import android.util.Log
+import com.eight87.strictlykeptboy.BuildConfig
 import com.eight87.strictlykeptboy.ui.theming.RepoIconKind
 import com.eight87.strictlykeptboy.ui.theming.initialsFromName
 import com.eight87.strictlykeptboy.ui.theming.seedColorFromName
+import java.io.File
 import kotlinx.serialization.Serializable
 
 /**
@@ -114,6 +117,34 @@ data class RepoConfig(
         else -> RepoIconKind.AutoInitials(
             initials = initialsFromName(displayName),
             seedColor = seedColorFromName(displayName),
+        )
+    }
+}
+
+/**
+ * Round 2.17.C.4 — debug-only invariant check. Any new repo's [RepoConfig.rootDir]
+ * should land under the currently-configured parent folder. We only log a
+ * warning here (no enforcement); proper enforcement + a move-job for repos
+ * that violate the invariant arrive with Phase E.5. Call this at every
+ * site that constructs a brand-new [RepoConfig] before it goes into
+ * [RepoStore.add] (wizard scaffolding, AddRepoNavHost finish, demo
+ * seeder — demos intentionally violate this and pass a `parentAbsPath`
+ * that matches their `filesDir/demo-repos/...` root to silence the warning).
+ *
+ * No-op on release builds (gated by [BuildConfig.DEBUG]) to keep the
+ * `Log.w` call out of the production binary path.
+ */
+fun warnIfRepoOutsideParent(config: RepoConfig, parentAbsPath: String?) {
+    if (!BuildConfig.DEBUG) return
+    if (parentAbsPath.isNullOrBlank()) return
+    val normalizedParent = File(parentAbsPath).absolutePath
+    val normalizedRoot = File(config.rootDir).absolutePath
+    if (!normalizedRoot.startsWith(normalizedParent)) {
+        Log.w(
+            "RepoConfig",
+            "repo ${config.repoId} rootDir=$normalizedRoot is outside the " +
+                "configured parent=$normalizedParent — Phase E.5 will gain a " +
+                "move-job; for now this is just a warning.",
         )
     }
 }
