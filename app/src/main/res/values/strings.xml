@@ -1117,10 +1117,14 @@
     <string name="adopt_sheet_cancel">Cancel</string>
     <string name="adopt_sheet_done">Adopted %1$d repo(s).</string>
 
-    <!-- Backup / Restore placeholder -->
+    <!-- Backup / Restore -->
     <string name="backuprestore_title">Backup / Restore</string>
+    <string name="backuprestore_export_title">Export backup</string>
+    <string name="backuprestore_export_subtitle">Save the whole strictlykeptboy folder (all repos) as a .tar.gz archive you can keep or move to another device.</string>
     <string name="backuprestore_export_placeholder">Backup export coming in Phase F</string>
     <string name="backuprestore_restore_placeholder">Restore coming in Phase G</string>
+    <string name="backuprestore_export_failed">Export failed</string>
+    <string name="backuprestore_export_done">Backup saved (%1$s)</string>
 
     <!-- Move job -->
     <string name="repo_mover_title">Moving repos…</string>
