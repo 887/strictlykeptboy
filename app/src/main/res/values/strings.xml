@@ -1086,4 +1086,50 @@
     <string name="repos_backup_reminder_text">Set up a backup folder so your repos survive app uninstall</string>
     <string name="repos_backup_reminder_pick">Pick now</string>
     <string name="repos_backup_reminder_dismiss">Dismiss</string>
+
+    <!-- Round 2.17 Phase E — Storage category + sub-screens. -->
+    <string name="settings_category_storage">Storage</string>
+    <string name="settings_subtitle_storage">Where your repos live on disk + backup + restore.</string>
+    <string name="settings_storage_blurb">Strictlykeptboy keeps every repo as a subfolder of one parent folder. Pick where that parent lives, adopt repos from another folder, or back the whole tree up.</string>
+    <string name="settings_storage_folder_title">Storage folder</string>
+    <string name="settings_storage_folder_subtitle_none">Not set yet</string>
+    <string name="settings_storage_folder_subtitle_internal">Inside the app</string>
+    <string name="settings_storage_adopt_title">Adopt existing folder</string>
+    <string name="settings_storage_adopt_subtitle">Pick a folder that already contains strictlykeptboy repos.</string>
+    <string name="settings_storage_backuprestore_title">Backup / Restore</string>
+    <string name="settings_storage_backuprestore_subtitle">Export the whole parent as one archive, or restore from one.</string>
+
+    <!-- Storage folder screen -->
+    <string name="storage_folder_screen_title">Storage folder</string>
+    <string name="storage_folder_repo_count">%1$d repo(s) in this folder</string>
+    <string name="storage_folder_change_button">Change folder</string>
+    <string name="storage_folder_switch_internal_button">Switch to internal</string>
+    <string name="storage_folder_path_label">Path: %1$s</string>
+    <string name="storage_folder_kind_internal">Inside the app (private to this install)</string>
+    <string name="storage_folder_kind_external">External (%1$s)</string>
+    <string name="storage_folder_kind_none">No parent folder configured yet.</string>
+
+    <!-- Adopt sheet -->
+    <string name="adopt_sheet_title">Adopt repos from this folder</string>
+    <string name="adopt_sheet_empty">No strictlykeptboy repos found in the picked folder.</string>
+    <string name="adopt_sheet_no_marker">This folder is missing the .skb-root marker. Pick a folder that was previously a strictlykeptboy parent.</string>
+    <string name="adopt_sheet_confirm">Adopt %1$d repo(s) and switch parent</string>
+    <string name="adopt_sheet_cancel">Cancel</string>
+    <string name="adopt_sheet_done">Adopted %1$d repo(s).</string>
+
+    <!-- Backup / Restore placeholder -->
+    <string name="backuprestore_title">Backup / Restore</string>
+    <string name="backuprestore_export_placeholder">Backup export coming in Phase F</string>
+    <string name="backuprestore_restore_placeholder">Restore coming in Phase G</string>
+
+    <!-- Move job -->
+    <string name="repo_mover_title">Moving repos…</string>
+    <string name="repo_mover_progress">Moving %1$d of %2$d: %3$s</string>
+    <string name="repo_mover_cancel">Cancel</string>
+    <string name="repo_mover_done">Move complete.</string>
+    <string name="repo_mover_cancelled">Move cancelled. Parent reverted.</string>
+    <string name="repo_mover_failed">Move failed: %1$s</string>
+
+    <!-- Permission-revoked banner -->
+    <string name="repos_lost_access_banner">Strictlykeptboy lost access to its folder, tap to re-pick</string>
 </resources>

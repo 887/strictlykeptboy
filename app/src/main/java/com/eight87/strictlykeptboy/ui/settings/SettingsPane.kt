@@ -120,15 +120,22 @@ sealed class SettingsCategory(
     object Access : SettingsCategory(R.string.settings_category_access, "Access")
     /** 2.2.D.7 — Android Auto + tablet master-detail preferences. */
     object AutoTablet : SettingsCategory(R.string.settings_category_autotablet, "AutoTablet")
-    /** Round 2.7.B.4-UI — external backup-folder mirror picker. */
-    object BackupLocation : SettingsCategory(R.string.settings_category_backup, "BackupLocation")
+    /**
+     * Round 2.17 Phase E.2 — Storage category. Replaces the 2.7.D
+     * `BackupLocation` surface; the `testTag` is bumped to `"Storage"`
+     * so existing UI tests targeting the old tag fail loud rather than
+     * landing on the wrong screen. Tap routes to the in-pane
+     * StorageFolderScreen / AdoptExistingSheet / BackupRestoreScreen
+     * sub-flows owned by `SettingsCategoryContent`.
+     */
+    object Storage : SettingsCategory(R.string.settings_category_storage, "Storage")
 
     companion object {
         val all: List<SettingsCategory> by lazy {
             listOf(
                 Repos, Sync, Notifications, Calendars, Todolists,
                 Templates, Lifestyle, Identity, Appearance, About, Mode, CalDav,
-                Access, AutoTablet, BackupLocation,
+                Access, AutoTablet, Storage,
             )
         }
 
@@ -188,9 +195,41 @@ data class SettingsAccess(
     val tripFeed: com.eight87.strictlykeptboy.ui.trip.TripFeed? = null,
     val onOpenTrip: (com.eight87.strictlykeptboy.ui.trip.TripSummary) -> Unit = {},
     // Round 2.7.B.4-UI — backup-folder mirror prefs + picker handle.
+    // Round 2.17 Phase E.2 — `onPickBackupFolder` keeps its name for
+    // back-compat with the Repos-pane reminder banner wiring; it fires
+    // the parent SAF picker. `onRemoveBackupFolder` is gone in favour
+    // of the Storage screen's "Switch to internal" button.
     val repoStoragePrefs: com.eight87.strictlykeptboy.prefs.RepoStoragePrefs? = null,
     val onPickBackupFolder: () -> Unit = {},
     val onRemoveBackupFolder: () -> Unit = {},
+    /**
+     * Round 2.17 Phase E.4 — "Adopt existing folder" picker. Fires a
+     * SAF picker that DOES NOT change the parent; instead the caller
+     * runs `ParentReconciler.reconcileExternal(uri)` against the
+     * picked folder and presents an in-sheet confirmation list.
+     */
+    val onAdoptExistingFolder: () -> Unit = {},
+    /**
+     * Round 2.17 Phase E.5 — "Change folder" entry-point from the
+     * StorageFolderScreen. Fires the SAF picker via the activity, but
+     * the activity routes the grant through `RepoMover` instead of
+     * setting prefs in place (distinct from `onPickBackupFolder`,
+     * which is the wizard / banner / legacy-set-in-place path).
+     */
+    val onChangeStorageFolder: () -> Unit = {},
+    /**
+     * Round 2.17 Phase E.7 — observable "SAF permission revoked" flag
+     * for the Repos pane banner. When true, the red banner shows.
+     */
+    val safPermissionRevokedFlow: kotlinx.coroutines.flow.StateFlow<Boolean>? = null,
+    /**
+     * Round 2.17 Phase E.5 — "Switch to internal" / "Change folder"
+     * routes both trigger a [com.eight87.strictlykeptboy.sync.RepoMover]
+     * run. The caller owns the worker instance + the move-job dialog
+     * UI; this callback just kicks off the move with the resolved
+     * `newParentLocation`.
+     */
+    val onSwitchToInternal: () -> Unit = {},
     // Round 2.15 — demo-mode toggle prefs.
     val demoModePrefs: com.eight87.strictlykeptboy.prefs.DemoModePrefs? = null,
 )
@@ -310,7 +349,7 @@ private fun subtitleResFor(cat: SettingsCategory): Int = when (cat) {
     SettingsCategory.CalDav -> R.string.settings_subtitle_caldav
     SettingsCategory.Access -> R.string.settings_subtitle_access
     SettingsCategory.AutoTablet -> R.string.settings_subtitle_autotablet
-    SettingsCategory.BackupLocation -> R.string.settings_subtitle_backup
+    SettingsCategory.Storage -> R.string.settings_subtitle_storage
 }
 
 @Composable
@@ -345,8 +384,8 @@ private fun metaFor(cat: SettingsCategory): CategoryMeta {
             CategoryMeta(Icons.Filled.FolderShared, R.string.settings_subtitle_access, cs.secondary)
         SettingsCategory.AutoTablet ->
             CategoryMeta(Icons.Filled.Tune, R.string.settings_subtitle_autotablet, cs.tertiary)
-        SettingsCategory.BackupLocation ->
-            CategoryMeta(Icons.Filled.FolderShared, R.string.settings_subtitle_backup, cs.primary)
+        SettingsCategory.Storage ->
+            CategoryMeta(Icons.Filled.FolderShared, R.string.settings_subtitle_storage, cs.primary)
     }
 }
 
@@ -378,7 +417,7 @@ private val sections: List<SettingsSection> = listOf(
             SettingsCategory.CalDav,
             SettingsCategory.Access,
             SettingsCategory.AutoTablet,
-            SettingsCategory.BackupLocation,
+            SettingsCategory.Storage,
         ),
     ),
     SettingsSection(
@@ -634,12 +673,17 @@ private fun SettingsCategoryContent(
                     reposFlow = access.reposFlow,
                 )
             } ?: DiagnosticMissingPrefBanner(category, "autoTabletPrefs")
-            // Round 2.7.B.4-UI — backup-folder mirror.
-            SettingsCategory.BackupLocation -> access.repoStoragePrefs?.let { p ->
-                com.eight87.strictlykeptboy.ui.settings.categories.BackupLocationCategory(
+            // Round 2.17 Phase E.2 — Storage category (3-row entry; the
+            // active sub-screen is held in `storageSubScreen` state so
+            // tapping a row swaps the content pane without changing the
+            // outer category selection).
+            SettingsCategory.Storage -> access.repoStoragePrefs?.let { p ->
+                StorageCategoryHost(
                     prefs = p,
-                    onPickFolder = access.onPickBackupFolder,
-                    onRemoveFolder = access.onRemoveBackupFolder,
+                    reposFlow = access.reposFlow,
+                    onChangeFolder = access.onChangeStorageFolder,
+                    onAdoptExistingFolder = access.onAdoptExistingFolder,
+                    onSwitchToInternal = access.onSwitchToInternal,
                 )
             } ?: DiagnosticMissingPrefBanner(category, "repoStoragePrefs")
         }
@@ -679,6 +723,43 @@ private fun DiagnosticMissingPrefBanner(category: SettingsCategory, handleName: 
     }
 }
 
+
+/**
+ * Round 2.17 Phase E.2/E.3 — Storage category host. Renders the
+ * top-level row list and swaps to a sub-screen when one is open. State
+ * is local to the host so navigating away + back returns the user to
+ * the rows.
+ */
+@Composable
+private fun StorageCategoryHost(
+    prefs: com.eight87.strictlykeptboy.prefs.RepoStoragePrefs,
+    reposFlow: kotlinx.coroutines.flow.StateFlow<List<com.eight87.strictlykeptboy.git.RepoConfig>>?,
+    onChangeFolder: () -> Unit,
+    onAdoptExistingFolder: () -> Unit,
+    onSwitchToInternal: () -> Unit,
+) {
+    var sub by remember { mutableStateOf(StorageSubScreen.Rows) }
+    when (sub) {
+        StorageSubScreen.Rows -> com.eight87.strictlykeptboy.ui.settings.categories.StorageCategory(
+            prefs = prefs,
+            onOpenStorageFolder = { sub = StorageSubScreen.Folder },
+            onAdoptExistingFolder = onAdoptExistingFolder,
+            onOpenBackupRestore = { sub = StorageSubScreen.BackupRestore },
+        )
+        StorageSubScreen.Folder -> {
+            val flow = reposFlow ?: kotlinx.coroutines.flow.MutableStateFlow(emptyList())
+            StorageFolderScreen(
+                prefs = prefs,
+                reposFlow = flow,
+                onChangeFolder = onChangeFolder,
+                onSwitchToInternal = onSwitchToInternal,
+            )
+        }
+        StorageSubScreen.BackupRestore -> BackupRestoreScreen()
+    }
+}
+
+private enum class StorageSubScreen { Rows, Folder, BackupRestore }
 
 @Composable
 private fun CategoryPlaceholder(label: String) {

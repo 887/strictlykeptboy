@@ -1,5 +1,6 @@
 package com.eight87.strictlykeptboy.ui.repos
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -109,6 +110,22 @@ fun ReposPane(
      * Round 2.15 — demo-mode toggle row at the top of the repo list.
      */
     demoModePrefs: com.eight87.strictlykeptboy.prefs.DemoModePrefs? = null,
+    /**
+     * Round 2.17 Phase E.1 — when `repoStoragePrefs` is configured, the
+     * Add-Repo branch consults `ParentLocationGate.evaluate` and renders
+     * an inline Storage step instead of the form until the gate flips
+     * to Confirmed. Wired here so the host can pass `onPickInternal`
+     * + `onPickExternal` callbacks without duplicating the picker
+     * launcher.
+     */
+    onPickInternalStorage: () -> Unit = {},
+    /**
+     * Round 2.17 Phase E.7 — banner shown when the persisted SAF URI
+     * permission has been revoked from outside the app (system
+     * Settings → Apps → permissions). Tap fires the parent picker.
+     * Default null → no banner check.
+     */
+    safPermissionRevoked: Boolean = false,
 ) {
     var mode by remember { mutableStateOf<Mode>(Mode.List) }
     val repos by state.repos.collectAsState()
@@ -117,6 +134,20 @@ fun ReposPane(
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
     val widthClass = LocalWindowWidthSizeClass.current
+
+    // Round 2.17 Phase E.1 — gate evaluation. Recomposed on prefs flip
+    // (collectAsState pulls in `parent` so the gate re-derives).
+    val parentState = repoStoragePrefs?.state?.collectAsState()?.value
+    val storageGate: com.eight87.strictlykeptboy.prefs.ParentLocationGate.State? =
+        repoStoragePrefs?.let {
+            // Use `parentState` as a recomposition trigger (read but
+            // not used directly — `evaluate` reads the same prefs).
+            @Suppress("UNUSED_EXPRESSION") parentState
+            com.eight87.strictlykeptboy.prefs.ParentLocationGate.evaluate(
+                it, context.contentResolver,
+            )
+        }
+    val onAddRepoPickExternal: () -> Unit = { onPickBackupFolder?.invoke() }
 
     // Round 2.3.A.3 — default per-repo sync dispatch: call the existing
     // SyncService entrypoint for the given repo. Callers can override via
@@ -160,6 +191,7 @@ fun ReposPane(
                         notificationPrefs = notificationPrefs,
                         onPickBackupFolder = onPickBackupFolder,
                         demoModePrefs = demoModePrefs,
+                        safPermissionRevoked = safPermissionRevoked,
                     )
                 },
                 detail = {
@@ -175,6 +207,9 @@ fun ReposPane(
                         // under the configured parent (same as compact).
                         parentDir = repoStoragePrefs?.location?.workingDir(context.filesDir)
                             ?: com.eight87.strictlykeptboy.prefs.RepoStoragePrefs.defaultInternalDir(context),
+                        storageGate = storageGate,
+                        onPickExternalStorage = onAddRepoPickExternal,
+                        onPickInternalStorage = onPickInternalStorage,
                     )
                 },
             )
@@ -229,9 +264,13 @@ fun ReposPane(
                 notificationPrefs = notificationPrefs,
                 onPickBackupFolder = onPickBackupFolder,
                 demoModePrefs = demoModePrefs,
+                safPermissionRevoked = safPermissionRevoked,
             )
             Mode.Add -> AddRepoNavHost(
                 onCancel = { mode = Mode.List },
+                storageGate = storageGate,
+                onPickExternalStorage = onAddRepoPickExternal,
+                onPickInternalStorage = onPickInternalStorage,
                 onFinish = { result ->
                     scope.launch {
                         // Round 2.17.C.3 — working-tree path now lives under
@@ -392,6 +431,7 @@ private fun ReposList(
     notificationPrefs: com.eight87.strictlykeptboy.notif.NotificationPrefs? = null,
     onPickBackupFolder: (() -> Unit)? = null,
     demoModePrefs: com.eight87.strictlykeptboy.prefs.DemoModePrefs? = null,
+    safPermissionRevoked: Boolean = false,
 ) {
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -489,6 +529,13 @@ private fun ReposList(
                     )
                 }
             }
+        }
+
+        // Round 2.17 Phase E.7 — SAF permission-revoked banner. Shown
+        // when the host detected that the persisted URI grant is gone
+        // (boot-time check in `AppGraph.init` flips `safPermissionRevoked`).
+        if (safPermissionRevoked && onPickBackupFolder != null) {
+            SafPermissionRevokedBanner(onPick = { onPickBackupFolder() })
         }
 
         // Round 2.7.D.2-UI — dismissable backup-folder reminder banner.
@@ -609,6 +656,48 @@ const val TestTagBackupReminderBanner = "ReposPane-BackupReminderBanner"
 const val TestTagBackupReminderPick = "ReposPane-BackupReminderPick"
 const val TestTagBackupReminderDismiss = "ReposPane-BackupReminderDismiss"
 
+const val TestTagSafRevokedBanner = "ReposPane-SafRevokedBanner"
+const val TestTagSafRevokedRepick = "ReposPane-SafRevokedRepick"
+
+/**
+ * Round 2.17 Phase E.7 — banner shown when SAF permission for the
+ * external parent has been revoked from outside the app. Red surface
+ * (error-container) per D-2.17.k. Tap fires the parent picker.
+ */
+@Composable
+private fun SafPermissionRevokedBanner(onPick: () -> Unit) {
+    androidx.compose.material3.Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(TestTagSafRevokedBanner)
+            .clickable(onClick = onPick),
+        colors = androidx.compose.material3.CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+        ),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    stringResource(R.string.repos_lost_access_banner),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                )
+                androidx.compose.material3.TextButton(
+                    onClick = onPick,
+                    modifier = Modifier.testTag(TestTagSafRevokedRepick),
+                ) {
+                    Text(stringResource(R.string.repos_backup_reminder_pick))
+                }
+            }
+        }
+    }
+}
+
 /**
  * Round 2.7.D.2-UI — primary-container card with copy + "Pick now"
  * button + dismiss icon. Banner hides once the dismiss key lands in
@@ -695,6 +784,9 @@ private fun ReposDetailPane(
      * the on-disk layout matches the configured [ParentLocation].
      */
     parentDir: java.io.File,
+    storageGate: com.eight87.strictlykeptboy.prefs.ParentLocationGate.State? = null,
+    onPickExternalStorage: () -> Unit = {},
+    onPickInternalStorage: () -> Unit = {},
 ) {
     when (mode) {
         Mode.List -> Column(
@@ -716,6 +808,9 @@ private fun ReposDetailPane(
         }
         Mode.Add -> AddRepoNavHost(
             onCancel = { onModeChange(Mode.List) },
+            storageGate = storageGate,
+            onPickExternalStorage = onPickExternalStorage,
+            onPickInternalStorage = onPickInternalStorage,
             onFinish = { result ->
                 scope.launch {
                     when (result) {

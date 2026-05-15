@@ -52,6 +52,36 @@ class MainActivity : ComponentActivity() {
     private var pendingExportContent: String? = null
     private var onParsed: ((com.eight87.strictlykeptboy.port.ics.IcsParseReport) -> Unit)? = null
 
+    /** Round 2.17 Phase E.4 — adopt-sheet request, observed from Compose. */
+    val adoptSheetRequest:
+        kotlinx.coroutines.flow.MutableStateFlow<AdoptSheetState?> =
+        kotlinx.coroutines.flow.MutableStateFlow(null)
+
+    /** Round 2.17 Phase E.5 — pending move-job, observed from Compose. */
+    val moveJobRequest:
+        kotlinx.coroutines.flow.MutableStateFlow<MoveJobRequest?> =
+        kotlinx.coroutines.flow.MutableStateFlow(null)
+
+    /**
+     * Round 2.17 Phase E.4 — parameters for the adopt confirmation sheet.
+     */
+    data class AdoptSheetState(
+        val treeUri: String,
+        val label: String,
+        val parentDir: java.io.File,
+        val hasMarker: Boolean,
+    )
+
+    /**
+     * Round 2.17 Phase E.5 — RepoMover invocation parameters.
+     */
+    data class MoveJobRequest(
+        val oldParent: java.io.File,
+        val newParent: java.io.File,
+        val oldLocation: com.eight87.strictlykeptboy.prefs.ParentLocation,
+        val newLocation: com.eight87.strictlykeptboy.prefs.ParentLocation,
+    )
+
     private val openIcsLauncher = registerForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
@@ -104,6 +134,14 @@ class MainActivity : ComponentActivity() {
      */
     private var pendingAppGraph: com.eight87.strictlykeptboy.composition.AppGraph? = null
 
+    /**
+     * Round 2.17 Phase E.5 — when true, the next parent-picker grant
+     * routes through the RepoMover instead of overwriting prefs in
+     * place. Set by the Storage screen's "Change folder" CTA before
+     * firing `parentPickerHandle`; cleared after the picker returns.
+     */
+    private var parentPickerAsChangeFolder: Boolean = false
+
     private val parentPickerLauncher = registerForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
     ) { uri: Uri? ->
@@ -152,13 +190,31 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
-        graph.repoStoragePrefs.set(
-            com.eight87.strictlykeptboy.prefs.ParentLocation.External(
-                treeUri = uri.toString(),
-                label = label,
-                cachedRealPath = parentFile.absolutePath,
-            ),
+        val newLocation = com.eight87.strictlykeptboy.prefs.ParentLocation.External(
+            treeUri = uri.toString(),
+            label = label,
+            cachedRealPath = parentFile.absolutePath,
         )
+        // Round 2.17 Phase E.5 — when the picker was launched as a
+        // "Change folder" action (from Settings → Storage folder), route
+        // through the move-job so existing repos under the previous
+        // parent are physically moved instead of stranded.
+        val asChangeFolder = parentPickerAsChangeFolder
+        parentPickerAsChangeFolder = false
+        if (asChangeFolder) {
+            val oldLoc = graph.repoStoragePrefs.location
+            val oldDir = oldLoc?.workingDir(filesDir)
+            if (oldDir != null && oldDir.absolutePath != parentFile.absolutePath) {
+                moveJobRequest.value = MoveJobRequest(
+                    oldParent = oldDir,
+                    newParent = parentFile,
+                    oldLocation = oldLoc,
+                    newLocation = newLocation,
+                )
+                return@registerForActivityResult
+            }
+        }
+        graph.repoStoragePrefs.set(newLocation)
         // B.4 — reconcile against the new parent and Toast how many
         // repos got adopted (instead of "applied backup mirror to N").
         kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
@@ -171,6 +227,23 @@ class MainActivity : ComponentActivity() {
                 ).show()
             }
         }
+    }
+
+    /**
+     * Round 2.17 Phase E.4 — "Adopt existing folder" picker. Differs
+     * from [parentPickerLauncher] in that we do NOT switch parents on
+     * grant — we only run [com.eight87.strictlykeptboy.sync.ParentReconciler.reconcileExternal]
+     * against the picked folder and surface its discoveries in a
+     * confirmation sheet. The handler attached by Compose decides
+     * whether to commit (switch parent + register adoptees) or cancel.
+     */
+    private var pendingAdoptHandler: ((Uri) -> Unit)? = null
+
+    private val adoptPickerLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri: Uri? ->
+        if (uri == null) return@registerForActivityResult
+        pendingAdoptHandler?.invoke(uri)
     }
 
     /**
@@ -231,6 +304,11 @@ class MainActivity : ComponentActivity() {
         // it without owning an ActivityResultLauncher.
         pendingAppGraph = graph
         graph.parentPickerHandle = { parentPickerLauncher.launch(null) }
+
+        // Round 2.17 Phase E.7 — probe persisted SAF permissions on
+        // boot so the Repos pane red banner flips if the user revoked
+        // access from system Settings while we were dead.
+        graph.refreshSafPermissionState()
 
         // Phase O.2 — handle strictlykeptboy://share deep links.
         deepLinkHandler = { intent ->
@@ -617,20 +695,75 @@ class MainActivity : ComponentActivity() {
                             },
                             // Round 2.7.B.4-UI — backup folder picker access.
                             repoStoragePrefs = graph.repoStoragePrefs,
+                            // Round 2.17 Phase E.7 — SAF permission state.
+                            safPermissionRevokedFlow = graph.safPermissionRevoked,
                             onPickBackupFolder = {
                                 graph.parentPickerHandle?.invoke()
                             },
                             onRemoveBackupFolder = {
-                                // Round 2.17.A — "Remove backup" now means
-                                // "switch parent back to internal". Phase E
-                                // replaces this surface with the proper
-                                // "Switch to internal" flow + move-job; for
-                                // now we just flip the prefs so the build
-                                // is green.
-                                graph.repoStoragePrefs.set(
-                                    com.eight87.strictlykeptboy.prefs.ParentLocation.Internal(
-                                        absPath = filesDir.resolve("strictlykeptboy").absolutePath,
-                                    ),
+                                // Round 2.17.A — legacy hook. Phase E.3
+                                // replaces this surface with the explicit
+                                // "Switch to internal" button below; this
+                                // callback is no longer wired into the
+                                // Storage category itself but stays as a
+                                // no-op fallback for any legacy caller.
+                            },
+                            // Round 2.17 Phase E.4 — "Adopt existing folder"
+                            // entry-point. Stashes the handler that runs the
+                            // reconcile + confirmation sheet, then fires the
+                            // SAF picker.
+                            onChangeStorageFolder = {
+                                // Route the next parent-picker grant through
+                                // RepoMover (Phase E.5) rather than the
+                                // set-in-place behaviour the wizard/banner
+                                // use.
+                                parentPickerAsChangeFolder = true
+                                graph.parentPickerHandle?.invoke()
+                            },
+                            onAdoptExistingFolder = {
+                                pendingAdoptHandler = handler@{ pickedUri ->
+                                    val realPath = com.eight87.strictlykeptboy.prefs.SafTreeUriResolver
+                                        .resolveRealPath(pickedUri)
+                                    if (realPath == null) {
+                                        Toast.makeText(
+                                            this@MainActivity,
+                                            getString(R.string.parent_picker_internal_only),
+                                            Toast.LENGTH_LONG,
+                                        ).show()
+                                        return@handler
+                                    }
+                                    runCatching {
+                                        contentResolver.takePersistableUriPermission(
+                                            pickedUri,
+                                            Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                                or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+                                        )
+                                    }
+                                    val pickedFile = java.io.File(realPath)
+                                    val parentFile = if (
+                                        com.eight87.strictlykeptboy.prefs.SkbRootMarker.isSkbRoot(pickedFile)
+                                    ) pickedFile else java.io.File(pickedFile, "strictlykeptboy")
+                                    adoptSheetRequest.value = AdoptSheetState(
+                                        treeUri = pickedUri.toString(),
+                                        label = com.eight87.strictlykeptboy.prefs.SafTreeUriResolver
+                                            .deriveLabel(pickedUri),
+                                        parentDir = parentFile,
+                                        hasMarker = com.eight87.strictlykeptboy.prefs.SkbRootMarker
+                                            .isSkbRoot(parentFile),
+                                    )
+                                }
+                                adoptPickerLauncher.launch(null)
+                            },
+                            onSwitchToInternal = switch@{
+                                val oldLoc = graph.repoStoragePrefs.location ?: return@switch
+                                val oldDir = oldLoc.workingDir(filesDir)
+                                val newDir = filesDir.resolve("strictlykeptboy")
+                                moveJobRequest.value = MoveJobRequest(
+                                    oldParent = oldDir,
+                                    newParent = newDir,
+                                    oldLocation = oldLoc,
+                                    newLocation = com.eight87.strictlykeptboy.prefs.ParentLocation
+                                        .Internal(absPath = newDir.absolutePath),
                                 )
                             },
                             // Round 2.15 — demo-mode toggle access.
@@ -746,6 +879,66 @@ class MainActivity : ComponentActivity() {
                                     pendingCalendarEdit = null
                                 }
                             },
+                        )
+                    }
+                    // Round 2.17 Phase E.4 — Adopt confirmation sheet host.
+                    val adoptState by adoptSheetRequest.collectAsState()
+                    adoptState?.let { req ->
+                        com.eight87.strictlykeptboy.ui.settings.AdoptFolderSheet(
+                            request = req,
+                            reconcile = { graph.parentReconciler.reconcileExternal(req.parentDir) },
+                            onCancel = { adoptSheetRequest.value = null },
+                            onConfirm = { adoptees ->
+                                scope.launch {
+                                    runCatching {
+                                        // Switch parent to the picked folder.
+                                        if (!com.eight87.strictlykeptboy.prefs.SkbRootMarker
+                                                .isSkbRoot(req.parentDir)
+                                        ) {
+                                            com.eight87.strictlykeptboy.prefs.SkbRootMarker.write(
+                                                parent = req.parentDir,
+                                                deviceName = android.os.Build.MODEL ?: "",
+                                            )
+                                        }
+                                        graph.repoStoragePrefs.set(
+                                            com.eight87.strictlykeptboy.prefs.ParentLocation.External(
+                                                treeUri = req.treeUri,
+                                                label = req.label,
+                                                cachedRealPath = req.parentDir.absolutePath,
+                                            ),
+                                        )
+                                        // Register adoptees.
+                                        for (ad in adoptees) {
+                                            if (graph.repoStore.get(ad.repoId) != null) continue
+                                            graph.repoStore.add(
+                                                RepoConfig(
+                                                    repoId = ad.repoId,
+                                                    displayName = ad.repoId,
+                                                    rootDir = ad.rootDir.absolutePath,
+                                                    remotes = emptyList(),
+                                                    primaryRemote = null,
+                                                    authorIdentity = AuthorIdentity("me", "me@example.com"),
+                                                ),
+                                            )
+                                        }
+                                    }
+                                    Toast.makeText(
+                                        this@MainActivity,
+                                        getString(R.string.adopt_sheet_done, adoptees.size),
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
+                                    adoptSheetRequest.value = null
+                                }
+                            },
+                        )
+                    }
+                    // Round 2.17 Phase E.5 — Move-job dialog host.
+                    val moveReq by moveJobRequest.collectAsState()
+                    moveReq?.let { req ->
+                        com.eight87.strictlykeptboy.ui.settings.RepoMoveJobDialog(
+                            mover = graph.repoMover,
+                            request = req,
+                            onDone = { moveJobRequest.value = null },
                         )
                     }
                     // Phase 2.1.I.4 — overlay the ShareSheet when the

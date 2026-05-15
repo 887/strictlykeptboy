@@ -158,7 +158,44 @@ fun AddRepoNavHost(
     onFinish: (AddRepoResult) -> Unit,
     modifier: Modifier = Modifier,
     deviceFlowFactory: ((AddRepoProvider, String?) -> Flow<DeviceFlowState>)? = null,
+    /**
+     * Round 2.17 Phase E.1 — when non-null and reporting `NeedsPicking`,
+     * an inline storage step renders instead of the form. Once the gate
+     * flips to `Confirmed` (via the host firing the SAF parent picker
+     * or the inline "Keep inside the app" button), the form appears.
+     */
+    storageGate: com.eight87.strictlykeptboy.prefs.ParentLocationGate.State? = null,
+    onPickExternalStorage: () -> Unit = {},
+    onPickInternalStorage: () -> Unit = {},
 ) {
+    // Phase E.1 — pre-add gate. Short-circuit the form when no parent
+    // is confirmed yet; the inline step matches the wizard's storage
+    // step copy so the user sees the same prompt either way.
+    if (storageGate is com.eight87.strictlykeptboy.prefs.ParentLocationGate.State.NeedsPicking) {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .testTag(TestTagAddRepo)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.add_repo_title),
+                style = MaterialTheme.typography.headlineSmall,
+            )
+            com.eight87.strictlykeptboy.ui.wizard.StorageStep(
+                onPickExternal = onPickExternalStorage,
+                onPickInternal = onPickInternalStorage,
+            )
+            TextButton(
+                onClick = onCancel,
+                modifier = Modifier.testTag(TestTagAddRepoCancel),
+            ) { Text(stringResource(R.string.dialog_cancel)) }
+        }
+        return
+    }
+
     var step by remember { mutableStateOf(Step.Branch) }
     var displayName by remember { mutableStateOf("") }
     var identityName by remember { mutableStateOf("") }

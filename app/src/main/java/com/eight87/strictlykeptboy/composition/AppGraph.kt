@@ -297,6 +297,56 @@ class AppGraph(private val appContext: Context) {
     }
 
     /**
+     * Round 2.17 Phase E.7 — boot-time check for "the SAF tree URI we
+     * persisted is no longer granted". The user can revoke it via
+     * system Settings → Apps → permissions; when they do, our File-API
+     * access still works (the underlying real path is cached) but new
+     * processes can't re-establish the persisted permission and the
+     * picker MUST be re-driven to get back into a sane state. Read
+     * by the Repos pane to flip the red banner; observable so a future
+     * settings-screen poll could refresh it without a process restart.
+     */
+    val safPermissionRevoked: kotlinx.coroutines.flow.MutableStateFlow<Boolean> =
+        kotlinx.coroutines.flow.MutableStateFlow(false)
+
+    /**
+     * Round 2.17 Phase E.7 — single-shot SAF permission probe. Called
+     * from `MainActivity.onCreate` after the graph is constructed.
+     * Sets [safPermissionRevoked] to true iff the configured parent is
+     * External AND its `treeUri` is no longer in
+     * `contentResolver.persistedUriPermissions`.
+     */
+    fun refreshSafPermissionState() {
+        val loc = repoStoragePrefs.location
+        if (loc !is ParentLocation.External) {
+            safPermissionRevoked.value = false
+            return
+        }
+        val target = runCatching { android.net.Uri.parse(loc.treeUri) }.getOrNull()
+        if (target == null) {
+            safPermissionRevoked.value = true
+            return
+        }
+        val granted = appContext.contentResolver.persistedUriPermissions.any {
+            it.uri == target && it.isReadPermission && it.isWritePermission
+        }
+        safPermissionRevoked.value = !granted
+    }
+
+    /**
+     * Round 2.17 Phase E.5 — single canonical RepoMover. Owned here so
+     * the move-job dialog UI can observe its `progress` flow across
+     * recompositions / Settings-pane category switches.
+     */
+    val repoMover: com.eight87.strictlykeptboy.sync.RepoMover by lazy {
+        com.eight87.strictlykeptboy.sync.RepoMover(
+            repoStore = repoStore,
+            storagePrefs = repoStoragePrefs,
+            deviceName = android.os.Build.MODEL ?: "",
+        )
+    }
+
+    /**
      * Round 2.17.A.5 — fire-once migrator from D-2.7.b's
      * `filesDir/repos/` layout to D-2.17.a's `<parent>/<repoId>/` layout.
      * Idempotent at the prefs-flag level; safe to call repeatedly.

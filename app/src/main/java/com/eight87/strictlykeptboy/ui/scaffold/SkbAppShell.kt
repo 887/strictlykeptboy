@@ -445,6 +445,9 @@ private fun SkbAppShellContent(
                                 notificationPrefs = settingsAccess.notificationPrefs,
                                 onPickBackupFolder = settingsAccess.onPickBackupFolder,
                                 demoModePrefs = settingsAccess.demoModePrefs,
+                                onPickInternalStorage = onPickInternalStorage,
+                                safPermissionRevoked = settingsAccess.safPermissionRevokedFlow
+                                    ?.collectAsState()?.value == true,
                             )
                         } else {
                             PlaceholderScreen(stringResource(R.string.scaffold_dest_repos))
