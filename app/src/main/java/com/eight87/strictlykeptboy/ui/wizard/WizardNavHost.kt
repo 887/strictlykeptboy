@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -90,6 +91,9 @@ const val TestTagWizardDiscardDialog = "Wizard-DiscardDialog"
 // with no context.
 private val SCREEN_ORDER: List<WizardScreen> = listOf(
     WizardScreen.Welcome,
+    // Round 2.17.D — storage-folder picker. Auto-skipped when the
+    // ParentLocationGate already reports Confirmed (returning user).
+    WizardScreen.Storage,
     WizardScreen.Species,
     WizardScreen.Identity,
     WizardScreen.Lifestyle,
@@ -142,12 +146,37 @@ fun WizardNavHost(
      * just-scaffolded repo and `allowWriteBack` pre-checked.
      */
     onShareWithDom: () -> Unit = {},
+    /**
+     * Round 2.17.D — prefs surface backing the Storage step. When non-null,
+     * the wizard auto-skips the Storage step if `ParentLocationGate` already
+     * reports `Confirmed` and auto-advances when the user picks External /
+     * Internal and the prefs flip. Tests pass `null` to keep the step
+     * stationary so callbacks can be asserted.
+     */
+    repoStoragePrefs: com.eight87.strictlykeptboy.prefs.RepoStoragePrefs? = null,
+    /**
+     * Round 2.17.D — "Save on your phone" CTA on the Storage step. Caller
+     * launches the SAF tree picker; the wizard listens to
+     * [repoStoragePrefs] and advances once the new parent confirms.
+     */
+    onPickExternalStorage: () -> Unit = {},
+    /**
+     * Round 2.17.D — "Keep inside the app" CTA on the Storage step. Caller
+     * writes `ParentLocation.Internal(filesDir/strictlykeptboy)` and the
+     * `.skb-root` marker; the wizard auto-advances when the prefs flip.
+     */
+    onPickInternalStorage: () -> Unit = {},
 ) {
     // v1: in-memory draft only. SavedStateHandle-backed persistence is a
     // follow-up (LW-A.5 mid-wizard exit safety beyond config-change is
     // deferred until the wizard ViewModel lands).
     var draft by remember { mutableStateOf(initialDraft) }
     var current by remember { mutableStateOf(initialScreen) }
+    // Round 2.17.D — observe parent-location prefs so the Storage step
+    // can auto-skip (returning user, gate already Confirmed) and auto-
+    // advance when the user picks a parent.
+    val storageState = repoStoragePrefs?.state?.collectAsState()
+    val contentResolver = androidx.compose.ui.platform.LocalContext.current.contentResolver
     var showDiscard by remember { mutableStateOf(false) }
     var scaffoldProgress by remember { mutableStateOf(ScaffoldProgress.Idle) }
     var scaffoldError by remember { mutableStateOf<String?>(null) }
@@ -167,6 +196,37 @@ fun WizardNavHost(
     // Round 2.9 — Welcome dropped; allow back from any non-Done screen.
     BackHandler(enabled = current != WizardScreen.Done) {
         if (draft.hasUserChoices) showDiscard = true else onCancel()
+    }
+
+    // Round 2.17.D — auto-skip Storage when the gate is already Confirmed
+    // (returning user re-runs the wizard after blowing away their repo).
+    // Re-keyed on the prefs state so an out-of-band Confirmation (e.g. user
+    // picked External in another surface while wizard is open) also skips.
+    val storageStateValue = storageState?.value
+    // Snapshot the prefs value the first time the user arrives on Storage.
+    // We treat ANY later change (Internal-→-External or External-→-other)
+    // as the user's pick and advance — the gate re-eval is the primary
+    // gate, but the snapshot diff is the belt-and-braces fallback for
+    // when the gate's `persistedUriPermissions` probe is racy after a
+    // freshly-returned SAF grant.
+    val initialStorageValue = remember(current == WizardScreen.Storage) {
+        if (current == WizardScreen.Storage) storageStateValue else null
+    }
+    LaunchedEffect(current, storageStateValue) {
+        if (current != WizardScreen.Storage) return@LaunchedEffect
+        val prefs = repoStoragePrefs ?: return@LaunchedEffect
+        val gateState = com.eight87.strictlykeptboy.prefs.ParentLocationGate.evaluate(
+            storagePrefs = prefs,
+            contentResolver = contentResolver,
+        )
+        val shouldAdvance =
+            gateState is com.eight87.strictlykeptboy.prefs.ParentLocationGate.State.Confirmed ||
+            (initialStorageValue != null && storageStateValue != null &&
+                storageStateValue != initialStorageValue)
+        if (shouldAdvance) {
+            val idx = SCREEN_ORDER.indexOf(WizardScreen.Storage)
+            if (idx in 0 until SCREEN_ORDER.size - 1) current = SCREEN_ORDER[idx + 1]
+        }
     }
 
     if (showDiscard) {
@@ -219,6 +279,24 @@ fun WizardNavHost(
             BatMascotSticker(screen = current)
             when (current) {
                 WizardScreen.Welcome -> WelcomeScreen()
+                WizardScreen.Storage -> StorageStep(
+                    // External pick fires the SAF picker; the wizard waits
+                    // for `prefs.state` to flip to Confirmed before
+                    // advancing (LaunchedEffect above).
+                    onPickExternal = onPickExternalStorage,
+                    // Internal pick is synchronous (no SAF round-trip), so
+                    // wrap the callback to advance the wizard immediately.
+                    // The Phase A gate is now Confirmed (marker written +
+                    // Internal pref set), so subsequent re-entries would
+                    // auto-skip this screen.
+                    onPickInternal = {
+                        onPickInternalStorage()
+                        val idx = SCREEN_ORDER.indexOf(WizardScreen.Storage)
+                        if (idx in 0 until SCREEN_ORDER.size - 1) {
+                            current = SCREEN_ORDER[idx + 1]
+                        }
+                    },
+                )
                 WizardScreen.Species -> Unit // handled above
                 WizardScreen.Identity -> Unit // handled above
                 WizardScreen.Lifestyle -> LifestyleCardScreen(
@@ -301,9 +379,14 @@ fun WizardNavHost(
         }
 
         // Buttons
+        // Round 2.17.D — Storage step has no Continue/Back row; the user
+        // must pick one of the two cards. Back is still handled via the
+        // system back button (BackHandler above), which triggers the
+        // discard-confirm dialog when needed.
         if (current != WizardScreen.Scaffold &&
             current != WizardScreen.Done &&
-            current != WizardScreen.ShareWithDom
+            current != WizardScreen.ShareWithDom &&
+            current != WizardScreen.Storage
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(

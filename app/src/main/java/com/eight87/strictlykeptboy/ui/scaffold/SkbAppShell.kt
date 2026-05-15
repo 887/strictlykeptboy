@@ -246,6 +246,14 @@ fun SkbAppShell(
      * player flow inside the expanded sheet.
      */
     onStartTask: ((String) -> Unit)? = null,
+    /**
+     * Round 2.17.D — "Keep inside the app" CTA on the wizard's storage
+     * step. MainActivity wires this to write
+     * `ParentLocation.Internal(filesDir/strictlykeptboy)` + the `.skb-root`
+     * marker. Default is a no-op so previews / tests don't have to plumb
+     * it. The wizard auto-advances when prefs flip.
+     */
+    onPickInternalStorage: () -> Unit = {},
 ) {
     ProvideWindowSizeClass(modifier = modifier) { _ ->
         SkbAppShellContent(
@@ -274,6 +282,7 @@ fun SkbAppShell(
             onLongPressCalendar = onLongPressCalendar,
             taskPlaybackSource = taskPlaybackSource,
             onStartTask = onStartTask,
+            onPickInternalStorage = onPickInternalStorage,
         )
     }
 }
@@ -307,6 +316,8 @@ private fun SkbAppShellContent(
     onLongPressCalendar: ((com.eight87.strictlykeptboy.resolver.CalendarMeta) -> Unit)? = null,
     taskPlaybackSource: Any = StubTaskPlaybackSource,
     onStartTask: ((String) -> Unit)? = null,
+    /** Round 2.17.D — see [SkbAppShell.onPickInternalStorage]. */
+    onPickInternalStorage: () -> Unit = {},
 ) {
     var selected by rememberSaveable { mutableStateOf(TopDestination.Schedule) }
     // Phase 2.1.I.2 — observe wizard re-entry requests.
@@ -453,6 +464,10 @@ private fun SkbAppShellContent(
                             initialScreen = wizardEntry
                                 ?: com.eight87.strictlykeptboy.ui.wizard.WizardScreen.Welcome,
                             onShareWithDom = onShareWithDom,
+                            // Round 2.17.D — storage step wiring.
+                            repoStoragePrefs = settingsAccess.repoStoragePrefs,
+                            onPickExternalStorage = settingsAccess.onPickBackupFolder,
+                            onPickInternalStorage = onPickInternalStorage,
                         )
                         TopDestination.Reviews -> {
                             // Phase DDD.13 wiring (F45 follow-up). Items list is

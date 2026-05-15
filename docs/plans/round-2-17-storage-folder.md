@@ -302,34 +302,34 @@ Strict dependency chain:
   configured path, External returns `cachedRealPath` or falls
   back to `filesDir/strictlykeptboy` when the cache is unpopulated.
 
-## Phase D — Wizard "Where to store?" screen
+## Phase D — Wizard "Where to store?" screen — shipped in f9bed3b
 
-- [ ] **D.1** Add `ui/wizard/WizardStorageStep.kt` —
+- [x] **D.1** Add `ui/wizard/WizardStorageStep.kt` —
   `@Composable fun StorageStep(onPickExternal, onPickInternal,
   onBack, onNext)`. Two big cards: "Save on your phone (recommended)"
   with the explanatory hint about stickers + portability, and
   "Keep inside the app" with the "private to this app, gone if you
   uninstall" caveat. RadioButton or Card-as-toggle, per the lifestyle-
   step pattern at `WizardNavHost.kt` (look for `LifestyleStep`).
-- [ ] **D.2** Insert the step into `WizardNavHost.kt` after the
+- [x] **D.2** Insert the step into `WizardNavHost.kt` after the
   Welcome step and before the existing first scaffold step. Test
   tag `Wizard-Storage`. Skip-able? — **No**, the user must pick
   before scaffolding. The screen is auto-skipped when the
   `ParentLocationGate` already reports `Confirmed` (returning user
   who blew away a repo, re-runs the wizard, etc.).
-- [ ] **D.3** "Pick external" CTA calls
+- [x] **D.3** "Pick external" CTA calls
   `graph.parentPickerHandle()`. The wizard listens via a
   `LaunchedEffect` keyed on `prefs.state` and advances when state
   transitions from `Internal-default` / unconfirmed to
   `External(...)`.
-- [ ] **D.4** "Keep inside the app" CTA calls
+- [x] **D.4** "Keep inside the app" CTA calls
   `graph.repoStoragePrefs.set(ParentLocation.Internal(
   filesDir.resolve("strictlykeptboy").absolutePath))`, writes the
   `.skb-root` marker, advances.
-- [ ] **D.5** Robolectric snapshot test for the new step
+- [x] **D.5** Robolectric snapshot test for the new step
   (`WizardStorageStepTest`): rendering, "Pick external" callback,
   "Keep inside the app" callback.
-- [ ] **D.6** Update existing wizard tests that drive Welcome → next
+- [x] **D.6** Update existing wizard tests that drive Welcome → next
   to expect the new Storage step in between.
 
 ## Phase E — Repos pane gate + settings folder management

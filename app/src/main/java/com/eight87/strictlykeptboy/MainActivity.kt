@@ -522,6 +522,28 @@ class MainActivity : ComponentActivity() {
                                 ?: graph.repoStore.list().firstOrNull()
                             pendingShareRepo = cfg
                         },
+                        // Round 2.17.D — "Keep inside the app" wizard CTA.
+                        // Write Internal parent + create the .skb-root marker
+                        // so `ParentLocationGate` flips to Confirmed; the
+                        // wizard's LaunchedEffect on prefs.state advances
+                        // past the Storage step automatically.
+                        onPickInternalStorage = {
+                            val parentDir = filesDir.resolve("strictlykeptboy")
+                            runCatching {
+                                parentDir.mkdirs()
+                                if (!com.eight87.strictlykeptboy.prefs.SkbRootMarker.isSkbRoot(parentDir)) {
+                                    com.eight87.strictlykeptboy.prefs.SkbRootMarker.write(
+                                        parent = parentDir,
+                                        deviceName = android.os.Build.MODEL ?: "",
+                                    )
+                                }
+                            }
+                            graph.repoStoragePrefs.set(
+                                com.eight87.strictlykeptboy.prefs.ParentLocation.Internal(
+                                    absPath = parentDir.absolutePath,
+                                ),
+                            )
+                        },
                         scheduleState = scheduleState,
                         eventCreateController = eventCreateController,
                         onPersistTab = graph.viewModePrefs::set,
