@@ -375,7 +375,7 @@ Strict dependency chain:
   `contentResolver.persistedUriPermissions` check in
   `AppGraph.init`.
 
-## Phase F — Settings: backup export — shipped in <PHASE_F_SHA>
+## Phase F — Settings: backup export — shipped in 01e3573
 
 - [x] **F.1** Add `backup/BackupArchiver.kt`:
   `suspend fun export(parent: File, out: OutputStream): Manifest`.
