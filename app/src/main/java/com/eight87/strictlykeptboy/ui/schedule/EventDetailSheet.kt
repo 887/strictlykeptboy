@@ -77,6 +77,8 @@ const val TestTagEventDetailSourceAuthor = "EventDetailSourceAuthor"
 const val TestTagEventDetailSupersededNote = "EventDetailSupersededNote"
 // Round 2.18.C.7 — external-event attribution header
 const val TestTagEventDetailExternalSource = "EventDetailExternalSource"
+// Round 2.18.D.2 — read-only banner shown when CAL_ACCESS_LEVEL < CONTRIBUTOR.
+const val TestTagEventDetailExternalReadOnly = "EventDetailExternalReadOnly"
 // Round 2.18.C.8/C.9 — attendees + reminders sections
 const val TestTagEventDetailAttendees = "EventDetailAttendees"
 const val TestTagEventDetailAttendeeRow = "EventDetailAttendeeRow"
@@ -168,6 +170,22 @@ fun EventDetailContent(
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.testTag(TestTagEventDetailExternalSource),
                 )
+                // Round 2.18.D.2 — explicit read-only header when the calendar's
+                // access level is below CAL_ACCESS_CONTRIBUTOR (500). The owner
+                // account string is appended so the user sees who controls the
+                // event.
+                if (ext.accessLevel < 500) {
+                    val ownerLabel = ext.ownerAccount?.takeIf { it.isNotBlank() }
+                        ?: ext.accountName
+                    Text(
+                        text = stringResource(
+                            R.string.event_detail_external_read_only, ownerLabel,
+                        ),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testTag(TestTagEventDetailExternalReadOnly),
+                    )
+                }
                 Spacer(modifier = Modifier.height(4.dp))
             }
             // Time + tz

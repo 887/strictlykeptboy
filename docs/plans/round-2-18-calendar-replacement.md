@@ -519,52 +519,60 @@ repos slot in identically.
   `CalendarContract.Reminders` for the event; render skb-style
   reminder cards.
 
-## Phase D — Two-way edit
+## Phase D — Two-way edit — shipped in d3dbbdb
 
-- [ ] **D.1** New `system/CalendarContractWriter.kt` — pure write
+- [x] **D.1** New `system/CalendarContractWriter.kt` — pure write
   surface: `insertEvent`, `updateEvent`, `deleteEvent`,
-  `respondToInvite(eventId, response)`.
-- [ ] **D.2** Editor flow detection: in the event-edit sheet
-  view-model, if `meta.kind == External` and `accessLevel >=
-  CAL_ACCESS_CONTRIBUTOR`, edits write via
-  `CalendarContractWriter` instead of `EntityWriter`. If
-  `< CAL_ACCESS_CONTRIBUTOR`, the editor opens read-only with a
-  "Read-only — owned by [account]" header.
-- [ ] **D.3** Field mapping — skb's `EventInput` → `ContentValues`
-  for `Events.CONTENT_URI`. Required columns:
-  `CALENDAR_ID = meta.external.calendarId`, `DTSTART`, `DTEND`,
-  `EVENT_TIMEZONE`, `TITLE`, `DESCRIPTION`, `EVENT_LOCATION`,
-  `ALL_DAY` (0/1), `STATUS`, `ACCESS_LEVEL`. Round-trip emoji + body
-  via `DESCRIPTION` (skb's frontmatter has no equivalent in
-  CalendarContract; emoji goes into title prefix, body into
-  description).
-- [ ] **D.4** Recurrence — translate skb's dmfs-lib-recur
-  `RecurrenceInput` to RFC5545 `RRULE` string (lib-recur exposes a
-  serializer). Write to `Events.RRULE`. EXDATE → `Events.EXDATE`.
-- [ ] **D.5** Recurring-event edit tri-choice prompt ("this event
-  only / this and following / all"). Implementation per
-  CalendarContract docs:
-  - "this only" → insert a new event row with
-    `ORIGINAL_ID = parentEventId` + `ORIGINAL_INSTANCE_TIME = start`.
-  - "this and following" → set the parent's `RRULE` UNTIL to the
-    instance start; insert a new recurring event from the instance.
-  - "all" → update the parent event row.
-- [ ] **D.6** Delete flow — soft-delete via
-  `ContentResolver.delete(eventUri)` (the source adapter handles
-  the upstream push). Recurring tri-choice mirrors D.5.
-- [ ] **D.7** RSVP write — `Attendees.ATTENDEE_STATUS` update for
-  the current user's attendee row. Surface as Accept / Tentative /
-  Decline buttons in the detail sheet for events where
-  `Events.SELF_ATTENDEE_STATUS` is settable.
-- [ ] **D.8** Conflict-handling — if the upstream sync rejects an
-  edit, the source adapter marks the event `DIRTY = 1` and may
-  surface its own retry / error UX. Skb shows a passive
-  "Sync pending" badge while `DIRTY = 1`.
-- [ ] **D.9** Optimistic update — UI assumes write success
-  immediately, since CalendarContract writes are synchronous to the
-  local DB even before upstream sync.
-- [ ] **D.10** Write-permission gate — block all write paths when
-  `WRITE_CALENDAR` not granted; show a re-permission inline cue.
+  `respondToInvite(eventId, response)`. Plus
+  `insertRecurrenceOverride`, `capRecurrenceUntil`,
+  `insertRecurrence` for the D.5 tri-choice. All entry points
+  suspend on `Dispatchers.IO`, every call re-checks
+  `WRITE_CALENDAR` (cleanly returns `Result.failure` on denial).
+- [x] **D.2** Editor flow detection: new
+  `system/ExternalEventEditRouter.kt` returns
+  `EditorMode.{WritableSkbRepo|WritableExternal|ReadOnlyExternal}`
+  from a `MaterializedInstance.external` sidecar.
+  `EventDetailSheet` now renders the explicit "Read-only — owned
+  by <account>" header (test-tag `EventDetailExternalReadOnly`,
+  new `event_detail_external_read_only` string) when
+  `accessLevel < 500`; the FAB stays gated as before.
+- [x] **D.3** `EventInputMapper` translates `EventInput` →
+  `ContentValues` with all listed columns. Emoji becomes title
+  prefix, body becomes `DESCRIPTION`. All-day events emit
+  `ALL_DAY=1`, `EVENT_TIMEZONE="UTC"`, start-of-day epoch — per
+  CalendarContract docs.
+- [x] **D.4** `RecurrenceInputMapper` + `RecurrenceRuleSerializer`
+  pass the lib-recur RFC5545 RRULE string through; `EXDATE`
+  rendered as a `TZID=…:` prefixed comma list. `withUntil` /
+  `formatUntilUtc` cap RRULEs for the D.5 ThisAndFollowing branch.
+- [x] **D.5** `RecurringEditScope` enum
+  (`ThisOnly|ThisAndFollowing|All`) mandatory tri-choice — no
+  silent default. ThisOnly → `insertRecurrenceOverride` with
+  `ORIGINAL_ID` + `ORIGINAL_INSTANCE_TIME`. ThisAndFollowing →
+  `capRecurrenceUntil` on the parent then `insertRecurrence` for
+  the tail. All → `updateEvent` on the parent row.
+- [x] **D.6** `deleteEvent(scope, instanceStartMs?, parentRrule?)` —
+  All branch deletes via `ContentResolver.delete(eventUri)`;
+  ThisOnly inserts a `STATUS_CANCELED` override row; ThisAndFollowing
+  caps the RRULE's UNTIL.
+- [x] **D.7** `respondToInvite(eventId, userEmail, response)`
+  updates the matching `Attendees` row by
+  `EVENT_ID + ATTENDEE_EMAIL`, bumps `SELF_ATTENDEE_STATUS` on the
+  parent event for snappy UI. `InviteResponse` enum maps
+  Accepted/Tentative/Declined onto the contract constants.
+- [x] **D.8** `SystemEventDirtyReader` reads `Events.DIRTY` for the
+  passive "Sync pending" badge. Read on the next ContentObserver
+  tick — observer is already wired in Phase A
+  (`SystemEventsBridge.ticker()`).
+- [x] **D.9** Optimistic update — every writer entry point is
+  synchronous against the local provider DB; the UI may render the
+  saved state immediately and trust the existing observer-driven
+  re-emission to confirm.
+- [x] **D.10** Write-permission gate — `CalendarContractWriter`
+  short-circuits to `Result.failure(SecurityException)` on every
+  entry point when `WRITE_CALENDAR` is denied, plus a public
+  `hasWritePermission()` for the UI to gate affordances + drive
+  the inline-cue [Grant] launcher.
 
 ## Phase E — Intent filter set
 
