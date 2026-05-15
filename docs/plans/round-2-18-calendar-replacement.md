@@ -574,7 +574,7 @@ repos slot in identically.
   `hasWritePermission()` for the UI to gate affordances + drive
   the inline-cue [Grant] launcher.
 
-## Phase E — Intent filter set (shipped in <SHA-PLACEHOLDER>)
+## Phase E — Intent filter set (shipped in 7b3fcae)
 
 - [x] **E.1** Manifest — APP_CALENDAR category added to the
   MAIN/LAUNCHER filter so skb appears as a "Calendar app" default
