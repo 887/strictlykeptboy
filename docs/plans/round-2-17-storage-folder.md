@@ -403,38 +403,38 @@ Strict dependency chain:
   first entry, `.skb-root` + pack `.tmp*` are skipped, and a
   `CLAUDE.md → AGENTS.md` symlink round-trips as `LF_SYMLINK`.
 
-## Phase G — Settings: restore
+## Phase G — Settings: restore — shipped in 935a164
 
-- [ ] **G.1** `backup/BackupRestorer.kt`:
+- [x] **G.1** `backup/BackupRestorer.kt`:
   `suspend fun restoreFromArchive(in: InputStream, parent: File):
   Manifest` — extracts tar.gz over a freshly-wiped parent. Refuses
   if the destination has files but no `.skb-root` (refuse to nuke
   user data we didn't put there).
-- [ ] **G.2** `suspend fun rescanParent(parent: File): List<RepoConfig>`
+- [x] **G.2** `suspend fun rescanParent(parent: File): List<RepoConfig>`
   — walks `<parent>/<dir>/.git` (or bare equivalent), builds a
   `RepoConfig` per discovered repo (reads `repo.toml` for
   `displayName`, `defaultCalendarId`, etc.; falls back to
   directory name).
-- [ ] **G.3** `ui/settings/BackupRestoreScreen.kt` — three
+- [x] **G.3** `ui/settings/BackupRestoreScreen.kt` — three
   sub-actions:
   - Export backup (Phase F)
   - Restore from current folder (calls `rescanParent`, replaces
     `RepoStore` contents on confirm)
   - Restore from backup archive (calls `restoreArchivePickerLauncher`)
-- [ ] **G.4** Destructive-confirm dialog per D-2.17.g — typed
+- [x] **G.4** Destructive-confirm dialog per D-2.17.g — typed
   `restore` field + 3-second hold on the red button. Component
   lives at `ui/components/DestructiveConfirmDialog.kt` (new) —
   reuse-able for any future destructive flow.
-- [ ] **G.5** Wire `RepoStore.replaceAll(list: List<RepoConfig>)` —
+- [x] **G.5** Wire `RepoStore.replaceAll(list: List<RepoConfig>)` —
   may not exist yet (grep `RepoStore.kt`). If absent, add it;
   emits a single `state` update.
-- [ ] **G.6** After restore, invalidate the cache DB and trigger a
+- [x] **G.6** After restore, invalidate the cache DB and trigger a
   full re-index via the existing `CacheRebuilder` (grep for
   `CacheRebuilder` or `rebuildAll`).
-- [ ] **G.7** Robolectric test `BackupRestorerTest` — export
+- [x] **G.7** Robolectric test `BackupRestorerTest` — export
   parent A, restore into empty parent B, assert
   `rescanParent(B)` returns the same repo configs.
-- [ ] **G.8** Robolectric test `RestoreSafetyTest` — restore
+- [x] **G.8** Robolectric test `RestoreSafetyTest` — restore
   refuses to wipe a directory containing unrelated files
   (no `.skb-root`).
 
