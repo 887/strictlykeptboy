@@ -375,28 +375,33 @@ Strict dependency chain:
   `contentResolver.persistedUriPermissions` check in
   `AppGraph.init`.
 
-## Phase F — Settings: backup export
+## Phase F — Settings: backup export — shipped in <PHASE_F_SHA>
 
-- [ ] **F.1** Add `backup/BackupArchiver.kt`:
+- [x] **F.1** Add `backup/BackupArchiver.kt`:
   `suspend fun export(parent: File, out: OutputStream): Manifest`.
   Streams a `tar.gz` via Commons Compress
   (`TarArchiveOutputStream` + `GzipCompressorOutputStream`).
   Preserves symlinks (`TarArchiveEntry.LF_SYMLINK`). Skips
   `.skb-root` (regenerated on restore) and per-repo
   `.git/objects/pack/.tmp*` lockfiles.
-- [ ] **F.2** Manifest TOML schema: `skb_version`,
+- [x] **F.2** Manifest TOML schema: `skb_version`,
   `schema_version = 1`, `created_at`, `repo_count`,
   `parent_label`, `device_name`. Written as the first entry in the
   tar so a partial read can show the manifest.
-- [ ] **F.3** "Export backup" Settings row → opens a
+- [x] **F.3** "Export backup" Settings row → opens a
   `CreateDocument("application/gzip")` launcher (suggested name
   `strictlykeptboy-backup-<yyyy-MM-dd>.tar.gz`). On grant, write
   on `Dispatchers.IO`, Toast on completion with byte count.
-- [ ] **F.4** Add the `CreateDocument` launcher to
-  `MainActivity.kt` alongside the others.
-- [ ] **F.5** Robolectric test `BackupArchiverTest` — round-trip
-  a parent with two repos through `export` → `import`, assert
-  every file (including a symlink) survives.
+- [x] **F.4** Add the `CreateDocument` launcher to
+  `MainActivity.kt` alongside the others. Parked via
+  `pendingExportArchiveHandler` so Compose attaches its callback
+  at request time (mirrors the Phase B `restoreArchivePickerLauncher`
+  pattern).
+- [x] **F.5** Robolectric test `BackupArchiverTest` — round-trip
+  a parent with two repos through `export` → manual extract via
+  Commons Compress, assert every file survives, the manifest is the
+  first entry, `.skb-root` + pack `.tmp*` are skipped, and a
+  `CLAUDE.md → AGENTS.md` symlink round-trips as `LF_SYMLINK`.
 
 ## Phase G — Settings: restore
 

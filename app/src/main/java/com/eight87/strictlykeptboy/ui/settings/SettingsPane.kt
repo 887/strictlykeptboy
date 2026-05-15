@@ -230,6 +230,13 @@ data class SettingsAccess(
      * `newParentLocation`.
      */
     val onSwitchToInternal: () -> Unit = {},
+    /**
+     * Round 2.17 Phase F.3 — "Export backup" row in BackupRestoreScreen.
+     * Fires the SAF `CreateDocument("application/gzip")` picker via the
+     * activity. The activity (Phase F.4) then writes the tar.gz on
+     * `Dispatchers.IO` once the user grants a destination URI.
+     */
+    val onExportBackup: () -> Unit = {},
     // Round 2.15 — demo-mode toggle prefs.
     val demoModePrefs: com.eight87.strictlykeptboy.prefs.DemoModePrefs? = null,
 )
@@ -684,6 +691,7 @@ private fun SettingsCategoryContent(
                     onChangeFolder = access.onChangeStorageFolder,
                     onAdoptExistingFolder = access.onAdoptExistingFolder,
                     onSwitchToInternal = access.onSwitchToInternal,
+                    onExportBackup = access.onExportBackup,
                 )
             } ?: DiagnosticMissingPrefBanner(category, "repoStoragePrefs")
         }
@@ -737,6 +745,7 @@ private fun StorageCategoryHost(
     onChangeFolder: () -> Unit,
     onAdoptExistingFolder: () -> Unit,
     onSwitchToInternal: () -> Unit,
+    onExportBackup: () -> Unit = {},
 ) {
     var sub by remember { mutableStateOf(StorageSubScreen.Rows) }
     when (sub) {
@@ -755,7 +764,9 @@ private fun StorageCategoryHost(
                 onSwitchToInternal = onSwitchToInternal,
             )
         }
-        StorageSubScreen.BackupRestore -> BackupRestoreScreen()
+        StorageSubScreen.BackupRestore -> BackupRestoreScreen(
+            onExportBackup = onExportBackup,
+        )
     }
 }
 

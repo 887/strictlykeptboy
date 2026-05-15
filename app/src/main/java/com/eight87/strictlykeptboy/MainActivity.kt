@@ -264,6 +264,21 @@ class MainActivity : ComponentActivity() {
         pendingRestoreArchiveHandler?.invoke(uri)
     }
 
+    /**
+     * Round 2.17 Phase F.4 — parked handler for the "Export backup"
+     * SAF launcher. The Settings → Storage → Backup/Restore screen
+     * attaches a callback before launching, so the activity can write
+     * the tar.gz on `Dispatchers.IO` once the user names a destination.
+     */
+    private var pendingExportArchiveHandler: ((Uri) -> Unit)? = null
+
+    private val exportArchivePickerLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("application/gzip")
+    ) { uri: Uri? ->
+        if (uri == null) return@registerForActivityResult
+        pendingExportArchiveHandler?.invoke(uri)
+    }
+
     private val createIcsLauncher = registerForActivityResult(
         ActivityResultContracts.CreateDocument("text/calendar")
     ) { uri: Uri? ->
@@ -754,6 +769,76 @@ class MainActivity : ComponentActivity() {
                                 }
                                 adoptPickerLauncher.launch(null)
                             },
+                            // Round 2.17 Phase F.3/F.4 — "Export backup"
+                            // row: park a handler, fire the SAF
+                            // CreateDocument picker with a suggested
+                            // dated filename, then on grant stream the
+                            // parent through BackupArchiver on IO.
+                            onExportBackup = export@{
+                                val parentDir = graph.repoStoragePrefs.location
+                                    ?.workingDir(filesDir)
+                                if (parentDir == null || !parentDir.isDirectory) {
+                                    Toast.makeText(
+                                        this@MainActivity,
+                                        getString(R.string.backuprestore_export_failed),
+                                        Toast.LENGTH_LONG,
+                                    ).show()
+                                    return@export
+                                }
+                                pendingExportArchiveHandler = handler@{ destUri ->
+                                    val locSnap = graph.repoStoragePrefs.location
+                                    val label = when (locSnap) {
+                                        null -> ""
+                                        is com.eight87.strictlykeptboy.prefs.ParentLocation.Internal ->
+                                            "internal"
+                                        is com.eight87.strictlykeptboy.prefs.ParentLocation.External ->
+                                            locSnap.label
+                                    }
+                                    kotlinx.coroutines.GlobalScope.launch(
+                                        kotlinx.coroutines.Dispatchers.IO,
+                                    ) {
+                                        val result = runCatching {
+                                            contentResolver.openOutputStream(destUri)?.use { os ->
+                                                com.eight87.strictlykeptboy.backup.BackupArchiver.export(
+                                                    parent = parentDir,
+                                                    out = os,
+                                                    skbVersion = BuildConfig.VERSION_NAME,
+                                                    parentLabel = label,
+                                                    deviceName = android.os.Build.MODEL ?: "",
+                                                )
+                                            } ?: error("openOutputStream returned null")
+                                        }
+                                        kotlinx.coroutines.withContext(
+                                            kotlinx.coroutines.Dispatchers.Main,
+                                        ) {
+                                            result.fold(
+                                                onSuccess = { manifest ->
+                                                    val pretty = humanBytes(manifest.bytesWritten)
+                                                    Toast.makeText(
+                                                        this@MainActivity,
+                                                        getString(
+                                                            R.string.backuprestore_export_done,
+                                                            pretty,
+                                                        ),
+                                                        Toast.LENGTH_LONG,
+                                                    ).show()
+                                                },
+                                                onFailure = {
+                                                    Toast.makeText(
+                                                        this@MainActivity,
+                                                        getString(R.string.backuprestore_export_failed),
+                                                        Toast.LENGTH_LONG,
+                                                    ).show()
+                                                },
+                                            )
+                                        }
+                                    }
+                                }
+                                val today = java.time.LocalDate.now().toString()
+                                exportArchivePickerLauncher.launch(
+                                    "strictlykeptboy-backup-$today.tar.gz",
+                                )
+                            },
                             onSwitchToInternal = switch@{
                                 val oldLoc = graph.repoStoragePrefs.location ?: return@switch
                                 val oldDir = oldLoc.workingDir(filesDir)
@@ -1038,6 +1123,19 @@ class MainActivity : ComponentActivity() {
      * working tree, narrowing to event-shaped entities, and handing the
      * triple to [com.eight87.strictlykeptboy.port.ics.IcsExporter].
      */
+    /**
+     * Round 2.17 Phase F.3 — format a byte count for the export Toast.
+     * Small, base-10 (matches what file managers display).
+     */
+    private fun humanBytes(n: Long): String {
+        if (n < 1024) return "$n B"
+        val units = listOf("KB", "MB", "GB", "TB")
+        var v = n.toDouble() / 1024.0
+        var i = 0
+        while (v >= 1024.0 && i < units.size - 1) { v /= 1024.0; i++ }
+        return String.format(java.util.Locale.ROOT, "%.1f %s", v, units[i])
+    }
+
     private suspend fun buildExportContent(repo: RepoConfig): String =
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             val results = com.eight87.strictlykeptboy.store.RepoScanner.scanAll(File(repo.rootDir))
