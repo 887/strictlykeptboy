@@ -510,22 +510,70 @@ private fun ReposList(
             }
         }
 
-        RepoSwitcherDropdown(
-            repos = repos,
-            activeRepoId = activeRepoId,
-            statusFor = { state.statusFor(it) },
-            onSelect = onSelect,
-            onAddRepo = onAddRepo,
-            onOpenSettings = onOpenSettings,
-            onSyncRepo = onSyncRepo,
-            onToggleShowOnSchedule = { repoId, value ->
-                scope.launch { state.store.setShowOnSchedule(repoId, value) }
-            },
-            onToggleDrawTasksFrom = { repoId, value ->
-                scope.launch { state.store.setDrawTasksFrom(repoId, value) }
-            },
+        // Round 2.19 — per-repo expandable Material3 cards. Each repo is
+        // its own card with all its binary toggles "hanging from" the
+        // header like indented Python config; the long-tail edits live
+        // behind the per-card "More settings…" footer that opens
+        // `RepoSettingsScreen`. Replaces the dense `RepoSwitcherDropdown`
+        // checkbox row layout the user called out as too tiny to use.
+        Column(
             modifier = Modifier.fillMaxWidth().testTag(TestTagReposPaneSwitcher),
-        )
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            repos.forEach { repo ->
+                RepoCard(
+                    repo = repo,
+                    isWriteTarget = repo.repoId == activeRepoId,
+                    onSelectWriteTarget = { onSelect(repo.repoId) },
+                    onToggleShowOnSchedule = { v ->
+                        scope.launch { state.store.setShowOnSchedule(repo.repoId, v) }
+                    },
+                    onToggleDrawTasksFrom = { v ->
+                        scope.launch { state.store.setDrawTasksFrom(repo.repoId, v) }
+                    },
+                    onToggleAutoSync = { v ->
+                        scope.launch {
+                            val cur = state.store.get(repo.repoId) ?: return@launch
+                            state.store.update(cur.copy(autoSyncEnabled = v))
+                        }
+                    },
+                    onToggleWifiOnly = { v ->
+                        scope.launch {
+                            val cur = state.store.get(repo.repoId) ?: return@launch
+                            state.store.update(cur.copy(wifiOnly = v))
+                        }
+                    },
+                    onToggleImportStickers = { v ->
+                        scope.launch {
+                            val cur = state.store.get(repo.repoId) ?: return@launch
+                            state.store.update(cur.copy(importStickersToRepo = v))
+                        }
+                    },
+                    onOpenMoreSettings = { onOpenSettings(repo.repoId) },
+                )
+            }
+            // Footer "Add repo" affordance — keeps the existing test tag
+            // so AddRepo flow tests continue to drive entry from here.
+            androidx.compose.material3.TextButton(
+                onClick = onAddRepo,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(TestTagRepoSwitcherAdd),
+            ) {
+                androidx.compose.material3.Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = null,
+                )
+                Text(
+                    text = "  Add repo",
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.padding(start = 8.dp),
+                )
+            }
+        }
+        // Silence the sync handler — wired but not surfaced on the new
+        // card; per-repo sync now lives behind "More settings…".
+        @Suppress("UNUSED_EXPRESSION") onSyncRepo
     }
     // imports kept used:
     @Suppress("UNUSED_EXPRESSION") AuthorIdentity("", "")

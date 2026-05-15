@@ -230,14 +230,11 @@ fun RepoSettingsScreen(
             )
         }
 
-        // ---- Sync -------------------------------------------------------------
+        // ---- Sync interval ----------------------------------------------------
+        // Round 2.19 — Auto-sync + Wi-Fi-only toggles moved out to the
+        // per-repo card (`RepoCard`). What stays here is the interval
+        // chip strip, which the card has no room for.
         SectionCard(title = stringResource(R.string.repo_settings_section_sync)) {
-            ToggleRow(
-                label = stringResource(R.string.repo_settings_auto_sync),
-                checked = draft.autoSyncEnabled,
-                onChange = { draft = draft.copy(autoSyncEnabled = it) },
-                tag = TestTagRepoSettingsAutoSync,
-            )
             Text(
                 stringResource(R.string.repo_settings_sync_interval, draft.syncIntervalMinutes),
                 style = MaterialTheme.typography.bodyMedium,
@@ -262,12 +259,6 @@ fun RepoSettingsScreen(
                     )
                 }
             }
-            ToggleRow(
-                label = stringResource(R.string.repo_settings_wifi_only),
-                checked = draft.wifiOnly,
-                onChange = { draft = draft.copy(wifiOnly = it) },
-                tag = TestTagRepoSettingsWifiOnly,
-            )
         }
 
         // ---- Author signing (legacy "Identity" — git author bits) -------------
@@ -366,73 +357,9 @@ fun RepoSettingsScreen(
             }
         }
 
-        // ---- Sticker pack (Round 2.8 — import toggle) ------------------------
-        SectionCard(
-            title = stringResource(R.string.repo_settings_section_sticker_pack),
-            modifier = Modifier.testTag(TestTagRepoSettingsStickerPack),
-        ) {
-            Text(
-                "By default this repo only carries a `stickers/README.md`; the app " +
-                    "renders the active bundled pack from its own assets. Turn on the " +
-                    "toggle below to copy the active pack's images into this repo so " +
-                    "you can edit them (e.g. hand them to an AI image generator).",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        "Import stickers into repo",
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                    Text(
-                        "Off by default — image bytes inflate repo size.",
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-                Switch(
-                    checked = draft.importStickersToRepo,
-                    onCheckedChange = { newValue ->
-                        draft = draft.copy(importStickersToRepo = newValue)
-                    },
-                    modifier = Modifier.testTag("RepoSettings-ImportStickersToggle"),
-                )
-            }
-            val assetLoader = LocalAssetPackLoader.current
-            val packPrefs = LocalAvatarPackPrefs.current
-            val species = draft.iconSpecies
-            val didImport = remember(repo.repoId) { mutableStateOf(repo.importStickersToRepo) }
-            LaunchedEffect(draft.importStickersToRepo, species, assetLoader, packPrefs) {
-                val on = draft.importStickersToRepo
-                val justFlippedOn = on && !didImport.value
-                if (justFlippedOn && species != null && assetLoader != null && packPrefs != null) {
-                    runCatching {
-                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                            // Round 2.10 — paths are pack-keyed (multiple packs
-                            // can coexist in one repo). packId = "default-<species>"
-                            // for bundled packs.
-                            val packId = packPrefs.activePackFor(species.lowercase())
-                            val bundledAssetFolder = if (packId.startsWith("default-")) {
-                                packId.removePrefix("default-")
-                            } else {
-                                // User-imported pack — for v1 we skip; the import-
-                                // from-userPackLoader path is a follow-up.
-                                species.lowercase()
-                            }
-                            val dest = java.nio.file.Paths.get(repo.rootDir)
-                                .resolve("stickers/$packId/")
-                            assetLoader.copyPackInto(bundledAssetFolder, dest)
-                            com.eight87.strictlykeptboy.git.GitRepoRegistry
-                                .get(repo.repoId)
-                                ?.commitAll("stickers: import $packId pack into repo")
-                        }
-                    }
-                }
-                didImport.value = on
-            }
-        }
+        // Round 2.19 — Sticker pack import toggle moved to the per-repo
+        // card. The side-effect that copies the active pack into the repo
+        // now lives in `RepoCard` next to the switch the user flips.
 
         // ---- Defaults --------------------------------------------------------
         SectionCard(title = stringResource(R.string.repo_settings_section_defaults)) {
