@@ -302,7 +302,7 @@ Strict dependency chain:
   configured path, External returns `cachedRealPath` or falls
   back to `filesDir/strictlykeptboy` when the cache is unpopulated.
 
-## Phase D — Wizard "Where to store?" screen — shipped in <SHA-PLACEHOLDER>
+## Phase D — Wizard "Where to store?" screen — shipped in f9bed3b
 
 - [x] **D.1** Add `ui/wizard/WizardStorageStep.kt` —
   `@Composable fun StorageStep(onPickExternal, onPickInternal,
