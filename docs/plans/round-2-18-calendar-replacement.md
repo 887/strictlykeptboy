@@ -477,7 +477,7 @@ repos slot in identically.
   "repo IS an identity" note) clarifying skb does not exfiltrate
   calendar data — purely local.
 
-## Phase C — UI surfacing (shipped in `<C-SHA>`)
+## Phase C — UI surfacing (shipped in `b8bd5ae`)
 
 - [x] **C.0** Fold `SystemEventsBridge.events(window, knownCalendars, zone)`
   into the resolver's event stream via `SourcesPublisher`. External
