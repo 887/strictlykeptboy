@@ -30,6 +30,22 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <!-- Round 2.18.E.1 — surface skb in the system's
+                     "Calendar" app slot so the launcher and settings
+                     can pick skb as the default calendar app. -->
+                <category android:name="android.intent.category.APP_CALENDAR" />
+            </intent-filter>
+
+            <!-- Round 2.18.E.2 — "go to date" intent.
+                 content://com.android.calendar/time/<epoch-seconds> is
+                 the OS contract for jumping the active calendar to a
+                 date. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content"
+                      android:host="com.android.calendar"
+                      android:pathPrefix="/time" />
             </intent-filter>
             <!-- Phase O.2 — strictlykeptboy://share deep links -->
             <intent-filter android:autoVerify="false">
@@ -60,6 +76,69 @@
                 <data android:scheme="http" android:host="strictlykeptboy.app" android:pathPrefix="/link/" />
             </intent-filter>
         </activity>
+
+        <!-- Round 2.18.E.3 — EventDetailActivity alias. Calendar
+             apps + launchers fire VIEW + vnd.android.cursor.item/event
+             with content://com.android.calendar/events/<id> when the
+             user taps an event row. Aliasing into MainActivity keeps a
+             single Activity instance serving every role. -->
+        <activity-alias
+            android:name=".EventDetailActivity"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="vnd.android.cursor.item/event" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- Round 2.18.E.4 — EventEditActivity alias. Calendar
+             apps + add-to-calendar share sheets fire EDIT/INSERT with
+             vnd.android.cursor.item/event (one row) or
+             vnd.android.cursor.dir/event (new row in any calendar). -->
+        <activity-alias
+            android:name=".EventEditActivity"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.EDIT" />
+                <action android:name="android.intent.action.INSERT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="vnd.android.cursor.item/event" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.EDIT" />
+                <action android:name="android.intent.action.INSERT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="vnd.android.cursor.dir/event" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- Round 2.18.E.5 — IcsImportActivity alias. Two filters:
+             local-file/content `text/calendar` (mail attachments,
+             downloads) and `https://*/*.ics` from a browser. -->
+        <activity-alias
+            android:name=".IcsImportActivity"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="file" android:mimeType="text/calendar" />
+                <data android:scheme="content" android:mimeType="text/calendar" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="https" android:host="*" android:pathPattern=".*\\.ics" />
+                <data android:scheme="http" android:host="*" android:pathPattern=".*\\.ics" />
+            </intent-filter>
+        </activity-alias>
 
         <service
             android:name=".sync.SyncService"
