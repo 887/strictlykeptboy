@@ -636,7 +636,7 @@ repos slot in identically.
   surfaced a misleading "share link could not be read" Toast on
   AVD smoke.
 
-## Phase F — Reminder + alarm parity — shipped in change `phase-2-18-F`
+## Phase F — Reminder + alarm parity — shipped in commit `06edc3e`
 
 - [x] **F.1** Read `CalendarContract.Reminders` for every
   external event surfaced in the visible window. Added batched
