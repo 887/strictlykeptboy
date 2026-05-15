@@ -269,7 +269,7 @@ Strict dependency chain:
   `pendingRestoreArchiveHandler: ((Uri) -> Unit)?` so Phase G can
   attach its handler without re-registering the launcher.
 
-## Phase C — Repo scaffolding honours the parent — shipped in <sha-pending>
+## Phase C — Repo scaffolding honours the parent — shipped in 1084a29
 
 - [x] **C.1** `WizardScaffolder.materialize`: change `parentDir`
   param semantics — caller now passes the *strictlykeptboy parent*,
