@@ -776,7 +776,7 @@ repos slot in identically.
 
 ## Phase I — Default-app discovery onboarding
 
-Shipped in commit `<filled-in-after-commit>`.
+Shipped in commit `d1eb974`.
 
 - [x] **I.1** Onboarding step (one-shot card in the existing intro
   wizard from Round 2.15): "Make skb your default calendar app?"
