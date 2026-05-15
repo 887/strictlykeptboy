@@ -61,6 +61,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
@@ -486,6 +487,16 @@ class AppGraph(private val appContext: Context) {
         com.eight87.strictlykeptboy.system.SystemEventsBridge(appContext)
     }
 
+    /** Round 2.18.C.8 — CalendarContract.Attendees reader. */
+    val systemAttendeesReader: com.eight87.strictlykeptboy.system.SystemAttendeesReader by lazy {
+        com.eight87.strictlykeptboy.system.SystemAttendeesReader(appContext)
+    }
+
+    /** Round 2.18.C.9 — CalendarContract.Reminders reader. */
+    val systemRemindersReader: com.eight87.strictlykeptboy.system.SystemRemindersReader by lazy {
+        com.eight87.strictlykeptboy.system.SystemRemindersReader(appContext)
+    }
+
     /** Round 2.18.A.14 — per-system-calendar user overrides. */
     val systemCalendarPrefsStore: com.eight87.strictlykeptboy.system.SystemCalendarPrefsStore by lazy {
         com.eight87.strictlykeptboy.system.SystemCalendarPrefsStore.open(appContext)
@@ -538,7 +549,50 @@ class AppGraph(private val appContext: Context) {
             repoStore = repoStore,
             visibleRange = visibleDateRange,
             scope = appScope,
+            // Round 2.18.C.0 — fold CalendarContract instances into the
+            // resolver's event stream. Provider takes the resolver window
+            // + the current set of system calendars and emits a list of
+            // `EventInput`s. Re-emits whenever the system events bridge
+            // notifies (provider-side ContentObserver) or the visible
+            // calendar set changes.
+            externalEventsProvider = { range ->
+                @Suppress("OPT_IN_USAGE")
+                buildExternalEventsFlow(range)
+            },
         )
+    }
+
+    /**
+     * Round 2.18.C.0 — build the windowed `Flow<List<EventInput>>` for
+     * the resolver's external-event source. Combines the visible meta
+     * set (so global-toggle-off + per-calendar-hidden are honored) with
+     * the raw system calendar list (needed to map id → accountType for
+     * the `external` sidecar), then drives the `SystemEventsBridge` for
+     * the given window. Re-checks `READ_CALENDAR` per query (the bridge
+     * itself returns empty on missing permission).
+     */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private fun buildExternalEventsFlow(
+        range: com.eight87.strictlykeptboy.resolver.DateRange,
+    ): kotlinx.coroutines.flow.Flow<List<com.eight87.strictlykeptboy.resolver.EventInput>> {
+        val zone = java.time.ZoneId.systemDefault()
+        val fromMs = range.start.atStartOfDay(zone).toInstant().toEpochMilli()
+        val toMs = (range.endInclusive ?: range.start)
+            .plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+        return systemCalendarsRepository.state.flatMapLatest { metas ->
+            if (metas.isEmpty()) {
+                kotlinx.coroutines.flow.flowOf(emptyList())
+            } else {
+                val visibleIds = metas
+                    .mapNotNull { runCatching { it.ref.id.toLong() }.getOrNull() }
+                    .toSet()
+                systemCalendarsRawFlow
+                    .map { all -> all.filter { it.id in visibleIds } }
+                    .flatMapLatest { known ->
+                        systemEventsBridge.events(fromMs, toMs, known, zone)
+                    }
+            }
+        }
     }
 
     val snapshot: StateFlow<RepoSnapshot> get() = snapshotPublisher.state

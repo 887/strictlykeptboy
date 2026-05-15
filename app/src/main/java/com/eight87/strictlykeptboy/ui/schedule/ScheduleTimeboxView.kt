@@ -47,6 +47,8 @@ const val TestTagTimeboxNowCard = "TimeboxNowCard"
 const val TestTagTimeboxEmpty = "TimeboxEmpty"
 const val TestTagTimeboxRegularSection = "TimeboxRegularSection"
 const val TestTagTimeboxRegularCard = "TimeboxRegularCard"
+/** Round 2.18.C.5 — external (CalendarContract) account divider label, suffix `-<accountName>`. */
+const val TestTagTimeboxExternalAccountHeader = "TimeboxExternalAccountHeader"
 
 /**
  * Phase G.4 — today's planned focus blocks rendered edge-to-edge as
@@ -104,7 +106,12 @@ fun ScheduleTimeboxView(
                 defaultWriteRepoId = defaultWriteRepoId,
             )
         }
-        if (regularBands.isNotEmpty()) {
+        // Round 2.18.C.5 — split regular vs external. External bands group
+        // by source account (encoded in repo.id = "system/<at>/<name>")
+        // and render under a divider label per account.
+        val fileBackedRegular = regularBands.filter { it.kind != CalendarKind.External }
+        val externalBands = regularBands.filter { it.kind == CalendarKind.External }
+        if (fileBackedRegular.isNotEmpty()) {
             item(key = "regular-section-header") {
                 Text(
                     text = "Scheduled events on top of your time blocks",
@@ -116,12 +123,39 @@ fun ScheduleTimeboxView(
                         .testTag(TestTagTimeboxRegularSection),
                 )
             }
-            items(regularBands, key = { "reg-${it.instance.instanceId}" }) { band ->
+            items(fileBackedRegular, key = { "reg-${it.instance.instanceId}" }) { band ->
                 RegularSecondaryCard(
                     band = band,
                     onClick = { onBandTap(band) },
                     defaultWriteRepoId = defaultWriteRepoId,
                 )
+            }
+        }
+        if (externalBands.isNotEmpty()) {
+            val groups: Map<Pair<String, String>, List<DayBand>> = externalBands.groupBy { band ->
+                val parts = band.instance.repo.id.split('/', limit = 3)
+                if (parts.size == 3 && parts[0] == "system") parts[1] to parts[2] else "" to band.instance.repo.id
+            }
+            groups.entries.sortedBy { it.key.second }.forEach { (account, bs) ->
+                val (accountType, accountName) = account
+                item(key = "ext-header-$accountName") {
+                    Text(
+                        text = if (accountName.isNotBlank()) accountName else accountType,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 16.dp, bottom = 4.dp)
+                            .testTag("$TestTagTimeboxExternalAccountHeader-$accountName"),
+                    )
+                }
+                items(bs, key = { "ext-${it.instance.instanceId}" }) { band ->
+                    RegularSecondaryCard(
+                        band = band,
+                        onClick = { onBandTap(band) },
+                        defaultWriteRepoId = defaultWriteRepoId,
+                    )
+                }
             }
         }
     }

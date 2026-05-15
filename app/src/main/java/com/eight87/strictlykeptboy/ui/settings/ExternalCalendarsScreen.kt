@@ -4,6 +4,9 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,8 +18,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -47,6 +52,10 @@ const val TestTagExternalCalendarsScreen = "ExternalCalendarsScreen"
 const val TestTagExternalCalendarsShowSwitch = "ExternalCalendars-Show"
 const val TestTagExternalCalendarsAllowEditSwitch = "ExternalCalendars-AllowEdit"
 const val TestTagExternalCalendarsCalendarRow = "ExternalCalendars-Cal-"
+/** Round 2.18.C.6 — permission-needed empty state container. */
+const val TestTagExternalCalendarsPermissionNeeded = "ExternalCalendars-PermissionNeeded"
+const val TestTagExternalCalendarsGrantButton = "ExternalCalendars-Grant"
+const val TestTagExternalCalendarsOpenSettingsButton = "ExternalCalendars-OpenSettings"
 
 /**
  * Round 2.18.B.2/B.4/B.5 — External (CalendarContract) calendars
@@ -181,7 +190,59 @@ fun ExternalCalendarsScreen(
                 testTag = TestTagExternalCalendarsAllowEditSwitch,
             )
 
-            if (global.showSystemCalendars) {
+            // Round 2.18.C.6 — permission re-check at render time. If the
+            // user revoked READ_CALENDAR via system settings while we
+            // weren't looking, surface a [Grant] / [Open Settings] block.
+            val hasReadCalendar = ContextCompat.checkSelfPermission(
+                ctx, Manifest.permission.READ_CALENDAR,
+            ) == PackageManager.PERMISSION_GRANTED
+            if (global.showSystemCalendars && !hasReadCalendar) {
+                Spacer(Modifier.height(16.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(16.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(TestTagExternalCalendarsPermissionNeeded),
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_external_calendars_permission_required_title),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(R.string.settings_external_calendars_permission_required_body),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = {
+                                pendingShowGrant = true
+                                readLauncher.launch(Manifest.permission.READ_CALENDAR)
+                            },
+                            modifier = Modifier.testTag(TestTagExternalCalendarsGrantButton),
+                        ) {
+                            Text(stringResource(R.string.settings_external_calendars_permission_grant))
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                    data = Uri.fromParts("package", ctx.packageName, null)
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                runCatching { ctx.startActivity(intent) }
+                            },
+                            modifier = Modifier.testTag(TestTagExternalCalendarsOpenSettingsButton),
+                        ) {
+                            Text(stringResource(R.string.settings_external_calendars_open_system_settings))
+                        }
+                    }
+                }
+            }
+
+            if (global.showSystemCalendars && hasReadCalendar) {
                 Spacer(Modifier.height(16.dp))
                 HorizontalDivider()
                 Spacer(Modifier.height(16.dp))

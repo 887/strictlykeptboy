@@ -165,8 +165,16 @@ private fun BandsLayer(
                         .testTag("$TestTagDayBand-${band.instance.instanceId}"),
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
-                        // 4-dp left color stripe (2.2.C.1-paint)
-                        BandLeftStripe(seed = band.accentColorSeed)
+                        // 4-dp left color stripe (2.2.C.1-paint).
+                        // Round 2.18.C.4 — external events get a narrower
+                        // 2-dp accent strip painted in the source-calendar
+                        // color so the band reads as "from a system
+                        // calendar" without losing skb's identity tint.
+                        if (band.kind == com.eight87.strictlykeptboy.resolver.CalendarKind.External) {
+                            BandLeftStripe(seed = band.accentColorSeed, widthDp = 2.dp)
+                        } else {
+                            BandLeftStripe(seed = band.accentColorSeed)
+                        }
 
                         Column(modifier = Modifier.padding(start = 10.dp, end = 8.dp, top = 4.dp, bottom = 4.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {

@@ -12,12 +12,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QrCode
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -72,6 +75,13 @@ const val TestTagEventDetailSourceRepo = "EventDetailSourceRepo"
 const val TestTagEventDetailSourceKind = "EventDetailSourceKind"
 const val TestTagEventDetailSourceAuthor = "EventDetailSourceAuthor"
 const val TestTagEventDetailSupersededNote = "EventDetailSupersededNote"
+// Round 2.18.C.7 — external-event attribution header
+const val TestTagEventDetailExternalSource = "EventDetailExternalSource"
+// Round 2.18.C.8/C.9 — attendees + reminders sections
+const val TestTagEventDetailAttendees = "EventDetailAttendees"
+const val TestTagEventDetailAttendeeRow = "EventDetailAttendeeRow"
+const val TestTagEventDetailReminders = "EventDetailReminders"
+const val TestTagEventDetailReminderRow = "EventDetailReminderRow"
 
 /**
  * Phase G.7 — modal bottom sheet that surfaces an event's full content.
@@ -122,6 +132,10 @@ fun EventDetailContent(
     repoName: String? = null,
     supersededByName: String? = null,
     notificationPrefs: NotificationPrefs? = null,
+    /** Round 2.18.C.8 — already-resolved attendees for external events. */
+    externalAttendees: List<com.eight87.strictlykeptboy.system.ExternalAttendee> = emptyList(),
+    /** Round 2.18.C.9 — already-resolved reminders for external events. */
+    externalReminders: List<com.eight87.strictlykeptboy.system.ExternalReminder> = emptyList(),
     modifier: Modifier = Modifier,
 ) {
     val tz = band.instance.effectiveStart.zone
@@ -141,6 +155,21 @@ fun EventDetailContent(
                 modifier = Modifier.testTag(TestTagEventDetailTitle),
             )
             Spacer(modifier = Modifier.height(4.dp))
+            // Round 2.18.C.7 — external source attribution shown right
+            // under the title for events that came in via
+            // CalendarContract. Phrasing branches by accountType so the
+            // user sees "From Google Calendar (alice@gmail.com)" instead
+            // of the raw `(com.google, alice@gmail.com)` tuple.
+            band.instance.external?.let { ext ->
+                val attribution = externalAttributionLabel(ext.accountType, ext.accountName)
+                Text(
+                    text = attribution,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.testTag(TestTagEventDetailExternalSource),
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+            }
             // Time + tz
             Text(
                 text = "${fmt.format(band.instance.effectiveStart)} – " +
@@ -299,14 +328,130 @@ fun EventDetailContent(
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
+            // Round 2.18.C.8 — attendees with RSVP status icons.
+            if (externalAttendees.isNotEmpty()) {
+                Text(
+                    text = stringResource(R.string.event_detail_attendees_header),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Column(modifier = Modifier.testTag(TestTagEventDetailAttendees)) {
+                    externalAttendees.forEach { att ->
+                        AttendeeRow(att)
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            // Round 2.18.C.9 — reminders read from CalendarContract.Reminders.
+            if (externalReminders.isNotEmpty()) {
+                Text(
+                    text = stringResource(R.string.event_detail_reminders_header),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Column(modifier = Modifier.testTag(TestTagEventDetailReminders)) {
+                    externalReminders.forEach { rem ->
+                        Text(
+                            text = stringResource(
+                                R.string.event_detail_reminder_minutes_before,
+                                rem.minutes,
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 2.dp)
+                                .testTag("$TestTagEventDetailReminderRow-${rem.minutes}"),
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            // Round 2.18.C.2 — disable the edit affordance for read-only
+            // external events. Bands without an `external` sidecar always
+            // get the edit button; external bands gate on accessLevel.
+            val isExternalReadOnly = band.instance.external?.let {
+                it.accessLevel < 500 // CAL_ACCESS_CONTRIBUTOR
+            } ?: false
             FilledTonalButton(
                 onClick = onEdit,
+                enabled = !isExternalReadOnly,
                 modifier = Modifier.testTag(TestTagEventDetailEdit),
             ) {
                 Icon(Icons.Filled.Edit, contentDescription = null)
                 Spacer(modifier = Modifier.size(6.dp))
                 Text(stringResource(R.string.event_detail_edit))
             }
+    }
+}
+
+/**
+ * Round 2.18.C.7 — branch the attribution label on `accountType`. Returns
+ * a human-readable "From <provider> (<account>)" string. Falls back to a
+ * generic "From <accountType> (<accountName>)" when the type is unknown.
+ *
+ * Composable so we can resolve string resources (translation-correct).
+ */
+@Composable
+private fun externalAttributionLabel(accountType: String, accountName: String): String {
+    val at = accountType.lowercase()
+    return when {
+        at == "com.google" -> stringResource(
+            R.string.event_detail_external_source_google, accountName,
+        )
+        at == "com.android.exchange" || at.startsWith("eas") || at.contains("microsoft") ->
+            stringResource(R.string.event_detail_external_source_exchange, accountName)
+        at == "at.bitfire.davdroid" -> stringResource(
+            R.string.event_detail_external_source_davdroid, accountName,
+        )
+        else -> stringResource(
+            R.string.event_detail_external_source_generic, accountType, accountName,
+        )
+    }
+}
+
+@Composable
+private fun AttendeeRow(att: com.eight87.strictlykeptboy.system.ExternalAttendee) {
+    val statusLabel = when (att.statusCode) {
+        1 -> stringResource(R.string.event_detail_attendee_status_accepted)   // ATTENDEE_STATUS_ACCEPTED
+        2 -> stringResource(R.string.event_detail_attendee_status_declined)   // ATTENDEE_STATUS_DECLINED
+        3 -> stringResource(R.string.event_detail_attendee_status_invited)    // ATTENDEE_STATUS_INVITED
+        4 -> stringResource(R.string.event_detail_attendee_status_tentative)  // ATTENDEE_STATUS_TENTATIVE
+        else -> stringResource(R.string.event_detail_attendee_status_none)
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp)
+            .testTag("$TestTagEventDetailAttendeeRow-${att.email.ifBlank { att.displayName }}"),
+    ) {
+        val statusIcon = when (att.statusCode) {
+            1 -> Icons.Filled.CheckCircle
+            2 -> Icons.Filled.Cancel
+            4 -> Icons.Filled.HelpOutline
+            else -> Icons.Filled.Schedule
+        }
+        Icon(
+            imageVector = statusIcon,
+            contentDescription = statusLabel,
+            modifier = Modifier.size(16.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.size(8.dp))
+        Text(
+            text = att.displayName.ifBlank { att.email },
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            text = statusLabel,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

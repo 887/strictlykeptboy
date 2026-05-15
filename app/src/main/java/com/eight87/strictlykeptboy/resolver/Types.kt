@@ -106,7 +106,20 @@ data class CalendarMeta(
      * `CAL_ACCESS_CONTRIBUTOR` (500).
      */
     val externalAccessLevel: Int? = null,
-)
+) {
+    /**
+     * Round 2.18.C — parses the `(accountType, accountName)` tuple
+     * embedded in [repo].id for external calendars. Format is
+     * `system/<accountType>/<accountName>`. Returns `null` for
+     * non-external repos (kind != External) or repos whose id doesn't
+     * match the synthetic shape.
+     */
+    val externalAccount: Pair<String, String>?
+        get() = if (kind != CalendarKind.External) null else {
+            val parts = repo.id.split('/', limit = 3)
+            if (parts.size == 3 && parts[0] == "system") parts[1] to parts[2] else null
+        }
+}
 
 /**
  * Round 2.18.A.7 — sidecar source-of-origin tag for events that came in
@@ -305,6 +318,14 @@ data class MaterializedInstance(
     val isAllDay: Boolean = false,
     val priorityOverride: Int? = null,
     val author: PersonRef? = null,
+    /**
+     * Round 2.18.C.7 — non-null when this instance was materialized
+     * from an event that came in via
+     * [com.eight87.strictlykeptboy.system.SystemEventsBridge]. The
+     * resolver still ignores it; only the UI detail-sheet header +
+     * (future) writeback layer consult it.
+     */
+    val external: ExternalSource? = null,
 ) {
     val effectiveInterval: ZonedInterval get() = ZonedInterval(effectiveStart, effectiveEnd)
     /** Stable per-render id usable as Compose key and as cache primary key. */

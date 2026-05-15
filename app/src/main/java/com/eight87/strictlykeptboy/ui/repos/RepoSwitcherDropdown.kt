@@ -59,6 +59,10 @@ const val TestTagRepoSwitcherHouseGlyph = "RepoSwitcherHouseGlyph"
 const val TestTagRepoSwitcherSettings = "RepoSwitcherSettings"
 const val TestTagRepoSwitcherModeBadge = "RepoSwitcherModeBadge"
 const val TestTagRepoSwitcherSync = "RepoSwitcherSync"
+/** Round 2.18.C.3 — "System calendars" section header. */
+const val TestTagRepoSwitcherSystemHeader = "RepoSwitcherSystemHeader"
+/** Round 2.18.C.3 — synthetic non-clickable row, suffix `-<repoId>`. */
+const val TestTagRepoSwitcherSystemRow = "RepoSwitcherSystemRow"
 /** Round 2.5.A.3 — per-repo "show on schedule" chip toggle. */
 const val TestTagRepoSwitcherShowOnSchedule = "RepoSwitcherShowOnSchedule"
 /** Round 2.5.A.3 — per-repo "draw tasks from" chip toggle. */
@@ -96,6 +100,14 @@ fun RepoSwitcherDropdown(
      * Null suppresses the chip (back-compat for previews / tests).
      */
     onToggleDrawTasksFrom: ((String, Boolean) -> Unit)? = null,
+    /**
+     * Round 2.18.C.3 — synthetic repos backing system (CalendarContract)
+     * calendars. Rendered under a "System calendars" section header,
+     * non-clickable in the active-repo picker (no identity, no writes by
+     * default). Each row carries the `repoId` (`system/<accountType>/<accountName>`)
+     * and the displayed label (typically `<accountName>`).
+     */
+    systemRepos: List<SystemRepoRow> = emptyList(),
 ) {
     Surface(
         shape = MaterialTheme.shapes.large,
@@ -137,9 +149,70 @@ fun RepoSwitcherDropdown(
                     modifier = Modifier.padding(start = 12.dp),
                 )
             }
+            // Round 2.18.C.3 — synthetic repos (CalendarContract). Rendered
+            // under a "System calendars" header, non-clickable rows so the
+            // user can SEE which external accounts feed the schedule but
+            // cannot select them as the active write-target.
+            if (systemRepos.isNotEmpty()) {
+                HorizontalDivider()
+                Text(
+                    text = stringResource(R.string.repo_switcher_system_section_header),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .testTag(TestTagRepoSwitcherSystemHeader),
+                )
+                systemRepos.forEach { sys ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("$TestTagRepoSwitcherSystemRow-${sys.repoId}")
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Settings,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                text = sys.displayLabel,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            sys.secondaryLabel?.takeIf { it.isNotBlank() }?.let { sub ->
+                                Text(
+                                    text = sub,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
+
+/**
+ * Round 2.18.C.3 — display row for a synthetic system-calendar repo. The
+ * id is `system/<accountType>/<accountName>` (matches the resolver-level
+ * RepoRef); [displayLabel] is the user-facing label (typically the account
+ * name); [secondaryLabel] is the account type (`com.google` etc.).
+ */
+data class SystemRepoRow(
+    val repoId: String,
+    val displayLabel: String,
+    val secondaryLabel: String? = null,
+)
 
 @Composable
 private fun RepoRow(
