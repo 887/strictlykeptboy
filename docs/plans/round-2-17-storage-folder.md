@@ -178,7 +178,7 @@ Strict dependency chain:
 - **Phase H** — tests + AVD smoke.
 - **Phase I** — plan close-out + supersede D-2.7.b in older plans.
 
-## Phase A — Data layer rework — shipped in <PHASE-A-SHA>
+## Phase A — Data layer rework — shipped in 870c884
 
 - [x] **A.1** Inventory `apache-commons-compress` availability on the
   app classpath (transitive via JGit?). If absent, add
