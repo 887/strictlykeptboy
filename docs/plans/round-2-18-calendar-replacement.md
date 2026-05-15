@@ -749,7 +749,7 @@ repos slot in identically.
   `CalendarContract.Reminders` rows so other apps (Wear OS) see
   them.
 
-## Phase H — DAVx⁵ / Exchange integration docs — shipped in commit <PHASE_H_SHA>
+## Phase H — DAVx⁵ / Exchange integration docs — shipped in commit 71cdecc
 
 - [x] **H.1** New screen `ExternalAccountsConnectScreen` linked from
   the External Calendars settings page. Three cards:
