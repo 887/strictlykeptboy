@@ -118,6 +118,10 @@ fun BandKindGlyph(
     val icon = when (kind) {
         CalendarKind.Timebox -> Icons.Filled.HourglassEmpty
         CalendarKind.Regular -> Icons.Outlined.CalendarToday
+        // Round 2.18.A.3 — external calendars (CalendarContract-backed)
+        // render with the same glyph as a regular calendar; the
+        // source-icon overlay is handled separately in Phase C.
+        CalendarKind.External -> Icons.Outlined.CalendarToday
     }
     Icon(
         imageVector = icon,

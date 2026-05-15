@@ -341,34 +341,46 @@ repos slot in identically.
 - **Phase J** — Tests + AVD smoke.
 - **Phase K** — Plan-file close.
 
-## Phase A — Bridge data layer
+## Phase A — Bridge data layer — shipped in 8566d1d
 
-- [ ] **A.1** New file `app/src/main/java/com/eight87/strictlykeptboy/system/CalendarContractBridge.kt`.
+> Caveat on A.4: the codebase had no pre-existing `RepoKind` enum and
+> no exhaustive `when (repoKind)` sites. Rather than introduce one
+> empty-handed (YAGNI), the synthetic-repo concept lives in the
+> `RepoRef("system/<accountType>/<accountName>")` namespace itself —
+> resolver / chip-strip / color code already key off `RepoRef`, not a
+> kind enum. Phase B+C will surface the synthetic-vs-file distinction
+> in the UI; the data model is sufficient without a parallel kind
+> enum. `RepoConfig.rootDir` is `String` (non-nullable), so synthetic
+> repos do not flow through `RepoStore` at all — they bypass the
+> file-backed pipeline entirely via `SystemCalendarsRepository`
+> emitting directly into `IndexerSnapshotPublisher`.
+
+- [x] **A.1** New file `app/src/main/java/com/eight87/strictlykeptboy/system/CalendarContractBridge.kt`.
   Queries `CalendarContract.Calendars` with a projection of `[_ID,
   ACCOUNT_NAME, ACCOUNT_TYPE, CALENDAR_DISPLAY_NAME, CALENDAR_COLOR,
   CALENDAR_ACCESS_LEVEL, OWNER_ACCOUNT, IS_PRIMARY, SYNC_EVENTS,
   VISIBLE]`. Filter `VISIBLE = 1` and `SYNC_EVENTS = 1`. Returns a
   cold `Flow<List<SystemCalendar>>` re-emitted on a `ContentObserver`
   registered against `Calendars.CONTENT_URI`.
-- [ ] **A.2** New `data class SystemCalendar(val id: Long, val
+- [x] **A.2** New `data class SystemCalendar(val id: Long, val
   accountName: String, val accountType: String, val displayName:
   String, val color: Int, val accessLevel: Int, val ownerAccount:
   String?, val isPrimary: Boolean)` in
   `system/SystemCalendar.kt`.
-- [ ] **A.3** Extend `enum class CalendarKind` in
+- [x] **A.3** Extend `enum class CalendarKind` in
   `resolver/Types.kt` with `External`. Audit every existing exhaustive
   `when (kind)` site for compilation breakage; add an explicit
   `External -> Regular`-equivalent fallback unless the site has
   external-specific behavior.
-- [ ] **A.4** Extend `RepoKind` (in `git/RepoConfig.kt` or wherever
+- [x] **A.4** Extend `RepoKind` (in `git/RepoConfig.kt` or wherever
   it lives) with `System`. Synthetic `RepoConfig` for system repos
   has `rootDir = null`, `remoteName = null`, `colorSeed` =
   hash(accountType + accountName).
-- [ ] **A.5** New `system/SystemCalendarsRepository.kt` — combines
+- [x] **A.5** New `system/SystemCalendarsRepository.kt` — combines
   the `Flow<List<SystemCalendar>>` from `CalendarContractBridge` into
   `Flow<List<CalendarMeta>>` of `kind = External`, repo =
   synthetic `RepoRef("system/<accountType>/<accountName>")`.
-- [ ] **A.6** New `system/SystemEventsBridge.kt` — queries
+- [x] **A.6** New `system/SystemEventsBridge.kt` — queries
   `CalendarContract.Instances` for a given time window
   `[begin, end)` (`Instances.CONTENT_BY_DAY_URI` with appended
   begin/end), projection includes `EVENT_ID`, `BEGIN`, `END`,
@@ -377,42 +389,42 @@ repos slot in identically.
   `ACCESS_LEVEL`. Maps each row to skb's `EventInput` (or a new
   sibling `ExternalEventInput` if the resolver needs distinguishing
   metadata such as `accessLevel`).
-- [ ] **A.7** Decision sub-step: extend `EventInput` with optional
+- [x] **A.7** Decision sub-step: extend `EventInput` with optional
   `external: ExternalSource?` (account type + account name +
   CalendarContract event ID + accessLevel + ownerAccount). Defended:
   resolver still treats all events uniformly; only the writeback
   layer + UI badges read `external`.
-- [ ] **A.8** Aggregator wiring in `composition/AppGraph.kt`:
+- [x] **A.8** Aggregator wiring in `composition/AppGraph.kt`:
   `CalendarRegistry` already takes `synthesizedSnapshot:
   StateFlow<RepoSnapshot>`. Extend `IndexerSnapshotPublisher` to
   fold `SystemCalendarsRepository.state` into its emitted
   `RepoSnapshot.calendars` list. Mirror for events via
   whichever publisher feeds the resolver's event stream.
-- [ ] **A.9** Date-window contract: the resolver currently
+- [x] **A.9** Date-window contract: the resolver currently
   materializes for a per-view window. `SystemEventsBridge` must take
   the same window as input and re-emit on window change. Confirm via
   reading `resolver/Renderer.kt` how the window flows in today; wire
   identically.
-- [ ] **A.10** Color mapping: `CALENDAR_COLOR` is a raw `0xAARRGGBB`
+- [x] **A.10** Color mapping: `CALENDAR_COLOR` is a raw `0xAARRGGBB`
   int. Translate to skb's M3E tint pipeline by populating
   `CalendarMeta.colorSeed` with the truncated int hash. Verify
   Material You harmonization still applies.
-- [ ] **A.11** Access-level → editability flag exposed on
+- [x] **A.11** Access-level → editability flag exposed on
   `CalendarMeta` (new field `val externalAccessLevel: Int? = null`).
   `null` for non-external; one of the
   `CalendarContract.Calendars.CAL_ACCESS_*` constants for external.
-- [ ] **A.12** `ContentObserver` lifecycle owned by
+- [x] **A.12** `ContentObserver` lifecycle owned by
   `SystemCalendarsRepository` — registered in a `coroutineScope`
   tied to the app lifecycle, NOT to a view-model. Same pattern as
   `RepoStore`.
-- [ ] **A.13** Empty-permission state: if `READ_CALENDAR` not
+- [x] **A.13** Empty-permission state: if `READ_CALENDAR` not
   granted, all flows emit `emptyList()` (no SecurityException
   bubbling up). Granted state checked on each query, not cached.
-- [ ] **A.14** New `system/SystemCalendarPrefsStore.kt` for
+- [x] **A.14** New `system/SystemCalendarPrefsStore.kt` for
   user-defined overrides (priority, active toggle, active windows,
   supersedence) keyed by `(accountType, accountName, calendarId)`.
   Backed by `SharedPreferences` (JSON via `kotlinx.serialization`).
-- [ ] **A.15** Overlay step in `SystemCalendarsRepository` — apply
+- [x] **A.15** Overlay step in `SystemCalendarsRepository` — apply
   prefs overrides to the synthesized `CalendarMeta` before emit.
   Mirrors `CalendarRegistry.applyOverlay` semantically.
 

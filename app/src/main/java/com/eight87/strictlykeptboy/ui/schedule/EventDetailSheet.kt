@@ -166,6 +166,8 @@ fun EventDetailContent(
                     text = "Kind: " + when (band.kind) {
                         com.eight87.strictlykeptboy.resolver.CalendarKind.Timebox -> "Timebox"
                         com.eight87.strictlykeptboy.resolver.CalendarKind.Regular -> "Regular"
+                        // Round 2.18.A.3 — external (CalendarContract) calendars.
+                        com.eight87.strictlykeptboy.resolver.CalendarKind.External -> "External"
                     },
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

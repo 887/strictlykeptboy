@@ -56,7 +56,19 @@ data class ZonedInterval(val from: ZonedDateTime, val toExclusive: ZonedDateTime
     fun lengthMillis(): Long = java.time.Duration.between(from, toExclusive).toMillis()
 }
 
-enum class CalendarKind { Regular, Timebox }
+/**
+ * Round 2.18.A.3 — kind of calendar surface.
+ *
+ * - [Regular]: file-backed event calendar in a skb repo.
+ * - [Timebox]: file-backed timebox calendar (focus sessions, work blocks).
+ * - [External]: synthetic calendar backed by Android's CalendarContract
+ *   (Google, Exchange, iCloud, etc. — provided by the OS sync adapters).
+ *   External calendars are read-only in Phase A; Phase D adds write-back.
+ *   Resolver treats `External` as regular-equivalent for active-windows,
+ *   priority, supersedence, and inversion semantics — the distinction
+ *   only matters for the writeback layer + UI badges.
+ */
+enum class CalendarKind { Regular, Timebox, External }
 
 /**
  * Resolver-facing calendar metadata. Caller (UI / view-model layer)
@@ -86,6 +98,35 @@ data class CalendarMeta(
      */
     val baselineCadenceDays: Int? = null,
     val colorSeed: Int? = null,
+    /**
+     * Round 2.18.A.11 — `CalendarContract.Calendars.CALENDAR_ACCESS_LEVEL`
+     * for external calendars (one of `CAL_ACCESS_*` constants). `null` for
+     * non-external calendars. Drives the edit-affordance gating in the UI:
+     * the detail sheet hides edit / delete actions when this is below
+     * `CAL_ACCESS_CONTRIBUTOR` (500).
+     */
+    val externalAccessLevel: Int? = null,
+)
+
+/**
+ * Round 2.18.A.7 — sidecar source-of-origin tag for events that came in
+ * via [com.eight87.strictlykeptboy.system.SystemEventsBridge] from
+ * Android's `CalendarContract`. Carries the writeback-relevant tuple so
+ * Phase D can route an edit back to the right account.
+ *
+ * Defended: resolver code never reads this; only the UI badge layer +
+ * the (future) writeback path consult it. Existing file-backed events
+ * leave it `null` — those go through `GitRepo.commitAll`.
+ */
+data class ExternalSource(
+    val accountType: String,
+    val accountName: String,
+    /** `CalendarContract.Events._ID`. */
+    val eventId: Long,
+    /** One of `CalendarContract.Calendars.CAL_ACCESS_*`. */
+    val accessLevel: Int,
+    /** Owner email/account, may be `null` for some sync adapters. */
+    val ownerAccount: String? = null,
 )
 
 data class TodolistMeta(
@@ -142,6 +183,13 @@ data class EventInput(
     val location: String? = null,
     val externalUid: String? = null,
     val author: PersonRef? = null,
+    /**
+     * Round 2.18.A.7 — non-null when this event came in via
+     * [com.eight87.strictlykeptboy.system.SystemEventsBridge]. The
+     * resolver ignores this field; only the writeback + UI-badge layers
+     * read it.
+     */
+    val external: ExternalSource? = null,
 )
 
 /**
