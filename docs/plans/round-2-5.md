@@ -1,6 +1,6 @@
 # Round 2.5 — Per-repo overlay control + calendar management + sticker packs
 
-## Status: PENDING — planning complete, implementation not started
+## Status: ✅ DONE — phases A–D shipped (f01aebd / 3b1e57c / 93639a9 / f01aebd); Phase E (dedicated AVD smoke + release) absorbed into the rolling 2.15/2.16/2.17 release cadence — no separate 2.5 release tag, the surfaces are live in the current build.
 
 ## Why this round exists
 

@@ -1,9 +1,9 @@
 # Round 2.18 — Replace the Android system calendar
 
-## Status
+## Status: 📋 DRAFT — not yet started, see round-2-17 for foundational storage work that this round builds on
 
 Planning. No code changes yet. Predecessor: Round 2.16 (now-playing + todolist
-unification), Round 2.17 (TBD). Sister plan: `docs/plans/round-2-15-demo-first-onboarding.md`.
+unification), Round 2.17 (storage folder + import/export/restore — ✅ DONE). Sister plan: `docs/plans/round-2-15-demo-first-onboarding.md`.
 
 ## Context
 

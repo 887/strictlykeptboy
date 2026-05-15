@@ -96,12 +96,12 @@ Round 2.1 fixed the wiring (data layer correct, UI bindings live), but two thing
 - [x] **2.2.E.6** **Worker-safe `MaterializedInstance` snapshot handoff.** `BriefingComposer` today emits "Nothing scheduled" placeholder because the WorkManager worker can't access `AppGraph.snapshot` without an Android Application context. Use the `CarAppRuntime` parked-handle pattern — `AppGraph.parkBriefingSourceFor(worker)` exposes a `Flow<List<MaterializedInstance>>` that the worker collects against. (Was 2.1.F.6 deferred half.) Landed: `BriefingRuntime` parked-handle (mirrors `CarAppRuntime`); `AppGraph.briefingSource` adapter; `BriefingWorker.doWork()` collects real events; `BriefingSourceHandleTest` + `BriefingComposerRealEventsTest`.
 - [x] **2.2.E.M5** **Call-site wiring of `IdentityNotifBody.bodyForPet`.** Today `ReminderBroadcastReceiver` calls `bodyFor` (the non-pet-aware variant). Route through `bodyForPet` with a derived `PetMode` from `PetModeDerivation`. Pet-mode register reaches the lockscreen. (Was 2.1.M.5 deferred.) Landed: receiver derives `PetMode` via `petModeResolver` seam + routes through `bodyForPet`; `NotifReminderPetCopyTest` (4 cases — Self-Pet / Partnered-Pet / Self-Keep / private-short-circuit).
 
-## Phase 2.2.F — Polish + tests + AVD smoke + release
+## Phase 2.2.F — Polish + tests + AVD smoke + release — shipped in commit 0b6973e
 
-- [ ] **2.2.F.1** Full AVD smoke walkthrough: wipe data → wizard → pick each of the 6 lifestyle cards in separate runs → verify `mode.toml` + `identity.toml` reflect each card's atomic 4-tuple. Confirm top-bar shows ONLY Schedule + Tasks + Reviews destination buttons. Confirm Repos "+" opens wizard. Confirm Schedule + Tasks FAB visible only in those views.
-- [ ] **2.2.F.2** Tests: all green ≥ 736.
-- [ ] **2.2.F.3** Status flip: `## Status: ✅ DONE` on `round-2-2.md`. Update `main.md` Round 2.2 section to ✅ DONE with summary.
-- [ ] **2.2.F.4** `scripts/build-release-apk.sh --gh-release` → push new APK to GitHub Releases. Obtainium auto-pulls.
+- [x] **2.2.F.1** Full AVD smoke walkthrough: wipe data → wizard → pick each of the 6 lifestyle cards in separate runs → verify `mode.toml` + `identity.toml` reflect each card's atomic 4-tuple. Confirm top-bar shows ONLY Schedule + Tasks + Reviews destination buttons. Confirm Repos "+" opens wizard. Confirm Schedule + Tasks FAB visible only in those views.
+- [x] **2.2.F.2** Tests: all green ≥ 736. (Landed at 773.)
+- [x] **2.2.F.3** Status flip: `## Status: ✅ DONE` on `round-2-2.md`. Update `main.md` Round 2.2 section to ✅ DONE with summary.
+- [x] **2.2.F.4** `scripts/build-release-apk.sh --gh-release` → push new APK to GitHub Releases. Obtainium auto-pulls.
 
 ---
 

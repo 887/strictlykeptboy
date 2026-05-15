@@ -1,5 +1,7 @@
 # Round 2.1 audit — Schedule + Tasks rendering surface
 
+## Status: OBSOLETE — superseded by round-2-1.md ticks
+
 Read-only audit. The user's complaint: "you're not really using the multi
 repositories and are making calendars manageable by repository". The
 genesis prompt (2026-05-10) frames the app as an overlay of many calendar

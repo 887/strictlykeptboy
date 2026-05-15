@@ -1,5 +1,7 @@
 # Audit 2.1 — Notifications, Android Auto, Tablet adaptation
 
+## Status: OBSOLETE — superseded by round-2-1.md ticks
+
 Read-only audit of the three surfaces the user called out in the genesis prompt
 ("per-event notification control", "notification groups to toggle etc", "also
 android auto and tablets") plus the lifestyle wizard's morning/evening briefings

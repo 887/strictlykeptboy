@@ -1,5 +1,7 @@
 # Round 2.17 — Storage folder choice + import/export/restore
 
+## Status: ✅ DONE
+
 ## Context
 
 D-2.7.b (locked in `docs/plans/round-2-7.md`) hard-codes the repo
@@ -500,16 +502,18 @@ Strict dependency chain:
   present with byte-identical content. Migrator is idempotent on
   the second launch (flag set, no-op).
 
-## Phase I — Plan close-out
+## Phase I — Plan close-out — shipped in this commit (close-out sweep)
 
-- [ ] **I.1** Edit `docs/plans/round-2-7.md`: mark D-2.7.b
+- [x] **I.1** Edit `docs/plans/round-2-7.md`: mark D-2.7.b
   "SUPERSEDED by D-2.17.a" and D-2.7.c "SUPERSEDED by D-2.17.b".
   Don't delete the old plan — leave the history.
-- [ ] **I.2** Edit `docs/plans/decisions.md`: append D-2.17.a
+- [x] **I.2** Edit `docs/plans/decisions.md`: append D-2.17.a
   through D-2.17.l to the locked-decisions list.
-- [ ] **I.3** Tick every phase header in this file with its jj
-  change ID as the work lands.
-- [ ] **I.4** Add `## Status: ✅ DONE` to the top of this file
+- [x] **I.3** Tick every phase header in this file with its
+  git short-sha as the work lands. (skb is plain git; SHAs already
+  pinned: A 870c884, B 528c894, C 1084a29, D f9bed3b, E 9573c77,
+  F 01e3573, G 935a164, H 84e4afc.)
+- [x] **I.4** Add `## Status: ✅ DONE` to the top of this file
   when every phase is ticked.
 
 ## Verification

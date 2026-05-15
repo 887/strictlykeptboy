@@ -1,5 +1,7 @@
 # Round 2.1 — Settings audit
 
+## Status: OBSOLETE — superseded by round-2-1.md ticks
+
 Read-only audit of every settings surface in strictlykeptboy as of
 the Phase W close-out. Source of intent: `docs/plans/prompts.md` (94
 prompts, 2026-05-10..2026-05-13). Source of architecture:

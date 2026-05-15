@@ -1781,3 +1781,124 @@ In strictlykeptboy there is **no app-level user identity**. Each repo carries it
 Implication for UI work: never hardcode a "current user" outside the active-repo scope. `IdentityAvatar`'s rendering reads from `AppGraph.activeRepoConfig.iconKind` + the active repo's `identity.toml.species`. Until Phase WW's sticker pack lands the fallback chain is: `Sticker(bat) → R.drawable.about_bat`; `Sticker(other-species) → AutoInitials(species[0], seedColor)`; `Photo(uri) → Coil load`; `Emoji → render glyph`; default → `AutoInitials(displayName[0], hash-derived color)`.
 
 Tracked finding: **F48** (refactor-solid.md) — wire `IdentityAvatar` in `SkbAppShell` to read the active-repo `IconKind` + `identity.toml.species`. Currently hardcoded to `R.drawable.about_bat` regardless of active repo. Closes when Phase WW lands (bitmap pipeline) OR earlier as a polish round if we accept the AutoInitials fallback for non-bat species in the interim.
+
+---
+
+## Round 2.17 — Storage folder choice (locked 2026-05-15)
+
+- **D-2.17.a — Parent folder is the unit of "where the app stores
+  things".** `ParentLocation` replaces `MirrorLocation`. Two variants:
+  `Internal(absPath = filesDir/strictlykeptboy)` and
+  `External(treeUri, label, cachedRealPath?)`. There is always
+  exactly one parent; `None` is gone. The default on first launch
+  (before the user answers the question) is `Internal`, but the
+  scaffold flow blocks until the user has explicitly chosen.
+
+- **D-2.17.b — External path uses SAF tree URI for the consent
+  handshake + the cached real path for JGit I/O.** SAF is the only
+  way Android 11+ lets the user grant a stable, persistable tree
+  permission outside the app sandbox; raw `File` paths under
+  `/storage/emulated/0/` work for JGit only if the user has
+  separately granted `MANAGE_EXTERNAL_STORAGE` (a Play-Store
+  high-risk permission we will not request). The compromise: the
+  user picks via `ACTION_OPEN_DOCUMENT_TREE`, we reuse
+  `SafTreeUriResolver.resolveRealPath` (only works for the primary
+  volume — that's fine, picker copy makes that clear) to derive an
+  absolute path, and JGit reads/writes there with bare `java.io.File`
+  on the strength of the SAF permission grant. If the user picks an
+  SD card / cloud provider, `resolveRealPath` returns null and the
+  picker is rejected with a clear error ("Pick a folder on internal
+  storage — SD cards and cloud folders aren't supported yet").
+
+- **D-2.17.c — User picks ANY directory; the app creates / reuses a
+  `strictlykeptboy/` subfolder inside it.** A user pointing the picker
+  at `Documents/` ends up with `Documents/strictlykeptboy/<repoId>/`.
+  Pointing it at an *existing* `Documents/strictlykeptboy/` short-
+  circuits to using that folder as-is (detected by `.skb-root` marker
+  — see D-2.17.d). Pointing at any other folder containing a
+  `strictlykeptboy/` child that already carries a marker also short-
+  circuits. Why: keeps users' Documents/ clean, avoids the "the app
+  vomited 15 repo folders into my Downloads" surprise, and makes the
+  parent self-describing.
+
+- **D-2.17.d — `.skb-root` marker file pins the parent.** A small TOML
+  at `<parent>/.skb-root` with `version = 1`, `app_id =
+  "com.eight87.strictlykeptboy"`, `created_at = <iso8601>`,
+  `created_by = <device-name>`. Created on parent-folder
+  initialisation. Used to (a) detect "this folder is already ours" on
+  re-pick, (b) drive the "adopt existing folder" Settings flow, (c)
+  refuse to nuke a non-skb folder during Restore. Plain TOML so the
+  user / a peer agent can hand-edit if needed.
+
+- **D-2.17.e — Strictly one parent at a time.** Per-repo overrides
+  ("this repo lives over there, that one lives over here") are
+  rejected for v1: too much UX surface, settings sprawl, and the
+  user's intent ("the main strictlykeptboy folder, the repo we're
+  creating is a subfolder") reads as singular. Switching parent =
+  moving every repo (Phase E.5 move-job).
+
+- **D-2.17.f — Migration from D-2.7.b.** On first launch after this
+  round ships, if `filesDir/repos/<x>/` exist and no parent prefs
+  exist, write `Internal(filesDir/strictlykeptboy/)` to prefs and
+  *move* (not copy) every `filesDir/repos/<x>/` into the new parent.
+  Record `migrated_from_d_2_7_b = true` in prefs so we don't run twice.
+  Existing mirror prefs (`MirrorLocation.External`) are read as a
+  hint and the user gets a one-time toast: "Your previous backup
+  folder is no longer mirrored — open Settings to move repos there
+  instead." We do NOT auto-promote a mirror to a parent: the user
+  should consent again with the new framing.
+
+- **D-2.17.g — Restore is destructive + irreversible; gated by typed
+  confirmation.** "Restore from folder" wipes the in-memory
+  `RepoStore`, deletes `filesDir/strictlykeptboy/`'s contents (or the
+  configured external parent's contents — see D-2.17.h), then
+  re-hydrates from the chosen source. User must type `restore` into a
+  text field before the action enables, plus a 3-second hold on the
+  destructive button. No system "Are you sure" — we own the dialog.
+
+- **D-2.17.h — Restore can target the live parent or a backup
+  archive.** Two sub-actions:
+  - *Restore from current parent folder* — re-scan the parent, drop
+    every `repoStore` entry, register every `<parent>/<repoId>/` that
+    looks like a git repo. Used to recover after a `RepoStore` prefs
+    corruption / a manual `adb pull`-and-edit cycle.
+  - *Restore from backup archive* — pick a `.skb-backup.tar.gz`,
+    extract into the parent (replacing it), then run the same re-scan.
+
+- **D-2.17.i — Backup export format is `.skb-backup.tar.gz` with a
+  manifest.** Single `tar.gz` containing the entire parent folder
+  contents plus a top-level `manifest.toml` (skb version, schema
+  version, repo count, created_at, parent_label). Tar preserves
+  symlinks (required for `CLAUDE.md → AGENTS.md` symlinks per
+  produced-repo convention). We do NOT zip — Java's `ZipOutputStream`
+  loses symlinks. Apache Commons Compress is already on the classpath
+  via JGit transitives? — verify in A.1 and add explicitly if not.
+
+- **D-2.17.j — Adoption is permissive but never overwrites.** When
+  the user "Choose existing folder", the discovered repos are added
+  to `RepoStore` with `displayName` derived from each repo's
+  `repo.toml` (or `<repoId>` fallback). If a `displayName` collides
+  with an existing entry the adopted one gets ` (adopted)` appended.
+  We never modify the on-disk repo during adoption — only register it.
+
+- **D-2.17.k — SAF permission revocation is non-fatal but blocks
+  writes.** On boot we verify the persisted tree URI permission is
+  still granted (`contentResolver.persistedUriPermissions`). If
+  revoked, the app boots, surfaces a red banner on Repos +
+  Schedule ("Strictlykeptboy lost access to its folder — re-pick
+  it"), and disables write paths until re-picked. We do NOT fall
+  back to `Internal` automatically: silent fallback is the kind of
+  thing that produces "where did all my data go" bug reports.
+
+- **D-2.17.l — Refactor, don't rewrite.** `RepoStoragePrefs`,
+  `SafTreeUriResolver`, `MirrorReconciler` are *refactored*:
+  - `RepoStoragePrefs` keeps its `EncryptedSharedPreferences`-backed
+    file, prefs schema is bumped to `repo_storage_v2.xml` with
+    one-time read of `_v1.xml` for migration.
+  - `SafTreeUriResolver` keeps its current `resolveRealPath` and
+    grows an `appendSubfolder` helper for D-2.17.c.
+  - `MirrorReconciler` is renamed to `ParentReconciler` and its
+    `mirror` remote work is **removed**, replaced with a
+    "make sure every repo on disk under the parent is in
+    `RepoStore`" reconcile. Existing `"mirror"` remotes on repos
+    are pruned the first time `reconcile()` runs after migration.

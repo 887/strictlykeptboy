@@ -1,5 +1,7 @@
 # Audit: Wizard + Identity + Mode + Dom-persona — Round 2.1
 
+## Status: OBSOLETE — superseded by round-2-1.md ticks
+
 > Read-only audit, 2026-05-13. Source-of-intent: `docs/plans/prompts.md`
 > (94 prompts, genesis 2026-05-10). Source-of-architecture: `main.md`
 > Phases K / DDD / SS / RR / AAA, `decisions.md` D.54..D.86 + K-1..K-7.

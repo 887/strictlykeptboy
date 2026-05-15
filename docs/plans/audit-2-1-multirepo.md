@@ -1,5 +1,7 @@
 # Audit — Round 2.1: multi-repo + cross-repo sharing surface
 
+## Status: OBSOLETE — superseded by round-2-1.md ticks
+
 Auditor: opus-subagent, READ-ONLY, 2026-05-13.
 Scope: how multiple git repos and their calendars actually surface to
 the user today, and where the architecture diverges from the genesis
