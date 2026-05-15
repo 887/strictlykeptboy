@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.system.SystemCalendar
+import com.eight87.strictlykeptboy.system.SystemCalendarAppDetector
 import com.eight87.strictlykeptboy.system.SystemCalendarPrefsStore
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -56,6 +57,9 @@ const val TestTagExternalCalendarsCalendarRow = "ExternalCalendars-Cal-"
 const val TestTagExternalCalendarsPermissionNeeded = "ExternalCalendars-PermissionNeeded"
 const val TestTagExternalCalendarsGrantButton = "ExternalCalendars-Grant"
 const val TestTagExternalCalendarsOpenSettingsButton = "ExternalCalendars-OpenSettings"
+/** Round 2.18.F.7 — Settings → "Suppress system notifications" section. */
+const val TestTagExternalCalendarsSuppressSection = "ExternalCalendars-SuppressSection"
+const val TestTagExternalCalendarsSuppressRow = "ExternalCalendars-SuppressRow-"
 
 /**
  * Round 2.18.B.2/B.4/B.5 — External (CalendarContract) calendars
@@ -83,6 +87,12 @@ fun ExternalCalendarsScreen(
     prefs: SystemCalendarPrefsStore,
     systemCalendarsFlow: StateFlow<List<SystemCalendar>>,
     modifier: Modifier = Modifier,
+    /**
+     * Round 2.18.F.7 — test seam. Tests can pass a fixed candidate list
+     * to bypass `PackageManager` lookup.
+     */
+    detectInstalledCalendarApps: (android.content.Context) -> List<SystemCalendarAppDetector.InstalledCandidate> =
+        { ctx -> SystemCalendarAppDetector.detectInstalled(ctx) },
 ) {
     val ctx = LocalContext.current
     val global by prefs.globalState.collectAsState()
@@ -289,6 +299,69 @@ fun ExternalCalendarsScreen(
                                 },
                                 testTag = TestTagExternalCalendarsCalendarRow + cal.id,
                             )
+                        }
+                    }
+                }
+            }
+            // Round 2.18.F.7 — Suppress system calendar notifications.
+            // List the candidate calendar apps installed on the device;
+            // tapping a row opens the OS notification settings for that
+            // package so the user can mute it.
+            Spacer(Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(16.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(TestTagExternalCalendarsSuppressSection),
+            ) {
+                Text(
+                    stringResource(R.string.settings_external_calendars_suppress_header),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    stringResource(R.string.settings_external_calendars_suppress_body),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(12.dp))
+                val installed = remember(ctx) { detectInstalledCalendarApps(ctx) }
+                if (installed.isEmpty()) {
+                    Text(
+                        stringResource(R.string.settings_external_calendars_suppress_empty),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    installed.forEach { cand ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp)
+                                .testTag(TestTagExternalCalendarsSuppressRow + cand.packageName),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    cand.displayName,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                )
+                                Text(
+                                    cand.packageName,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            OutlinedButton(onClick = {
+                                val intent = SystemCalendarAppDetector
+                                    .appNotificationSettingsIntent(cand.packageName)
+                                    .apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+                                runCatching { ctx.startActivity(intent) }
+                            }) {
+                                Text(stringResource(R.string.settings_external_calendars_suppress_row_action))
+                            }
                         }
                     }
                 }
