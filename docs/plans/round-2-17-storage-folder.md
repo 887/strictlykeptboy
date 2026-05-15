@@ -438,7 +438,7 @@ Strict dependency chain:
   refuses to wipe a directory containing unrelated files
   (no `.skb-root`).
 
-## Phase H — Tests + AVD smoke — shipped in <SHA>
+## Phase H — Tests + AVD smoke — shipped in 84e4afc
 
 - [x] **H.1** New Robolectric tests added per phase land green
   (A.6, A.7, D.5, E.6, F.5, G.7, G.8). Full sweep: 866 tests, 1
