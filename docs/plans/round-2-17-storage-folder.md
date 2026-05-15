@@ -237,7 +237,7 @@ Strict dependency chain:
   External) the URI permission is still granted AND the marker
   resolves on disk.
 
-## Phase B — MainActivity SAF launcher refactor — shipped in d5ad1b5
+## Phase B — MainActivity SAF launcher refactor — shipped in 528c894
 
 - [x] **B.1** Rename `openTreeLauncher` (`MainActivity.kt:93-132`)
   → `parentPickerLauncher`. Behaviour: on grant, call
