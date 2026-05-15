@@ -473,12 +473,41 @@ class AppGraph(private val appContext: Context) {
         },
     )
 
+    /**
+     * Round 2.18.A.1 — CalendarContract.Calendars wrapper. Cold; reads
+     * are gated by `READ_CALENDAR` and return empty when ungranted.
+     */
+    val calendarContractBridge: com.eight87.strictlykeptboy.system.CalendarContractBridge by lazy {
+        com.eight87.strictlykeptboy.system.CalendarContractBridge(appContext)
+    }
+
+    /** Round 2.18.A.6 — CalendarContract.Instances wrapper (windowed). */
+    val systemEventsBridge: com.eight87.strictlykeptboy.system.SystemEventsBridge by lazy {
+        com.eight87.strictlykeptboy.system.SystemEventsBridge(appContext)
+    }
+
+    /** Round 2.18.A.14 — per-system-calendar user overrides. */
+    val systemCalendarPrefsStore: com.eight87.strictlykeptboy.system.SystemCalendarPrefsStore by lazy {
+        com.eight87.strictlykeptboy.system.SystemCalendarPrefsStore.open(appContext)
+    }
+
+    /** Round 2.18.A.5 / A.15 — synthesized [CalendarMeta] for system calendars. */
+    val systemCalendarsRepository: com.eight87.strictlykeptboy.system.SystemCalendarsRepository by lazy {
+        com.eight87.strictlykeptboy.system.SystemCalendarsRepository(
+            bridge = calendarContractBridge,
+            prefs = systemCalendarPrefsStore,
+            scope = appScope,
+        )
+    }
+
     /** Round 2.1.A.1 — Room → [RepoSnapshot] bridge. */
     val snapshotPublisher: IndexerSnapshotPublisher by lazy {
         IndexerSnapshotPublisher(
             db = cacheDatabase,
             repoStore = repoStore,
             scope = appScope,
+            // Round 2.18.A.8 — fold external calendars into the snapshot.
+            externalCalendars = systemCalendarsRepository.state,
         )
     }
 

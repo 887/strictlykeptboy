@@ -13,8 +13,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
@@ -56,6 +59,16 @@ class IndexerSnapshotPublisher(
     private val db: CacheDatabase,
     private val repoStore: RepoStore,
     private val scope: CoroutineScope,
+    /**
+     * Round 2.18.A.8 — optional pipe of system-calendar metas
+     * ([com.eight87.strictlykeptboy.system.SystemCalendarsRepository.state]).
+     * When non-null, the synthesized `RepoSnapshot.calendars` list is the
+     * union of file-backed calendars + every emission from this flow.
+     * Defaults to an empty flow so existing call-sites (and tests) do
+     * not need to know about system calendars.
+     */
+    private val externalCalendars: StateFlow<List<CalendarMeta>> =
+        MutableStateFlow<List<CalendarMeta>>(emptyList()).asStateFlow(),
 ) {
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -70,21 +83,38 @@ class IndexerSnapshotPublisher(
             )
 
     private fun snapshotFlow(configs: List<RepoConfig>): Flow<RepoSnapshot> {
-        if (configs.isEmpty()) return flowOf(EMPTY)
-        // One tick whenever any event row in any repo changes. Used as
-        // the "something happened — re-read all repos" pulse. We pair
-        // it with an initial null so the first emission also reads.
-        val tick: Flow<Unit> = db.events()
-            .multiRepoByDateRange(FAR_PAST_MS, FAR_FUTURE_MS)
-            .map { Unit }
-        return tick.map { readAll(configs) }
+        val tick: Flow<Unit> = if (configs.isEmpty()) {
+            // Still need a "first emission" pulse so external calendars
+            // alone can populate the snapshot when zero file-backed
+            // repos are configured.
+            flowOf(Unit)
+        } else {
+            db.events()
+                .multiRepoByDateRange(FAR_PAST_MS, FAR_FUTURE_MS)
+                .map { Unit }
+        }
+        // Combine the (per-config) tick with the external calendar
+        // metas flow so any change on either side re-emits.
+        return combine(tick, externalCalendars) { _, externals ->
+            readAll(configs, externals)
+        }
     }
 
-    private suspend fun readAll(configs: List<RepoConfig>): RepoSnapshot {
-        val repos = configs.map {
+    private suspend fun readAll(
+        configs: List<RepoConfig>,
+        externalCalendars: List<CalendarMeta>,
+    ): RepoSnapshot {
+        val externalRepoRefs = externalCalendars.map { it.repo }.distinct()
+        val fileRepoEntries = configs.map {
             RepoSnapshot.RepoEntry(ref = RepoRef(it.repoId), lastIndexedHeadSha = null)
         }
+        val externalRepoEntries = externalRepoRefs.map {
+            // Synthetic repos have no Git HEAD; signal that with null.
+            RepoSnapshot.RepoEntry(ref = it, lastIndexedHeadSha = null)
+        }
+        val repos = fileRepoEntries + externalRepoEntries
         val calendars = mutableListOf<CalendarMeta>()
+        calendars += externalCalendars
         val todolists = mutableListOf<TodolistMeta>()
         for (cfg in configs) {
             val repoRef = RepoRef(cfg.repoId)
