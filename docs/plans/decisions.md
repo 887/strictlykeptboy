@@ -1902,3 +1902,40 @@ Tracked finding: **F48** (refactor-solid.md) — wire `IdentityAvatar` in `SkbAp
     "make sure every repo on disk under the parent is in
     `RepoStore`" reconcile. Existing `"mirror"` remotes on repos
     are pruned the first time `reconcile()` runs after migration.
+
+## D.89 — System calendar data stays on the device (Round 2.18.B.9)
+
+(D.88 was used elsewhere; this is the privacy-policy companion the
+Round 2.18 Phase B plan calls "new D.88".)
+
+The Round 2.18 system-calendar bridge reads `CalendarContract.Calendars`
+and `CalendarContract.Instances` to surface the user's Google /
+Exchange / DAVx5 calendars alongside skb's file-backed repos.
+**Strictlykeptboy never exfiltrates this data.** Specifically:
+
+- The `READ_CALENDAR` and `WRITE_CALENDAR` permissions are only
+  requested when the user explicitly enables "Show system calendars"
+  / "Allow editing system calendars" in Settings → External calendars.
+  Off by default.
+- All reads happen on-device via the OS `ContentResolver`. No event
+  bodies, attendee lists, account names, or calendar metadata are
+  sent to skb's Git remotes, our analytics (we have none), or any
+  third party.
+- External events render in skb's UI but their authoritative store
+  remains the OS calendar provider. Skb does NOT copy external events
+  into the user's file-backed repos.
+- The `system/<accountType>/<accountName>` synthetic repo namespace
+  is in-memory only — no `.git` directory is created for it, no
+  `RepoStore` entry, no JGit clone.
+- Phase D (two-way edit) will write back to CalendarContract via the
+  same on-device `ContentResolver` and will require the user to have
+  flipped the "Allow editing system calendars" toggle on. We do not
+  use any background sync, foreground service, or network call for
+  external-calendar IO.
+- The phone-only behaviour mirrors the existing no-origin repo
+  guarantee (D.74): the OS calendar provider is the system of record
+  for system calendars, exactly as the on-disk Git repo is the
+  system of record for file-backed calendars.
+
+The privacy policy at `docs/privacy-policy.md` carries this paragraph
+verbatim once Round 2.18 ships.

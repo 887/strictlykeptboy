@@ -32,6 +32,16 @@ import java.time.ZonedDateTime
  * **No write-back.** Phase D owns two-way edit. Phase A only feeds the
  * resolver.
  *
+ * Round 2.18.B.7 — quiet-hours / dom-persona / mode register sourcing
+ * for external events: system repos have no `identity.toml`, so any
+ * notification / register / quiet-hours decision for an external event
+ * inherits the **active write-target repo's** identity (the same
+ * identity the user is currently editing in), not the synthetic
+ * `system/<accountType>/<accountName>` repo. This bridge only emits
+ * resolver-facing inputs; the actual identity inheritance happens in
+ * the notif scheduler when it walks `RepoStore.activeRepoId` rather
+ * than the event's `repo` field for register lookup.
+ *
  * Window contract (A.9): the resolver renders for a per-view date range
  * — typically a few days for Week view, ~30 days for Month, etc. We
  * accept a `[fromMs, toMs)` epoch-millis pair and materialize the

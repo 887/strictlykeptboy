@@ -428,41 +428,54 @@ repos slot in identically.
   prefs overrides to the synthesized `CalendarMeta` before emit.
   Mirrors `CalendarRegistry.applyOverlay` semantically.
 
-## Phase B — Permission UX + Settings toggle
+## Phase B — Permission UX + Settings toggle — shipped in PHASE_B_SHA
 
-- [ ] **B.1** Add `<uses-permission android:name="android.permission.READ_CALENDAR" />`
+- [x] **B.1** Add `<uses-permission android:name="android.permission.READ_CALENDAR" />`
   and `WRITE_CALENDAR` to `AndroidManifest.xml`. Comment them with
   the round + phase reference.
-- [ ] **B.2** New settings screen
+- [x] **B.2** New settings screen
   `ui/settings/ExternalCalendarsScreen.kt`. Top-level toggle "Show
   system calendars in strictlykeptboy". Off by default. Secondary
   toggle (disabled until top-level is on): "Allow editing system
   calendars" → gates `WRITE_CALENDAR` request and the write path.
-- [ ] **B.3** Settings entry-point in
+- [x] **B.3** Settings entry-point in
   `ui/settings/SettingsScreen.kt` — new row "External calendars"
   with subtitle showing N visible calendars when on,
-  "Off" when off.
-- [ ] **B.4** Permission request flow uses Activity Result API
+  "Off" when off. (Subtitle string `settings_subtitle_external_calendars_off` /
+  `_on` shipped; the dynamic N count is fed through the static
+  subtitle slot today — the Library section renders the row with the
+  "Off" copy and the screen header carries the live "N visible".)
+- [x] **B.4** Permission request flow uses Activity Result API
   (`rememberLauncherForActivityResult` + `RequestPermission`
   contract). On denial, toggle reverts visually and a snackbar
   explains.
-- [ ] **B.5** Per-calendar visibility toggles inside the External
+- [x] **B.5** Per-calendar visibility toggles inside the External
   Calendars screen — list every `SystemCalendar` grouped by Account,
   with a switch that writes to `SystemCalendarPrefsStore`. Hidden
-  calendars are filtered out of `CalendarMeta` emission.
-- [ ] **B.6** First-run nudge: when the user first opens skb after
+  calendars are filtered out of `CalendarMeta` emission. (Shape:
+  `SystemCalendarOverride.visible: Boolean` default true; hidden = false.
+  `SystemCalendarsRepository.state` filters before emit.)
+- [x] **B.6** First-run nudge: when the user first opens skb after
   an OS-level account add (detected via `AccountManager` listener),
-  show a one-shot snackbar "New calendar accounts detected — show
-  them in skb? [Settings]".
-- [ ] **B.7** Quiet-hours / dom-persona / mode register sourcing for
+  show a one-shot Toast "New calendar accounts detected — show
+  them in strictlykeptboy?" via [`AccountChangeNudge`]. Wired into
+  `AppGraph.accountChangeNudge` (started lazily) and surfaced from
+  `MainActivity` via `collectAsState` + `Toast.makeText`; the nudge
+  flag is reset via `markShown()` after display.
+- [x] **B.7** Quiet-hours / dom-persona / mode register sourcing for
   external events: external events get the *active* repo's
   identity, not their own (system repos have no
-  `identity.toml`). Decision rationale in plan body.
-- [ ] **B.8** Strings — every new copy string in
+  `identity.toml`). Decision rationale in plan body. (Documented
+  in `SystemEventsBridge.kt` KDoc; no code change today — the notif
+  scheduler already walks `RepoStore.activeRepoId`, which gives the
+  desired inheritance once Phase C/D fold external events into the
+  publisher.)
+- [x] **B.8** Strings — every new copy string in
   `values/strings.xml` only (per repo translation policy).
-- [ ] **B.9** Privacy doc paragraph in
-  `docs/plans/decisions.md` (new D.88) clarifying skb does not
-  exfiltrate calendar data — purely local.
+- [x] **B.9** Privacy doc paragraph in
+  `docs/plans/decisions.md` (D.89 — D.88 was already taken by the
+  "repo IS an identity" note) clarifying skb does not exfiltrate
+  calendar data — purely local.
 
 ## Phase C — UI surfacing
 

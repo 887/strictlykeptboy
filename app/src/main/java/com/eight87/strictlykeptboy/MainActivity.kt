@@ -15,6 +15,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.stringResource
+import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.composition.AppGraph
 import com.eight87.strictlykeptboy.git.AuthorIdentity
 import com.eight87.strictlykeptboy.git.GitRepo
@@ -419,6 +421,20 @@ class MainActivity : ComponentActivity() {
                         ageOk = true
                     }
                 }
+                // Round 2.18.B.6 — first-run "new calendar accounts
+                // detected" nudge. Observe AccountChangeNudge.shouldShowNudge
+                // and surface a one-shot Toast pointing the user at the
+                // External Calendars settings screen. markShown() flips
+                // the flag back off so we don't pester on every account
+                // change.
+                val showNudge by graph.accountChangeNudge.shouldShowNudge.collectAsState()
+                if (showNudge) {
+                    val nudgeText = stringResource(R.string.settings_external_calendars_nudge)
+                    LaunchedEffect(showNudge) {
+                        Toast.makeText(this@MainActivity, nudgeText, Toast.LENGTH_LONG).show()
+                        graph.accountChangeNudge.markShown()
+                    }
+                }
                 if (!firstLaunchDone) {
                     // Round 2.15 — demo-first onboarding. The intro wizard
                     // is two screens: manifesto + perspective picker. On
@@ -664,6 +680,9 @@ class MainActivity : ComponentActivity() {
                         },
                         neutralMode = graph.neutralModePrefs.isEnabled(),
                         settingsAccess = com.eight87.strictlykeptboy.ui.settings.SettingsAccess(
+                            // Round 2.18.B.3 — External Calendars wiring.
+                            systemCalendarPrefs = graph.systemCalendarPrefsStore,
+                            systemCalendarsFlow = graph.systemCalendarsRawFlow,
                             syncPrefs = graph.syncSettingsPrefs,
                             statusStore = graph.statusStore,
                             notificationPrefs = graph.notificationPrefs,
