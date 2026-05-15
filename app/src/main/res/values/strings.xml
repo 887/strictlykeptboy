@@ -1164,4 +1164,26 @@
     <string name="settings_external_calendars_account_label">%1$s · %2$s</string>
     <string name="settings_external_calendars_nudge">New calendar accounts detected — show them in strictlykeptboy?</string>
     <string name="settings_external_calendars_nudge_action">Settings</string>
+    <!-- Round 2.18.C.3 -->
+    <string name="repo_switcher_system_section_header">System calendars</string>
+    <!-- Round 2.18.C.6 — empty-state copy when toggle is on but READ_CALENDAR is denied. -->
+    <string name="settings_external_calendars_permission_required_title">Calendar permission needed</string>
+    <string name="settings_external_calendars_permission_required_body">skb needs the Calendar permission to see your system calendars.</string>
+    <string name="settings_external_calendars_permission_grant">Grant</string>
+    <string name="settings_external_calendars_open_system_settings">Open Settings</string>
+    <!-- Round 2.18.C.7 — source attribution for external events. -->
+    <string name="event_detail_external_source_google">From Google Calendar (%1$s)</string>
+    <string name="event_detail_external_source_exchange">From Exchange (%1$s)</string>
+    <string name="event_detail_external_source_davdroid">From DAVx5 (%1$s)</string>
+    <string name="event_detail_external_source_generic">From %1$s (%2$s)</string>
+    <!-- Round 2.18.C.8 — attendees section + per-status labels. -->
+    <string name="event_detail_attendees_header">Attendees</string>
+    <string name="event_detail_attendee_status_accepted">Accepted</string>
+    <string name="event_detail_attendee_status_declined">Declined</string>
+    <string name="event_detail_attendee_status_invited">Invited</string>
+    <string name="event_detail_attendee_status_tentative">Tentative</string>
+    <string name="event_detail_attendee_status_none">No response</string>
+    <!-- Round 2.18.C.9 — reminders. -->
+    <string name="event_detail_reminders_header">Reminders</string>
+    <string name="event_detail_reminder_minutes_before">%1$d min before</string>
 </resources>

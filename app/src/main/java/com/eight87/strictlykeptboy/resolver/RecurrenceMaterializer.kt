@@ -134,6 +134,7 @@ class RecurrenceMaterializer {
         isAllDay = event.isAllDay,
         priorityOverride = event.priorityOverride,
         author = event.author,
+        external = event.external,
     )
 
     private fun materializedFromRule(

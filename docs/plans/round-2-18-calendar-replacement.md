@@ -477,42 +477,45 @@ repos slot in identically.
   "repo IS an identity" note) clarifying skb does not exfiltrate
   calendar data — purely local.
 
-## Phase C — UI surfacing
+## Phase C — UI surfacing (shipped in `b8bd5ae`)
 
-- [ ] **C.1** `CalendarFilterChipStrip` adornment slot — show a
+- [x] **C.0** Fold `SystemEventsBridge.events(window, knownCalendars, zone)`
+  into the resolver's event stream via `SourcesPublisher`. External
+  events now render in Schedule for the first time.
+- [x] **C.1** `CalendarFilterChipStrip` adornment slot — show a
   source-icon glyph (small leading icon) on chips whose
   `CalendarKind == External`. Icon mapping table:
   `com.google` → Google "G" mark (vector); `com.android.exchange`
   / `eas` / `com.microsoft.*` → Outlook "O"; `at.bitfire.davdroid`
   → cloud; default → gear.
-- [ ] **C.2** Read-only badge — `CAL_ACCESS_READ` /
+- [x] **C.2** Read-only badge — `CAL_ACCESS_READ` /
   `CAL_ACCESS_FREEBUSY` chips render with a lock glyph and
   `disabled = true` for edit affordances (the chip itself is still
   toggleable for visibility).
-- [ ] **C.3** Repo switcher / avatar menu — synthetic repos appear
+- [x] **C.3** Repo switcher / avatar menu — synthetic repos appear
   in the avatar menu under a section header "System calendars"
   separating them from the file-backed repos. Selecting a synthetic
   repo as "active" is **not** allowed (no identity, no writes by
   default) — its row is non-clickable in the active-repo picker but
   still rendered for visibility.
-- [ ] **C.4** Day-band rendering — `DayBand` already carries
+- [x] **C.4** Day-band rendering — `DayBand` already carries
   `colorSeed` + `kind`. External events surface a 2-pixel left edge
   strip in the source's color, with the existing band color used for
   the body. Defended: lets the user spot which events are
   external without losing skb's color identity.
-- [ ] **C.5** Agenda view header — external account groups get a
+- [x] **C.5** Agenda view header — external account groups get a
   divider label with the account email, similar to how repo
   groupings work today.
-- [ ] **C.6** Empty-state copy when `READ_CALENDAR` denied + toggle
+- [x] **C.6** Empty-state copy when `READ_CALENDAR` denied + toggle
   on: "skb needs the Calendar permission to see your system
   calendars. [Grant] [Open Settings]".
-- [ ] **C.7** Event detail sheet — for external events, header shows
+- [x] **C.7** Event detail sheet — for external events, header shows
   "From Google Calendar (someone@gmail.com)" or analogous;
   attendees rendered from `CalendarContract.Attendees`.
-- [ ] **C.8** Attendees rendering — for read-only event view, list
+- [x] **C.8** Attendees rendering — for read-only event view, list
   attendees with RSVP status icons (accepted / tentative / declined
   / no response). Map `Attendees.ATTENDEE_STATUS` constants.
-- [ ] **C.9** Reminder list in detail sheet — read
+- [x] **C.9** Reminder list in detail sheet — read
   `CalendarContract.Reminders` for the event; render skb-style
   reminder cards.
 

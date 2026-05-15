@@ -67,6 +67,16 @@ class SourcesPublisher(
     private val repoStore: RepoStore,
     private val visibleRange: Flow<DateRange>,
     private val scope: CoroutineScope,
+    /**
+     * Round 2.18.C.0 — external (CalendarContract) events folded into the
+     * resolver's source stream. Given the visible window + the set of
+     * known system calendars (from `SystemCalendarsRepository`), this
+     * provider emits `EventInput`s sourced from
+     * [com.eight87.strictlykeptboy.system.SystemEventsBridge]. Default is
+     * a no-op for tests / non-Android contexts. The flow re-emits on
+     * provider notify + on window change.
+     */
+    private val externalEventsProvider: (DateRange) -> Flow<List<EventInput>> = { flowOf(emptyList()) },
 ) {
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -80,12 +90,17 @@ class SourcesPublisher(
                 initialValue = EMPTY,
             )
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun sourcesFlow(range: DateRange, configs: List<RepoConfig>): Flow<Renderer.Sources> {
-        if (configs.isEmpty()) return flowOf(EMPTY)
         val zone = ZoneId.systemDefault()
         val fromMs = range.start.atStartOfDay(zone).toInstant().toEpochMilli()
         val toMs = (range.endInclusive ?: range.start)
             .plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+        // Round 2.18.C.0 — external events: a synthetic "repo" flow on
+        // top of the configured file-backed repos. Re-emits whenever the
+        // SystemEventsBridge ticker fires (or — for tests — a different
+        // provider drives it).
+        val externalFlow: Flow<List<EventInput>> = externalEventsProvider(range)
         // Per-repo tick: events flow in the window invalidates whenever
         // any event row touching the range changes. We listAll() the
         // other tables on the same tick.
@@ -99,7 +114,15 @@ class SourcesPublisher(
                     RepoData(cfg, winEvents, rules, exceptions, deviations, overrides)
                 }
         }
-        return combine(perRepo) { array -> merge(array.toList(), zone) }
+        val fileRepoMerged: Flow<Renderer.Sources> = if (perRepo.isEmpty()) {
+            flowOf(EMPTY)
+        } else {
+            combine(perRepo) { array -> merge(array.toList(), zone) }
+        }
+        return combine(fileRepoMerged, externalFlow) { fileSrc, ext ->
+            if (ext.isEmpty()) fileSrc
+            else fileSrc.copy(events = fileSrc.events + ext)
+        }
     }
 
     private fun merge(perRepo: List<RepoData>, zone: ZoneId): Renderer.Sources {
