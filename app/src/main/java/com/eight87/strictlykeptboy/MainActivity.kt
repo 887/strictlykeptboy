@@ -76,71 +76,119 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * Round 2.7.B.2-UI — SAF tree picker for the external backup folder.
+     * Round 2.17.B.1–B.4 — SAF tree picker for the strictlykeptboy parent
+     * folder. Replaces the Round 2.7 "backup mirror" launcher: there is no
+     * mirror any more, the parent IS the working tree.
      *
-     * Mirrors [openIcsLauncher]: registered eagerly because
-     * `registerForActivityResult` must be called before `onCreate`'s
-     * STARTED state. On grant we take the persistable permission, derive
-     * a human label by parsing the SAF tree document-id (avoids pulling
-     * in `androidx.documentfile`),
-     * write `ParentLocation.External` into
-     * [com.eight87.strictlykeptboy.prefs.RepoStoragePrefs], then Toast
-     * the count of repos discovered under the new parent by calling
-     * [com.eight87.strictlykeptboy.sync.ParentReconciler.reconcile].
-     *
-     * Note: Phase A keeps this launcher's structure intact for compile
-     * continuity; Phase B.1–B.5 replaces it with a proper "pick parent"
-     * launcher that creates `<picked>/strictlykeptboy/`, writes the
-     * marker, and stores the cached real path. Until Phase B ships,
-     * the launcher writes External with a `null` cachedRealPath so the
-     * gate keeps surfacing the question until the user re-picks.
+     * Registered eagerly because `registerForActivityResult` must be called
+     * before `onCreate`'s STARTED state. On grant:
+     *  1. Resolve the SAF tree URI to a real `/storage/emulated/0/…` path
+     *     via [com.eight87.strictlykeptboy.prefs.SafTreeUriResolver.resolveRealPath].
+     *     SD cards / cloud providers return null — Toast + bail, no prefs
+     *     written (B.1).
+     *  2. Take the persistable URI permission so we keep access across
+     *     reboots.
+     *  3. Compute `<picked>/strictlykeptboy/` (if the picked folder
+     *     already carries a marker, re-use it as-is per D-2.17.c).
+     *     `mkdirs` the parent, write `.skb-root` via
+     *     [com.eight87.strictlykeptboy.prefs.SkbRootMarker.write] if the
+     *     marker isn't already there (idempotent re-pick of an already-skb
+     *     folder leaves the marker untouched) (B.2).
+     *  4. Persist
+     *     [com.eight87.strictlykeptboy.prefs.ParentLocation.External]
+     *     with the resolved `cachedRealPath` so the
+     *     `ParentLocationGate` flips to `Confirmed` (B.2).
+     *  5. Run
+     *     [com.eight87.strictlykeptboy.sync.ParentReconciler.reconcile]
+     *     on IO and Toast the adoption count (B.4).
      */
     private var pendingAppGraph: com.eight87.strictlykeptboy.composition.AppGraph? = null
 
-    private val openTreeLauncher = registerForActivityResult(
+    private val parentPickerLauncher = registerForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
     ) { uri: Uri? ->
         if (uri == null) return@registerForActivityResult
         val graph = pendingAppGraph ?: return@registerForActivityResult
+        // B.1 — resolve the real path FIRST. SD card / cloud provider
+        // picks return null; Toast + bail before we write any prefs.
+        val pickedRealPath = com.eight87.strictlykeptboy.prefs.SafTreeUriResolver
+            .resolveRealPath(uri)
+        if (pickedRealPath == null) {
+            Toast.makeText(
+                this@MainActivity,
+                getString(R.string.parent_picker_internal_only),
+                Toast.LENGTH_LONG,
+            ).show()
+            return@registerForActivityResult
+        }
+        // Persist the SAF permission grant. Required so we can re-open
+        // the tree URI across reboots even though the underlying File
+        // I/O goes through the resolved real path.
         runCatching {
             contentResolver.takePersistableUriPermission(
                 uri,
                 Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
             )
         }
-        // Derive a human label from the tree document id without pulling
-        // in androidx.documentfile. Doc-ids look like `"primary:Documents/foo"`;
-        // take the leaf segment of the sub-path. Falls back to "selected
-        // folder" for volume-root or non-primary picks.
-        val label = runCatching {
-            val docId = android.provider.DocumentsContract.getTreeDocumentId(uri)
-            val sub = docId.substringAfter(':', "")
-            sub.substringAfterLast('/', sub).ifBlank { null }
-        }.getOrNull() ?: "selected folder"
-        // Round 2.17.A.2 — write a placeholder External shell; Phase B
-        // adds the SafTreeUriResolver.resolveRealPath dance + marker
-        // creation. With `cachedRealPath = null`, the gate still
-        // returns NeedsPicking, which keeps Phase A's data-layer-only
-        // semantics honest (no UI surface yet to drive the new flow).
+        // B.3 — label derivation moved into SafTreeUriResolver.deriveLabel.
+        val label = com.eight87.strictlykeptboy.prefs.SafTreeUriResolver.deriveLabel(uri)
+        // B.2 — compute the strictlykeptboy parent directory inside the
+        // picked folder. If the picked folder ITSELF is already an skb
+        // root (`.skb-root` present), short-circuit to using it as-is
+        // (D-2.17.c happy path). Otherwise nest a `strictlykeptboy/`
+        // subdir and write the marker there if missing.
+        val pickedFile = java.io.File(pickedRealPath)
+        val parentFile = if (com.eight87.strictlykeptboy.prefs.SkbRootMarker.isSkbRoot(pickedFile)) {
+            pickedFile
+        } else {
+            java.io.File(pickedFile, "strictlykeptboy")
+        }
+        runCatching {
+            parentFile.mkdirs()
+            if (!com.eight87.strictlykeptboy.prefs.SkbRootMarker.isSkbRoot(parentFile)) {
+                com.eight87.strictlykeptboy.prefs.SkbRootMarker.write(
+                    parent = parentFile,
+                    deviceName = android.os.Build.MODEL ?: "",
+                )
+            }
+        }
         graph.repoStoragePrefs.set(
             com.eight87.strictlykeptboy.prefs.ParentLocation.External(
                 treeUri = uri.toString(),
                 label = label,
-                cachedRealPath = null,
+                cachedRealPath = parentFile.absolutePath,
             ),
         )
-        // Round 2.17.A.8 — surface how many repos got discovered under
-        // the new parent (zero until Phase B populates `cachedRealPath`).
+        // B.4 — reconcile against the new parent and Toast how many
+        // repos got adopted (instead of "applied backup mirror to N").
         kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             val count = runCatching { graph.parentReconciler.reconcile().size }.getOrDefault(0)
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                 Toast.makeText(
                     this@MainActivity,
-                    getString(R.string.backup_applied_to_n_repos, count),
+                    getString(R.string.parent_adopted_n_repos, count),
                     Toast.LENGTH_SHORT,
                 ).show()
             }
         }
+    }
+
+    /**
+     * Round 2.17.B.6 — SAF document picker for backup archives. The
+     * `.skb-backup.tar.gz` MIME type is `application/gzip`; consumed by
+     * Phase G's destructive Restore flow. The actual `pendingRestoreXxx`
+     * state + handler wiring lands in Phase G; for now the launcher is
+     * registered and parked under [pendingRestoreArchiveHandler] so the
+     * picker contract registration is in place (registration must happen
+     * before STARTED, but the consumer can attach later).
+     */
+    private var pendingRestoreArchiveHandler: ((Uri) -> Unit)? = null
+
+    private val restoreArchivePickerLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri == null) return@registerForActivityResult
+        pendingRestoreArchiveHandler?.invoke(uri)
     }
 
     private val createIcsLauncher = registerForActivityResult(
@@ -178,11 +226,11 @@ class MainActivity : ComponentActivity() {
         ) { AppGraph(applicationContext) }
         graph.parkRuntimes()
         graph.installSyncEventBridge()
-        // Round 2.7.B.2-UI — park the SAF tree picker so Compose
-        // surfaces (Settings → Backup location, Repos reminder banner)
-        // can launch it without owning an ActivityResultLauncher.
+        // Round 2.17.B.5 — park the SAF tree picker so Compose surfaces
+        // (Settings → Storage folder, Repos reminder banner) can launch
+        // it without owning an ActivityResultLauncher.
         pendingAppGraph = graph
-        graph.backupPickerHandle = { openTreeLauncher.launch(null) }
+        graph.parentPickerHandle = { parentPickerLauncher.launch(null) }
 
         // Phase O.2 — handle strictlykeptboy://share deep links.
         deepLinkHandler = { intent ->
@@ -548,7 +596,7 @@ class MainActivity : ComponentActivity() {
                             // Round 2.7.B.4-UI — backup folder picker access.
                             repoStoragePrefs = graph.repoStoragePrefs,
                             onPickBackupFolder = {
-                                graph.backupPickerHandle?.invoke()
+                                graph.parentPickerHandle?.invoke()
                             },
                             onRemoveBackupFolder = {
                                 // Round 2.17.A — "Remove backup" now means

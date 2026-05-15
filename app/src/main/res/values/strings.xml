@@ -1074,6 +1074,8 @@
     <string name="settings_backup_blurb">Pick a folder on your phone\'s internal storage. Each repo will be mirrored into a bare Git folder there so a fresh install can recover everything.</string>
     <string name="settings_backup_current_label">Backup folder: %1$s</string>
     <string name="backup_applied_to_n_repos">Applied backup mirror to %1$d repo(s)</string>
+    <string name="parent_picker_internal_only">Internal storage only — try a folder on this phone</string>
+    <string name="parent_adopted_n_repos">Adopted %1$d repo(s) from the parent folder</string>
     <string name="repos_backup_reminder_text">Set up a backup folder so your repos survive app uninstall</string>
     <string name="repos_backup_reminder_pick">Pick now</string>
     <string name="repos_backup_reminder_dismiss">Dismiss</string>

@@ -317,27 +317,17 @@ class AppGraph(private val appContext: Context) {
      * Round 2.17.B.5 — parked handle so Compose surfaces can fire the
      * SAF "pick parent" launcher that's `ComponentActivity`-scoped.
      *
-     * (Renamed from `backupPickerHandle` per Phase B.5; Phase A keeps
-     * the old name as a compatibility alias because Phase B has the
-     * full picker-launcher rewrite — only the property name flips here
-     * to leave `main` buildable.)
-     *
-     * MainActivity sets this to `{ openTreeLauncher.launch(null) }`
+     * MainActivity sets this to `{ parentPickerLauncher.launch(null) }`
      * after registering the launcher in `onCreate`. Composables call
      * `appGraph.parentPickerHandle?.invoke()`. Null = not yet wired
      * (previews / tests).
+     *
+     * (Renamed from `backupPickerHandle` per Phase B.5 — the legacy
+     * compile-shim alias was dropped once the only two call-sites
+     * landed in this phase.)
      */
     @Volatile
     var parentPickerHandle: (() -> Unit)? = null
-
-    /** Compatibility alias retained until Phase B renames callsites. */
-    @Deprecated(
-        message = "Use parentPickerHandle (2.17.B.5 rename).",
-        replaceWith = ReplaceWith("parentPickerHandle"),
-    )
-    var backupPickerHandle: (() -> Unit)?
-        get() = parentPickerHandle
-        set(value) { parentPickerHandle = value }
 
     /** Phase J — per-process sync scheduler. */
     val scheduler: SyncScheduler by lazy {

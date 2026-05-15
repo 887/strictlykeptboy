@@ -45,6 +45,21 @@ class SafTreeUriResolverTest {
         assertNull(SafTreeUriResolver.resolveRealPath(uri))
     }
 
+    @Test fun deriveLabelLeafSegment() {
+        val uri = treeUriFor("primary:Documents/strictlykeptboy")
+        assertEquals("strictlykeptboy", SafTreeUriResolver.deriveLabel(uri))
+    }
+
+    @Test fun deriveLabelSinglePathSegment() {
+        val uri = treeUriFor("primary:Documents")
+        assertEquals("Documents", SafTreeUriResolver.deriveLabel(uri))
+    }
+
+    @Test fun deriveLabelVolumeRootFallsBack() {
+        val uri = treeUriFor("primary:")
+        assertEquals("selected folder", SafTreeUriResolver.deriveLabel(uri))
+    }
+
     companion object {
         private const val EXTERNALSTORAGE_AUTHORITY =
             "com.android.externalstorage.documents"

@@ -237,29 +237,37 @@ Strict dependency chain:
   External) the URI permission is still granted AND the marker
   resolves on disk.
 
-## Phase B — MainActivity SAF launcher refactor
+## Phase B — MainActivity SAF launcher refactor — shipped in 528c894
 
-- [ ] **B.1** Rename `openTreeLauncher` (`MainActivity.kt:93-132`)
+- [x] **B.1** Rename `openTreeLauncher` (`MainActivity.kt:93-132`)
   → `parentPickerLauncher`. Behaviour: on grant, call
   `SafTreeUriResolver.resolveRealPath`; if null, Toast
   "Internal storage only — try a folder on this phone" and bail.
-- [ ] **B.2** Inside the launcher: compute
+- [x] **B.2** Inside the launcher: compute
   `<picked>/strictlykeptboy/` directory (create if missing), check
   for `.skb-root` marker, create marker if missing. Write
   `ParentLocation.External(treeUri, label, cachedRealPath =
-  "<picked>/strictlykeptboy")` to prefs.
-- [ ] **B.3** Move the SAF "label derivation" block currently inline
+  "<picked>/strictlykeptboy")` to prefs. Re-pick of a folder that
+  is *itself* already an skb-root short-circuits to using it as-is
+  per D-2.17.c.
+- [x] **B.3** Move the SAF "label derivation" block currently inline
   at `MainActivity.kt:108-112` into `SafTreeUriResolver.deriveLabel`.
-- [ ] **B.4** Drop the `Toast` wired to `mirrorReconciler.applyToAll`
+  3 new tests in `SafTreeUriResolverTest`.
+- [x] **B.4** Drop the `Toast` wired to `mirrorReconciler.applyToAll`
   at `MainActivity.kt:122-131` — replace with a Toast that reports
   how many repos got adopted (calling `ParentReconciler.reconcile()`
-  and reading the size of its returned list).
-- [ ] **B.5** Expose `graph.parentPickerHandle = {
+  and reading the size of its returned list). New string
+  `parent_adopted_n_repos`.
+- [x] **B.5** Expose `graph.parentPickerHandle = {
   parentPickerLauncher.launch(null) }` (rename from
-  `backupPickerHandle`) so Compose surfaces can fire it.
-- [ ] **B.6** Add a SECOND launcher `restoreArchivePickerLauncher`
+  `backupPickerHandle`) so Compose surfaces can fire it. Both
+  call-sites in `MainActivity` migrated; the Phase A
+  `@Deprecated backupPickerHandle` alias has been removed.
+- [x] **B.6** Add a SECOND launcher `restoreArchivePickerLauncher`
   using `ActivityResultContracts.OpenDocument()` with MIME type
-  `application/gzip` — Phase G consumes this.
+  `application/gzip` — Phase G consumes this. Routed through a
+  `pendingRestoreArchiveHandler: ((Uri) -> Unit)?` so Phase G can
+  attach its handler without re-registering the launcher.
 
 ## Phase C — Repo scaffolding honours the parent
 
