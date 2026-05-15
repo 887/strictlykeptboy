@@ -102,8 +102,25 @@ fun ExternalCalendarsScreen(
      * No-op default so previews + tests don't depend on AccountManager.
      */
     onPublishToOsChanged: (Boolean) -> Unit = { _ -> },
+    /**
+     * Round 2.18.H — test seam for the Connect Accounts sub-screen
+     * probes (DAVx5 + F-Droid + Exchange detection).
+     */
+    connectAccountsProbes: ExternalAccountsProbes = ExternalAccountsProbes(),
 ) {
     val ctx = LocalContext.current
+    // Round 2.18.H — local nav between the main external-calendars
+    // screen and the Connect Accounts sub-screen. Kept local so
+    // SettingsPane doesn't need to learn about another route.
+    var showConnectAccounts by remember { mutableStateOf(false) }
+    if (showConnectAccounts) {
+        ExternalAccountsConnectScreen(
+            modifier = modifier,
+            probes = connectAccountsProbes,
+            onBack = { showConnectAccounts = false },
+        )
+        return
+    }
     val global by prefs.globalState.collectAsState()
     val overrides by prefs.state.collectAsState()
     val systemCalendars by systemCalendarsFlow.collectAsState()
@@ -334,6 +351,36 @@ fun ExternalCalendarsScreen(
                 enabled = true,
                 testTag = TestTagExternalCalendarsPublishSwitch,
             )
+
+            // Round 2.18.H — entry row to the Connect Accounts sub-screen
+            // (DAVx5 + Exchange onboarding). Pure outbound — no sync
+            // wiring lives here.
+            Spacer(Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(16.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+                    .testTag(TestTagExternalCalendarsConnectAccountsRow),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.settings_external_calendars_connect_accounts_label),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    Text(
+                        stringResource(R.string.settings_external_calendars_connect_accounts_helper),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                OutlinedButton(onClick = { showConnectAccounts = true }) {
+                    Text(stringResource(R.string.settings_external_calendars_connect_accounts_action))
+                }
+            }
 
             // Round 2.18.F.7 — Suppress system calendar notifications.
             // List the candidate calendar apps installed on the device;

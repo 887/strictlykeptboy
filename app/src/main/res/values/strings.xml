@@ -1197,4 +1197,24 @@
     <!-- Round 2.18.G.6 — publish skb to OS toggle. -->
     <string name="settings_external_calendars_publish_label">Make skb visible to other Android apps</string>
     <string name="settings_external_calendars_publish_helper">Create one Android account per skb repo so other apps (Wear OS, the lockscreen Calendar) can see skb events. Off by default.</string>
+
+    <!-- Round 2.18.H — DAVx5 / Exchange onboarding entry + sub-screen. -->
+    <string name="settings_external_calendars_connect_accounts_label">Connect accounts</string>
+    <string name="settings_external_calendars_connect_accounts_helper">Add Google, iCloud, Nextcloud, Fastmail (via DAVx5) or Microsoft 365 / Exchange so their events show up here.</string>
+    <string name="settings_external_calendars_connect_accounts_action">Open</string>
+    <string name="settings_connect_accounts_title">Connect accounts</string>
+    <string name="settings_connect_accounts_intro">skb doesn\'t talk to Google, iCloud, Nextcloud, Fastmail or Microsoft 365 directly. Instead it reads whatever calendars Android already has — once you\'ve added an account through the helpers below, its events appear in the per-calendar list above.</string>
+    <string name="settings_connect_accounts_back">Back</string>
+    <string name="settings_connect_accounts_caldav_title">Google · iCloud · Nextcloud · Fastmail (CalDAV)</string>
+    <string name="settings_connect_accounts_caldav_body">DAVx5 is a free open-source app that adds CalDAV/CardDAV accounts to Android. After installing it, sign in once and your calendars will show up here.</string>
+    <string name="settings_connect_accounts_caldav_install">Install DAVx5</string>
+    <string name="settings_connect_accounts_caldav_open">Open DAVx5</string>
+    <string name="settings_connect_accounts_exchange_title">Microsoft 365 / Exchange</string>
+    <string name="settings_connect_accounts_exchange_body">Use Android\'s built-in Exchange account adder. If your phone doesn\'t ship Exchange, install Outlook or Nine Mail and sign in there instead.</string>
+    <string name="settings_connect_accounts_exchange_add">Add Exchange account</string>
+    <string name="settings_connect_accounts_exchange_manage">Manage Exchange accounts</string>
+    <string name="settings_connect_accounts_configured_title">Already configured</string>
+    <string name="settings_connect_accounts_configured_body">If your accounts are already set up but not appearing, open Android\'s sync settings and confirm Calendar sync is enabled for each one.</string>
+    <string name="settings_connect_accounts_configured_action">Open sync settings</string>
+    <string name="settings_connect_accounts_footer">DAVx5 documentation: https://manual.davx5.com/</string>
 </resources>

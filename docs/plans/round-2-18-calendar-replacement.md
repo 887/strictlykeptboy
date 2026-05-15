@@ -749,9 +749,9 @@ repos slot in identically.
   `CalendarContract.Reminders` rows so other apps (Wear OS) see
   them.
 
-## Phase H — DAVx⁵ / Exchange integration docs
+## Phase H — DAVx⁵ / Exchange integration docs — shipped in commit 71cdecc
 
-- [ ] **H.1** New screen `ExternalAccountsConnectScreen` linked from
+- [x] **H.1** New screen `ExternalAccountsConnectScreen` linked from
   the External Calendars settings page. Three cards:
   - "Google / iCloud / Nextcloud / Fastmail (CalDAV)" → button
     "Install DAVx⁵" → `Intent.ACTION_VIEW` to F-Droid /
@@ -761,14 +761,17 @@ repos slot in identically.
     `EXTRA_ACCOUNT_TYPES=["com.android.exchange"]`.
   - "Already configured" → opens
     `Settings.ACTION_SYNC_SETTINGS`.
-- [ ] **H.2** Help copy — short explainers per card. Reference
+- [x] **H.2** Help copy — short explainers per card. Reference
   DAVx⁵'s docs link.
-- [ ] **H.3** Detect installed-state — if DAVx⁵ is installed
+- [x] **H.3** Detect installed-state — if DAVx⁵ is installed
   (`PackageManager.getApplicationInfo("at.bitfire.davdroid")`),
   replace the "Install" button with "Open DAVx⁵" via
-  `getLaunchIntentForPackage`.
-- [ ] **H.4** No bundling, no auto-install — purely outbound links.
-- [ ] **H.5** Doc page in `docs/external-calendars.md` mirroring
+  `getLaunchIntentForPackage`. Same pattern for Exchange via
+  `AccountManager.getAccountsByType("com.android.exchange")`.
+- [x] **H.4** No bundling, no auto-install — purely outbound links.
+  `<queries>` block in `AndroidManifest.xml` (DAVx⁵ + Exchange +
+  F-Droid + Aurora Droid) for Android 11+ package visibility.
+- [x] **H.5** Doc page in `docs/external-calendars.md` mirroring
   the same content for users who read the repo.
 
 ## Phase I — Default-app discovery onboarding
