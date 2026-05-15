@@ -45,6 +45,9 @@ class SystemCalendarsRepositoryTest {
         val sharedPrefs = ctx.getSharedPreferences("sys_cal_repo_test", Context.MODE_PRIVATE)
             .also { it.edit().clear().apply() }
         prefs = SystemCalendarPrefsStore.openForTest(sharedPrefs)
+        // Round 2.18.B.2 — global toggle is off by default; flip on so
+        // these A-phase tests still see the synthesized CalendarMeta.
+        prefs.setShowSystemCalendars(true)
         scope = CoroutineScope(SupervisorJob())
         repo = SystemCalendarsRepository(
             bridge = CalendarContractBridge(ctx),

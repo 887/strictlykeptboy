@@ -37,10 +37,28 @@ class SystemCalendarsRepository(
     private val scope: CoroutineScope,
 ) {
 
-    /** Emits the current list of merged [CalendarMeta] for system calendars. */
+    /**
+     * Emits the current list of merged [CalendarMeta] for system
+     * calendars.
+     *
+     * Round 2.18.B.2 — gated on the global `showSystemCalendars` toggle
+     * (off by default, the resolver sees an empty list until the user
+     * opts in via Settings → External calendars).
+     *
+     * Round 2.18.B.5 — calendars whose `SystemCalendarOverride.visible`
+     * is `false` are filtered out before emission.
+     */
     val state: StateFlow<List<CalendarMeta>> =
-        combine(bridge.calendars(), prefs.state) { sysCals, overrides ->
-            sysCals.map { cal -> toMeta(cal, overrides) }
+        combine(bridge.calendars(), prefs.state, prefs.globalState) { sysCals, overrides, global ->
+            if (!global.showSystemCalendars) emptyList()
+            else sysCals
+                .filter { cal ->
+                    val ov = overrides[SystemCalendarPrefsStore.keyFor(
+                        cal.accountType, cal.accountName, cal.id,
+                    )]
+                    ov?.visible ?: true
+                }
+                .map { cal -> toMeta(cal, overrides) }
         }.stateIn(scope = scope, started = SharingStarted.Eagerly, initialValue = emptyList())
 
     /**
@@ -51,9 +69,17 @@ class SystemCalendarsRepository(
 
     /** Synchronous one-shot used by tests / one-off readers. */
     fun readOnce(): List<CalendarMeta> {
+        if (!prefs.globalState.value.showSystemCalendars) return emptyList()
         val sysCals = bridge.readOnce()
         val overrides = prefs.state.value
-        return sysCals.map { toMeta(it, overrides) }
+        return sysCals
+            .filter { cal ->
+                val ov = overrides[SystemCalendarPrefsStore.keyFor(
+                    cal.accountType, cal.accountName, cal.id,
+                )]
+                ov?.visible ?: true
+            }
+            .map { toMeta(it, overrides) }
     }
 
     private fun toMeta(

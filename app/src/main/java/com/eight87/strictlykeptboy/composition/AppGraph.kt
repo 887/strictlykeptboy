@@ -491,12 +491,32 @@ class AppGraph(private val appContext: Context) {
         com.eight87.strictlykeptboy.system.SystemCalendarPrefsStore.open(appContext)
     }
 
+    /** Round 2.18.B.6 — first-run nudge when OS-level accounts change. */
+    val accountChangeNudge: com.eight87.strictlykeptboy.system.AccountChangeNudge by lazy {
+        com.eight87.strictlykeptboy.system.AccountChangeNudge.open(appContext).also { it.start() }
+    }
+
     /** Round 2.18.A.5 / A.15 — synthesized [CalendarMeta] for system calendars. */
     val systemCalendarsRepository: com.eight87.strictlykeptboy.system.SystemCalendarsRepository by lazy {
         com.eight87.strictlykeptboy.system.SystemCalendarsRepository(
             bridge = calendarContractBridge,
             prefs = systemCalendarPrefsStore,
             scope = appScope,
+        )
+    }
+
+    /**
+     * Round 2.18.B.5 — raw `SystemCalendar` list for the External
+     * Calendars settings screen (every CalendarContract row, regardless
+     * of the global show toggle or per-calendar visibility overrides;
+     * the screen needs every row so the user can flip visibility on
+     * hidden ones).
+     */
+    val systemCalendarsRawFlow: kotlinx.coroutines.flow.StateFlow<List<com.eight87.strictlykeptboy.system.SystemCalendar>> by lazy {
+        systemCalendarsRepository.systemCalendars().stateIn(
+            scope = appScope,
+            started = kotlinx.coroutines.flow.SharingStarted.Eagerly,
+            initialValue = emptyList(),
         )
     }
 

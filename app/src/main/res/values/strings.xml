@@ -1148,4 +1148,20 @@
 
     <!-- Permission-revoked banner -->
     <string name="repos_lost_access_banner">Strictlykeptboy lost access to its folder, tap to re-pick</string>
+
+    <!-- Round 2.18.B — External calendars (CalendarContract bridge) settings surface. -->
+    <string name="settings_category_external_calendars">External calendars</string>
+    <string name="settings_subtitle_external_calendars_off">Off</string>
+    <string name="settings_subtitle_external_calendars_on">%1$d visible</string>
+    <string name="settings_external_calendars_intro">Show calendars from your phone (Google, Exchange, DAVx5, etc.) alongside strictlykeptboy\'s own calendars. Data stays on your device — skb never uploads your events anywhere.</string>
+    <string name="settings_external_calendars_show_label">Show system calendars in strictlykeptboy</string>
+    <string name="settings_external_calendars_allow_edit_label">Allow editing system calendars</string>
+    <string name="settings_external_calendars_allow_edit_helper">Lets strictlykeptboy create and update events in your phone\'s calendars. Off by default.</string>
+    <string name="settings_external_calendars_permission_denied">Strictlykeptboy needs the Calendar permission to read your system calendars.</string>
+    <string name="settings_external_calendars_write_permission_denied">Strictlykeptboy needs the Calendar write permission to edit system calendars.</string>
+    <string name="settings_external_calendars_empty">No system calendars found. Add a Google / Exchange / DAVx5 account in Android Settings, then return here.</string>
+    <string name="settings_external_calendars_per_calendar_header">Visible calendars</string>
+    <string name="settings_external_calendars_account_label">%1$s · %2$s</string>
+    <string name="settings_external_calendars_nudge">New calendar accounts detected — show them in strictlykeptboy?</string>
+    <string name="settings_external_calendars_nudge_action">Settings</string>
 </resources>

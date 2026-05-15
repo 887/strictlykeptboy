@@ -130,12 +130,19 @@ sealed class SettingsCategory(
      */
     object Storage : SettingsCategory(R.string.settings_category_storage, "Storage")
 
+    /**
+     * Round 2.18.B.3 — External (system) calendars entry-point.
+     * Renders [ExternalCalendarsScreen] for the global toggle +
+     * permission flow + per-calendar visibility list.
+     */
+    object ExternalCalendars : SettingsCategory(R.string.settings_category_external_calendars, "ExternalCalendars")
+
     companion object {
         val all: List<SettingsCategory> by lazy {
             listOf(
                 Repos, Sync, Notifications, Calendars, Todolists,
                 Templates, Lifestyle, Identity, Appearance, About, Mode, CalDav,
-                Access, AutoTablet, Storage,
+                Access, AutoTablet, Storage, ExternalCalendars,
             )
         }
 
@@ -253,6 +260,14 @@ data class SettingsAccess(
     val onPickRestoreArchive: () -> Unit = {},
     // Round 2.15 — demo-mode toggle prefs.
     val demoModePrefs: com.eight87.strictlykeptboy.prefs.DemoModePrefs? = null,
+    /**
+     * Round 2.18.B — handles for the External Calendars settings screen.
+     * Both nullable so callers that don't wire the system-calendar
+     * stack still compile; the screen falls back to a diagnostic
+     * banner just like other categories with missing prefs.
+     */
+    val systemCalendarPrefs: com.eight87.strictlykeptboy.system.SystemCalendarPrefsStore? = null,
+    val systemCalendarsFlow: kotlinx.coroutines.flow.StateFlow<List<com.eight87.strictlykeptboy.system.SystemCalendar>>? = null,
 )
 
 @Composable
@@ -371,6 +386,7 @@ private fun subtitleResFor(cat: SettingsCategory): Int = when (cat) {
     SettingsCategory.Access -> R.string.settings_subtitle_access
     SettingsCategory.AutoTablet -> R.string.settings_subtitle_autotablet
     SettingsCategory.Storage -> R.string.settings_subtitle_storage
+    SettingsCategory.ExternalCalendars -> R.string.settings_subtitle_external_calendars_off
 }
 
 @Composable
@@ -407,6 +423,8 @@ private fun metaFor(cat: SettingsCategory): CategoryMeta {
             CategoryMeta(Icons.Filled.Tune, R.string.settings_subtitle_autotablet, cs.tertiary)
         SettingsCategory.Storage ->
             CategoryMeta(Icons.Filled.FolderShared, R.string.settings_subtitle_storage, cs.primary)
+        SettingsCategory.ExternalCalendars ->
+            CategoryMeta(Icons.Filled.CalendarMonth, R.string.settings_subtitle_external_calendars_off, cs.tertiary)
     }
 }
 
@@ -425,6 +443,8 @@ private val sections: List<SettingsSection> = listOf(
             SettingsCategory.Calendars,
             SettingsCategory.Todolists,
             SettingsCategory.Templates,
+            // Round 2.18.B.3 — External (CalendarContract) calendars row.
+            SettingsCategory.ExternalCalendars,
         ),
     ),
     // 2.1.E.12 — CalDAV stub category lives under Behaviour.
@@ -698,6 +718,19 @@ private fun SettingsCategoryContent(
             // active sub-screen is held in `storageSubScreen` state so
             // tapping a row swaps the content pane without changing the
             // outer category selection).
+            // Round 2.18.B.3 — External (system) calendars screen.
+            SettingsCategory.ExternalCalendars -> {
+                val sp = access.systemCalendarPrefs
+                val sf = access.systemCalendarsFlow
+                if (sp != null && sf != null) {
+                    ExternalCalendarsScreen(prefs = sp, systemCalendarsFlow = sf)
+                } else {
+                    DiagnosticMissingPrefBanner(
+                        category,
+                        if (sp == null) "systemCalendarPrefs" else "systemCalendarsFlow",
+                    )
+                }
+            }
             SettingsCategory.Storage -> access.repoStoragePrefs?.let { p ->
                 StorageCategoryHost(
                     prefs = p,
