@@ -497,6 +497,11 @@ data class WizardDraft(
 /** Wizard screen identifiers; drives nav + bat-mascot sticker key per LW-A.6. */
 enum class WizardScreen(val stickerKey: String) {
     Welcome("welcome-wave"),
+    // Round 2.17.D — "Where should your stuff live?" — external vs. internal
+    // parent folder. Inserted between Welcome and Species so the choice
+    // happens before any scaffolding. Auto-skipped when ParentLocationGate
+    // already reports Confirmed (returning user who blew away their repo).
+    Storage("storage-folder"),
     Species("species-greeting"),
     Identity("name-tag"),         // Screen 3.5 (K.5a)
     // Phase 2.2.B — collapsed Alignment + Lifestyle + Mode into a single

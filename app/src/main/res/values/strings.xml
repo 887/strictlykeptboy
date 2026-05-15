@@ -449,6 +449,13 @@
     <string name="wizard_welcome_blurb">A short walkthrough — by the end you\'ll have a working calendar repo, not an empty app. You\'ll pick:\n\n• a sticker pack (how the app illustrates you)\n• how the app addresses you (praise terms, pronouns, tone)\n• plain calendar vs. kink framing\n• your initial role + a few starter routines\n• an optional Git remote (or stay phone-only)\n\nNothing here is final — every choice is editable later in Settings.</string>
     <string name="wizard_welcome_cta">let\'s go</string>
     <string name="wizard_welcome_footnote">~1 minute. You can back out any time.</string>
+    <!-- Round 2.17 Phase D — wizard storage step -->
+    <string name="wizard_storage_prompt">Where should your stuff live?</string>
+    <string name="wizard_storage_blurb">Pick one. You can move everything later in Settings → Storage folder.</string>
+    <string name="wizard_storage_external_title">Save on your phone (recommended)</string>
+    <string name="wizard_storage_external_blurb">A folder you pick (e.g. Documents/strictlykeptboy/). Easier to back up, copy to a computer, drop sticker packs into, or hand to another app. Survives uninstall.</string>
+    <string name="wizard_storage_internal_title">Keep inside the app</string>
+    <string name="wizard_storage_internal_blurb">Private to this app. No file manager required. Trade-off: everything is gone if you uninstall strictlykeptboy.</string>
     <string name="wizard_species_prompt">Pick your sticker pack</string>
     <string name="wizard_species_subtitle">Your sticker pack is how the app illustrates you. Bat is the default. You can clone the scaffolded repo and customize the artwork later.</string>
     <string name="wizard_species_custom_pack_url">Custom sticker-pack URL (GitHub)</string>
