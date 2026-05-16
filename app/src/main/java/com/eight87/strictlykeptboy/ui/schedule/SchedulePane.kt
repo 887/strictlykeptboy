@@ -148,7 +148,6 @@ fun SchedulePane(
         } else {
             Column(modifier = Modifier.fillMaxSize().testTag(TestTagScheduleMasterPane)) {
                 // Round 2.21 Phase C.3 — chip strip removed (D-2.21.d).
-                @Suppress("UNUSED_EXPRESSION") calendarVisibility
                 @Suppress("UNUSED_EXPRESSION") onLongPressCalendar
                 ScheduleMasterContent(
                     activeRepoName = activeRepoName,
@@ -157,6 +156,9 @@ fun SchedulePane(
                     onSyncClick = onSyncClick,
                     onBandTap = { detailBand = it },
                     onPlanTrip = onPlanTrip,
+                    // Round 2.23 Phase C — needed so the ZoomLevelRow
+                    // mounts in compact (phone) mode too.
+                    calendarVisibility = calendarVisibility,
                     onDragReschedule = onDragReschedule,
                 )
             }
