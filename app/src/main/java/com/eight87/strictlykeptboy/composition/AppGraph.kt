@@ -286,6 +286,21 @@ class AppGraph(private val appContext: Context) {
     }
 
     /**
+     * Round 2.20 Phase B — rich-demo seeder. Lazy singleton, no
+     * auto-call (Phase C wires the picker that triggers seeding).
+     * Uses a plain `SharedPreferences` (not Encrypted) — the seed flag
+     * is non-sensitive and we don't want first-launch encryption
+     * overhead on a pref this hot.
+     */
+    val richDemoSeeder: com.eight87.strictlykeptboy.demo.RichDemoSeeder by lazy {
+        val prefs = appContext.getSharedPreferences(
+            "rich_demo_seeder_v1",
+            android.content.Context.MODE_PRIVATE,
+        )
+        com.eight87.strictlykeptboy.demo.RichDemoSeeder(appContext, prefs)
+    }
+
+    /**
      * Round 2.17.A.8 — reconciler over the configured parent folder.
      * Replaces the Round 2.7.C `MirrorReconciler` (renamed via `git mv`).
      * No longer participates in the per-sync push fan-out — the parent

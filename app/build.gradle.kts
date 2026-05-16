@@ -80,6 +80,25 @@ android {
         }
     }
 
+    // Round 2.20 Phase B — the bundled rich-demo repo at
+    // `assets/rich-demo-repo/` contains dot-prefixed paths
+    // (`.strictlykeptboy/repo.toml`, etc.) that are LOAD-BEARING for the
+    // produced-repo schema (per CLAUDE.md §D.3). aapt2's default ignore
+    // pattern (`!.*`) drops those silently; relax it to keep VCS-style
+    // junk out (`.svn`, `.git`, thumbs.db, …) while preserving our
+    // dotfiles. RichDemoManifestCoverageTest fails if anything we ship
+    // doesn't make it through aapt2.
+    androidResources {
+        ignoreAssetsPatterns += listOf(
+            "<dir>_*", "<dir>CVS", "<dir>thumbs.db", "<dir>picasa.ini",
+            "<file>*.scc",
+            // Drop SCM dirs by exact name — NOT the `!.*` blanket.
+            "<dir>.svn", "<dir>.git", "<dir>.hg", "<dir>.bzr",
+            "<file>.DS_Store", "<file>thumbs.db", "<file>picasa.ini",
+            "<file>*~",
+        )
+    }
+
     // Phase W.6 — Lint's `Instantiatable` check sees a stale class graph
     // when R8 runs in the same Gradle invocation (KSP-generated classes
     // + multi-module classpath ordering). MainActivity and
@@ -237,4 +256,31 @@ dependencies {
   androidTestImplementation(libs.androidx.test.ext.junit)
   androidTestImplementation(libs.androidx.test.runner)
   androidTestImplementation(libs.androidx.test.espresso.core)
+}
+
+// Round 2.20 Phase B.5 — authoring helper that regenerates
+// `app/src/main/assets/rich-demo-repo/_manifest.txt`. NOT wired into
+// the build graph; invoke manually after editing rich-demo content:
+//
+//   ./gradlew :app:regenerateRichDemoManifest
+//
+// The runtime seeder reads this manifest because AssetManager.list()
+// is non-recursive. `RichDemoManifestCoverageTest` fails the unit
+// suite if the manifest drifts from the asset tree.
+tasks.register("regenerateRichDemoManifest") {
+    group = "build setup"
+    description = "Regenerate app/src/main/assets/rich-demo-repo/_manifest.txt by walking the asset tree."
+    val assetRoot = file("src/main/assets/rich-demo-repo")
+    doLast {
+        require(assetRoot.isDirectory) { "rich-demo asset dir missing: $assetRoot" }
+        val rootPath = assetRoot.toPath()
+        val entries = assetRoot
+            .walkTopDown()
+            .filter { it.isFile }
+            .map { rootPath.relativize(it.toPath()).toString().replace('\\', '/') }
+            .toSortedSet()
+        val manifest = File(assetRoot, "_manifest.txt")
+        manifest.writeText(entries.joinToString(separator = "\n", postfix = "\n"))
+        logger.lifecycle("regenerated ${manifest.relativeTo(rootDir)} (${entries.size} entries)")
+    }
 }
