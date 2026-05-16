@@ -479,33 +479,54 @@ class MainActivity : ComponentActivity() {
                     // pick we seed a read-only demo repo and drop the user
                     // straight into the app.
                     com.eight87.strictlykeptboy.ui.wizard.intro.IntroWizardHost(
-                        onPerspectiveChosen = { card ->
+                        onPerspectiveChosen = { choice ->
                             scope.launch {
-                                val outcome = com.eight87.strictlykeptboy.demo.DemoRepoSeeder.seed(
-                                    parentDir = filesDir.resolve("demo-repos")
-                                        .resolve(com.eight87.strictlykeptboy.demo.DemoRepoSeeder.folderName(card)),
-                                    perspective = card,
-                                    author = AuthorIdentity("demo", "demo@strictlykeptboy.local"),
-                                    assetPackLoader = graph.assetPackLoader,
-                                )
-                                val displayName = "demo · ${card.name.lowercase()}"
-                                graph.repoStore.add(
-                                    RepoConfig(
-                                        repoId = outcome.repoId,
-                                        displayName = displayName,
-                                        rootDir = outcome.rootDir.absolutePath,
-                                        remotes = emptyList(),
-                                        primaryRemote = null,
-                                        authorIdentity = outcome.authorIdentity,
-                                        defaultCalendarId = outcome.calendarIds.values.firstOrNull(),
-                                        defaultTodolistId = outcome.todolistId,
-                                        iconEmoji = "🦇",
-                                        iconSpecies = "Bat",
-                                        isDemo = true,
-                                    ),
-                                )
-                                graph.demoModePrefs.setPerspective(card)
-                                graph.activeRepoName.value = displayName
+                                val config = when (choice) {
+                                    is com.eight87.strictlykeptboy.ui.wizard.intro.DemoPerspectiveChoice.Lifestyle -> {
+                                        val card = choice.card
+                                        val outcome = com.eight87.strictlykeptboy.demo.DemoRepoSeeder.seed(
+                                            parentDir = filesDir.resolve("demo-repos")
+                                                .resolve(com.eight87.strictlykeptboy.demo.DemoRepoSeeder.folderName(card)),
+                                            perspective = card,
+                                            author = AuthorIdentity("demo", "demo@strictlykeptboy.local"),
+                                            assetPackLoader = graph.assetPackLoader,
+                                        )
+                                        graph.demoModePrefs.setPerspective(card)
+                                        RepoConfig(
+                                            repoId = outcome.repoId,
+                                            displayName = "demo · ${card.name.lowercase()}",
+                                            rootDir = outcome.rootDir.absolutePath,
+                                            remotes = emptyList(),
+                                            primaryRemote = null,
+                                            authorIdentity = outcome.authorIdentity,
+                                            defaultCalendarId = outcome.calendarIds.values.firstOrNull(),
+                                            defaultTodolistId = outcome.todolistId,
+                                            iconEmoji = "🦇",
+                                            iconSpecies = "Bat",
+                                            isDemo = true,
+                                        )
+                                    }
+                                    is com.eight87.strictlykeptboy.ui.wizard.intro.DemoPerspectiveChoice.RichDemo -> {
+                                        // Round 2.20 Phase C.4 — dispatch to
+                                        // RichDemoSeeder; share the same
+                                        // RepoStore.add tail as the legacy
+                                        // demo flow.
+                                        val parent = filesDir.resolve("demo-repos")
+                                        val repoRoot = graph.richDemoSeeder
+                                            .seedIfNeeded(parent)
+                                            .getOrThrow()
+                                        // RichDemo doesn't map to a
+                                        // LifestyleCard; mark demo active
+                                        // without a perspective so the
+                                        // first-launch routing keys off
+                                        // RepoStore non-emptiness instead.
+                                        graph.demoModePrefs.setActive(true)
+                                        com.eight87.strictlykeptboy.demo
+                                            .RichDemoRegistrar.buildConfig(repoRoot)
+                                    }
+                                }
+                                graph.repoStore.add(config)
+                                graph.activeRepoName.value = config.displayName
                                 firstLaunchDone = true
                             }
                         },
