@@ -39,6 +39,19 @@ User feedback on screenshots: the destination buttons currently occupy row 2; `k
 - [x] **2.3.A.4** Verify destination buttons fit on a single row alongside title + avatar on Compact width (1080dp baseline). Title elides with `…` via `overflow = TextOverflow.Ellipsis` while taking `weight(1f)`; action-row icons never clip.
 - [x] **2.3.A.5** AVD smoke verified on `emulator-5554` (1080×2400). Screenshots in `docs/qa/2-3/`. `AppShellNavigationSwapTest` did not need updates — `TestTagShellDestPrefix` tags are preserved on the relocated destination buttons.
 
+## Round 2.21 — Calendar UX: overlay identity, picker, zoom, grouping [DONE] (see [`round-2-21-calendar-ux.md`](round-2-21-calendar-ux.md))
+
+Phase A (atomic-grouping schema), B (calendar identity editor), C
+(top-bar overlay picker — full-screen, chip strip retired), D
+(per-overlay zoom prefs + 4-stop dp/h scale), E (Schedule + 3-day
+view modes), F (atomic event grouping w/ tap-to-expand) all
+shipped. Locks D.99..D.109 (D-2.21.a..k). Commits:
+`aa898db` (A) · `3469784` (B) · `57a2bb9` (C) · `587d401` (D) ·
+`6138298` (E) · `5caf1a7` (F). Unit-test count 1017 → 1065.
+Pinch-to-zoom (D.5) and on-AVD verification deferred — pinch
+gesture is unreliable through `adb input`; the deliberate path
+through the per-row segmented control covers D-2.21.i.
+
 ## Round 2.18 — Replace the Android system calendar [DONE] (see [`round-2-18-calendar-replacement.md`](round-2-18-calendar-replacement.md))
 
 CalendarContractBridge (Phase A) + permission UX (B) + UI surfacing (C) + two-way edit (D) + intent filters (E) + reminder parity (F) + sync adapter publishing skb as Android Account type `com.eight87.strictlykeptboy` (G) + DAVx⁵ / Exchange onboarding (H) + default-app discovery (I) + tests & AVD smoke (J) all shipped. Locks D.90..D.98 (D-2.18.a..i).

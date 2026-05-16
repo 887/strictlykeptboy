@@ -2063,3 +2063,113 @@ notification-channel settings for the source apps so the user can
 mute them manually. Silencing other apps from inside skb is not
 technically possible (no IPC for "please don't notify"); a
 link-out is the honest UX.
+
+## D.99 — Calendar identity edits go through `CalendarActivityConfig.write`, not a new prefs file (Round 2.21 D-2.21.a)
+
+Emoji + color seed live on the on-disk `calendar.toml`. The
+`CalendarSettingsSheet` writes through the existing
+`CalendarActivityConfig` codec + the existing per-repo
+`GitRepoRegistry.commitAll` path. We deliberately avoided
+introducing a phone-local prefs file for identity overrides —
+that would have created a "is the disk truth or is the override
+truth?" reconciliation problem with no good answer. One source of
+truth, committed to git, syncable, AI-editable.
+
+## D.100 — 12-swatch palette + custom hex, no color wheel (Round 2.21 D-2.21.b)
+
+12 swatches cover the 11 demo calendars + a slot. A hue/sat/val
+wheel is roughly 200 LOC of Compose canvas work and ships nothing
+the swatches don't already cover for the rich-demo cohort. Custom
+hex entry keeps the escape hatch open for users who want a
+specific brand color. Wheel can land later if a 12-calendar
+overlap actually shows up.
+
+## D.101 — Emoji = single-grapheme TextField, no in-app picker grid (Round 2.21 D-2.21.c)
+
+The system IME already has an emoji picker that's better than any
+in-app grid we'd build. We validate the typed value to a single
+grapheme cluster via `java.text.BreakIterator` on save; anything
+else gets rejected so the picker row + chip glyph stays one
+character wide.
+
+## D.102 — Overlay management lives in a full-screen picker; chip strip retires (Round 2.21 D-2.21.d)
+
+The horizontal `CalendarFilterChipStrip` got deleted. With 11+
+overlays a horizontal scroll is a finger-flick to find anything.
+A repo-grouped full-screen list with per-row toggles + edit
+affordance reads at a glance and scales to N overlays without
+running out of horizontal space.
+
+## D.103 — Top-bar overlay picker = ONE new icon, full-screen destination (Round 2.21 D-2.21.e)
+
+Right side of the Schedule top-bar: `Tune` icon with a badge
+counting visible overlays. Tap opens a **full-screen**
+`OverlayPickerScreen` — not a bottom sheet (bottom sheet is
+reserved for todo items) and not a left-rail tab (the rail is
+view-modes only). Picker dismisses with a back arrow in the
+top-app-bar.
+
+## D.104 — View modes mirror Google Calendar + Year (Round 2.21 D-2.21.f)
+
+Final rail set:
+`Schedule · Day · 3-day · Week · Month · Agenda · Year`.
+`Schedule` is the agenda-list mode (no time grid); `Agenda` keeps
+its Phase G.4 meaning as the focus-block timebox. We anchored to
+Google's set because the user explicitly asked for parity *plus*
+keeping Year. Adding both Schedule and 3-day in the same round is
+cheap because both compose on top of existing day rendering.
+
+## D.105 — Zoom is per-overlay, not per-view, not global (Round 2.21 D-2.21.g)
+
+`CalendarVisibilityPrefs` carries `zoom: Int ∈ {1..4}` keyed by
+`(repoId, calendarId)`, default 2. The effective grid zoom for
+Day / 3-day / Week is `max(zoomOf visible overlays)`. Rationale:
+the user wants routines-overlay at zoom 3 (atomic-readable) while
+keeping work-overlay at the default — without dragging the work
+view along when routines is on. Hidden overlays don't count.
+Schedule + Month + Year ignore zoom (list / cell layouts).
+
+## D.106 — Zoom stops: 40 · 80 · 160 · 320 dp/hour (Round 2.21 D-2.21.h)
+
+Four named stops:
+- 1 = 40dp/h (tighter than the old default)
+- 2 = 80dp/h (new default; 1h ≈ half a phone screen vertically)
+- 3 = 160dp/h (atomic events readable)
+- 4 = 320dp/h (planning mode)
+Out-of-range inputs clamp to {1..4}; the codec defaults missing
+values to 2 so legacy `VisibilityEntry` rows decode without
+churn.
+
+## D.107 — Pinch-to-zoom deferred; per-row segmented control is the deliberate path (Round 2.21 D-2.21.i amendment)
+
+The original plan called for both a pinch gesture *and* a
+deliberate picker control. We shipped the deliberate path —
+`SingleChoiceSegmentedButtonRow` with 4 stops on every overlay
+row in `OverlayPickerScreen` — and deferred the pinch gesture.
+Reason: `adb input` can't simulate multi-touch pinch reliably on
+the headless AVD; the deliberate path satisfies the "user must
+be able to set it deliberately" half of D-2.21.i without paying
+for an unverifiable gesture layer this round.
+
+## D.108 — Atomic grouping is opt-in per calendar via `meta_group_field` (Round 2.21 D-2.21.j)
+
+A new top-level scalar on `calendar.toml`: `meta_group_field =
+"phase"` (or any other event field name). When set, the day
+renderer groups consecutive atoms in the same `group` label into
+one collapsed band. Default: unset (no grouping). This is purely
+additive on the event schema — events already carry arbitrary
+key/value fields per Phase Q. The literal value of
+`meta_group_field` is informational in v1; only its non-emptiness
+toggles the opt-in.
+
+## D.109 — Grouped bands are UI-only; MaterializedInstance list is unchanged (Round 2.21 D-2.21.k)
+
+`groupDayBands(bands, hasMetaGroup, gapSeconds=300)` is a pure
+function in `ui/schedule/GroupedDayBand.kt` consumed by
+`ScheduleDayView`. The resolver still emits one
+`MaterializedInstance` per atom; collapse happens at render time.
+Tap on a collapsed band toggles expansion; zoom ≥ 3 auto-expands
+every group. This keeps the resolver narrow (it knows nothing
+about UI affordances) and makes the collapse behaviour cheap to
+iterate on without disturbing recurrence / supersedence / off-
+schedule pipelines.
