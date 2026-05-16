@@ -290,7 +290,7 @@ The raw `Auto / 40 / 80 / 160 / 320` dp-per-hour labels shipped in
 
 ---
 
-## Round 2.23.5 follow-up (shipped in commit `<pending>`)
+## Round 2.23.5 follow-up (shipped in commit `f104ae4`)
 
 User feedback on the overlay picker (2026-05-17):
 "higher wins tiebreaks is a good info.. once.. in an explanation for
