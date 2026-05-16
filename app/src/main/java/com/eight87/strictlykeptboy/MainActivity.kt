@@ -526,6 +526,55 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
                                 graph.repoStore.add(config)
+                                // Round 2.20 Phase D.8 — fix Phase C's "nothing
+                                // scheduled" finding. RepoStore.add does not
+                                // trigger an indexer pass, and the rich-demo
+                                // ships ~120 events / ~30 recurrences only on
+                                // disk. Without indexing, Room stays empty +
+                                // the schedule view renders no bands. Initialise
+                                // a local-only git repo if needed (the indexer
+                                // records the head SHA into RepoStateRow), then
+                                // run a full scan. Idempotent + crash-safe via
+                                // runCatching — a failure surfaces as an empty
+                                // schedule rather than a fatal first launch.
+                                if (config.isDemo) {
+                                    kotlinx.coroutines.withContext(
+                                        kotlinx.coroutines.Dispatchers.IO,
+                                    ) {
+                                        runCatching {
+                                            val rootDir = File(config.rootDir)
+                                            val gitRepo = GitRepoRegistry.get(config.repoId)
+                                                ?: run {
+                                                    val gd = File(rootDir, ".git")
+                                                    if (gd.isDirectory) {
+                                                        GitRepo.open(
+                                                            rootDir = rootDir,
+                                                            repoId = config.repoId,
+                                                            remotes = config.remotes,
+                                                            primaryRemote = config.primaryRemote,
+                                                            authorIdentity = config.authorIdentity,
+                                                            defaultBranch = config.defaultBranch,
+                                                        )
+                                                    } else {
+                                                        GitRepo.initLocalOnly(
+                                                            rootDir = rootDir,
+                                                            repoId = config.repoId,
+                                                            authorIdentity = config.authorIdentity,
+                                                        ).also { fresh ->
+                                                            runCatching {
+                                                                fresh.commitAll(
+                                                                    "rich-demo: initial extraction",
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+                                                }.also(GitRepoRegistry::put)
+                                            com.eight87.strictlykeptboy.cache.Indexer(
+                                                graph.cacheDatabase,
+                                            ).fullScan(config.repoId, gitRepo)
+                                        }
+                                    }
+                                }
                                 graph.activeRepoName.value = config.displayName
                                 firstLaunchDone = true
                             }

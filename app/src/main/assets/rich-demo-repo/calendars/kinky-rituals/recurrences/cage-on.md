@@ -7,7 +7,7 @@ updated_at = 2026-05-09T08:00:00+01:00
 author = "01900000-0000-7000-8000-0000000000bb"
 title = "Cage on"
 dtstart = 2026-05-15T06:35:00
-duration = "PT0S"
+duration = "PT5M"
 tz_id = "Europe/London"
 rrule = "FREQ=DAILY"
 calendar_id = "0190a0aa-1c1d-7000-8a0a-000000000005"
