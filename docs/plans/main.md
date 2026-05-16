@@ -47,8 +47,8 @@ Phase B (DD drag-to-reschedule math + entity-transform core in
 deferred behind the gesture-coexistence-with-pinch-zoom AVD gate),
 Phase C (Phase FF retired — substantive coverage via WW + 2.5.C;
 residuals FF.2 / FF.4 / FF.5 scoped to Round 3), Phase D (close-out).
-Locks D.110..D.112 (D-2.22.a..c). Commits: `870ee05` (A) ·
-`f2c6700` (B) · `8dd7879` (C). Unit-test count 1075 → 1094.
+Locks D.110..D.112 (D-2.22.a..c). Commits: `4af31f4` (A) ·
+`dbf015e` (B) · `8dd7879` (C). Unit-test count 1075 → 1094.
 
 ## Round 2.21 — Calendar UX: overlay identity, picker, zoom, grouping [DONE] (see [`round-2-21-calendar-ux.md`](round-2-21-calendar-ux.md))
 
@@ -622,7 +622,7 @@ Deep-dives: [`data-model.md`](data-model.md) extension DM-K, [`ui-spec.md`](ui-s
 - [ ] **CC.5** Comment author chip rendering (same shape as event chip) (Round 4 — later)
 - [ ] **CC.6** Threaded `in_reply_to` rendering (indented under parent) (Round 4 — later)
 
-## Phase DD — Drag-to-reschedule + pinch-to-zoom (pinch half shipped in Round 2.21 D.5 `16d63b7`; drag math-core shipped in Round 2.22 B commit `f2c6700`)
+## Phase DD — Drag-to-reschedule + pinch-to-zoom (pinch half shipped in Round 2.21 D.5 `16d63b7`; drag math-core shipped in Round 2.22 B commit `dbf015e`)
 
 Pinch-to-zoom subsumed by Round 2.21's per-overlay zoom model (D-2.21.g/h) —
 levels {1=40 / 2=80 / 3=160 / 4=320 dp/h} replace the original 5m/15m/30m/1h

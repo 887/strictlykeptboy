@@ -78,7 +78,7 @@ loose threads remain visible-or-tracked:
 
 ## Phases
 
-### Phase A — F48 IdentityAvatar close-out (shipped in commit `870ee05`)
+### Phase A — F48 IdentityAvatar close-out (shipped in commit `4af31f4`)
 
 - [x] **A.1** Audit confirms the wiring already exists end-to-end:
   `AppGraph.activeRepoIconKind` (per-repo derived flow) →
@@ -98,7 +98,7 @@ loose threads remain visible-or-tracked:
   `docs/plans/refactor-solid.md` with the landing commit SHA.
 - [x] **A.5** Commit.
 
-### Phase B — DD drag-to-reschedule (core shipped in commit `f2c6700`)
+### Phase B — DD drag-to-reschedule (core shipped in commit `dbf015e`)
 
 This round ships the **load-bearing pure-math + entity-transform
 core** of drag-to-reschedule, fully test-covered. The Compose
