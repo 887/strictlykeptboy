@@ -120,6 +120,13 @@ fun ScheduleWeekView(
                         modifier = Modifier.padding(vertical = 6.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
+                        // Round 2.23 Phase B (D-2.23.c) — weekday emoji
+                        // header strip; visible above the weekday abbreviation.
+                        Text(
+                            text = emojiFor(d.dayOfWeek),
+                            style = MaterialTheme.typography.titleMedium,
+                            textAlign = TextAlign.Center,
+                        )
                         Text(
                             text = d.dayOfWeek.name.take(3),
                             style = MaterialTheme.typography.labelMedium,

@@ -1,0 +1,146 @@
+# Round 2.23 — Schedule readability + reviews wiring
+
+## Status: DRAFT
+
+## Context
+
+Five user-feedback items captured from a live AVD session on 2026-05-16:
+
+1. "i didn't see any reviews wired up yet" — `ReviewsPane` mounted
+   (DDD.13) but `ReviewFeedReader` deferred; the destination shows
+   the empty-state card even when `reviews/<sha>/reviewable_change.md`
+   files exist on disk.
+2. "i have no way to zoom in into our calendar to make the hours be
+   half the screen like you should have done (make that a row of
+   buttons at the top for the different zoom levels)" — pinch +
+   per-overlay segmented control exist but aren't discoverable as a
+   one-tap day-view-wide control.
+3. "all the demo tasks here still have the same color" — band
+   `accentColorSeed` is piped through but the day/week band background
+   is uniform `surfaceContainer`; only the 4dp left stripe carries
+   color (often invisible on small bands).
+4. "our schedule looks nothing like the google one which has nice
+   artwork for each day to separate our days (at least give me an
+   emoji there or something to separate the weekdays)" — day-header
+   strip in Day/3-day/Week shows only the weekday abbreviation +
+   day-of-month number.
+5. "clicking on a task in the calendar pulls in the card from the
+   bottom, but i want a full screen view rather than the pullin from
+   the bottom to view/edit my task, the button on there doesn't work
+   anyway" — `EventDetailSheet` is a `ModalBottomSheet`; the Edit
+   button in `SchedulePane` is wired with `onEdit = {}` (stub).
+
+## Locked design decisions
+
+- **D-2.23.a — Top-of-Day-view zoom row.** A 5-segmented button row
+  (Auto · 40 · 80 · 160 · 320) above the Day-grid Box and above the
+  3-day timeline. "Auto" sets `globalZoomOverride = null` (falls back
+  to max-of-visible-overlays per D-2.21.g); numbers set the override
+  directly. Persisted via a new `setGlobalZoomOverride(Int?)` on
+  `CalendarVisibilityPrefs` (closest existing pref class — adding a
+  new SchedulePrefs file would just be ceremony).
+- **D-2.23.b — Per-calendar colorSeed wins on the band.** Band Surface
+  background = `colorForSeed(accentColorSeed).copy(alpha = 0.4f)` over
+  the existing tonal fallback when seed != 0; foreground text uses
+  `onSurface`. The 4dp leading stripe remains at full alpha for
+  emphasis. When seed == 0, the existing `surfaceContainer` fallback
+  is preserved (no regression on un-seeded calendars).
+- **D-2.23.c — Per-weekday emoji.** Stable map lives in
+  `ui/schedule/WeekdayEmoji.kt`: Mon🌅 Tue🌱 Wed🌊 Thu🌳 Fri🌟
+  Sat🌸 Sun🦇. Prefixed to the day-header text in Day / 3-day / Week.
+  Sun = 🦇 lands the bat-coded identity.
+- **D-2.23.d — `EventDetailSheet` → full-screen overlay.** Same
+  scaffold-level Surface-overlay pattern Round 2.22 used for
+  `OverlayPickerScreen` (mount above the chrome Column inside the
+  outer Box). New `EventDetailScreen` composable with `TopAppBar +
+  back arrow`; the existing `EventDetailContent` is reused inside
+  fillMaxSize. `EventDetailSheet` retired from Schedule but kept in
+  source as `@Deprecated` thin wrapper to preserve API for any
+  callers outside the schedule package; SchedulePane callers
+  retargeted.
+- **D-2.23.e — Reviews wiring uses `ReviewFeedReader`.** Pure helper
+  scans `reviews/<commit-sha>/reviewable_change.md` (the
+  `ReviewFeedWriter` output) across all active repos and emits
+  `ReviewEntry`. The task brief said `feedback/` but the actual
+  on-disk schema (DM-Z.3) is `reviews/`; we honour the codebase
+  schema. `ReviewsPane` consumes the flow via `AppGraph`. Empty state
+  preserved when no reviews exist.
+
+## Phases
+
+### Phase A — Per-calendar color on bands
+
+- [ ] **A.1** Day-view band: apply `colorForSeed(seed).copy(alpha=0.4)`
+      background when seed != 0; preserve existing fallback otherwise.
+- [ ] **A.2** Week-view DayColumn band: same tint logic.
+- [ ] **A.3** 3-day-view band: same tint logic.
+- [ ] **A.4** Test `RendererColorSeedTest` already covers piping;
+      add `BandTintColorSeedTest` (unit + Robolectric snap) — two
+      bands with distinct seeds render distinct backgrounds.
+
+### Phase B — Weekday emoji
+
+- [ ] **B.1** New `ui/schedule/WeekdayEmoji.kt` with map + `emojiFor`.
+- [ ] **B.2** Day-view header (currently missing — Day grid has no
+      "today" header) — defer to header sites that exist: Week +
+      3-day. For Day view, add an emoji to the now-line / day label
+      via a small top strip.
+- [ ] **B.3** Week + 3-day day-headers — prefix emoji before weekday
+      abbreviation.
+- [ ] **B.4** `WeekdayEmojiTest` — 7 entries map correctly.
+
+### Phase C — Top-of-Day zoom row
+
+- [ ] **C.1** `CalendarVisibilityPrefs.globalZoomOverride` — Int? backed
+      by separate prefs key; flow exposed via `state` (extend
+      `VisibilityState`).
+- [ ] **C.2** New `ui/schedule/ZoomLevelRow.kt` — 5-segmented button
+      row (Auto / 40 / 80 / 160 / 320) with test-tags per button.
+- [ ] **C.3** Mount row at the top of Day view + 3-day view inside
+      SchedulePane's `ScheduleMasterContent`.
+- [ ] **C.4** `effectiveZoom` calc: prefers override over
+      max-of-visible.
+- [ ] **C.5** `ZoomLevelRowTest` (Compose-Robolectric) +
+      `SchedulePrefsZoomOverrideTest` (round-trip).
+
+### Phase D — EventDetailSheet → EventDetailScreen full-screen
+
+- [ ] **D.1** New `ui/schedule/EventDetailScreen.kt` —
+      Surface(fillMaxSize) + TopAppBar with back arrow; embeds
+      `EventDetailContent`.
+- [ ] **D.2** Hoist `pendingEvent: DayBand?` state in SchedulePane
+      (compact path only — tablet two-pane keeps its detail pane).
+- [ ] **D.3** `onBandTap` in compact path sets `pendingEvent` instead
+      of opening the ModalBottomSheet.
+- [ ] **D.4** Mount `EventDetailScreen` over the pane via Surface
+      overlay in SchedulePane (mirrors OverlayPickerScreen pattern).
+- [ ] **D.5** Identify broken button: Edit (`onEdit = {}` stub in
+      SchedulePane.kt:167). Wire to a no-op-but-toast feedback so
+      user gets a clear "Edit coming Round 3 — Phase I editor" toast
+      until the editor lands, AND wire a working "Close" route via
+      back. Document in commit message.
+- [ ] **D.6** `EventDetailScreenTest` — TopAppBar + back arrow +
+      event title render; back callback fires.
+
+### Phase E — Reviews wiring
+
+- [ ] **E.1** New `ui/reviews/ReviewFeedReader.kt` — scans
+      `reviews/<commit-sha>/reviewable_change.md` per repo root, parses
+      via existing `FrontmatterReader`, returns `List<ReviewEntry>`.
+- [ ] **E.2** Wire into `AppGraph` via existing repo-root flow
+      (use `repoRegistry.activeRoots()` equivalent).
+- [ ] **E.3** `ReviewsPane` consumes the flow in `SkbAppShell`.
+- [ ] **E.4** Preserve empty state when no items.
+- [ ] **E.5** `ReviewFeedReaderTest` — seed two repos with
+      reviewable_change.md files; assert combined list ordered by
+      timestamp desc.
+
+### Phase F — Close-out
+
+- [ ] **F.1** Tick all substeps with commit SHAs.
+- [ ] **F.2** `## Status: ✅ DONE` on this file.
+- [ ] **F.3** Append D.113..D.117 to `decisions.md` (verify highest is
+      D.112).
+- [ ] **F.4** Add Round 2.23 entry to `main.md`.
+- [ ] **F.5** AVD smoke on emulator-5558 — screencaps to
+      `docs/qa/2-23/`.

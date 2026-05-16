@@ -136,6 +136,9 @@ fun ScheduleDayView(
     }
 
     val hourHeight = hourHeightForZoom(effectiveZoom)
+    // Round 2.23 Phase B (D-2.23.c) — weekday emoji strip above the
+    // hour grid so the Day view picks up the same visual separator the
+    // Week / 3-day headers use.
     val scroll = rememberScrollState()
     val density = LocalDensity.current
     val hourHeightPx = with(density) { hourHeight.toPx() }
@@ -148,11 +151,22 @@ fun ScheduleDayView(
     val autoExpand = shouldAutoExpand(effectiveZoom)
     var expandedKeys by remember { mutableStateOf(setOf<String>()) }
     val dragState = rememberDragRescheduleUiState()
+    Column(modifier = modifier.fillMaxSize().testTag(TestTagDayView)) {
+        // Round 2.23 Phase B — weekday emoji strip.
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Spacer(modifier = Modifier.width(GutterWidth))
+            Text(
+                text = "${emojiFor(date.dayOfWeek)}  ${date.dayOfWeek.name.take(3)} ${date.dayOfMonth}",
+                style = MaterialTheme.typography.titleMedium,
+            )
+        }
     Row(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(scroll)
-            .testTag(TestTagDayView),
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(scroll),
     ) {
         HourGutter(hourHeight = hourHeight)
         // Round 2.21 Phase D.5 — pinch-to-zoom on the day-grid Box.
@@ -229,6 +243,7 @@ fun ScheduleDayView(
             }
             if (isToday) NowLine(hourHeight = hourHeight)
         }
+    }
     }
 }
 
@@ -345,13 +360,24 @@ private fun BandsLayer(
                         onDrop = onDragReschedule,
                     )
                 } else Modifier
+                // Round 2.23 Phase A — per-calendar colorSeed wins on the
+                // band background (D-2.23.b). When seed != 0, paint a tinted
+                // fill at alpha 0.4 over the tonal scheme; foreground text
+                // colour falls back to onSurface for legibility on the tint.
+                val seedColor = colorForSeed(band.accentColorSeed)
+                val baseFill = if (seedColor == Color.Unspecified) {
+                    MaterialTheme.colorScheme.surfaceContainer
+                } else {
+                    seedColor.copy(alpha = 0.4f)
+                }
+                val effectiveFill = baseFill.copy(alpha = baseFill.alpha * bandAlpha)
                 Surface(
                     onClick = {
                         // Round 2.21 Phase F.2 — synthetic group folder taps
                         // toggle expansion; real bands open detail.
                         if (groupKey != null) onToggleGroup(groupKey) else onBandTap(band)
                     },
-                    color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = bandAlpha),
+                    color = effectiveFill,
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier
                         .fillMaxSize()
