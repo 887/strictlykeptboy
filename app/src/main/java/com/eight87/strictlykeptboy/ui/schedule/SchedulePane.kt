@@ -160,11 +160,26 @@ fun SchedulePane(
                     onDragReschedule = onDragReschedule,
                 )
             }
+            // Round 2.23 Phase D (D-2.23.d) — full-screen event detail
+            // replaces the legacy ModalBottomSheet for the compact path.
+            // Mounted at the SchedulePane root so its TopAppBar covers
+            // the schedule tab strip. The bottom-sheet wrapper is
+            // retired from this surface.
             detailBand?.let { band ->
-                EventDetailSheet(
+                val ctx = androidx.compose.ui.platform.LocalContext.current
+                EventDetailScreen(
                     band = band,
-                    onDismiss = { detailBand = null },
-                    onEdit = { /* Phase I/K — stubbed */ },
+                    onBack = { detailBand = null },
+                    // Phase D.5 — surface a clear "coming soon" toast
+                    // instead of the silent no-op the legacy stub had.
+                    // The event editor is Round 3 / Phase I work.
+                    onEdit = {
+                        android.widget.Toast.makeText(
+                            ctx,
+                            "Event editor coming in Round 3",
+                            android.widget.Toast.LENGTH_SHORT,
+                        ).show()
+                    },
                 )
             }
         }
