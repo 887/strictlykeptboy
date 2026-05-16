@@ -143,18 +143,21 @@ a Round 2.23 polish slice when on-device verification is in hand.
   UI without rederiving the algorithm.
 - [x] **B.9** Commit.
 
-### Phase C — Phase FF audit + disposition
+### Phase C — Phase FF audit + disposition (shipped in commit `2c1654a`)
 
-- [ ] **C.1** Read each FF substep against WW + 2.5.C surfaces.
-- [ ] **C.2** Per substep, mark (a) shipped via WW/2.5.C with
-  cross-ref, (b) genuinely open + small, (c) genuinely open +
-  substantial.
-- [ ] **C.3** Update Phase FF header in `main.md` with disposition
-  outcome.
-- [ ] **C.4** If any (b) cheap items appear — ship inline. If only
-  (a) or (c), close FF as RETIRED / mark remaining substeps with
-  explicit Round-N deferrals.
-- [ ] **C.5** Commit.
+- [x] **C.1** Audited each FF substep against shipped surfaces
+  (`UserPackLoader`, `PackManifest`, `AvatarPackPrefs`,
+  `CompositePackStore`, `StickerPackSelectorScreen`, `RepoIconPicker`).
+- [x] **C.2** Classification: **(a) covered** — FF.1 (WW.1), FF.3
+  (WW.4), FF.6 (Round 2.5.C); **(b) cheap-and-open** — none; **(c)
+  genuinely open + substantial** — FF.2 (SAF local picker), FF.4
+  (`:sticker-name:` shortcut + autocomplete), FF.5 (calendar /
+  todolist icon picker integration).
+- [x] **C.3** Phase FF header in `main.md` retitled to RETIRED;
+  per-substep dispositions written with cross-refs.
+- [x] **C.4** No cheap items inline; FF.2 / FF.4 / FF.5 explicitly
+  scoped to Round 3 with their open boxes preserved.
+- [x] **C.5** Commit.
 
 ### Phase D — Close-out
 

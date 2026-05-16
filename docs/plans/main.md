@@ -681,14 +681,20 @@ viewer is reachable from the renderer.
   produced-user-repo convention uses the AGENTS↔CLAUDE symlink,
   not the app repo itself). Shipped in this change.
 
-## Phase FF — Custom sticker / icon packs
+## Phase FF — Custom sticker / icon packs — RETIRED (disposed Round 2.22 C; substantive coverage via Phase WW + Round 2.5.C; residuals scoped to future round)
 
-- [ ] **FF.1** Pack format spec (directory + optional `pack.toml`) (Round 4 — later)
-- [ ] **FF.2** Install from local picker (zip or unzipped dir) (Round 4 — later)
-- [ ] **FF.3** Install from URL fetch (Round 4 — later)
-- [ ] **FF.4** `:sticker-name:` shortcut in title editors with autocomplete (Round 4 — later)
-- [ ] **FF.5** Icon picker integration (repos, calendars, todolists) (Round 4 — later)
-- [ ] **FF.6** Settings → Appearance → Sticker packs (list, install, remove) (Round 4 — later)
+Round 2.22 Phase C audit (commit `2c1654a`) classifies each substep
+against shipped WW + 2.5.C surfaces. Three covered (FF.1 / FF.3 /
+FF.6), three genuinely open + substantive and scoped to future
+rounds (FF.2 local picker, FF.4 `:sticker-name:` shortcut, FF.5
+calendar/todolist icon picker integration).
+
+- [x] **FF.1** Pack format spec (directory + optional `pack.toml`) — COVERED by Phase WW.1 (`PackManifest` parser + `assets/avatar-packs/<species>/` scaffolds + `StickerTag` taxonomy).
+- [ ] **FF.2** Install from local picker (zip or unzipped dir) — genuinely open + substantive; SAF picker not implemented. Scoped to Round 3.
+- [x] **FF.3** Install from URL fetch — COVERED by Phase WW.4 (`UserPackLoader.cloneFrom(url, packId)` with shallow JGit clone + `PackId.fromCloneUrl` SHA-256 derivation).
+- [ ] **FF.4** `:sticker-name:` shortcut in title editors with autocomplete — genuinely open + substantive; no editor-side shortcut surface yet. Scoped to Round 3.
+- [ ] **FF.5** Icon picker integration (repos, calendars, todolists) — partial: repos have `RepoIconKind.Sticker` + `RepoIconPicker`; calendars have emoji via Round 2.21 Phase B identity editor; todolists not yet covered. Scoped to Round 3.
+- [x] **FF.6** Settings → Appearance → Sticker packs (list, install, remove) — COVERED by Round 2.5.C `StickerPackSelectorScreen` mounted under Repos pane (Settings → Appearance hosts the "Sticker pack" picker per WW.5).
 
 ## Phase GG — Signed commits (optional capability)
 
