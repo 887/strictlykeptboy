@@ -196,3 +196,56 @@ TabRow at the top. `reviews-demo-seeded.png` is the same surface.
 1103 (Round 2.18 close-out) -> 1115 passing (+ ReviewsPaneVerticalRailTest
 × 3 cases, RichDemoReviewSeedTest × 1, plus the Round 2.23 additions
 that landed in `ed9d4c6`).
+
+---
+
+## Round 2.23.2 follow-up (shipped in commit `a9e7cfb`)
+
+User feedback on the overlay picker (2026-05-17):
+"can't see which color is which here, remove the priority picker
+with the 40-80-160-320 that's redundant. show the color not near
+the emoji but instead make this a card view like in repository,
+where you list commute at the top, then a color entry i can click
+on to change the color, then the priority, so each entry in
+overlays here has multiple rows and is a card"
+
+### Fix — Multi-row M3 Card per overlay (D.119)
+
+- [x] **2.23.2.A.1** `OverlayPickerScreen.OverlayCard`: header
+      (emoji + name + Switch + ⋮) / Color row / Priority row / Repo row,
+      backed by an M3 `Card` with `surfaceContainerLow`. Tiny dot near
+      the emoji removed.
+- [x] **2.23.2.A.2** Color row reuses `IdentitySwatches` + `ColorSwatch`
+      from `CalendarSettingsSheet` (made `internal` + new
+      `identitySwatchName` helper for the human-readable label).
+- [x] **2.23.2.A.3** `CalendarSettingsWriter.writeColorSeed(...)`
+      mirrors `writePriority`'s read-merge-write shape; wired through
+      `SkbAppShell.onOverlayColorChange` → `MainActivity`.
+- [x] **2.23.2.A.4** Per-row 40/80/160/320 segmented control deleted;
+      `TestTagOverlayPickerZoom` retired. Per-overlay zoom storage
+      preserved (still backs `globalZoomOverride == null` fallback).
+- [x] **2.23.2.A.5** `OverlayPickerScreenTest`
+      `card_layout_renders_color_row_and_opens_palette_and_fires_writer`:
+      asserts Color row exists, opens the palette on tap, and the
+      blue swatch tap fires `onColorChange(meta, 0x42A5F5)`.
+- [x] **2.23.2.A.6** D.119 added to `decisions.md`.
+
+### AVD evidence (emulator-5558)
+
+- `docs/qa/2-23/overlay-picker-card-layout.png` — three stacked cards
+  (Beans / Commute / Boy Keeper) with header + Color + Priority + Repo
+  rows; no per-row zoom segmented control; top-of-Day ZoomLevelRow
+  remains visible behind back-nav.
+- `docs/qa/2-23/overlay-picker-card-color-picker.png` — Beans card's
+  Color row expanded to the 2×6 swatch grid.
+- `docs/qa/2-23/overlay-picker-card-color-applied.png` — after picking
+  blue + reopening the picker, Beans Color row reads "blue" with a
+  visible blue swatch (color_seed = 0x42A5F5 persisted to
+  `cat-care/calendar.toml`).
+- `docs/qa/2-23/overlay-picker-card-priority-typed.png` — number
+  keyboard up on Commute's Priority field with the typed value live
+  in the field.
+
+### Test delta
+
+1115 → 1116 (+ card_layout_renders_color_row_and_opens_palette_and_fires_writer).
