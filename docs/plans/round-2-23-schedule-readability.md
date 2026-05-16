@@ -252,7 +252,7 @@ overlays here has multiple rows and is a card"
 
 ---
 
-## Round 2.23.3 follow-up (shipped in commit `__SHA__`)
+## Round 2.23.3 follow-up (shipped in commit `6e40de5`)
 
 User feedback on the zoom row (2026-05-17):
 "oh god nobody will get what these numbers mean bat.. make it more
