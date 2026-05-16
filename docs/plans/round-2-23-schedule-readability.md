@@ -249,3 +249,42 @@ overlays here has multiple rows and is a card"
 ### Test delta
 
 1115 → 1116 (+ card_layout_renders_color_row_and_opens_palette_and_fires_writer).
+
+---
+
+## Round 2.23.3 follow-up (shipped in commit `__SHA__`)
+
+User feedback on the zoom row (2026-05-17):
+"oh god nobody will get what these numbers mean bat.. make it more
+comprehensive icons"
+
+The raw `Auto / 40 / 80 / 160 / 320` dp-per-hour labels shipped in
+2.23 Phase C were unreadable to non-developer users.
+
+### Fix — icon + descriptive label per segment
+
+- [x] **2.23.3.A.1** `ZoomLevelRow`: each `SegmentedButton.label` now
+      stacks `Icon` on top of a short descriptive `Text` (labelSmall,
+      `maxLines = 1`, `softWrap = false`). Icons chosen:
+      `Icons.Outlined.AutoMode` (Auto) / `UnfoldLess` (Compact, 40) /
+      `GridView` (Normal, 80) / `UnfoldMore` (Detail, 160) /
+      `OpenInFull` (Spacious, 320). The icon ladder mirrors the dp/h
+      ladder: low dp/h = compact / high dp/h = spacious.
+- [x] **2.23.3.A.2** Per-segment `contentDescription` carries the
+      precise value, e.g. "Zoom: Compact (40 dp per hour)", so
+      screen-reader users still get the exact dp/h.
+- [x] **2.23.3.A.3** New `ZoomLevelRowTest` (Compose-Robolectric):
+      five tests covering descriptive-label rendering, default-selected
+      Auto state, and onSelect callbacks for Compact / Spacious / Auto.
+
+### AVD evidence (emulator-5558)
+
+- `docs/qa/2-23/zoom-row-icons.png` — Day view top-of-pane row reads
+  "Auto / Compact / Normal / Detail / Spacious" with icons stacked
+  above labels; Compact is selected so the timeline shows dense
+  40 dp/h bands.
+
+### Test delta
+
+1116 → 1121 (+ five `ZoomLevelRowTest` cases).
+
