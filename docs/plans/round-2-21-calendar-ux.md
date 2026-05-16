@@ -247,7 +247,7 @@ this round.
   rule, opt-in gate, null-group fallthrough, cross-calendar
   separation, zoom auto-expand threshold, and the empty-input case.
 
-### Phase G — Close-out (shipped in `<sha-g>`)
+### Phase G — Close-out (shipped in `48e45bf`)
 
 - [x] **G.1** Every Phase A–F sub-step ticked with the landing
   commit SHA on its phase header.
