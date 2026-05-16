@@ -162,6 +162,13 @@ fun SkbAppShell(
      */
     onLongPressCalendar: ((com.eight87.strictlykeptboy.resolver.CalendarMeta) -> Unit)? = null,
     /**
+     * Round 2.22 / Fix 3 — inline priority writer fired from the
+     * overlay-picker per-row OutlinedTextField. Default no-op so
+     * tests / previews don't have to plumb the writer.
+     */
+    onOverlayPriorityChange:
+        ((com.eight87.strictlykeptboy.resolver.CalendarMeta, Int) -> Unit) = { _, _ -> },
+    /**
      * Round 2.16.B — task-playback source feeding MiniPlayer +
      * NowPlayingScreen. Defaults to the Phase A stub for previews /
      * tests; MainActivity wires `appGraph.taskTransport`.
@@ -214,6 +221,7 @@ fun SkbAppShell(
             onShareWithDom = onShareWithDom,
             calendarVisibility = calendarVisibility,
             onLongPressCalendar = onLongPressCalendar,
+            onOverlayPriorityChange = onOverlayPriorityChange,
             taskPlaybackSource = taskPlaybackSource,
             onStartTask = onStartTask,
             onPickInternalStorage = onPickInternalStorage,
@@ -250,6 +258,8 @@ private fun SkbAppShellContent(
     onShareWithDom: () -> Unit = {},
     calendarVisibility: com.eight87.strictlykeptboy.ui.settings.CalendarVisibilityPrefs? = null,
     onLongPressCalendar: ((com.eight87.strictlykeptboy.resolver.CalendarMeta) -> Unit)? = null,
+    onOverlayPriorityChange:
+        ((com.eight87.strictlykeptboy.resolver.CalendarMeta, Int) -> Unit) = { _, _ -> },
     taskPlaybackSource: Any = StubTaskPlaybackSource,
     onStartTask: ((String) -> Unit)? = null,
     /** Round 2.17.D — see [SkbAppShell.onPickInternalStorage]. */
@@ -308,6 +318,13 @@ private fun SkbAppShellContent(
     // redundant — destination is the right granularity here.
     val title = selected.labelString()
 
+    // Round 2.22 / Fix 1 — overlay picker overlay state. Hoisted above
+    // the shell's Column so the picker can cover the top-bar AND the
+    // left rail (previously it was nested inside the destination-
+    // content Box, which left both visible — "the overlays go over the
+    // settings and it's dumb"). The picker now mirrors the same
+    // Surface(fillMaxSize) idiom that the TripWizardNavHost uses.
+    var overlayPickerOpen by rememberSaveable { mutableStateOf(false) }
     NowPlayingSheetHost(
         source = taskPlaybackSource,
         tasksState = tasksState,
@@ -318,10 +335,7 @@ private fun SkbAppShellContent(
         color = MaterialTheme.colorScheme.background,
         modifier = Modifier.fillMaxSize().testTag(TestTagAppShell),
     ) {
-        // Round 2.21 Phase C — overlay picker overlay state. When true, the
-        // full-screen [OverlayPickerScreen] sits on top of whatever the
-        // active destination is (back navigates to it).
-        var overlayPickerOpen by rememberSaveable { mutableStateOf(false) }
+      Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
             ShellTopBar(
                 activeRepoName = activeRepoName,
@@ -338,12 +352,6 @@ private fun SkbAppShellContent(
                 onRepoSwitcherClick = { selected = TopDestination.Repos },
                 onSettingsTap = { selected = TopDestination.Settings },
                 modePrefs = settingsAccess.modePrefs,
-                // Round 2.21 Phase C.1 — overlay-picker icon, only shown on
-                // the Schedule destination + only when wiring is present.
-                overlayPickerCalendars =
-                    if (selected == TopDestination.Schedule) scheduleState.calendarsFlow else null,
-                overlayPickerPrefs = calendarVisibility,
-                onOverlayPickerClick = { overlayPickerOpen = true },
             )
             Row(modifier = Modifier.fillMaxSize()) {
                 // Left rail only renders when the destination has view-mode
@@ -351,11 +359,22 @@ private fun SkbAppShellContent(
                 // the rail collapses and the pane spans edge-to-edge (user
                 // direction 2026-05-13 — "still space on the left").
                 if (railItems.isNotEmpty()) {
+                    // Round 2.22 / Fix 2 — overlay-picker icon now lives at
+                    // the bottom of the rail (tonearmboy LibraryRail
+                    // parity). Only the Schedule destination has the
+                    // picker wiring; other rail-bearing destinations pass
+                    // nulls and the bottom slot collapses.
+                    val pickerCalendars = if (selected == TopDestination.Schedule) {
+                        scheduleState.calendarsFlow
+                    } else null
                     RailColumn(
                         items = railItems,
                         activeIconKind = activeIconKind,
                         onAccountTap = { selected = TopDestination.Repos },
                         onSettingsTap = { selected = TopDestination.Settings },
+                        overlayPickerCalendars = pickerCalendars,
+                        overlayPickerPrefs = calendarVisibility,
+                        onOverlayPickerClick = { overlayPickerOpen = true },
                     )
                 }
                 Box(
@@ -403,22 +422,31 @@ private fun SkbAppShellContent(
                             )
                         }
                     }
-                    // Round 2.21 Phase C.2 — full-screen overlay picker.
-                    // Mounted above the active pane; back navigates to it.
-                    val calsFlow = scheduleState.calendarsFlow
-                    if (overlayPickerOpen && calendarVisibility != null && calsFlow != null) {
-                        com.eight87.strictlykeptboy.ui.calendars.OverlayPickerScreen(
-                            calendarsFlow = calsFlow,
-                            visibilityPrefs = calendarVisibility,
-                            onBack = { overlayPickerOpen = false },
-                            onEditCalendar = { meta ->
-                                onLongPressCalendar?.invoke(meta)
-                            },
-                        )
-                    }
                 }
             }
         }
+        // Round 2.22 / Fix 1 — full-shell-cover overlay picker. Mounted
+        // at the Box root above the (top-bar + rail + content) Column
+        // so its own Surface fully covers the chrome. Back navigates
+        // to the pane underneath.
+        val calsFlow = scheduleState.calendarsFlow
+        if (overlayPickerOpen && calendarVisibility != null && calsFlow != null) {
+            Surface(
+                color = MaterialTheme.colorScheme.background,
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                com.eight87.strictlykeptboy.ui.calendars.OverlayPickerScreen(
+                    calendarsFlow = calsFlow,
+                    visibilityPrefs = calendarVisibility,
+                    onBack = { overlayPickerOpen = false },
+                    onEditCalendar = { meta ->
+                        onLongPressCalendar?.invoke(meta)
+                    },
+                    onPriorityChange = onOverlayPriorityChange,
+                )
+            }
+        }
+      }  // end outer Box
     }
     }  // end NowPlayingSheetHost
 }

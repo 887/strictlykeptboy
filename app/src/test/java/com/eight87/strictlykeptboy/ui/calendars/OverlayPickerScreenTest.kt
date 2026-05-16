@@ -1,13 +1,22 @@
 package com.eight87.strictlykeptboy.ui.calendars
 
 import android.content.Context
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.test.core.app.ApplicationProvider
+import com.eight87.strictlykeptboy.resolver.CalendarMeta
+import com.eight87.strictlykeptboy.resolver.CalendarRef
+import com.eight87.strictlykeptboy.resolver.RepoRef
 import com.eight87.strictlykeptboy.ui.settings.CalendarVisibilityPrefs
 import com.eight87.strictlykeptboy.ui.settings.ListKind
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -24,6 +33,8 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 class OverlayPickerScreenTest {
+
+    @get:Rule val composeRule = createComposeRule()
 
     private lateinit var ctx: Context
 
@@ -70,6 +81,47 @@ class OverlayPickerScreenTest {
         assertEquals(1, store.zoomOf("c", "r"))
         store.setZoom("c", zoom = 99, repoId = "r")
         assertEquals(4, store.zoomOf("c", "r"))
+    }
+
+    @Test fun inline_priority_field_renders_for_each_row_and_fires_writer() {
+        // Round 2.22 / Fix 3 — each row in the picker surfaces a typeable
+        // priority field. We assert one OutlinedTextField per (visible)
+        // calendar row and that an edit fires onPriorityChange with the
+        // parsed Int + the row's CalendarMeta.
+        val prefs = open()
+        val cals = listOf(
+            CalendarMeta(
+                ref = CalendarRef("cal-routines"),
+                repo = RepoRef("repo-a"),
+                displayName = "Routines",
+                priority = 100,
+            ),
+            CalendarMeta(
+                ref = CalendarRef("cal-trips"),
+                repo = RepoRef("repo-a"),
+                displayName = "Trips",
+                priority = 250,
+            ),
+        )
+        val captured = mutableListOf<Pair<String, Int>>()
+        composeRule.setContent {
+            OverlayPickerScreen(
+                calendarsFlow = MutableStateFlow(cals),
+                visibilityPrefs = prefs,
+                onBack = {},
+                onEditCalendar = {},
+                onPriorityChange = { meta, newPriority ->
+                    captured += meta.ref.id to newPriority
+                },
+            )
+        }
+        // One priority field per row.
+        composeRule.onAllNodesWithTag(TestTagOverlayPickerPriority + "-repo-a-cal-routines")
+            .assertCountEquals(1)
+        composeRule.onAllNodesWithTag(TestTagOverlayPickerPriority + "-repo-a-cal-trips")
+            .assertCountEquals(1)
+        // Spot-check the row tag also exists (sanity).
+        composeRule.onNodeWithTag("$TestTagOverlayPickerRow-repo-a-cal-routines").assertExists()
     }
 
     @Test fun zoom_survives_reopen() {

@@ -83,4 +83,43 @@ object CalendarSettingsWriter {
             GitRepoRegistry.get(meta.repo.id)?.commitAll("calendar settings: ${meta.displayName}")
         }
     }
+
+    /**
+     * Round 2.22 / Fix 3 — single-scalar write for the OverlayPicker
+     * inline priority editor. Reads the existing `calendar.toml` to
+     * preserve every other key, rewrites only the top-level `priority`
+     * scalar, and commits. Mirrors [write]'s read-merge-write pattern
+     * but stays cheap because the inline editor only ever changes that
+     * one scalar.
+     */
+    suspend fun writePriority(
+        graph: AppGraph,
+        repoId: String,
+        calendarId: String,
+        calendarDisplayName: String,
+        newPriority: Int,
+    ) {
+        withContext(Dispatchers.IO) {
+            val cfg = graph.repoStore.list().firstOrNull { it.repoId == repoId } ?: return@withContext
+            val root = Path.of(cfg.rootDir)
+            val tomlPath = root.resolve("calendars/$calendarId/calendar.toml")
+            Files.createDirectories(tomlPath.parent)
+            val table: TomlTable = if (Files.isRegularFile(tomlPath)) {
+                TomlReader.parse(String(Files.readAllBytes(tomlPath), StandardCharsets.UTF_8))
+            } else {
+                TomlTable().apply {
+                    putString("id", calendarId)
+                    putString("name", calendarDisplayName)
+                }
+            }
+            table.putInt("priority", newPriority)
+            Files.write(
+                tomlPath,
+                TomlWriter.emit(table).toByteArray(StandardCharsets.UTF_8),
+            )
+            GitRepoRegistry.get(repoId)?.commitAll(
+                "calendar priority: $calendarDisplayName → $newPriority",
+            )
+        }
+    }
 }

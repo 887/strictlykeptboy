@@ -16,6 +16,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
@@ -23,6 +25,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -33,12 +36,19 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.resolver.CalendarMeta
 import com.eight87.strictlykeptboy.ui.settings.CalendarVisibilityPrefs
@@ -50,6 +60,8 @@ const val TestTagOverlayPickerToggle = "Overlay-PickerToggle"
 const val TestTagOverlayPickerEdit = "Overlay-PickerEdit"
 const val TestTagOverlayPickerRepoHeader = "Overlay-PickerRepoHeader"
 const val TestTagOverlayPickerZoom = "Overlay-PickerZoom"
+/** Round 2.22 / Fix 3 — inline priority editor on each row. */
+const val TestTagOverlayPickerPriority = "Overlay-PickerPriority"
 
 /**
  * Round 2.21 Phase C.2 — full-screen overlay picker destination.
@@ -69,6 +81,13 @@ fun OverlayPickerScreen(
     visibilityPrefs: CalendarVisibilityPrefs,
     onBack: () -> Unit,
     onEditCalendar: (CalendarMeta) -> Unit,
+    /**
+     * Round 2.22 / Fix 3 — inline priority writer. Fires on focus
+     * loss / IME done. Default no-op so previews + tests don't have
+     * to plumb it; MainActivity wires the real
+     * [CalendarSettingsWriter.writePriority].
+     */
+    onPriorityChange: (CalendarMeta, Int) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
     val calendars by calendarsFlow.collectAsState()
@@ -137,6 +156,9 @@ fun OverlayPickerScreen(
                                     repoId = cal.repo.id,
                                 )
                             },
+                            onPriority = { newPriority ->
+                                onPriorityChange(cal, newPriority)
+                            },
                         )
                     }
                 }
@@ -172,6 +194,7 @@ private fun OverlayRow(
     onToggle: () -> Unit,
     onEdit: () -> Unit,
     onZoom: (Int) -> Unit,
+    onPriority: (Int) -> Unit,
 ) {
     val tagId = "${calendar.repo.id}-${calendar.ref.id}"
     Column(
@@ -239,21 +262,71 @@ private fun OverlayRow(
             }
         }
         Spacer(modifier = Modifier.size(6.dp))
-        // Round 2.21 D.4 — four-stop zoom segmented control per row.
-        SingleChoiceSegmentedButtonRow(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp)
-                .testTag("$TestTagOverlayPickerZoom-$tagId"),
+        // Round 2.22 / Fix 3 — inline priority editor. User feedback:
+        // "priorities are a multiple choice thing rather than a number
+        // i can type" — they were reading the zoom segmented control's
+        // 40/80/160/320 labels as priority values. Surface priority as
+        // a free-text Int input right here on the row, alongside zoom,
+        // so it's visible + editable without diving into the per-
+        // calendar settings sheet.
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            val stops = listOf(1, 2, 3, 4)
-            stops.forEachIndexed { idx, level ->
-                SegmentedButton(
-                    selected = zoom == level,
-                    onClick = { onZoom(level) },
-                    shape = SegmentedButtonDefaults.itemShape(index = idx, count = stops.size),
-                ) {
-                    Text(zoomLabel(level), style = MaterialTheme.typography.labelSmall)
+            var priorityText by remember(calendar.priority) {
+                mutableStateOf(calendar.priority.toString())
+            }
+            val keyboardController = LocalSoftwareKeyboardController.current
+            fun commit() {
+                val parsed = priorityText.toIntOrNull()
+                if (parsed != null && parsed != calendar.priority) {
+                    onPriority(parsed)
+                } else if (parsed == null) {
+                    // Reset to current value on invalid input.
+                    priorityText = calendar.priority.toString()
+                }
+            }
+            OutlinedTextField(
+                value = priorityText,
+                onValueChange = { raw ->
+                    // Number-only, 4-char cap.
+                    priorityText = raw.filter { it.isDigit() || it == '-' }.take(4)
+                },
+                label = { Text("Priority") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Done,
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = {
+                        commit()
+                        keyboardController?.hide()
+                    },
+                ),
+                modifier = Modifier
+                    .width(96.dp)
+                    .testTag("$TestTagOverlayPickerPriority-$tagId")
+                    .onFocusChanged { focusState ->
+                        if (!focusState.isFocused) commit()
+                    },
+            )
+            // Round 2.21 D.4 — four-stop zoom segmented control per row.
+            SingleChoiceSegmentedButtonRow(
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag("$TestTagOverlayPickerZoom-$tagId"),
+            ) {
+                val stops = listOf(1, 2, 3, 4)
+                stops.forEachIndexed { idx, level ->
+                    SegmentedButton(
+                        selected = zoom == level,
+                        onClick = { onZoom(level) },
+                        shape = SegmentedButtonDefaults.itemShape(index = idx, count = stops.size),
+                    ) {
+                        Text(zoomLabel(level), style = MaterialTheme.typography.labelSmall)
+                    }
                 }
             }
         }
@@ -262,7 +335,7 @@ private fun OverlayRow(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
-                "zoom",
+                "higher priority wins overlay tiebreaks · zoom",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

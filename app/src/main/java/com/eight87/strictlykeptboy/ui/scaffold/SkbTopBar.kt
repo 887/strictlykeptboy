@@ -32,7 +32,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.ui.a11y.labelString
 import com.eight87.strictlykeptboy.ui.components.IdentityAvatar
-import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Round 2.21 SOLID split — extracted from `SkbAppShell.kt`. This file
@@ -62,16 +61,6 @@ internal fun ShellTopBar(
      */
     onSettingsTap: () -> Unit,
     modePrefs: com.eight87.strictlykeptboy.ui.settings.ModePrefs? = null,
-    /**
-     * Round 2.21 Phase C.1 — when non-null + prefs non-null, the
-     * overlay-picker icon button renders just before the settings cog.
-     * Host opens [com.eight87.strictlykeptboy.ui.calendars.OverlayPickerScreen]
-     * on tap.
-     */
-    overlayPickerCalendars:
-        StateFlow<List<com.eight87.strictlykeptboy.resolver.CalendarMeta>>? = null,
-    overlayPickerPrefs: com.eight87.strictlykeptboy.ui.settings.CalendarVisibilityPrefs? = null,
-    onOverlayPickerClick: () -> Unit = {},
 ) {
     // enableEdgeToEdge() is on in MainActivity — content draws under the
     // status bar by default. Push the top-bar Surface down past the system
@@ -121,15 +110,10 @@ internal fun ShellTopBar(
                     onClick = { onSelectDest(dest) },
                 )
             }
-            // Round 2.21 Phase C.1 — overlay-picker icon (only when the
-            // Schedule destination is active + wiring is present).
-            if (overlayPickerCalendars != null && overlayPickerPrefs != null) {
-                com.eight87.strictlykeptboy.ui.calendars.OverlayPickerButton(
-                    calendarsFlow = overlayPickerCalendars,
-                    visibilityPrefs = overlayPickerPrefs,
-                    onClick = onOverlayPickerClick,
-                )
-            }
+            // Round 2.22 / Fix 2 — overlay-picker icon moved to the
+            // rail bottom (SkbScheduleRail.RailColumn). The top-bar no
+            // longer carries it; previously it disappeared on the
+            // Reviews destination, which the user flagged as a bug.
             // Round 2.16.F — global app-settings cog, immediately before
             // the avatar (pre-Round-2.1 location). Tapping selects
             // `TopDestination.Settings`. Per-repo settings still open from

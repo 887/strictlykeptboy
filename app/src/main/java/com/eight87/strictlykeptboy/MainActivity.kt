@@ -841,6 +841,22 @@ class MainActivity : ComponentActivity() {
                         wizardEntryRequest = graph.wizardEntryRequest,
                         calendarVisibility = graph.calendarVisibility,
                         onLongPressCalendar = { meta -> pendingCalendarEdit = meta },
+                        // Round 2.22 / Fix 3 — inline priority writer for the
+                        // OverlayPicker per-row OutlinedTextField. Drops +
+                        // rewrites the `priority` scalar in the calendar's
+                        // calendar.toml and commits via GitRepoRegistry.
+                        onOverlayPriorityChange = { meta, newPriority ->
+                            scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                com.eight87.strictlykeptboy.ui.calendars.CalendarSettingsWriter
+                                    .writePriority(
+                                        graph = graph,
+                                        repoId = meta.repo.id,
+                                        calendarId = meta.ref.id,
+                                        calendarDisplayName = meta.displayName,
+                                        newPriority = newPriority,
+                                    )
+                            }
+                        },
                         onShareWithDom = {
                             val name = graph.activeRepoName.value
                             val cfg = graph.repoStore.list()

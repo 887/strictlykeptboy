@@ -31,6 +31,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
+import com.eight87.strictlykeptboy.resolver.CalendarMeta
+import com.eight87.strictlykeptboy.ui.calendars.OverlayPickerButton
+import com.eight87.strictlykeptboy.ui.settings.CalendarVisibilityPrefs
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Round 2.21 SOLID split — extracted from `SkbAppShell.kt`. This file
@@ -77,10 +81,27 @@ internal fun RailColumn(
     activeIconKind: com.eight87.strictlykeptboy.ui.theming.RepoIconKind,
     onAccountTap: () -> Unit,
     onSettingsTap: () -> Unit,
+    /**
+     * Round 2.22 / Fix 2 — when non-null + prefs non-null, the
+     * overlay-picker icon button renders pinned to the bottom of the
+     * rail (tonearmboy `LibraryRail` parity — the settings gear lives
+     * at the bottom-left there; here it's the overlay-picker filter
+     * icon, because the user complained that the previous top-bar
+     * mount-point vanished on the Reviews destination).
+     */
+    overlayPickerCalendars: StateFlow<List<CalendarMeta>>? = null,
+    overlayPickerPrefs: CalendarVisibilityPrefs? = null,
+    onOverlayPickerClick: () -> Unit = {},
 ) {
     // Match tonearmboy's LibraryRail: 52dp wide, 108dp per item.
-    // Bottom of the rail carries the active-repo avatar + a settings gear
-    // (tonearmboy parity: gear lives at the bottom-left of the rail).
+    // Bottom of the rail now carries the overlay-picker filter icon
+    // (Round 2.22 / Fix 2) — this is the persistent entry-point for the
+    // full-screen OverlayPickerScreen on the Schedule destination. On
+    // destinations that don't supply picker wiring the bottom slot is
+    // empty; on destinations without a rail at all (Reviews / Settings
+    // / Repos / Wizard) the user reaches schedule overlays by going
+    // back to Schedule first — per design, overlays are a
+    // Schedule-context concern.
     val railWidth = 52.dp
     Box(
         modifier = Modifier
@@ -105,14 +126,21 @@ internal fun RailColumn(
                     RailTabItem(item = item)
                 }
             }
-            // Rail bottom intentionally empty per user direction 2026-05-13 —
-            // settings gear moved up to the top-bar action row, bat avatar
-            // already at top-right.
-            Spacer(Modifier.height(12.dp))
+            // BOTTOM: overlay-picker filter icon (when wired).
+            if (overlayPickerCalendars != null && overlayPickerPrefs != null) {
+                OverlayPickerButton(
+                    calendarsFlow = overlayPickerCalendars,
+                    visibilityPrefs = overlayPickerPrefs,
+                    onClick = onOverlayPickerClick,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+            } else {
+                Spacer(Modifier.height(12.dp))
+            }
         }
     }
     // Keep params referenced so callers retain the existing surface
-    // (rail-bottom slots may return in a tablet expansion).
+    // (account/settings slots may return in a tablet expansion).
     @Suppress("UNUSED_EXPRESSION") activeIconKind
     @Suppress("UNUSED_EXPRESSION") onAccountTap
     @Suppress("UNUSED_EXPRESSION") onSettingsTap
