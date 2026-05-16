@@ -19,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -54,7 +55,11 @@ fun ImportExportScreen(
     onPickExportFile: (RepoConfig) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val repos by state.repos.collectAsState()
+    // Round 2.20.1 B — demo repos (RepoConfig.isDemo) are app-internal,
+    // not user-owned bytes on disk; hide them from import/export so the
+    // user can't "Export .ics" from a synthesized asset-backed repo.
+    val allRepos by state.repos.collectAsState()
+    val repos = remember(allRepos) { allRepos.filter { !it.isDemo } }
     val preview by state.pendingPreview.collectAsState()
     val widthClass = LocalWindowWidthSizeClass.current
 
