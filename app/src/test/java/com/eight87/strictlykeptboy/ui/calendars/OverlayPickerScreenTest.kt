@@ -2,10 +2,12 @@ package com.eight87.strictlykeptboy.ui.calendars
 
 import android.content.Context
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import com.eight87.strictlykeptboy.resolver.CalendarMeta
 import com.eight87.strictlykeptboy.resolver.CalendarRef
@@ -160,6 +162,138 @@ class OverlayPickerScreenTest {
         assertEquals(1, captured.size)
         assertEquals("cal-routines", captured[0].first)
         assertEquals(0x42A5F5, captured[0].second)
+    }
+
+    @Test fun top_explainer_is_present_exactly_once() {
+        // Round 2.23.5 / Fix 1 — per-row "higher wins tiebreaks" helper
+        // is gone; replaced by a single top-of-screen caption.
+        val prefs = open()
+        val cals = (1..3).map { i ->
+            CalendarMeta(
+                ref = CalendarRef("cal-$i"),
+                repo = RepoRef("repo-a"),
+                displayName = "Cal $i",
+                priority = 100,
+            )
+        }
+        composeRule.setContent {
+            OverlayPickerScreen(
+                calendarsFlow = MutableStateFlow(cals),
+                visibilityPrefs = prefs,
+                onBack = {},
+                onEditCalendar = {},
+            )
+        }
+        composeRule.onAllNodesWithTag(TestTagOverlayPickerExplainer).assertCountEquals(1)
+    }
+
+    @Test fun no_guid_repo_header_strip_rendered_anymore() {
+        // Round 2.23.5 / Fix 2 — the per-repo GUID header above each
+        // group of cards is deleted; identity moves into each card.
+        val prefs = open()
+        val cals = listOf(
+            CalendarMeta(
+                ref = CalendarRef("cal-a"),
+                repo = RepoRef("repo-deadbeef"),
+                displayName = "A",
+                priority = 100,
+            ),
+        )
+        composeRule.setContent {
+            OverlayPickerScreen(
+                calendarsFlow = MutableStateFlow(cals),
+                visibilityPrefs = prefs,
+                onBack = {},
+                onEditCalendar = {},
+            )
+        }
+        composeRule.onAllNodesWithTag("$TestTagOverlayPickerRepoHeader-repo-deadbeef")
+            .assertCountEquals(0)
+    }
+
+    @Test fun repo_name_row_renders_resolved_display_name() {
+        // Round 2.23.5 / Fix 3 — second row of each card shows the
+        // resolver-supplied repo display name (e.g. "demo · richdemo").
+        val prefs = open()
+        val cals = listOf(
+            CalendarMeta(
+                ref = CalendarRef("cal-x"),
+                repo = RepoRef("0190a000-0000-7000-8000-000000000001"),
+                displayName = "Beans",
+                priority = 100,
+            ),
+        )
+        composeRule.setContent {
+            OverlayPickerScreen(
+                calendarsFlow = MutableStateFlow(cals),
+                visibilityPrefs = prefs,
+                onBack = {},
+                onEditCalendar = {},
+                repoDisplayNameFor = { id ->
+                    if (id == "0190a000-0000-7000-8000-000000000001") "demo · richdemo" else null
+                },
+            )
+        }
+        composeRule.onNodeWithTag(
+            "$TestTagOverlayPickerRepoName-0190a000-0000-7000-8000-000000000001-cal-x",
+        ).assertTextEquals("demo · richdemo")
+    }
+
+    @Test fun repo_name_row_falls_back_to_truncated_guid_when_unresolved() {
+        // Round 2.23.5 / Fix 3 — foreign UID with no local config falls
+        // back to first 8 chars + ellipsis.
+        val prefs = open()
+        val cals = listOf(
+            CalendarMeta(
+                ref = CalendarRef("cal-y"),
+                repo = RepoRef("0190a000-ffff-7000-8000-000000000999"),
+                displayName = "Foreign",
+                priority = 100,
+            ),
+        )
+        composeRule.setContent {
+            OverlayPickerScreen(
+                calendarsFlow = MutableStateFlow(cals),
+                visibilityPrefs = prefs,
+                onBack = {},
+                onEditCalendar = {},
+                repoDisplayNameFor = { null },
+            )
+        }
+        composeRule.onNodeWithTag(
+            "$TestTagOverlayPickerRepoName-0190a000-ffff-7000-8000-000000000999-cal-y",
+        ).assertTextEquals("0190a000…")
+    }
+
+    @Test fun hex_input_fires_color_writer_when_six_chars_typed() {
+        // Round 2.23.5 / Fix 4 — typing a 6-char hex into the custom
+        // hex TextField in the color expansion routes through the same
+        // onColorChange writer the swatches use.
+        val prefs = open()
+        val cals = listOf(
+            CalendarMeta(
+                ref = CalendarRef("cal-h"),
+                repo = RepoRef("repo-a"),
+                displayName = "Hex",
+                priority = 100,
+            ),
+        )
+        val captured = mutableListOf<Int>()
+        composeRule.setContent {
+            OverlayPickerScreen(
+                calendarsFlow = MutableStateFlow(cals),
+                visibilityPrefs = prefs,
+                onBack = {},
+                onEditCalendar = {},
+                onColorChange = { _, rgb -> captured += rgb },
+            )
+        }
+        // Expand color palette.
+        composeRule.onNodeWithTag("$TestTagOverlayPickerColorRow-repo-a-cal-h").performClick()
+        // Type 6-char hex — should fire writer once on the 6th char.
+        composeRule.onNodeWithTag("$TestTagOverlayPickerHexInput-repo-a-cal-h")
+            .performTextInput("FF8800")
+        assertTrue("expected hex writer to fire; captured=$captured", captured.contains(0xFF8800))
     }
 
     @Test fun zoom_survives_reopen() {

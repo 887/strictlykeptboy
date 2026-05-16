@@ -65,6 +65,12 @@ const val TestTagOverlayPickerPriority = "Overlay-PickerPriority"
 /** Round 2.23.2 — inline color row on each card. Tap = expand swatches. */
 const val TestTagOverlayPickerColorRow = "Overlay-PickerColorRow"
 const val TestTagOverlayPickerColorSwatchPrefix = "Overlay-PickerColorSwatch-"
+/** Round 2.23.5 — single top-of-screen explainer (replaces per-row helper). */
+const val TestTagOverlayPickerExplainer = "Overlay-PickerExplainer"
+/** Round 2.23.5 — second-row repo display-name on each card. */
+const val TestTagOverlayPickerRepoName = "Overlay-PickerRepoName"
+/** Round 2.23.5 — free-form hex input inside the color expansion. */
+const val TestTagOverlayPickerHexInput = "Overlay-PickerHexInput"
 
 /**
  * Round 2.21 Phase C.2 — full-screen overlay picker destination.
@@ -103,12 +109,21 @@ fun OverlayPickerScreen(
      * MainActivity wires [CalendarSettingsWriter.writeColorSeed].
      */
     onColorChange: (CalendarMeta, Int) -> Unit = { _, _ -> },
+    /**
+     * Round 2.23.5 / Fix 3 — resolves `cal.repo.id` (GUID) to a friendly
+     * display name (e.g. "demo · richdemo"). Return `null` for foreign /
+     * unknown UIDs; the card falls back to the truncated GUID. Default
+     * no-op for previews + tests.
+     */
+    repoDisplayNameFor: (String) -> String? = { null },
     modifier: Modifier = Modifier,
 ) {
     val calendars by calendarsFlow.collectAsState()
     val visState by visibilityPrefs.state.collectAsState()
     val visibilityById = visState.ordered.associateBy { it.repoId to it.id }
 
+    // Round 2.23.5 / Fix 2 — group for stable ordering only; the GUID
+    // header strip is gone, identity moves into each card as row #2.
     val grouped = calendars.groupBy { it.repo.id }
 
     Surface(
@@ -126,6 +141,19 @@ fun OverlayPickerScreen(
                         )
                     }
                 },
+            )
+            // Round 2.23.5 / Fix 1 — single top-of-screen explainer.
+            // Replaces the per-row "higher wins tiebreaks" helper text
+            // (now deleted from PriorityRow).
+            Text(
+                text = "Priority — higher number wins overlay tiebreaks. " +
+                    "Color: tap a row to pick a swatch or type a custom hex.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .testTag(TestTagOverlayPickerExplainer),
             )
             if (calendars.isEmpty()) {
                 Box(
@@ -145,16 +173,17 @@ fun OverlayPickerScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp),
             ) {
-                grouped.forEach { (repoId, calsInRepo) ->
-                    item(key = "header-$repoId") {
-                        RepoHeader(repoId = repoId)
-                    }
+                // Round 2.23.5 / Fix 2 — no per-repo GUID header strip;
+                // grouping is preserved purely for adjacency ordering.
+                grouped.forEach { (_, calsInRepo) ->
                     items(calsInRepo, key = { c -> "card-${c.repo.id}-${c.ref.id}" }) { cal ->
                         val key = cal.repo.id to cal.ref.id
                         val visible = visibilityById[key]?.visible ?: true
+                        val resolvedRepoName = repoDisplayNameFor(cal.repo.id)
                         OverlayCard(
                             calendar = cal,
                             visible = visible,
+                            repoDisplayName = resolvedRepoName,
                             onToggle = {
                                 visibilityPrefs.setVisible(
                                     id = cal.ref.id,
@@ -170,25 +199,6 @@ fun OverlayPickerScreen(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun RepoHeader(repoId: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 4.dp, vertical = 8.dp)
-            .testTag("$TestTagOverlayPickerRepoHeader-$repoId"),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = repoId.ifBlank { "—" },
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
-        )
     }
 }
 
@@ -210,6 +220,7 @@ private fun RepoHeader(repoId: String) {
 private fun OverlayCard(
     calendar: CalendarMeta,
     visible: Boolean,
+    repoDisplayName: String?,
     onToggle: () -> Unit,
     onEdit: () -> Unit,
     onPriority: (Int) -> Unit,
@@ -264,7 +275,16 @@ private fun OverlayCard(
                 }
             }
             HorizontalDivider()
-            // Color row — clickable, expands swatch palette.
+            // Round 2.23.5 / Fix 3 — Repo row promoted to second slot,
+            // resolved to a friendly display name; falls back to first
+            // 8 chars of the UID for foreign / unknown repos.
+            RepoNameRow(
+                tagId = tagId,
+                rawRepoId = calendar.repo.id,
+                resolvedName = repoDisplayName,
+            )
+            HorizontalDivider()
+            // Color row — clickable, expands swatch palette + hex input.
             ColorRow(
                 tagId = tagId,
                 colorSeed = calendar.colorSeed,
@@ -274,6 +294,7 @@ private fun OverlayCard(
                     paletteOpen = false
                     onColor(rgb)
                 },
+                onHex = { rgb -> onColor(rgb) },
             )
             HorizontalDivider()
             // Priority row.
@@ -282,28 +303,48 @@ private fun OverlayCard(
                 currentPriority = calendar.priority,
                 onPriority = onPriority,
             )
-            HorizontalDivider()
-            // Repo row — supplementary chrome.
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    "Repo",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.width(96.dp),
-                )
-                Text(
-                    text = calendar.repo.id.ifBlank { "—" },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                )
-            }
         }
+    }
+}
+
+/**
+ * Round 2.23.5 / Fix 3 — repo-name row. Promoted to the second slot in
+ * the card (right after the header). Resolves `cal.repo.id` (GUID) to
+ * a friendly name via the picker's `repoDisplayNameFor` lambda; falls
+ * back to the first 8 chars of the UID with an ellipsis for foreign
+ * UIDs with no local config, and `—` for blank.
+ */
+@Composable
+private fun RepoNameRow(
+    tagId: String,
+    rawRepoId: String,
+    resolvedName: String?,
+) {
+    val rendered = when {
+        !resolvedName.isNullOrBlank() -> resolvedName
+        rawRepoId.isBlank() -> "—"
+        rawRepoId.length > 8 -> rawRepoId.take(8) + "…"
+        else -> rawRepoId
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            "Repo",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.width(96.dp),
+        )
+        Text(
+            text = rendered,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            modifier = Modifier.testTag("$TestTagOverlayPickerRepoName-$tagId"),
+        )
     }
 }
 
@@ -314,6 +355,7 @@ private fun ColorRow(
     expanded: Boolean,
     onToggleExpanded: () -> Unit,
     onPick: (Int) -> Unit,
+    onHex: (Int) -> Unit,
 ) {
     val tint = colorSeed?.let {
         Color(0xFF000000.toInt() or (it and 0x00FFFFFF))
@@ -375,8 +417,74 @@ private fun ColorRow(
                         PickerSwatch(rgb = rgb, selected = colorSeed == rgb, tagId = tagId, onClick = { onPick(rgb) })
                     }
                 }
+                // Round 2.23.5 / Fix 4 — free-form hex input. Mirrors the
+                // CalendarSettingsSheet hex validator: uppercase, [0-9A-F],
+                // take 6, parse on 6-char length. Routes through the same
+                // onColorChange writer the swatches use.
+                HexInputRow(
+                    tagId = tagId,
+                    colorSeed = colorSeed,
+                    onHex = onHex,
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun HexInputRow(
+    tagId: String,
+    colorSeed: Int?,
+    onHex: (Int) -> Unit,
+) {
+    var hexInput by remember(colorSeed) {
+        mutableStateOf(colorSeed?.let { "%06X".format(it and 0xFFFFFF) } ?: "")
+    }
+    val previewTint = run {
+        val parsed = hexInput.takeIf { it.length == 6 }
+            ?.runCatching { Integer.parseInt(this, 16) }?.getOrNull()
+        when {
+            parsed != null -> Color(0xFF000000.toInt() or (parsed and 0x00FFFFFF))
+            colorSeed != null -> Color(0xFF000000.toInt() or (colorSeed and 0x00FFFFFF))
+            else -> Color.Transparent
+        }
+    }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        OutlinedTextField(
+            value = hexInput,
+            onValueChange = { raw ->
+                val cleaned = raw.trim().removePrefix("#").take(6).uppercase()
+                    .filter { it in '0'..'9' || it in 'A'..'F' }
+                hexInput = cleaned
+                if (cleaned.length == 6) {
+                    runCatching { Integer.parseInt(cleaned, 16) }
+                        .getOrNull()?.let(onHex)
+                }
+            },
+            label = { Text("Custom hex (e.g. F0A1B2)") },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Ascii,
+                imeAction = ImeAction.Done,
+            ),
+            keyboardActions = KeyboardActions(
+                onDone = { keyboardController?.hide() },
+            ),
+            modifier = Modifier
+                .weight(1f)
+                .testTag("$TestTagOverlayPickerHexInput-$tagId"),
+        )
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(previewTint),
+        )
     }
 }
 
@@ -455,11 +563,7 @@ private fun PriorityRow(
                     if (!focusState.isFocused) commit()
                 },
         )
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            "higher wins tiebreaks",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        // Round 2.23.5 / Fix 1 — per-row "higher wins tiebreaks" helper
+        // moved to the single top-of-screen explainer above the list.
     }
 }

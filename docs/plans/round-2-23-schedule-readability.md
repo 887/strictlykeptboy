@@ -288,3 +288,97 @@ The raw `Auto / 40 / 80 / 160 / 320` dp-per-hour labels shipped in
 
 1116 → 1121 (+ five `ZoomLevelRowTest` cases).
 
+---
+
+## Round 2.23.5 follow-up (shipped in commit `<pending>`)
+
+User feedback on the overlay picker (2026-05-17):
+"higher wins tiebreaks is a good info.. once.. in an explanation for
+priority somewhere at the top. also the repo is already as a category
+here at the top, if we show it inline in the cards anyway -> why? we
+should also -> especially for the demo repo -> show demo as it's
+name not the guid.. if at all possible. also that should be the
+first line after the card name probably. also can we get a free
+color selection with a color picker option as well? like predefined
+colors are nice and all.. actually they fucking suck the life out of
+me fix it"
+
+### Fix 1 — Move "higher wins tiebreaks" to a single top explainer
+
+- [x] **2.23.5.A.1** Per-row "higher wins tiebreaks" `Text` in
+      `PriorityRow` deleted; replaced by a single
+      `TestTagOverlayPickerExplainer` caption above the LazyColumn
+      reading "Priority — higher number wins overlay tiebreaks.
+      Color: tap a row to pick a swatch or type a custom hex."
+
+### Fix 2 — Drop the redundant top GUID repo header
+
+- [x] **2.23.5.A.2** `RepoHeader` composable removed from the
+      `LazyColumn`; group-by-repoId preserved purely for adjacency
+      ordering. `TestTagOverlayPickerRepoHeader` const retained for
+      compatibility but no longer renders. Repo identity moves into
+      each card per Fix 3.
+
+### Fix 3 — Repo display name as the second row of each card
+
+- [x] **2.23.5.A.3** New `RepoNameRow` composable promoted to slot
+      #2 in `OverlayCard` (Header / Repo / Color / Priority); old
+      bottom Repo row deleted. New
+      `repoDisplayNameFor: (String) -> String?` parameter on
+      `OverlayPickerScreen`; `SkbAppShell` wires it via
+      `reposState.repos.collectAsState()` → map of repoId →
+      `RepoConfig.displayName`. Demo repo renders as
+      "demo · kept-life" instead of the GUID. Unresolved foreign UIDs
+      fall back to `first8…`; blank → `—`.
+
+### Fix 4 — Free color input (hex field)
+
+- [x] **2.23.5.A.4** New `HexInputRow` inside the color expansion of
+      `ColorRow` — mirrors `CalendarSettingsSheet`'s hex validator
+      (uppercase, [0-9A-F], take 6, parse on 6-char length) with a
+      32 dp preview swatch beside the field. Routes through the same
+      `onColorChange` writer the swatches use (no new writer path).
+      `TestTagOverlayPickerHexInput`.
+
+### Tests
+
+- [x] **2.23.5.A.5** `OverlayPickerScreenTest`:
+      - `top_explainer_is_present_exactly_once`
+      - `no_guid_repo_header_strip_rendered_anymore`
+      - `repo_name_row_renders_resolved_display_name`
+      - `repo_name_row_falls_back_to_truncated_guid_when_unresolved`
+      - `hex_input_fires_color_writer_when_six_chars_typed`
+
+### AVD evidence (emulator-5558)
+
+- `docs/qa/2-23/picker-2235-layout.png` — three stacked cards (Beans /
+  Commute / Boy Keeper); single top explainer; no GUID header strip;
+  each card: title → "Repo demo · kept-life" → Color → Priority (no
+  per-row helper text).
+- `docs/qa/2-23/picker-2235-hex-input.png` — Beans Color row expanded
+  to 2×6 swatch grid + "Custom hex (e.g. F0A1B2)" `OutlinedTextField`
+  underneath, with a small preview swatch beside the input.
+- `docs/qa/2-23/picker-2235-hex-applied.png` — after typing FF8800 +
+  reopening the picker, Beans Color row reads "#FF8800" with an
+  orange filled swatch (writer persisted through
+  `CalendarSettingsWriter.writeColorSeed`).
+
+### Test delta
+
+1121 → 1126 (+ five new picker tests).
+
+### SOLID self-check
+
+- **S:** `HexInputRow` + `RepoNameRow` extracted as private composables
+  beside `ColorRow` — each row owns one concern (header / repo / color
+  / priority). `OverlayPickerScreen.kt` still under 500 LOC.
+- **O:** Hex input reuses the existing `onColorChange` writer path
+  rather than introducing a parallel hex-only writer.
+- **L:** New `repoDisplayNameFor` lambda defaults to `{ null }` so
+  callers (preview / tests) substitute trivially; behaviour stays
+  total — `null` is handled as truncated-GUID fallback.
+- **I:** Picker still takes only the narrow callbacks it needs
+  (`(String) -> String?` for repo display, not `RepoStore`).
+- **D:** `SkbAppShell` (composition site) is the only place that
+  knows about `reposState`/`RepoStore` for this resolution.
+

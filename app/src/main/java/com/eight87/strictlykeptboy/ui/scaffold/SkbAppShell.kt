@@ -457,6 +457,13 @@ private fun SkbAppShellContent(
         // to the pane underneath.
         val calsFlow = scheduleState.calendarsFlow
         if (overlayPickerOpen && calendarVisibility != null && calsFlow != null) {
+            // Round 2.23.5 / Fix 3 — resolve repo GUID → friendly
+            // display name via the live RepoStore flow (already plumbed
+            // through `reposState`). Recomputed on each repo-list change.
+            val reposList = reposState?.repos?.collectAsState()?.value.orEmpty()
+            val repoNameById = remember(reposList) {
+                reposList.associate { it.repoId to it.displayName }
+            }
             Surface(
                 color = MaterialTheme.colorScheme.background,
                 modifier = Modifier.fillMaxSize(),
@@ -470,6 +477,7 @@ private fun SkbAppShellContent(
                     },
                     onPriorityChange = onOverlayPriorityChange,
                     onColorChange = onOverlayColorChange,
+                    repoDisplayNameFor = { repoId -> repoNameById[repoId] },
                 )
             }
         }
