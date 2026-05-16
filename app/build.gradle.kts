@@ -77,6 +77,21 @@ android {
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
+            all {
+                // F67 (refactor-solid.md) — kotlinx-coroutines-test's
+                // `UncaughtExceptionsBeforeTest` accumulator persists across
+                // test classes inside one Gradle worker JVM, producing a
+                // migratory canary (whichever runTest-based test runs after
+                // an upstream coroutine leak fails with "There were uncaught
+                // exceptions before the test started"). Forking a fresh JVM
+                // periodically resets the accumulator. forkEvery = 100 is
+                // the measured sweet spot: green under repeated runs (~55s)
+                // without paying the per-class JVM startup cost (~6m wall
+                // clock at forkEvery = 1). If the suite grows past ~250
+                // test classes this may need raising to avoid the
+                // accumulator filling within a single fork window.
+                it.forkEvery = 100
+            }
         }
     }
 
