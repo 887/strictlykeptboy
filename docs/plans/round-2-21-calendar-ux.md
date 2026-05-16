@@ -149,7 +149,7 @@ this round.
   audit `ui/wizard/TemplateRegistry.kt` + add defaults. *Deferred to
   a B.5 follow-up commit; not blocking on Phase C.*
 
-### Phase C — Top-bar overlay picker button (shipped in `<sha-c>`)
+### Phase C — Top-bar overlay picker button (shipped in `57a2bb9`)
 
 - [x] **C.1** `ui/calendars/OverlayPickerButton.kt` shipped: Material
   `Tune` icon + `BadgedBox` showing visible-overlay count. Wired into
@@ -175,34 +175,36 @@ this round.
   parity for 2 repos × 5 calendars, zoom round-trip per `(repoId, id)`,
   default-of-2, clamp-out-of-range, reopen-survives.
 
-### Phase D — Per-overlay zoom control (skb commit `<sha-here>`)
+### Phase D — Per-overlay zoom control (shipped in `<sha-d>`)
 
-- [ ] **D.1** New `prefs/SchedulePrefs.kt`: `viewMode:
-  ScheduleViewMode` (Flow-backed). **Zoom is NOT here** — it's
-  per-overlay (per D-2.21.g) and lives in
-  `CalendarVisibilityPrefs`.
-- [ ] **D.2** Extend `CalendarVisibilityPrefs` with `zoom: Int` ∈
-  {1..4} keyed by `(repoId, calendarId)`, default 2. Add migration
-  shim that defaults to 2 for any unseen key.
-- [ ] **D.3** Replace `private val HourHeight = 60.dp` in
-  `ScheduleDayView.kt` with `hourHeight = when (effectiveZoom) { 1
-  -> 40.dp; 2 -> 80.dp; 3 -> 160.dp; 4 -> 320.dp }` where
-  `effectiveZoom = visibleCalendars.maxOfOrNull { zoomOf(it) } ?:
-  2`.
-- [ ] **D.4** Add a zoom segmented-control on **each calendar row**
-  in the overlay-picker screen (four stops, current value
-  highlighted). Tapping cycles or expands a small popover with the
-  four levels.
-- [ ] **D.5** Add pinch-to-zoom gesture on the day grid Box →
-  **applies to the topmost visible overlay** (the one whose band
-  the pinch centers on), so the user can zoom an overlay without
-  opening the picker. Snap to nearest step on release.
-- [ ] **D.6** AVD verify: open Day view → bump routines-overlay to
-  zoom-3 → routines bands grow tall and readable, work-overlay bands
-  stay normal density when routines is hidden. Toggle routines back
-  on → grid expands to the routines zoom (effective = max).
-- [ ] **D.7** Apply effective-zoom to 3-day + existing Week views.
-  Schedule + Month + Year ignore zoom.
+- [x] **D.1** Skipped a new `prefs/SchedulePrefs.kt` — the existing
+  `ScheduleViewModePrefs` already covers the Flow-backed `viewMode`
+  surface. Zoom lives on `CalendarVisibilityPrefs` per D-2.21.g.
+- [x] **D.2** `CalendarVisibilityPrefs` extended: `zoom: Int` on
+  `VisibilityEntry` (default `ZOOM_DEFAULT = 2`, clamped 1..4),
+  `setZoom(id, zoom, repoId)`, `zoomOf(id, repoId)`. Tolerant JSON
+  load decodes legacy entries (no `zoom` field) at default-2.
+- [x] **D.3** `private val HourHeight = 60.dp` replaced by
+  `hourHeightForZoom(zoom) = {40,80,160,320}.dp` (default 80).
+  `ScheduleDayView` now takes `effectiveZoom: Int` and threads it
+  through `HourGutter` / `HourLines` / `BandsLayer` / `NowLine`.
+- [x] **D.4** Per-row `SingleChoiceSegmentedButtonRow` with 4 stops
+  rendered on every `OverlayPickerScreen` row. Tap commits zoom via
+  `CalendarVisibilityPrefs.setZoom`.
+- [ ] **D.5** Pinch-to-zoom on the day-grid Box DEFERRED — `adb input`
+  can't simulate pinch reliably on the AVD (same limitation as the
+  long-press flow in Round 2.1.B), and the picker's per-row segmented
+  control covers the *deliberate* path D-2.21.i mandates. The
+  gesture-only convenience layer is a Round 2.22 follow-up; the
+  per-overlay state model that would back it is already shipped.
+- [ ] **D.6** AVD verify partially covered: `HourHeightForZoomTest` +
+  `OverlayPickerScreenTest` exercise the persistence + dp/h mapping;
+  on-AVD pinch deferred per D.5.
+- [x] **D.7** `ScheduleWeekView` extended with `effectiveZoom: Int`
+  parameter; `HourGutter` / `DayColumn` / `WeekNowLine` all take
+  hourHeight by value. `SchedulePane` computes
+  `effectiveZoom = max(zoomOf each visible overlay)` and forwards to
+  Day + Week. Month + Year + Agenda ignore zoom (list / cell layouts).
 
 ### Phase E — Schedule + 3-day view modes (skb commit `<sha-here>`)
 

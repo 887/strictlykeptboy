@@ -50,7 +50,6 @@ const val TestTagWeekHeader = "WeekHeader"
 const val TestTagWeekTodayColumn = "WeekTodayColumn"
 const val TestTagWeekBand = "WeekBand"
 
-private val HourHeight = 60.dp
 private val GutterWidth = 44.dp
 
 /**
@@ -70,7 +69,10 @@ fun ScheduleWeekView(
     today: LocalDate = LocalDate.now(),
     /** Round 2.2.C.2 — default-write repo for `isForeignBand`. Empty = chip suppressed. */
     defaultWriteRepoId: String = "",
+    /** Round 2.21 Phase D.7 — effective zoom ∈ {1..4}, default 2 (80dp/h). */
+    effectiveZoom: Int = 2,
 ) {
+    val HourHeight = hourHeightForZoom(effectiveZoom)
     val days = (0..6).map { weekStart.plusDays(it.toLong()) }
     val bandsByDate: Map<LocalDate, List<DayBand>> =
         schedule?.days?.associate { it.date to it.bands }.orEmpty()
@@ -134,7 +136,7 @@ fun ScheduleWeekView(
 
         // Vertically-scrollable timeline.
         Row(modifier = Modifier.fillMaxWidth().verticalScroll(scroll)) {
-            HourGutter()
+            HourGutter(hourHeight = HourHeight)
             Row(modifier = Modifier.fillMaxWidth().height(HourHeight * 24)) {
                 days.forEach { d ->
                     DayColumn(
@@ -143,6 +145,7 @@ fun ScheduleWeekView(
                         isToday = d == today,
                         onBandTap = onBandTap,
                         defaultWriteRepoId = defaultWriteRepoId,
+                        hourHeight = HourHeight,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
                     )
                 }
@@ -152,10 +155,10 @@ fun ScheduleWeekView(
 }
 
 @Composable
-private fun HourGutter() {
+private fun HourGutter(hourHeight: androidx.compose.ui.unit.Dp) {
     Column(modifier = Modifier.width(GutterWidth)) {
         for (hr in 0 until 24) {
-            Box(modifier = Modifier.fillMaxWidth().height(HourHeight).padding(start = 4.dp, top = 2.dp)) {
+            Box(modifier = Modifier.fillMaxWidth().height(hourHeight).padding(start = 4.dp, top = 2.dp)) {
                 Text(
                     text = "%02d".format(hr),
                     style = MaterialTheme.typography.labelSmall,
@@ -173,8 +176,10 @@ private fun DayColumn(
     isToday: Boolean,
     onBandTap: (DayBand) -> Unit,
     defaultWriteRepoId: String,
+    hourHeight: androidx.compose.ui.unit.Dp,
     modifier: Modifier = Modifier,
 ) {
+    val HourHeight = hourHeight
     BoxWithConstraints(
         modifier = modifier
             .padding(horizontal = 1.dp)
@@ -274,12 +279,13 @@ private fun DayColumn(
             }
         }
 
-        if (isToday) WeekNowLine()
+        if (isToday) WeekNowLine(hourHeight = HourHeight)
     }
 }
 
 @Composable
-private fun WeekNowLine() {
+private fun WeekNowLine(hourHeight: androidx.compose.ui.unit.Dp) {
+    val HourHeight = hourHeight
     var now by remember { mutableStateOf(LocalTime.now()) }
     LaunchedEffect(Unit) {
         while (true) {

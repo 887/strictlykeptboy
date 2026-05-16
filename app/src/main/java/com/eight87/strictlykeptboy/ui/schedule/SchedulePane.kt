@@ -103,6 +103,7 @@ fun SchedulePane(
                             onSyncClick = onSyncClick,
                             onBandTap = { detailBand = it },
                             onPlanTrip = onPlanTrip,
+                            calendarVisibility = calendarVisibility,
                         )
                     }
                 },
@@ -181,10 +182,42 @@ private fun ScheduleMasterContent(
     onSyncClick: () -> Unit,
     onBandTap: (DayBand) -> Unit,
     onPlanTrip: (() -> Unit)? = null,
+    calendarVisibility: CalendarVisibilityPrefs? = null,
 ) {
     val selectedTab by state.selectedTab.collectAsState()
     val date by state.date.collectAsState()
     val rendered by state.rendered.collectAsState()
+    // Round 2.21 Phase D.3 — effective zoom = max(zoom of currently
+    // visible overlays). Falls back to default 2 when prefs / calendars
+    // aren't wired (tests / previews).
+    val calendars by (state.calendarsFlow ?: kotlinx.coroutines.flow.MutableStateFlow(emptyList()))
+        .collectAsState()
+    val visState by (calendarVisibility?.state
+        ?: kotlinx.coroutines.flow.MutableStateFlow(
+            com.eight87.strictlykeptboy.ui.settings.VisibilityState(),
+        )).collectAsState()
+    val effectiveZoom = remember(calendars, visState) {
+        if (calendarVisibility == null || calendars.isEmpty()) {
+            com.eight87.strictlykeptboy.ui.settings.ZOOM_DEFAULT
+        } else {
+            val hiddenKeys = visState.ordered
+                .filter { !it.visible }
+                .map { it.repoId to it.id }
+                .toSet()
+            val visEntries = visState.ordered.associateBy { it.repoId to it.id }
+            val zooms = calendars
+                .filter { (it.repo.id to it.ref.id) !in hiddenKeys }
+                .map {
+                    visEntries[it.repo.id to it.ref.id]?.zoom
+                        ?: com.eight87.strictlykeptboy.ui.settings.ZOOM_DEFAULT
+                }
+            (zooms.maxOrNull() ?: com.eight87.strictlykeptboy.ui.settings.ZOOM_DEFAULT)
+                .coerceIn(
+                    com.eight87.strictlykeptboy.ui.settings.ZOOM_MIN,
+                    com.eight87.strictlykeptboy.ui.settings.ZOOM_MAX,
+                )
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         @Suppress("UNUSED_VARIABLE") val _repo = activeRepoName
@@ -196,6 +229,7 @@ private fun ScheduleMasterContent(
                 modifier = Modifier.fillMaxSize(),
                 onBandTap = onBandTap,
                 onPlanTrip = onPlanTrip,
+                effectiveZoom = effectiveZoom,
             )
             ScheduleViewTab.Week -> {
                 val weekStart = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
@@ -205,6 +239,7 @@ private fun ScheduleMasterContent(
                     modifier = Modifier.fillMaxSize(),
                     onBandTap = onBandTap,
                     onSwipeWeek = { delta -> state.setDate(date.plusWeeks(delta.toLong())) },
+                    effectiveZoom = effectiveZoom,
                 )
             }
             ScheduleViewTab.Month -> ScheduleMonthView(

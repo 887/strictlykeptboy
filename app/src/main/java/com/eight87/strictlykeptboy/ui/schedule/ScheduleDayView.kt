@@ -35,6 +35,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import com.eight87.strictlykeptboy.resolver.DayBand
 import com.eight87.strictlykeptboy.resolver.RenderedSchedule
 import com.eight87.strictlykeptboy.ui.share.isForeignBand
@@ -48,7 +49,23 @@ const val TestTagDayBand = "DayBand"
 const val TestTagDayEmpty = "DayEmpty"
 const val TestTagNowLine = "NowLine"
 
-private val HourHeight = 60.dp
+/**
+ * Round 2.21 Phase D.3 — derive `HourHeight` from effective zoom
+ * ∈ {1..4}. Zoom = 2 is the new default (≈ 80dp/h ≈ half a phone
+ * screen per hour), replacing the legacy 60dp/h constant.
+ *
+ * `effectiveZoom = max(zoom of visible overlays)` — Schedule + Month
+ * + Year ignore it (list / grid layouts); Day / 3-day / Week consume
+ * it via this function.
+ */
+internal fun hourHeightForZoom(zoom: Int): androidx.compose.ui.unit.Dp = when (zoom) {
+    1 -> 40.dp
+    2 -> 80.dp
+    3 -> 160.dp
+    4 -> 320.dp
+    else -> 80.dp
+}
+
 private val GutterWidth = 56.dp
 
 /** Phase F.4 — stateless day view consuming a [RenderedSchedule]. */
@@ -64,6 +81,13 @@ fun ScheduleDayView(
     onPlanTrip: (() -> Unit)? = null,
     /** Round 2.2.C.2 — default-write repo for `isForeignBand`. Empty = chip suppressed. */
     defaultWriteRepoId: String = "",
+    /**
+     * Round 2.21 Phase D.3 — effective zoom level ∈ {1..4}. Default 2
+     * preserves the historic 60dp/h-ish density (now 80dp/h ≈ 1h per
+     * half a phone screen). Callers wire `max(zoom of visible overlays)`
+     * via [com.eight87.strictlykeptboy.ui.settings.CalendarVisibilityPrefs.zoomOf].
+     */
+    effectiveZoom: Int = 2,
 ) {
     val day = schedule?.days?.firstOrNull { it.date == date }
     val bands = day?.bands.orEmpty()
@@ -76,6 +100,7 @@ fun ScheduleDayView(
         return
     }
 
+    val hourHeight = hourHeightForZoom(effectiveZoom)
     val scroll = rememberScrollState()
     Row(
         modifier = modifier
@@ -83,21 +108,26 @@ fun ScheduleDayView(
             .verticalScroll(scroll)
             .testTag(TestTagDayView),
     ) {
-        HourGutter()
-        Box(modifier = Modifier.fillMaxWidth().height(HourHeight * 24)) {
-            HourLines(onTapHour = { hr -> onAddAt(LocalTime.of(hr, 0)) })
-            BandsLayer(bands = bands, onBandTap = onBandTap, defaultWriteRepoId = defaultWriteRepoId)
-            if (isToday) NowLine()
+        HourGutter(hourHeight = hourHeight)
+        Box(modifier = Modifier.fillMaxWidth().height(hourHeight * 24)) {
+            HourLines(hourHeight = hourHeight, onTapHour = { hr -> onAddAt(LocalTime.of(hr, 0)) })
+            BandsLayer(
+                bands = bands,
+                hourHeight = hourHeight,
+                onBandTap = onBandTap,
+                defaultWriteRepoId = defaultWriteRepoId,
+            )
+            if (isToday) NowLine(hourHeight = hourHeight)
         }
     }
 }
 
 @Composable
-private fun HourGutter() {
+private fun HourGutter(hourHeight: Dp) {
     Column(modifier = Modifier.width(GutterWidth)) {
         for (hr in 0 until 24) {
             Box(
-                modifier = Modifier.fillMaxWidth().height(HourHeight).padding(start = 8.dp, top = 2.dp),
+                modifier = Modifier.fillMaxWidth().height(hourHeight).padding(start = 8.dp, top = 2.dp),
             ) {
                 Text(
                     text = "%02d".format(hr),
@@ -110,13 +140,13 @@ private fun HourGutter() {
 }
 
 @Composable
-private fun HourLines(onTapHour: (Int) -> Unit) {
+private fun HourLines(hourHeight: Dp, onTapHour: (Int) -> Unit) {
     Column(modifier = Modifier.fillMaxSize()) {
         for (hr in 0 until 24) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(HourHeight)
+                    .height(hourHeight)
                     .clickable { onTapHour(hr) },
             ) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -128,6 +158,7 @@ private fun HourLines(onTapHour: (Int) -> Unit) {
 @Composable
 private fun BandsLayer(
     bands: List<DayBand>,
+    hourHeight: Dp,
     onBandTap: (DayBand) -> Unit,
     defaultWriteRepoId: String,
 ) {
@@ -139,8 +170,8 @@ private fun BandsLayer(
 
             val start = band.instance.effectiveStart
             val end = band.instance.effectiveEnd
-            val topDp = HourHeight * minutesFromMidnight(start) / 60f
-            val heightDp = HourHeight * durationMinutes(start, end).coerceAtLeast(15f) / 60f
+            val topDp = hourHeight * minutesFromMidnight(start) / 60f
+            val heightDp = hourHeight * durationMinutes(start, end).coerceAtLeast(15f) / 60f
 
             val isSuperseded = band.supersededByCalendar != null
             val isOffSchedule = band.offSchedule
@@ -230,7 +261,7 @@ private fun BandsLayer(
 }
 
 @Composable
-private fun NowLine() {
+private fun NowLine(hourHeight: Dp) {
     var now by remember { mutableStateOf(java.time.LocalTime.now()) }
     LaunchedEffect(Unit) {
         while (true) {
@@ -238,7 +269,7 @@ private fun NowLine() {
             delay(30_000L)
         }
     }
-    val topDp = HourHeight * (now.hour * 60 + now.minute) / 60f
+    val topDp = hourHeight * (now.hour * 60 + now.minute) / 60f
     Box(
         modifier = Modifier
             .fillMaxWidth()
