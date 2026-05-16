@@ -113,7 +113,7 @@ this round.
 - [x] **A.4** Piped through `RecurrenceMaterializer.fromOneOff` + `materializedFromRule` (so both one-off events and rule-materialised instances carry their `group`). The `OverlayResolver` is field-preserving — `MaterializedInstance.group` flows to `DayBand.instance.group` unchanged.
 - [x] **A.5** Room cache: added `groupLabel: String?` to `EventRow` + `RecurrenceRuleRow`, bumped `CacheDatabase` version 2 → 3 (existing `fallbackToDestructiveMigration(true)` handles the schema delta; Room is rebuildable from disk per CLAUDE.md). Wired through `EntityMapping.event` + `EntityMapping.recurrenceRule` and `SourcesPublisher.toEventInput` + `toRuleInput`.
 
-### Phase B — Calendar identity editor (shipped in skb commit `<sha-here>`)
+### Phase B — Calendar identity editor (shipped in skb commit `3469784`)
 
 - [x] **B.1** Identity editor added *inline* to the existing
   `CalendarSettingsSheet` (rather than a new composable — minimal-
