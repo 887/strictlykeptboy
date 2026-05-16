@@ -73,7 +73,10 @@ fun reviewsFilterLabelRes(filter: ReviewsFilter): Int = when (filter) {
 
 data class ReviewEntry(
     val commitSha: String,
+    /** Stable UID (used for backend tracking; rendered only as fallback). */
     val author: String,
+    /** Human-readable name; preferred over [author] in the UI. */
+    val authorDisplay: String? = null,
     val timestamp: String,
     val autoSummary: String,
     val unread: Boolean,
@@ -161,12 +164,18 @@ private fun ReviewItem(
         Column(Modifier.padding(12.dp)) {
             Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Text(
-                    text = entry.author,
+                    text = entry.authorDisplay ?: entry.author.take(8),
                     style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
                 )
                 if (entry.unread) {
                     Spacer(Modifier.padding(start = 6.dp))
-                    AssistChip(onClick = {}, label = { Text("unread") })
+                    AssistChip(
+                        onClick = {},
+                        label = { Text("unread", maxLines = 1, softWrap = false) },
+                    )
                 }
             }
             Spacer(Modifier.height(2.dp))

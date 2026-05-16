@@ -59,6 +59,7 @@ object ReviewFeedReader {
         val fm = doc.frontmatter
         val sha = fm.getString("commit_sha") ?: return null
         val author = fm.getString("author") ?: "anonymous"
+        val authorDisplay = fm.getString("author_display")
         val ts = fm.getString("timestamp") ?: ""
         val summary = fm.getString("auto_summary")
             ?: doc.body.lineSequence().firstOrNull { it.isNotBlank() }?.trim()
@@ -66,6 +67,7 @@ object ReviewFeedReader {
         return ReviewEntry(
             commitSha = sha,
             author = author,
+            authorDisplay = authorDisplay,
             timestamp = ts,
             autoSummary = summary,
             unread = true,
