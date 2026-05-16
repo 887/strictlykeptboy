@@ -160,7 +160,7 @@ Bonus (not in original B numbering, kept under B):
 - [x] **B.7** Authoring helper `./gradlew :app:regenerateRichDemoManifest` in `app/build.gradle.kts` — walks `src/main/assets/rich-demo-repo/`, regenerates `_manifest.txt` (sorted, POSIX paths). NOT wired into the build graph; run on demand after editing demo content.
 - [x] **B.8** Unit tests: `RichDemoSeederTest` (3 cases: first-extract / no-op-on-second-call / reset-re-enables-reseed), `RichDemoSeederSymlinkTest` (CLAUDE.md → AGENTS.md symlink content equality + isSymbolicLink assertion), `RichDemoManifestCoverageTest` (recursive `AssetManager.list()` walk equals the `_manifest.txt` set — catches forgotten manifest regeneration).
 
-## Phase C — Picker integration — shipped in <pending-sha>
+## Phase C — Picker integration — shipped in 27744ab
 
 - [x] **C.1** Extend `LifestyleCard` (or sibling enum) with a `RichDemo` perspective row labeled "Kept Life — full week" + subtitle "the example we ship that shows everything", displayed FIRST in the picker. Landed via sibling sealed type `DemoPerspectiveChoice` (`RichDemo` / `Lifestyle(card)`) in `ui/wizard/intro/IntroWizardHost.kt` — keeps `LifestyleCard` as a closed set of scaffolder-compatible perspectives.
 - [x] **C.2** In the Round 2.15 demo-perspective picker UI, render the rich-demo row with a distinct "Recommended" pill + a longer descriptive paragraph (the others stay one-line).
