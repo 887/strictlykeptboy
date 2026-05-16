@@ -39,7 +39,7 @@ A friend installs the build the user hands them, walks the onboarding once, land
 - **Phase D — Tests + AVD smoke.** Unit-test the seeder, parsability, overlay resolution; AVD-walk the demo.
 - **Phase E — Plan close-out.** Tick, status DONE, update `main.md` index.
 
-## Phase A — Demo content authoring
+## Phase A — Demo content authoring — shipped in 7fc80ef
 
 Target: ~50 sub-steps; every sub-step yields one or a small bundle of concrete files at concrete paths under `app/src/main/assets/rich-demo-repo/`.
 
