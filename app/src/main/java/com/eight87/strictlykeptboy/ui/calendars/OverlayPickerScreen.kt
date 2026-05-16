@@ -15,20 +15,21 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+// (removed: RoundedCornerShape — card now uses M3 Card's default shape)
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -59,20 +60,28 @@ const val TestTagOverlayPickerRow = "Overlay-PickerRow"
 const val TestTagOverlayPickerToggle = "Overlay-PickerToggle"
 const val TestTagOverlayPickerEdit = "Overlay-PickerEdit"
 const val TestTagOverlayPickerRepoHeader = "Overlay-PickerRepoHeader"
-const val TestTagOverlayPickerZoom = "Overlay-PickerZoom"
 /** Round 2.22 / Fix 3 — inline priority editor on each row. */
 const val TestTagOverlayPickerPriority = "Overlay-PickerPriority"
+/** Round 2.23.2 — inline color row on each card. Tap = expand swatches. */
+const val TestTagOverlayPickerColorRow = "Overlay-PickerColorRow"
+const val TestTagOverlayPickerColorSwatchPrefix = "Overlay-PickerColorSwatch-"
 
 /**
  * Round 2.21 Phase C.2 — full-screen overlay picker destination.
  *
- * Lists every calendar across every repo, grouped under repo headers.
- * Each row: emoji + color dot + display name + visibility toggle + a
- * trailing "..." that fires [onEditCalendar] (host mounts
- * [CalendarSettingsSheet] over the screen).
+ * Round 2.23.2 redesign (per D.119): each calendar is a multi-row M3
+ * [Card] mirroring `RepoSettingsScreen`'s `SectionCard` pattern. The
+ * header row carries emoji + name + visibility Switch + ⋮ (full
+ * identity editor). A clickable Color row opens an inline 12-swatch
+ * palette (reuses [ColorSwatch] + [IdentitySwatches] from
+ * [CalendarSettingsSheet]). A Priority row hosts the existing typeable
+ * Int editor. The Repo row is supplementary chrome.
  *
- * Phase D.4 — each row also carries a 4-stop zoom segmented control
- * binding to [CalendarVisibilityPrefs.setZoom].
+ * The per-overlay 4-stop zoom segmented control is RETIRED from this
+ * surface — the top-of-Day `ZoomLevelRow` (D.115) is now the single
+ * user-facing zoom entry-point. Per-overlay zoom storage stays (it
+ * still backs the max-of-visible fallback when globalZoomOverride is
+ * null).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,15 +97,18 @@ fun OverlayPickerScreen(
      * [CalendarSettingsWriter.writePriority].
      */
     onPriorityChange: (CalendarMeta, Int) -> Unit = { _, _ -> },
+    /**
+     * Round 2.23.2 — inline color writer for the Color row. Receives
+     * the chosen `0xRRGGBB` int. Default no-op for previews + tests;
+     * MainActivity wires [CalendarSettingsWriter.writeColorSeed].
+     */
+    onColorChange: (CalendarMeta, Int) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
     val calendars by calendarsFlow.collectAsState()
     val visState by visibilityPrefs.state.collectAsState()
     val visibilityById = visState.ordered.associateBy { it.repoId to it.id }
 
-    // Group rows by repo id (preserves insertion order from calendarsFlow,
-    // which already sorts by repo). Each group head is a single row of its
-    // own in the LazyColumn so it scrolls with the list.
     val grouped = calendars.groupBy { it.repo.id }
 
     Surface(
@@ -128,19 +140,21 @@ fun OverlayPickerScreen(
                 }
                 return@Column
             }
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp),
+            ) {
                 grouped.forEach { (repoId, calsInRepo) ->
                     item(key = "header-$repoId") {
                         RepoHeader(repoId = repoId)
                     }
-                    items(calsInRepo, key = { c -> "row-${c.repo.id}-${c.ref.id}" }) { cal ->
+                    items(calsInRepo, key = { c -> "card-${c.repo.id}-${c.ref.id}" }) { cal ->
                         val key = cal.repo.id to cal.ref.id
                         val visible = visibilityById[key]?.visible ?: true
-                        val zoom = visibilityPrefs.zoomOf(cal.ref.id, cal.repo.id)
-                        OverlayRow(
+                        OverlayCard(
                             calendar = cal,
                             visible = visible,
-                            zoom = zoom,
                             onToggle = {
                                 visibilityPrefs.setVisible(
                                     id = cal.ref.id,
@@ -149,16 +163,8 @@ fun OverlayPickerScreen(
                                 )
                             },
                             onEdit = { onEditCalendar(cal) },
-                            onZoom = { level ->
-                                visibilityPrefs.setZoom(
-                                    id = cal.ref.id,
-                                    zoom = level,
-                                    repoId = cal.repo.id,
-                                )
-                            },
-                            onPriority = { newPriority ->
-                                onPriorityChange(cal, newPriority)
-                            },
+                            onPriority = { newPriority -> onPriorityChange(cal, newPriority) },
+                            onColor = { rgb -> onColorChange(cal, rgb) },
                         )
                     }
                 }
@@ -172,7 +178,7 @@ private fun RepoHeader(repoId: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 4.dp, vertical = 8.dp)
             .testTag("$TestTagOverlayPickerRepoHeader-$repoId"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -186,167 +192,274 @@ private fun RepoHeader(repoId: String) {
     }
 }
 
+/**
+ * Round 2.23.2 — multi-row card per the D.119 spec.
+ *
+ *   ┌────────────────────────────────────┐
+ *   │ 🦙  Name              [Switch] [⋮] │  ← header
+ *   ├────────────────────────────────────┤
+ *   │ Color          [▓] yellow      >   │  ← clickable, expands palette
+ *   │   (when expanded: 2×6 swatch grid) │
+ *   ├────────────────────────────────────┤
+ *   │ Priority       [  999  ]           │  ← typeable TextField
+ *   ├────────────────────────────────────┤
+ *   │ Repo           repo-id             │  ← supplementary
+ *   └────────────────────────────────────┘
+ */
 @Composable
-private fun OverlayRow(
+private fun OverlayCard(
     calendar: CalendarMeta,
     visible: Boolean,
-    zoom: Int,
     onToggle: () -> Unit,
     onEdit: () -> Unit,
-    onZoom: (Int) -> Unit,
     onPriority: (Int) -> Unit,
+    onColor: (Int) -> Unit,
 ) {
     val tagId = "${calendar.repo.id}-${calendar.ref.id}"
-    Column(
+    var paletteOpen by remember { mutableStateOf(false) }
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 6.dp)
             .testTag("$TestTagOverlayPickerRow-$tagId"),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        ),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.surfaceContainer)
-                .clickable(onClick = onToggle)
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // Emoji column (fixed width so labels align).
-            Box(
-                modifier = Modifier.width(28.dp),
-                contentAlignment = Alignment.CenterStart,
-            ) {
-                if (!calendar.emoji.isNullOrBlank()) {
-                    Text(text = calendar.emoji!!, style = MaterialTheme.typography.titleMedium)
-                }
-            }
-            // Color dot.
-            val tint = calendar.colorSeed?.let {
-                Color(0xFF000000.toInt() or (it and 0x00FFFFFF))
-            } ?: MaterialTheme.colorScheme.outlineVariant
-            Box(
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // Header row: emoji + name + Switch + ⋮
+            Row(
                 modifier = Modifier
-                    .size(14.dp)
-                    .clip(CircleShape)
-                    .background(tint),
-            )
-            Spacer(modifier = Modifier.width(10.dp))
-            Column(modifier = Modifier.weight(1f)) {
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier.width(32.dp),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    if (!calendar.emoji.isNullOrBlank()) {
+                        Text(text = calendar.emoji!!, style = MaterialTheme.typography.titleLarge)
+                    }
+                }
                 Text(
                     text = calendar.displayName,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
+                    modifier = Modifier.weight(1f),
+                )
+                Switch(
+                    checked = visible,
+                    onCheckedChange = { onToggle() },
+                    modifier = Modifier.testTag("$TestTagOverlayPickerToggle-$tagId"),
+                )
+                IconButton(
+                    onClick = onEdit,
+                    modifier = Modifier.testTag("$TestTagOverlayPickerEdit-$tagId"),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = "Edit ${calendar.displayName}",
+                    )
+                }
+            }
+            HorizontalDivider()
+            // Color row — clickable, expands swatch palette.
+            ColorRow(
+                tagId = tagId,
+                colorSeed = calendar.colorSeed,
+                expanded = paletteOpen,
+                onToggleExpanded = { paletteOpen = !paletteOpen },
+                onPick = { rgb ->
+                    paletteOpen = false
+                    onColor(rgb)
+                },
+            )
+            HorizontalDivider()
+            // Priority row.
+            PriorityRow(
+                tagId = tagId,
+                currentPriority = calendar.priority,
+                onPriority = onPriority,
+            )
+            HorizontalDivider()
+            // Repo row — supplementary chrome.
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "Repo",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.width(96.dp),
                 )
                 Text(
-                    text = calendar.repo.id,
-                    style = MaterialTheme.typography.labelSmall,
+                    text = calendar.repo.id.ifBlank { "—" },
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                 )
             }
-            Switch(
-                checked = visible,
-                onCheckedChange = { onToggle() },
-                modifier = Modifier.testTag("$TestTagOverlayPickerToggle-$tagId"),
-            )
-            IconButton(
-                onClick = onEdit,
-                modifier = Modifier.testTag("$TestTagOverlayPickerEdit-$tagId"),
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.MoreVert,
-                    contentDescription = "Edit ${calendar.displayName}",
-                )
-            }
         }
-        Spacer(modifier = Modifier.size(6.dp))
-        // Round 2.22 / Fix 3 — inline priority editor. User feedback:
-        // "priorities are a multiple choice thing rather than a number
-        // i can type" — they were reading the zoom segmented control's
-        // 40/80/160/320 labels as priority values. Surface priority as
-        // a free-text Int input right here on the row, alongside zoom,
-        // so it's visible + editable without diving into the per-
-        // calendar settings sheet.
+    }
+}
+
+@Composable
+private fun ColorRow(
+    tagId: String,
+    colorSeed: Int?,
+    expanded: Boolean,
+    onToggleExpanded: () -> Unit,
+    onPick: (Int) -> Unit,
+) {
+    val tint = colorSeed?.let {
+        Color(0xFF000000.toInt() or (it and 0x00FFFFFF))
+    } ?: MaterialTheme.colorScheme.outlineVariant
+    Column(modifier = Modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onToggleExpanded)
+                .testTag("$TestTagOverlayPickerColorRow-$tagId")
+                .padding(horizontal = 12.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            var priorityText by remember(calendar.priority) {
-                mutableStateOf(calendar.priority.toString())
-            }
-            val keyboardController = LocalSoftwareKeyboardController.current
-            fun commit() {
-                val parsed = priorityText.toIntOrNull()
-                if (parsed != null && parsed != calendar.priority) {
-                    onPriority(parsed)
-                } else if (parsed == null) {
-                    // Reset to current value on invalid input.
-                    priorityText = calendar.priority.toString()
-                }
-            }
-            OutlinedTextField(
-                value = priorityText,
-                onValueChange = { raw ->
-                    // Number-only, 4-char cap.
-                    priorityText = raw.filter { it.isDigit() || it == '-' }.take(4)
-                },
-                label = { Text("Priority") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number,
-                    imeAction = ImeAction.Done,
-                ),
-                keyboardActions = KeyboardActions(
-                    onDone = {
-                        commit()
-                        keyboardController?.hide()
-                    },
-                ),
-                modifier = Modifier
-                    .width(96.dp)
-                    .testTag("$TestTagOverlayPickerPriority-$tagId")
-                    .onFocusChanged { focusState ->
-                        if (!focusState.isFocused) commit()
-                    },
+            Text(
+                "Color",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.width(96.dp),
             )
-            // Round 2.21 D.4 — four-stop zoom segmented control per row.
-            SingleChoiceSegmentedButtonRow(
+            Box(
                 modifier = Modifier
-                    .weight(1f)
-                    .testTag("$TestTagOverlayPickerZoom-$tagId"),
+                    .size(22.dp)
+                    .clip(CircleShape)
+                    .background(tint),
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = identitySwatchName(colorSeed),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+            )
+            Icon(
+                imageVector = Icons.Filled.ChevronRight,
+                contentDescription = if (expanded) "Hide palette" else "Choose color",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (expanded) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                val stops = listOf(1, 2, 3, 4)
-                stops.forEachIndexed { idx, level ->
-                    SegmentedButton(
-                        selected = zoom == level,
-                        onClick = { onZoom(level) },
-                        shape = SegmentedButtonDefaults.itemShape(index = idx, count = stops.size),
-                    ) {
-                        Text(zoomLabel(level), style = MaterialTheme.typography.labelSmall)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    IdentitySwatches.take(6).forEach { rgb ->
+                        PickerSwatch(rgb = rgb, selected = colorSeed == rgb, tagId = tagId, onClick = { onPick(rgb) })
+                    }
+                }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    IdentitySwatches.drop(6).forEach { rgb ->
+                        PickerSwatch(rgb = rgb, selected = colorSeed == rgb, tagId = tagId, onClick = { onPick(rgb) })
                     }
                 }
             }
         }
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 2.dp, start = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text(
-                "higher priority wins overlay tiebreaks · zoom",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+    }
+}
+
+@Composable
+private fun PickerSwatch(rgb: Int, selected: Boolean, tagId: String, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(32.dp)
+            .clip(CircleShape)
+            .background(Color(0xFF000000.toInt() or rgb))
+            .clickable(onClick = onClick)
+            .testTag("$TestTagOverlayPickerColorSwatchPrefix$tagId-%06X".format(rgb and 0xFFFFFF)),
+    ) {
+        if (selected) {
+            Box(
+                modifier = Modifier
+                    .size(10.dp)
+                    .align(Alignment.Center)
+                    .clip(CircleShape)
+                    .background(Color.White),
             )
         }
     }
 }
 
-internal fun zoomLabel(level: Int): String = when (level) {
-    1 -> "40"
-    2 -> "80"
-    3 -> "160"
-    4 -> "320"
-    else -> level.toString()
+@Composable
+private fun PriorityRow(
+    tagId: String,
+    currentPriority: Int,
+    onPriority: (Int) -> Unit,
+) {
+    var priorityText by remember(currentPriority) {
+        mutableStateOf(currentPriority.toString())
+    }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    fun commit() {
+        val parsed = priorityText.toIntOrNull()
+        if (parsed != null && parsed != currentPriority) {
+            onPriority(parsed)
+        } else if (parsed == null) {
+            priorityText = currentPriority.toString()
+        }
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            "Priority",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.width(96.dp),
+        )
+        OutlinedTextField(
+            value = priorityText,
+            onValueChange = { raw ->
+                priorityText = raw.filter { it.isDigit() || it == '-' }.take(4)
+            },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Number,
+                imeAction = ImeAction.Done,
+            ),
+            keyboardActions = KeyboardActions(
+                onDone = {
+                    commit()
+                    keyboardController?.hide()
+                },
+            ),
+            modifier = Modifier
+                .width(120.dp)
+                .testTag("$TestTagOverlayPickerPriority-$tagId")
+                .onFocusChanged { focusState ->
+                    if (!focusState.isFocused) commit()
+                },
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(
+            "higher wins tiebreaks",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
 }

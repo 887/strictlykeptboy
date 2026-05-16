@@ -5,6 +5,7 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import com.eight87.strictlykeptboy.resolver.CalendarMeta
 import com.eight87.strictlykeptboy.resolver.CalendarRef
@@ -122,6 +123,43 @@ class OverlayPickerScreenTest {
             .assertCountEquals(1)
         // Spot-check the row tag also exists (sanity).
         composeRule.onNodeWithTag("$TestTagOverlayPickerRow-repo-a-cal-routines").assertExists()
+    }
+
+    @Test fun card_layout_renders_color_row_and_opens_palette_and_fires_writer() {
+        // Round 2.23.2 / D.119 — each overlay row is a multi-row Card
+        // with a clickable Color row that expands the 12-swatch palette
+        // and writes through onColorChange.
+        val prefs = open()
+        val cals = listOf(
+            CalendarMeta(
+                ref = CalendarRef("cal-routines"),
+                repo = RepoRef("repo-a"),
+                displayName = "Routines",
+                priority = 100,
+                colorSeed = 0xEF5350, // red
+            ),
+        )
+        val captured = mutableListOf<Pair<String, Int>>()
+        composeRule.setContent {
+            OverlayPickerScreen(
+                calendarsFlow = MutableStateFlow(cals),
+                visibilityPrefs = prefs,
+                onBack = {},
+                onEditCalendar = {},
+                onColorChange = { meta, rgb -> captured += meta.ref.id to rgb },
+            )
+        }
+        // Color row exists on the card.
+        composeRule.onNodeWithTag("$TestTagOverlayPickerColorRow-repo-a-cal-routines").assertExists()
+        // Priority field also exists on the card (card layout sanity).
+        composeRule.onNodeWithTag("$TestTagOverlayPickerPriority-repo-a-cal-routines").assertExists()
+        // Tap the Color row -> palette expands -> the blue swatch becomes hittable.
+        composeRule.onNodeWithTag("$TestTagOverlayPickerColorRow-repo-a-cal-routines").performClick()
+        val blueTag = "${TestTagOverlayPickerColorSwatchPrefix}repo-a-cal-routines-42A5F5"
+        composeRule.onNodeWithTag(blueTag).assertExists().performClick()
+        assertEquals(1, captured.size)
+        assertEquals("cal-routines", captured[0].first)
+        assertEquals(0x42A5F5, captured[0].second)
     }
 
     @Test fun zoom_survives_reopen() {

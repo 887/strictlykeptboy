@@ -122,4 +122,42 @@ object CalendarSettingsWriter {
             )
         }
     }
+
+    /**
+     * Round 2.23.2 — single-scalar write for the OverlayPicker inline
+     * color row. Reads the existing `calendar.toml` to preserve every
+     * other key, rewrites only `color_seed`, and commits. Mirrors
+     * [writePriority]'s shape.
+     */
+    suspend fun writeColorSeed(
+        graph: AppGraph,
+        repoId: String,
+        calendarId: String,
+        calendarDisplayName: String,
+        colorSeed: Int,
+    ) {
+        withContext(Dispatchers.IO) {
+            val cfg = graph.repoStore.list().firstOrNull { it.repoId == repoId } ?: return@withContext
+            val root = Path.of(cfg.rootDir)
+            val tomlPath = root.resolve("calendars/$calendarId/calendar.toml")
+            Files.createDirectories(tomlPath.parent)
+            val table: TomlTable = if (Files.isRegularFile(tomlPath)) {
+                TomlReader.parse(String(Files.readAllBytes(tomlPath), StandardCharsets.UTF_8))
+            } else {
+                TomlTable().apply {
+                    putString("id", calendarId)
+                    putString("name", calendarDisplayName)
+                }
+            }
+            table.scalars.remove("color_seed")
+            table.putInt("color_seed", colorSeed and 0xFFFFFF)
+            Files.write(
+                tomlPath,
+                TomlWriter.emit(table).toByteArray(StandardCharsets.UTF_8),
+            )
+            GitRepoRegistry.get(repoId)?.commitAll(
+                "calendar color: $calendarDisplayName → #%06X".format(colorSeed and 0xFFFFFF),
+            )
+        }
+    }
 }

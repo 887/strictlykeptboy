@@ -52,7 +52,7 @@ const val TestTagCalendarSettingsSwatchPrefix = "CalendarSettings-Swatch-"
  * derived hues sized to cover the 11 demo calendars + a spare slot.
  * Stored on disk as the integer `0xRRGGBB` form via `color_seed`.
  */
-private val IdentitySwatches: List<Int> = listOf(
+internal val IdentitySwatches: List<Int> = listOf(
     0xEF5350, // red
     0xEC407A, // pink
     0xAB47BC, // purple
@@ -310,8 +310,33 @@ data class CalendarSettingsDraft(
     val colorSeed: Int? = null,
 )
 
+/**
+ * Round 2.23.2 — human-readable name for an `0xRRGGBB` swatch. Keyed
+ * to the [IdentitySwatches] palette; non-matches fall back to the
+ * `#RRGGBB` hex. Used by the OverlayPicker's color row to show
+ * "yellow" / "blue" next to the swatch instead of just a dot.
+ */
+internal fun identitySwatchName(rgb: Int?): String {
+    if (rgb == null) return "default"
+    return when (rgb and 0xFFFFFF) {
+        0xEF5350 -> "red"
+        0xEC407A -> "pink"
+        0xAB47BC -> "purple"
+        0x7E57C2 -> "deep purple"
+        0x5C6BC0 -> "indigo"
+        0x42A5F5 -> "blue"
+        0x29B6F6 -> "light blue"
+        0x26C6DA -> "cyan"
+        0x26A69A -> "teal"
+        0x66BB6A -> "green"
+        0xFFA726 -> "orange"
+        0x8D6E63 -> "brown"
+        else -> "#%06X".format(rgb and 0xFFFFFF)
+    }
+}
+
 @Composable
-private fun ColorSwatch(rgb: Int, selected: Boolean, onClick: () -> Unit) {
+internal fun ColorSwatch(rgb: Int, selected: Boolean, onClick: () -> Unit) {
     val borderColor = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent
     Box(
         modifier = Modifier

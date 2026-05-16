@@ -2341,3 +2341,32 @@ chips) — those aren't navigation, they're inline form controls.
 `SettingsPane` keeps its master-detail category list (settings owns
 its own internal navigation, and the shell-rail is empty on that
 destination by design).
+
+## D.119 — Overlay picker rows use multi-row M3 Card (Round 2.23.2)
+
+`OverlayPickerScreen` redesigns each overlay row as a multi-row M3
+`Card` (mirroring `RepoSettingsScreen`'s `SectionCard` pattern):
+header row (emoji + display name + visibility Switch + ⋮ identity-
+editor entry), Color row (clickable, expands the existing 12-swatch
+`IdentitySwatches` palette + writes through
+`CalendarSettingsWriter.writeColorSeed`), Priority row (the typeable
+Int editor that landed in D.112 / commit `8d82785`), and a
+supplementary Repo row. The color is shown as a 22dp swatch + a
+human-readable name (`identitySwatchName`) — the prior tiny dot near
+the emoji is removed.
+
+The per-overlay 4-stop zoom segmented control (40/80/160/320) is
+retired from the picker UI. Users reported the labels were
+misinterpreted as priority values. The top-of-Day `ZoomLevelRow`
+shipped in D.115 (Auto / 40 / 80 / 160 / 320) is now the single
+user-facing zoom entry-point. Per-overlay zoom storage in
+`CalendarVisibilityPrefs.setZoom` STAYS — it still backs the
+max-of-visible-overlays fallback in `ScheduleDayView` when
+`globalZoomOverride` is null (D.115 / Round 2.23 Phase C).
+
+Rationale: the card-per-overlay layout is the visual vocabulary the
+user already reads on `RepoSettingsScreen`. Hoisting Color into a
+full row makes the active swatch legible at glance (the user couldn't
+tell which color was which when it was a 14dp dot next to the emoji).
+Reusing `IdentitySwatches` + `ColorSwatch` from `CalendarSettingsSheet`
+keeps the palette source-of-truth single.

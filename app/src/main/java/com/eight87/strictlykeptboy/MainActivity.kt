@@ -857,6 +857,21 @@ class MainActivity : ComponentActivity() {
                                     )
                             }
                         },
+                        // Round 2.23.2 / D.119 — inline color writer for the
+                        // OverlayPicker per-card Color row. Rewrites the
+                        // `color_seed` scalar in calendar.toml and commits.
+                        onOverlayColorChange = { meta, rgb ->
+                            scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                com.eight87.strictlykeptboy.ui.calendars.CalendarSettingsWriter
+                                    .writeColorSeed(
+                                        graph = graph,
+                                        repoId = meta.repo.id,
+                                        calendarId = meta.ref.id,
+                                        calendarDisplayName = meta.displayName,
+                                        colorSeed = rgb,
+                                    )
+                            }
+                        },
                         onShareWithDom = {
                             val name = graph.activeRepoName.value
                             val cfg = graph.repoStore.list()

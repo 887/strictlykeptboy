@@ -169,6 +169,13 @@ fun SkbAppShell(
     onOverlayPriorityChange:
         ((com.eight87.strictlykeptboy.resolver.CalendarMeta, Int) -> Unit) = { _, _ -> },
     /**
+     * Round 2.23.2 — inline color writer fired from the overlay-picker
+     * Color row. Default no-op so tests / previews don't have to
+     * plumb the writer.
+     */
+    onOverlayColorChange:
+        ((com.eight87.strictlykeptboy.resolver.CalendarMeta, Int) -> Unit) = { _, _ -> },
+    /**
      * Round 2.16.B — task-playback source feeding MiniPlayer +
      * NowPlayingScreen. Defaults to the Phase A stub for previews /
      * tests; MainActivity wires `appGraph.taskTransport`.
@@ -222,6 +229,7 @@ fun SkbAppShell(
             calendarVisibility = calendarVisibility,
             onLongPressCalendar = onLongPressCalendar,
             onOverlayPriorityChange = onOverlayPriorityChange,
+            onOverlayColorChange = onOverlayColorChange,
             taskPlaybackSource = taskPlaybackSource,
             onStartTask = onStartTask,
             onPickInternalStorage = onPickInternalStorage,
@@ -259,6 +267,8 @@ private fun SkbAppShellContent(
     calendarVisibility: com.eight87.strictlykeptboy.ui.settings.CalendarVisibilityPrefs? = null,
     onLongPressCalendar: ((com.eight87.strictlykeptboy.resolver.CalendarMeta) -> Unit)? = null,
     onOverlayPriorityChange:
+        ((com.eight87.strictlykeptboy.resolver.CalendarMeta, Int) -> Unit) = { _, _ -> },
+    onOverlayColorChange:
         ((com.eight87.strictlykeptboy.resolver.CalendarMeta, Int) -> Unit) = { _, _ -> },
     taskPlaybackSource: Any = StubTaskPlaybackSource,
     onStartTask: ((String) -> Unit)? = null,
@@ -459,6 +469,7 @@ private fun SkbAppShellContent(
                         onLongPressCalendar?.invoke(meta)
                     },
                     onPriorityChange = onOverlayPriorityChange,
+                    onColorChange = onOverlayColorChange,
                 )
             }
         }
