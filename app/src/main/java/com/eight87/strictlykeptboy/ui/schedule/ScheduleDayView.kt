@@ -2,6 +2,7 @@ package com.eight87.strictlykeptboy.ui.schedule
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -31,13 +32,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
+import com.eight87.strictlykeptboy.resolver.CalendarRef
 import com.eight87.strictlykeptboy.resolver.DayBand
 import com.eight87.strictlykeptboy.resolver.RenderedSchedule
+import com.eight87.strictlykeptboy.resolver.RepoRef
 import com.eight87.strictlykeptboy.ui.share.isForeignBand
 import kotlinx.coroutines.delay
 import java.time.LocalDate
@@ -94,6 +99,23 @@ fun ScheduleDayView(
      * missing from this map are treated as opted-out (no grouping).
      */
     metaGroupByCalendar: Map<com.eight87.strictlykeptboy.resolver.CalendarRef, Boolean> = emptyMap(),
+    /**
+     * Round 2.21 Phase D.5 — pinch-to-zoom on the day-grid Box.
+     * Called on `detectTransformGestures` release with the
+     * topmost band at the gesture-center Y; host wires to
+     * `CalendarVisibilityPrefs.setZoom(repoId, calendarId, newZoom)`.
+     * The handler picks `newZoom` snapped to {1,2,3,4} based on
+     * accumulated scale; the caller persists.
+     */
+    onPinchZoomBand: ((CalendarRef, RepoRef, Int) -> Unit)? = null,
+    /**
+     * Round 2.21 Phase D.5 — current per-overlay zoom lookup. Used
+     * to compute the snap target relative to the band's *own*
+     * zoom (not the global effective zoom). Defaults to
+     * [effectiveZoom] when missing so tests / previews keep the
+     * old single-zoom behaviour.
+     */
+    zoomFor: (CalendarRef, RepoRef) -> Int = { _, _ -> effectiveZoom },
 ) {
     val day = schedule?.days?.firstOrNull { it.date == date }
     val bands = day?.bands.orEmpty()
@@ -108,6 +130,8 @@ fun ScheduleDayView(
 
     val hourHeight = hourHeightForZoom(effectiveZoom)
     val scroll = rememberScrollState()
+    val density = LocalDensity.current
+    val hourHeightPx = with(density) { hourHeight.toPx() }
     // Round 2.21 Phase F.2 — per-group expansion state. Auto-expand
     // when zoom ≥ GROUP_AUTO_EXPAND_ZOOM (= 3); below that, collapsed
     // groups can still be expanded on caret-tap.
@@ -123,7 +147,48 @@ fun ScheduleDayView(
             .testTag(TestTagDayView),
     ) {
         HourGutter(hourHeight = hourHeight)
-        Box(modifier = Modifier.fillMaxWidth().height(hourHeight * 24)) {
+        // Round 2.21 Phase D.5 — pinch-to-zoom on the day-grid Box.
+        // detectTransformGestures fires on every pointer move; we
+        // accumulate `pendingScale` and on the gesture-end (next
+        // pointer-down resets) commit a snap to {1,2,3,4}.
+        var pendingScale by remember { mutableStateOf(1f) }
+        var pendingCenterY by remember { mutableStateOf(0f) }
+        var pendingPanY by remember { mutableStateOf(0f) }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(hourHeight * 24)
+                .pointerInput(onPinchZoomBand, bands, hourHeightPx) {
+                    if (onPinchZoomBand == null) return@pointerInput
+                    detectTransformGestures(panZoomLock = false) { centroid, pan, zoom, _ ->
+                        pendingScale *= zoom
+                        pendingCenterY = centroid.y
+                        pendingPanY += pan.y
+                        // Commit a snap when accumulated scale leaves a
+                        // half-step band. Threshold log2: 0.5 ≈ "down a
+                        // level"; 2.0 ≈ "up a level". We snap on every
+                        // gesture move past the threshold so the user
+                        // sees the band redraw mid-gesture.
+                        val band = pickBandAtY(
+                            bands = bands,
+                            centerYPx = pendingCenterY,
+                            hourHeightPx = hourHeightPx,
+                        ) ?: return@detectTransformGestures
+                        val current = zoomFor(band.instance.calendar, band.instance.repo)
+                        val target = snapZoomFromScale(current, pendingScale)
+                        if (target != current) {
+                            onPinchZoomBand(
+                                band.instance.calendar,
+                                band.instance.repo,
+                                target,
+                            )
+                            // Reset accumulator so each snap-step requires
+                            // a fresh pinch span.
+                            pendingScale = 1f
+                        }
+                    }
+                },
+        ) {
             HourLines(hourHeight = hourHeight, onTapHour = { hr -> onAddAt(LocalTime.of(hr, 0)) })
             BandsLayer(
                 groups = groups,
@@ -337,6 +402,46 @@ private fun NowLine(hourHeight: Dp) {
             .background(Color.Red)
             .testTag(TestTagNowLine),
     )
+}
+
+/**
+ * Round 2.21 Phase D.5 — pick the topmost visible band that contains
+ * the given Y coordinate (in pixels from the top of the day-grid
+ * Box). When multiple bands overlap (different lanes), the first one
+ * whose vertical interval contains [centerYPx] wins — i.e. the band
+ * the user visually is touching. Lanes are horizontal subdivisions,
+ * so vertical containment is the right hit test.
+ */
+internal fun pickBandAtY(
+    bands: List<DayBand>,
+    centerYPx: Float,
+    hourHeightPx: Float,
+): DayBand? {
+    if (hourHeightPx <= 0f) return null
+    fun minutesFromMidnight(z: ZonedDateTime): Float =
+        (z.hour * 60 + z.minute + z.second / 60f)
+    return bands.firstOrNull { band ->
+        val topPx = hourHeightPx * minutesFromMidnight(band.instance.effectiveStart) / 60f
+        val bottomPx = hourHeightPx * minutesFromMidnight(band.instance.effectiveEnd) / 60f
+        centerYPx in topPx..bottomPx
+    }
+}
+
+/**
+ * Round 2.21 Phase D.5 — snap accumulated pinch scale to the next
+ * zoom step. Pinch-out (>1) bumps up one step; pinch-in (<1) bumps
+ * down one step. Thresholds are halfway in log-space (≈1.414 in,
+ * ≈0.707 out) so a deliberate pinch lands one step; smaller jitter
+ * leaves zoom unchanged.
+ */
+internal fun snapZoomFromScale(currentZoom: Int, scale: Float): Int {
+    val clamped = currentZoom.coerceIn(1, 4)
+    val target = when {
+        scale >= 1.414f -> clamped + 1
+        scale <= 0.707f -> clamped - 1
+        else -> clamped
+    }
+    return target.coerceIn(1, 4)
 }
 
 private fun minutesFromMidnight(z: ZonedDateTime): Float =

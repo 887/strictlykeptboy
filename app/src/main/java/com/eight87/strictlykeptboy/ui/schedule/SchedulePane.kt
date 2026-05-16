@@ -250,6 +250,19 @@ private fun ScheduleMasterContent(
                 onPlanTrip = onPlanTrip,
                 effectiveZoom = effectiveZoom,
                 metaGroupByCalendar = metaGroupByCalendar,
+                // Round 2.21 Phase D.5 — pinch-to-zoom on the day grid.
+                // The picker's per-row segmented control covers the
+                // deliberate path; pinch is the gesture-convenience layer
+                // (D-2.21.i). Persists via the same `setZoom` surface.
+                onPinchZoomBand = calendarVisibility?.let { prefs ->
+                    { calRef, repoRef, newZoom ->
+                        prefs.setZoom(calRef.id, newZoom, repoRef.id)
+                    }
+                },
+                zoomFor = { calRef, repoRef ->
+                    calendarVisibility?.zoomOf(calRef.id, repoRef.id)
+                        ?: effectiveZoom
+                },
             )
             ScheduleViewTab.Week -> {
                 val weekStart = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))

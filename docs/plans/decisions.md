@@ -2140,16 +2140,22 @@ Out-of-range inputs clamp to {1..4}; the codec defaults missing
 values to 2 so legacy `VisibilityEntry` rows decode without
 churn.
 
-## D.107 — Pinch-to-zoom deferred; per-row segmented control is the deliberate path (Round 2.21 D-2.21.i amendment)
+## D.107 — Pinch-to-zoom + per-row segmented control both ship (Round 2.21 D-2.21.i, RESOLVED)
 
-The original plan called for both a pinch gesture *and* a
-deliberate picker control. We shipped the deliberate path —
-`SingleChoiceSegmentedButtonRow` with 4 stops on every overlay
-row in `OverlayPickerScreen` — and deferred the pinch gesture.
-Reason: `adb input` can't simulate multi-touch pinch reliably on
-the headless AVD; the deliberate path satisfies the "user must
-be able to set it deliberately" half of D-2.21.i without paying
-for an unverifiable gesture layer this round.
+**RESOLVED — pinch shipped in Round 2.21 B.5 follow-up.** The
+deliberate path (`SingleChoiceSegmentedButtonRow` with 4 stops on
+every overlay row in `OverlayPickerScreen`) remains the
+"must-be-able-to-set-it-deliberately" surface; the pinch gesture
+on the day-grid Box is the gesture-convenience layer. Pinch fires
+`detectTransformGestures` on the grid's `pointerInput`, snaps to
+the nearest step ∈ {1,2,3,4} from accumulated scale (>1.414 → up
+one, <0.707 → down one), and applies to the topmost visible
+overlay at the gesture-center Y (via `pickBandAtY`). Persistence
+goes through the same `CalendarVisibilityPrefs.setZoom(repoId,
+calendarId, level)` surface as the segmented control. AVD pinch
+verification still constrained by `adb input` multi-touch
+limitations; the math is covered by `PinchZoomDayGridTest`
+(snap + hit-test unit tests).
 
 ## D.108 — Atomic grouping is opt-in per calendar via `meta_group_field` (Round 2.21 D-2.21.j)
 

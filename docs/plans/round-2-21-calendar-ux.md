@@ -196,12 +196,16 @@ this round.
 - [x] **D.4** Per-row `SingleChoiceSegmentedButtonRow` with 4 stops
   rendered on every `OverlayPickerScreen` row. Tap commits zoom via
   `CalendarVisibilityPrefs.setZoom`.
-- [ ] **D.5** Pinch-to-zoom on the day-grid Box DEFERRED — `adb input`
-  can't simulate pinch reliably on the AVD (same limitation as the
-  long-press flow in Round 2.1.B), and the picker's per-row segmented
-  control covers the *deliberate* path D-2.21.i mandates. The
-  gesture-only convenience layer is a Round 2.22 follow-up; the
-  per-overlay state model that would back it is already shipped.
+- [x] **D.5** Pinch-to-zoom on the day-grid Box shipped.
+  `ScheduleDayView` now wires `Modifier.pointerInput { detectTransformGestures }`
+  on the day-grid Box; the gesture picks the topmost band at the
+  gesture-center Y via `pickBandAtY`, snaps the accumulated scale
+  to the nearest step ∈ {1,2,3,4} via `snapZoomFromScale`, and
+  persists via `CalendarVisibilityPrefs.setZoom(repoId, calendarId,
+  level)` — same surface as the picker's per-row segmented control.
+  `PinchZoomDayGridTest` covers the snap + hit-test math (9 new
+  tests). AVD multi-touch pinch still unverifiable through `adb
+  input`; D.107 in decisions.md is now marked RESOLVED.
 - [ ] **D.6** AVD verify partially covered: `HourHeightForZoomTest` +
   `OverlayPickerScreenTest` exercise the persistence + dp/h mapping;
   on-AVD pinch deferred per D.5.
