@@ -102,7 +102,7 @@ this round.
 
 ## Phases
 
-### Phase A — Data: identity fields on `calendar.toml` (shipped in `<pending>`)
+### Phase A — Data: identity fields on `calendar.toml` (shipped in `aa898db`)
 
 - [x] **A.1** Confirmed `CalendarActivityConfig` round-trips `color_seed` (verified per `resolver/CalendarRegistry.kt:135` + `store/CalendarActivityConfig.kt:28`). `emoji` is read directly in `CalendarRegistry` and was already wired.
 - [x] **A.2** Added `metaGroupField: String?` to `CalendarActivityConfig` (`meta_group_field` on disk). Blank values normalised to `null` on both read + write. 5 new round-trip tests in `CalendarActivityConfigParseTest`.
