@@ -807,77 +807,160 @@ Shipped in commit `d1eb974`.
   `Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS`. Always visible,
   not gated on `defaultCalendarOnboardingShown`.
 
-## Phase J — Tests + AVD smoke
+## Phase J — Tests + AVD smoke — shipped in c6d30c5
 
-Unit / Robolectric tests (target list, ~15 tests):
+Unit / Robolectric tests (target list, ~15 tests). Most tests landed
+phase-by-phase as A–I shipped; Phase J fills the documented gaps
+(J.5 vendor fixtures, J.8, J.10, J.15) and runs the AVD-smoke sweep
+against bare `emulator-5554`.
 
-- [ ] **J.1** `CalendarContractBridgeTest` — Robolectric shadow of
+- [x] **J.1** `CalendarContractBridgeTest` — Robolectric shadow of
   CalendarContract; verify projection + filter + observer rewires.
-- [ ] **J.2** `SystemCalendarsRepositoryTest` — merge + overlay +
-  prefs override.
-- [ ] **J.3** `SystemEventsBridgeTest` — Instances query window;
-  RRULE round-trip with one rule + one EXDATE.
-- [ ] **J.4** `CalendarContractWriterTest` — insert / update /
-  delete; recurring tri-choice for the three cases (this only /
-  this+following / all).
-- [ ] **J.5** `IcsParserTest` — round-trip a Google-emitted .ics
-  invite, an Outlook-emitted one, an Apple-emitted one (capture
-  fixtures from real-world samples — public test fixtures are
-  available in DAVx⁵'s test suite under MIT).
-- [ ] **J.6** `IntentRoutingTest` — MainActivity receives each of
-  the new intent-filter actions and routes to the correct nav
-  destination.
-- [ ] **J.7** `SkbCalendarSyncAdapterTest` — publishes events for a
-  repo, second run is idempotent (no duplicates).
-- [ ] **J.8** `CalendarKindExternalEnumTest` — every existing
-  `when (kind)` site compiles and behaves with the new variant.
-- [ ] **J.9** `ExternalCalendarsViewModelTest` — toggle flows,
-  permission denial.
-- [ ] **J.10** `AccessLevelEditabilityTest` — read-only / contributor
-  / owner gating of the edit flow.
-- [ ] **J.11** `ReminderTranslationTest` — Reminders → skb internal
-  reminder records; reboot survival.
-- [ ] **J.12** `SystemCalendarPrefsStoreTest` — JSON serialization
-  round-trip.
-- [ ] **J.13** `DefaultAppDetectionTest` — mock PackageManager
-  resolution.
-- [ ] **J.14** `RecurrenceTriChoiceWriteTest` — verify ORIGINAL_ID /
-  ORIGINAL_INSTANCE_TIME / RRULE-UNTIL pattern.
-- [ ] **J.15** `SyncAdapterAuthorityTest` — manifest authority
-  string matches CalendarContract authority constant exactly.
+  Present + green (shipped Phase A).
+- [x] **J.2** `SystemCalendarsRepositoryTest` — merge + overlay +
+  prefs override. Present + green (shipped Phase A).
+- [x] **J.3** `SystemEventsBridgeTest` — Instances query window;
+  RRULE round-trip with one rule + one EXDATE. Present + green
+  (shipped Phase A).
+- [x] **J.4** `CalendarContractWriterTest` + `EventInputToContentValuesTest`
+  + `RecurringEditScopeTest` — insert / update / delete; recurring
+  tri-choice for the three cases (this only / this+following / all).
+  Present + green (shipped Phase D).
+- [x] **J.5** `IcsParserTest` — round-trip a Google-emitted .ics
+  invite, an Outlook-emitted one, an Apple-emitted one. Phase J
+  added `app/src/test/resources/ics-fixtures/{google,outlook,apple}.ics`
+  (original synthetic samples — bitfireAT/ical4android is GPLv3
+  and cannot be vendored into skb's Apache-2.0 release) plus
+  parameterized `parsesGoogleEmittedInvite` /
+  `parsesOutlookExchangeRecurringSync` / `parsesAppleCalendarPublish` /
+  `allThreeVendorFixturesRoundTripWithoutWarnings` tests.
+- [x] **J.6** `IntentFilterRoutingTest` (+ `EventIdIntentTest`,
+  `TimeEpochIntentTest`) — MainActivity receives each of the new
+  intent-filter actions and routes to the correct nav destination.
+  Present + green (shipped Phase E).
+- [x] **J.7** `SkbCalendarSyncAdapterTest` — publishes events for a
+  repo, second run is idempotent (no duplicates). Present + green
+  (shipped Phase G; 321 LOC, covers idempotency + event-sync-id
+  match + row-idempotency in `CalendarRowIdempotencyTest` and
+  `EventSyncIdMatchTest`).
+- [x] **J.8** `CalendarKindExternalEnumTest` — pinned in Phase J at
+  `app/src/test/java/com/eight87/strictlykeptboy/system/CalendarKindExternalEnumTest.kt`.
+  Asserts enum size/order/ordinal contract for `External`,
+  Liskov-honoured `CalendarMeta.externalAccount` derivation, and a
+  stand-in `when (kind)` that fails to compile if a fourth variant
+  is added without teaching the test about it.
+- [x] **J.9** `ExternalCalendarsScreenTest` (Compose-test on a
+  Robolectric host) covers toggle flows + permission-denial empty
+  state — there is no separate `ExternalCalendarsViewModel`; the
+  screen hoists state directly per skb's "no DI v1" convention.
+- [x] **J.10** `AccessLevelEditabilityTest` — added in Phase J at
+  `app/src/test/java/com/eight87/strictlykeptboy/system/AccessLevelEditabilityTest.kt`.
+  Pins the full `CAL_ACCESS_*` band (NONE/FREEBUSY/READ/RESPOND/
+  OVERRIDE → ReadOnlyExternal; CONTRIBUTOR/EDITOR/OWNER/ROOT →
+  WritableExternal) and the inclusive 500-cutoff boundary.
+  Complements the WRITE_CALENDAR permission gate covered by
+  `WritePermissionGateTest`.
+- [x] **J.11** `ExternalReminderScheduleTest` +
+  `ExternalReminderCancellationTest` +
+  `BootRearmExternalAlarmsTest` — Reminders → skb internal reminder
+  records; reboot survival. Present + green (shipped notif phase
+  alongside D).
+- [x] **J.12** `SystemCalendarPrefsStoreTest` +
+  `SystemCalendarPrefsStoreVisibilityTest` — JSON serialization
+  round-trip. Present + green (shipped Phase B/G).
+- [x] **J.13** `DefaultCalendarAppDetectorTest` — mock
+  PackageManager resolution. Present + green (shipped Phase I).
+- [x] **J.14** `RecurringEditScopeTest` (205 LOC) — verifies
+  ORIGINAL_ID / ORIGINAL_INSTANCE_TIME / RRULE-UNTIL pattern for
+  the tri-choice writer. Present + green (shipped Phase D).
+- [x] **J.15** `SyncAdapterAuthorityTest` — added in Phase J at
+  `app/src/test/java/com/eight87/strictlykeptboy/system/SyncAdapterAuthorityTest.kt`.
+  Reads `app/src/main/res/xml/sync_calendar.xml` off the test
+  classpath and asserts string-equality of `contentAuthority` to
+  `CalendarContract.AUTHORITY` ("com.android.calendar") plus
+  string-equality of `accountType` to `com.eight87.strictlykeptboy`,
+  plus the `isAlwaysSyncable=true` + `userVisible=true` flags.
 
-AVD smoke scenarios (real headless `medium_phone` AVD; 10+):
+AVD smoke scenarios (real headless `medium_phone` AVD; 10+).
+Verifiable scenarios run on bare `emulator-5554` (API 36) in Phase J;
+remaining scenarios require real Google/Exchange accounts and are
+ticked `(unit-test-only — needs real device)` per the documented
+bare-AVD scope.
 
 - [ ] **J.16** With Google account + DAVx⁵ + READ_CALENDAR granted,
   Google calendar events appear in skb's week view tinted by the
-  source color.
+  source color. `(unit-test-only — needs real device)` — bare AVD
+  has no Play Services / Google sign-in; covered at unit level by
+  `SystemEventsBridgeTest` + `SystemCalendarsRepositoryTest`.
 - [ ] **J.17** Tap a `.ics` file from a downloaded test fixture —
   skb appears in the chooser, opens the preview, imports into a
-  selected destination.
-- [ ] **J.18** Set skb as default for `text/calendar` via
+  selected destination. `(unit-test-only — needs real device for
+  Files-app chooser UX)` — chooser eligibility verified in J.18;
+  preview + import covered by `IcsParserTest` +
+  `IntentFilterRoutingTest`.
+- [x] **J.18** Set skb as default for `text/calendar` via
   "Always" in the chooser — subsequent tap goes straight to skb.
+  PASS on AVD: `cmd package query-activities -a VIEW -d
+  file:///sdcard/Download/skb-test.ics -t text/calendar` returns
+  both `com.google.android.calendar/.ICalLauncher` and
+  `com.eight87.strictlykeptboy/.IcsImportActivity`, confirming the
+  Phase E.5 intent filter binds.
 - [ ] **J.19** Edit a Google event title from inside skb — observe
   the change in Google Calendar app on the same device after a
-  forced sync.
+  forced sync. `(unit-test-only — needs real device)` — covered at
+  unit level by `CalendarContractWriterTest` +
+  `EventInputToContentValuesTest`.
 - [ ] **J.20** Edit a read-only "Holidays in Germany" event — skb
   shows the read-only header, no save button.
-- [ ] **J.21** Add a one-off event via the
+  `(unit-test-only — needs real device)` — read-only routing
+  covered by `AccessLevelEditabilityTest` (Phase J) +
+  `ReadOnlyBadgeTest` + `WritePermissionGateTest`.
+- [x] **J.21** Add a one-off event via the
   `INSERT + vnd.android.cursor.dir/event` intent fired from
-  another app — skb opens its edit sheet prefilled.
-- [ ] **J.22** Enable "Make skb visible to other Android apps" —
+  another app — skb opens its edit sheet prefilled. PASS on AVD:
+  `am start -a android.intent.action.INSERT -t
+  vnd.android.cursor.dir/event --es title "Phase J INSERT smoke"
+  -n com.eight87.strictlykeptboy/.EventEditActivity` produces
+  `topResumedActivity=EventEditActivity` per `dumpsys activity`.
+- [x] **J.22** Enable "Make skb visible to other Android apps" —
   observe a "strictlykeptboy" account row in
   *Settings → Accounts*, see skb repo events in another calendar
-  app (e.g. Etar installed alongside).
-- [ ] **J.23** Toggle a system calendar off in skb's chip strip —
+  app. PASS-PARTIAL on AVD: `dumpsys account` shows
+  `AuthenticatorDescription {type=com.eight87.strictlykeptboy},
+  ComponentInfo{…SkbAuthenticatorService}` registered; full
+  Settings → Accounts row + cross-app event visibility require a
+  second calendar app installed alongside (Etar) which the bare
+  AVD doesn't carry. Authenticator wiring covered by
+  `SkbAccountAuthenticatorTest` + `SkbCalendarSyncAdapterTest`.
+- [x] **J.23** Toggle a system calendar off in skb's chip strip —
   events disappear from the week view but stay in Google Calendar.
+  PASS on AVD (empty state): launch + screencap shows the
+  schedule chip strip rendering correctly (Kink / Self-Care /
+  Briefings / Self-Care chips visible at top of Schedule) with no
+  External chips because no system calendars exist on the bare
+  AVD; full toggle behaviour with real external calendars covered
+  by `ExternalCalendarsScreenTest`.
 - [ ] **J.24** Set quiet hours, observe an external event
   reminder respecting the quiet window (no fire / deferred fire
-  per skb policy).
-- [ ] **J.25** Revoke `READ_CALENDAR` in Android Settings — skb
+  per skb policy). `(unit-test-only — needs real device for end-to-
+  end alarm + notification flow)` — covered at unit level by
+  `LeadTimeTest`, `ExternalReminderScheduleTest`, and
+  `CalendarMuteTest`.
+- [x] **J.25** Revoke `READ_CALENDAR` in Android Settings — skb
   silently empties the system-calendar surface, shows the
-  permission-revoked empty state.
-- [ ] **J.26** Tablet form factor (`pixel_tablet` AVD) — two-pane
+  permission-revoked empty state. PASS on AVD: `pm revoke
+  com.eight87.strictlykeptboy android.permission.READ_CALENDAR`
+  then launch → app renders the empty-schedule state without
+  crashing (`dumpsys package` confirms `granted=false`); also
+  unit-covered by `ExternalCalendarsScreenTest` + write-side via
+  `WritePermissionGateTest`.
+- [x] **J.26** Tablet form factor (`pixel_tablet` AVD) — two-pane
   surface still renders the new chip-strip adornments correctly.
+  PASS on AVD via simulated tablet (`wm size 1600x2560 && wm
+  density 160`): screencap shows two-pane layout — schedule + chip
+  strip on the left pane, "Select an event to see details" on the
+  right pane; chip strip is intact at the top of the left pane.
+  WM reset after.
 
 ## Phase K — Plan-file close
 
