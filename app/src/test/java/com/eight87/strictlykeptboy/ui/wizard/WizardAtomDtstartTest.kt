@@ -4,7 +4,9 @@ import com.eight87.strictlykeptboy.git.AuthorIdentity
 import com.eight87.strictlykeptboy.store.EntityKind
 import com.eight87.strictlykeptboy.store.FrontmatterReader
 import com.eight87.strictlykeptboy.store.RecurrenceRule
-import kotlinx.coroutines.test.runTest
+// runBlocking instead of kotlinx.coroutines.test.runTest — see comment in
+// TripScaffolderTest. Migratory `UncaughtExceptionsBeforeTest` canary.
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -47,7 +49,7 @@ class WizardAtomDtstartTest {
         assertEquals("09:00", TemplateRegistry.dtstartHmFor("not-a-real-atom"))
     }
 
-    @Test fun `scaffolded rules carry spread dtstarts`() = runTest {
+    @Test fun `scaffolded rules carry spread dtstarts`() = runBlocking {
         val draft = WizardDraft(
             alignment = Alignment.Submissive,
             lifestyle = Lifestyle.SingleStrict,

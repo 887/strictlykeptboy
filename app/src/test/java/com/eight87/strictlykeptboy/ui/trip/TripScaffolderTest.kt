@@ -2,7 +2,13 @@ package com.eight87.strictlykeptboy.ui.trip
 
 import com.eight87.strictlykeptboy.git.AuthorIdentity
 import com.eight87.strictlykeptboy.git.GitRepo
-import kotlinx.coroutines.test.runTest
+// runBlocking instead of kotlinx.coroutines.test.runTest: this suite was
+// hitting `UncaughtExceptionsBeforeTest` flakily depending on which prior
+// test classes shared the Gradle JVM worker (a migratory canary — see
+// docs/plans/refactor-solid.md "Migratory runTest canary"). These tests
+// don't need virtual-time control, just suspend support, so runBlocking
+// is the more honest framework here.
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -55,7 +61,7 @@ class TripScaffolderTest {
         return rootDir to repoId
     }
 
-    @Test fun `materialize Sicily flight trip writes prep flight daily and commits`() = runTest {
+    @Test fun `materialize Sicily flight trip writes prep flight daily and commits`() = runBlocking {
         val (rootDir, repoId) = seedEmptyRepo()
         val draft = TripDraft(
             name = "Sicily 2026",
@@ -108,7 +114,7 @@ class TripScaffolderTest {
         assertTrue("UNTIL bounded", firstRuleText.contains("UNTIL=20260619"))
     }
 
-    @Test fun `materialize car trip skips flight events`() = runTest {
+    @Test fun `materialize car trip skips flight events`() = runBlocking {
         val (rootDir, repoId) = seedEmptyRepo()
         val draft = TripDraft(
             name = "Black Forest weekend",
@@ -129,7 +135,7 @@ class TripScaffolderTest {
         assertTrue("prep still materialized for non-flight", outcome.prepEventCount > 0)
     }
 
-    @Test fun `incomplete draft rejected`() = runTest {
+    @Test fun `incomplete draft rejected`() = runBlocking {
         val (rootDir, repoId) = seedEmptyRepo()
         val draft = TripDraft(name = "", startDate = null, endDate = null)
         var threw = false
@@ -147,7 +153,7 @@ class TripScaffolderTest {
         assertTrue("incomplete draft threw", threw)
     }
 
-    @Test fun `includeVacationDaily false skips recurring rule`() = runTest {
+    @Test fun `includeVacationDaily false skips recurring rule`() = runBlocking {
         val (rootDir, repoId) = seedEmptyRepo()
         val draft = TripDraft(
             name = "Quick trip",

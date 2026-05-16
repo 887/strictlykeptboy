@@ -207,7 +207,7 @@ fun List<TaskItem>.forToday(today: LocalDate = LocalDate.now()): List<TaskItem> 
             item.standing && item.pinnedForToday -> true
             item.source == TaskSource.FromEvents -> true
             item.due == today -> true
-            item.isOverdue -> true
+            !item.done && item.due != null && item.due.isBefore(today) -> true
             else -> false
         }
     }
