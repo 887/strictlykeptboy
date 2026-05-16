@@ -443,6 +443,8 @@ W.2 + W.3 shipped in commit `acbebee`; W.1, W.4..W.8 shipped in this Phase W clo
 
 # Round 2 — v1 scope expansion (Phases X–LL)
 
+- Round 2.20 — Rich demo data ([DONE]; `round-2-20-rich-demo.md`) — UK junior-dev kept by AI dom "Boy Keeper", 127 bundled assets, new default first-launch perspective.
+
 After Round 1, the user reviewed scope and directed that the entire
 v2-deferral pile be pulled into v1, plus signed commits demoted from
 required to optional, plus a `skb` CLI promoted to **primary interface

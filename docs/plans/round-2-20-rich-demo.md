@@ -1,5 +1,7 @@
 # Round 2.20 — Rich demo data: a fully-kept life
 
+## Status: ✅ DONE
+
 ## Context
 
 The Round 2.15 demo seeder (`app/src/main/java/com/eight87/strictlykeptboy/demo/DemoRepoSeeder.kt`) wires up six thin per-perspective repos — each a `WizardScaffolder.materialize()` of a `LifestyleCard` preset with identity / mode / one or two starter calendars baked in. That's plenty to demo *the wizard*, but it's not enough to demo *the app*: a new user opening the demo today sees an almost-empty schedule, no overlays interacting, no supersedence, no inverted habits firing, no markdown bodies of any depth, no todolists populated, no AI-dom presence on the timeline. The value-proposition of "AI-keep my whole life" doesn't survive a 30-second tour, because there's no life on screen.
@@ -182,9 +184,14 @@ Bonus (not in original B numbering, kept under B):
 
 ## Phase E — Plan close-out
 
-- [ ] **E.1** Tick every Phase A–D checkbox above as work lands; add jj change ID to each phase header (alphabetic prefix per global CLAUDE.md).
-- [ ] **E.2** Add `## Status: ✅ DONE` at the top of this file once all checkboxes are ticked.
-- [ ] **E.3** Add a one-line entry in `docs/plans/main.md` under Round 2 pointing at this plan and noting the rich-demo repo as the new default first-launch experience.
+- [x] **E.1** Tick every Phase A–D checkbox above as work lands; add git short-SHA to each phase header. (skb is plain git, not jj.)
+- [x] **E.2** Add `## Status: ✅ DONE` at the top of this file once all checkboxes are ticked.
+- [x] **E.3** Add a one-line entry in `docs/plans/main.md` under Round 2 pointing at this plan and noting the rich-demo repo as the new default first-launch experience.
+
+### Known follow-ups (defer to a Round 2.20.1 touch-up or fold into Round 2.15.C demo-chrome scope)
+
+- **owner-activity-log entries all `done = true`**: Tasks view hides them, so the pre-seeded retrospective dom-reply blockquotes don't render in the demo. Either re-author so today's-entry is `done = false` (or add a "show completed" toggle to Todolists).
+- **Rich-demo appears in Settings → Import / export with active Export .ics button**: violates D-2.20.j (demo isolation). Filter `RepoConfig.kind == "demo"` out of the Import/Export pane's repo list.
 
 ## Verification
 
