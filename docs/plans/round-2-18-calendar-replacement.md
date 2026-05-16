@@ -807,7 +807,7 @@ Shipped in commit `d1eb974`.
   `Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS`. Always visible,
   not gated on `defaultCalendarOnboardingShown`.
 
-## Phase J — Tests + AVD smoke — shipped in PHASE_J_SHA
+## Phase J — Tests + AVD smoke — shipped in c6d30c5
 
 Unit / Robolectric tests (target list, ~15 tests). Most tests landed
 phase-by-phase as A–I shipped; Phase J fills the documented gaps
