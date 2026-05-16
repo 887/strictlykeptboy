@@ -1239,6 +1239,19 @@ class MainActivity : ComponentActivity() {
                             demoModePrefs = graph.demoModePrefs,
                             // Round 2.2.D — Settings completion.
                             reposFlow = graph.repoStore.state,
+                            // Round 2.23 Phase E — Reviews live feed.
+                            // Recomputed when the repo list changes; the
+                            // reader walks each repo's reviews/<sha>/
+                            // reviewable_change.md and parses frontmatter.
+                            reviewItemsFlow = kotlinx.coroutines.flow.MutableStateFlow(
+                                run {
+                                    val roots = graph.repoStore.list().map {
+                                        java.io.File(it.rootDir).toPath()
+                                    }
+                                    com.eight87.strictlykeptboy.ui.reviews.ReviewFeedReader
+                                        .scan(roots)
+                                },
+                            ),
                             onOpenRepo = { cfg ->
                                 // Surface per-repo settings via the existing Repos top-destination.
                                 graph.defaultWriteRepoName.value = cfg.displayName

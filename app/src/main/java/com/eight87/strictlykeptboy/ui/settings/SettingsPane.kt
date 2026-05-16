@@ -192,6 +192,13 @@ data class SettingsAccess(
     val onOpenPrivacyPolicy: () -> Unit = {},
     // 2.2.D.2 — Repos as in-pane list.
     val reposFlow: kotlinx.coroutines.flow.StateFlow<List<com.eight87.strictlykeptboy.git.RepoConfig>>? = null,
+    /**
+     * Round 2.23 Phase E (D-2.23.e) — Reviews destination feed. Host
+     * collects review entries via [com.eight87.strictlykeptboy.ui.reviews.ReviewFeedReader]
+     * and exposes them here. `null` ⇒ empty-state fallback (Phase DDD.13
+     * behaviour preserved).
+     */
+    val reviewItemsFlow: kotlinx.coroutines.flow.StateFlow<List<com.eight87.strictlykeptboy.ui.reviews.ReviewEntry>>? = null,
     val onOpenRepo: (com.eight87.strictlykeptboy.git.RepoConfig) -> Unit = {},
     // 2.2.D.6 — Access aggregator.
     val accessAggregator: com.eight87.strictlykeptboy.store.AccessAggregator? = null,

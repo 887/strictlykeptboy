@@ -550,15 +550,18 @@ private fun SkbAppDestinationContent(
             systemCalendarPrefs = settingsAccess.systemCalendarPrefs,
         )
         TopDestination.Reviews -> {
-            // Phase DDD.13 wiring (F45 follow-up). Items list is
-            // empty until the ReviewFeedReader counterpart of
-            // `ReviewFeedWriter` lands; the empty-state card
-            // covers the boy/dom-side messaging meanwhile.
+            // Round 2.23 Phase E (D-2.23.e) — Reviews destination now
+            // renders live items from `ReviewFeedReader` when the host
+            // wires `settingsAccess.reviewItemsFlow`. Falls back to the
+            // Phase DDD.13 empty-state card otherwise.
             val identityState = settingsAccess.identityPrefs
                 ?.state?.collectAsState()?.value
+            val items = settingsAccess.reviewItemsFlow
+                ?.collectAsState()?.value
+                ?: emptyList()
             com.eight87.strictlykeptboy.ui.reviews.ReviewsPane(
                 side = com.eight87.strictlykeptboy.ui.reviews.ReviewsSide.Boy,
-                items = emptyList(),
+                items = items,
                 boyHonorific = identityState?.honorific?.ifBlank { "Sir" } ?: "Sir",
                 boyPraiseTerm = identityState?.praise?.ifBlank { "good boy" } ?: "good boy",
             )
