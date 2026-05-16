@@ -1,0 +1,4 @@
+schema_version = 1
+kind = "schema_meta"
+app_min_version = "0.1.0"
+last_writer = { app = "strictlykeptboy", version = "0.1.0", at = 2026-05-09T08:00:00+01:00 }
