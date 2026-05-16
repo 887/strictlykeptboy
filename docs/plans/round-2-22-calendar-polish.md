@@ -98,7 +98,21 @@ loose threads remain visible-or-tracked:
   `docs/plans/refactor-solid.md` with the landing commit SHA.
 - [x] **A.5** Commit.
 
-### Phase B — DD drag-to-reschedule (core shipped in commit `dbf015e`)
+### Phase B — DD drag-to-reschedule (core shipped in commit `dbf015e`; UI wire follow-up shipped in commit `f7e7000`)
+
+UI wire follow-up (`f7e7000`): `DragRescheduleController` (writer +
+commit dispatch), `DragRescheduleGesture`
+(`Modifier.dragRescheduleBand` + `DragRescheduleUiState` + ghost
+band), `DragRescheduleRecurrencePrompt` (M3 AlertDialog 3-choice),
+wired through `SchedulePane` + `SkbAppShell` to `MainActivity`'s
+`RepoScanner.scanAll`-based source-entity lookup. Tests +5
+(`DragRescheduleControllerTest`, 1099 total). AVD smoke: install +
+launch clean on `emulator-5554`; `adb input swipe` with 1500 ms
+dwell did not fire `detectDragGesturesAfterLongPress` (same harness
+limit as Round 2.21 D.5 / D.6) and no mobile-mcp tools available in
+this environment to verify the gesture path directly. Math + write
+path pinned by tests; gesture path remains AVD-untested.
+
 
 This round ships the **load-bearing pure-math + entity-transform
 core** of drag-to-reschedule, fully test-covered. The Compose
@@ -118,11 +132,13 @@ a Round 2.23 polish slice when on-device verification is in hand.
   `rewriteRuleDtstart` (entire-series), `splitRecurringRule` (this-
   and-future: capped UNTIL + fresh rule). Pure Kotlin, no Compose / no
   IO. Covered by `DragRescheduleTest` (12 tests).
-- [~] **B.2** Long-press + drag gesture wiring on `DayBand` —
-  **deferred** (Compose gesture-coexistence with the existing
-  pinch-zoom transform gesture on the same Box; AVD verification
-  needed). Math layer ready; wiring is glue.
-- [~] **B.3** Week / 3-day view gesture wiring — **deferred** with B.2.
+- [x] **B.2** Long-press + drag gesture wiring on `DayBand` —
+  shipped in commit `f7e7000` via `Modifier.dragRescheduleBand`
+  (per-band `detectDragGesturesAfterLongPress`; parent grid pinch
+  detector preserved). Ghost band renders at snapped target time.
+- [x] **B.3** Week / 3-day view gesture wiring — shipped in commit
+  `f7e7000` (same shared modifier; Week view also hoists
+  `DragRescheduleUiState` at view level).
 - [x] **B.4** Single-instance drop handler — `moveSingleEvent` +
   `commitMessageFor` ready for the caller; Single-instance branch
   covered by `DragRescheduleTest::moveSingleEvent preserves duration`
@@ -135,12 +151,14 @@ a Round 2.23 polish slice when on-device verification is in hand.
   dispatch deferred with B.2.
 - [x] **B.6** Cancelled drag handled by caller (no transform = no
   commit); cancellation is intrinsically out of the math layer.
-- [~] **B.7** AVD smoke — same limit as Round 2.21 D.5 / D.6;
-  deferred.
-- [~] **B.8** `main.md` Phase DD partial-tick: DD.1 / DD.2 /
-  DD.3 / DD.6 remain open; the math core lands as a `partial`
-  marker (`[~]`) with this commit SHA so the next round can wire the
-  UI without rederiving the algorithm.
+- [~] **B.7** AVD smoke — install + launch clean on `emulator-5554`
+  (commit `f7e7000`); gesture-fire via `adb input swipe` still
+  hits the harness limit cited in 2.21 D.5 / D.6, and no
+  mobile-mcp tools were available in this environment to verify the
+  gesture path directly. Genuinely-blocked item: on-device gesture
+  fire.
+- [x] **B.8** `main.md` Phase DD fully ticked in commit `f7e7000`
+  (DD.1 / DD.2 / DD.3 / DD.6 all shipped via the UI wire).
 - [x] **B.9** Commit.
 
 ### Phase C — Phase FF audit + disposition (shipped in commit `8dd7879`)
