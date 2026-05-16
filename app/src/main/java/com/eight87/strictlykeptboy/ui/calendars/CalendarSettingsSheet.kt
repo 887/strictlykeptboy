@@ -1,11 +1,17 @@
 package com.eight87.strictlykeptboy.ui.calendars
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -23,6 +29,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.resolver.CalendarMeta
@@ -35,6 +43,29 @@ const val TestTagCalendarSettingsSheet = "CalendarSettings-Sheet"
 const val TestTagCalendarSettingsSave = "CalendarSettings-Save"
 const val TestTagCalendarSettingsActiveToggle = "CalendarSettings-ActiveToggle"
 const val TestTagCalendarSettingsAddRange = "CalendarSettings-AddRange"
+const val TestTagCalendarSettingsEmoji = "CalendarSettings-Emoji"
+const val TestTagCalendarSettingsHex = "CalendarSettings-Hex"
+const val TestTagCalendarSettingsSwatchPrefix = "CalendarSettings-Swatch-"
+
+/**
+ * Round 2.21.B — 12-swatch palette for the identity editor. Material-
+ * derived hues sized to cover the 11 demo calendars + a spare slot.
+ * Stored on disk as the integer `0xRRGGBB` form via `color_seed`.
+ */
+private val IdentitySwatches: List<Int> = listOf(
+    0xEF5350, // red
+    0xEC407A, // pink
+    0xAB47BC, // purple
+    0x7E57C2, // deep purple
+    0x5C6BC0, // indigo
+    0x42A5F5, // blue
+    0x29B6F6, // light blue
+    0x26C6DA, // cyan
+    0x26A69A, // teal
+    0x66BB6A, // green
+    0xFFA726, // orange
+    0x8D6E63, // brown
+)
 
 /**
  * Round 2.1.B.4 — calendar-level editor.
@@ -76,6 +107,11 @@ private fun Body(
 ) {
     var active by remember { mutableStateOf(calendar.activeToggle) }
     var priority by remember { mutableStateOf(calendar.priority.toString()) }
+    var emoji by remember { mutableStateOf(calendar.emoji ?: "") }
+    var colorSeed by remember { mutableStateOf(calendar.colorSeed) }
+    var hexInput by remember {
+        mutableStateOf(calendar.colorSeed?.let { "%06X".format(it and 0xFFFFFF) } ?: "")
+    }
     var windows by remember {
         mutableStateOf(
             calendar.activeWindows.mapNotNull { r ->
@@ -103,6 +139,56 @@ private fun Body(
     ) {
         Text(calendar.displayName, style = MaterialTheme.typography.titleLarge)
         Text("repo: ${calendar.repo.id}", style = MaterialTheme.typography.labelSmall)
+
+        Text("Identity", style = MaterialTheme.typography.titleSmall)
+        OutlinedTextField(
+            value = emoji,
+            onValueChange = { v -> emoji = firstGraphemeOrEmpty(v) },
+            label = { Text("Emoji") },
+            singleLine = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(TestTagCalendarSettingsEmoji),
+        )
+        Text("Color", style = MaterialTheme.typography.labelMedium)
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            IdentitySwatches.take(6).forEach { rgb ->
+                ColorSwatch(rgb = rgb, selected = colorSeed == rgb, onClick = {
+                    colorSeed = rgb
+                    hexInput = "%06X".format(rgb and 0xFFFFFF)
+                })
+            }
+        }
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            IdentitySwatches.drop(6).forEach { rgb ->
+                ColorSwatch(rgb = rgb, selected = colorSeed == rgb, onClick = {
+                    colorSeed = rgb
+                    hexInput = "%06X".format(rgb and 0xFFFFFF)
+                })
+            }
+        }
+        OutlinedTextField(
+            value = hexInput,
+            onValueChange = { v ->
+                val cleaned = v.trim().removePrefix("#").take(6).uppercase()
+                    .filter { it in '0'..'9' || it in 'A'..'F' }
+                hexInput = cleaned
+                if (cleaned.length == 6) {
+                    colorSeed = cleaned.toInt(16)
+                }
+            },
+            label = { Text("Custom hex (RRGGBB)") },
+            singleLine = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(TestTagCalendarSettingsHex),
+        )
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Active", modifier = Modifier.weight(1f))
@@ -196,6 +282,8 @@ private fun Body(
                             windows = windows,
                             hours = hours,
                             supersedes = supersedes,
+                            emoji = emoji,
+                            colorSeed = colorSeed,
                         ),
                     )
                 },
@@ -216,7 +304,37 @@ data class CalendarSettingsDraft(
     val activeWindows: List<CalendarActivityConfig.DateRange>,
     val activeHours: List<CalendarActivityConfig.HourRange>,
     val supersedes: List<String>,
+    /** Round 2.21.B — single-grapheme emoji; blank ⇒ clear on disk. */
+    val emoji: String? = null,
+    /** Round 2.21.B — 0xRRGGBB int; `null` ⇒ preserve existing. */
+    val colorSeed: Int? = null,
 )
+
+@Composable
+private fun ColorSwatch(rgb: Int, selected: Boolean, onClick: () -> Unit) {
+    val borderColor = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent
+    Box(
+        modifier = Modifier
+            .size(36.dp)
+            .clip(CircleShape)
+            .background(Color(0xFF000000.toInt() or rgb))
+            .border(width = 3.dp, color = borderColor, shape = CircleShape)
+            .clickable(onClick = onClick)
+            .testTag(TestTagCalendarSettingsSwatchPrefix + "%06X".format(rgb and 0xFFFFFF)),
+    )
+}
+
+/**
+ * Validate the user-entered emoji down to its first grapheme cluster.
+ * Empty input yields empty (which the writer interprets as "clear").
+ */
+private fun firstGraphemeOrEmpty(raw: String): String {
+    if (raw.isEmpty()) return ""
+    val it = java.text.BreakIterator.getCharacterInstance()
+    it.setText(raw)
+    val end = it.next()
+    return if (end > 0) raw.substring(0, end) else raw
+}
 
 private fun toDraft(
     calendar: CalendarMeta,
@@ -225,6 +343,8 @@ private fun toDraft(
     windows: List<WindowDraft>,
     hours: List<HourDraft>,
     supersedes: String,
+    emoji: String,
+    colorSeed: Int?,
 ): CalendarSettingsDraft {
     val parsedWindows = windows.mapNotNull { w ->
         val from = runCatching { LocalDate.parse(w.from) }.getOrNull() ?: return@mapNotNull null
@@ -250,6 +370,8 @@ private fun toDraft(
         activeWindows = parsedWindows,
         activeHours = parsedHours,
         supersedes = parsedSupersedes,
+        emoji = emoji.ifBlank { null },
+        colorSeed = colorSeed,
     )
 }
 

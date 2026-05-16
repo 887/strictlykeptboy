@@ -55,14 +55,20 @@ object CalendarSettingsWriter {
             if (draft.supersedes.isNotEmpty()) {
                 table.putStringArray("supersedes", draft.supersedes)
             }
+            // Round 2.21.B — identity (emoji + color). Drop existing
+            // values, rewrite from draft (null emoji ⇒ clear, null
+            // colorSeed ⇒ preserve existing meta.colorSeed).
+            table.scalars.remove("emoji")
+            draft.emoji?.takeIf { it.isNotBlank() }?.let { table.putString("emoji", it) }
             // Activity fields — drop+rewrite.
             table.scalars.remove("color_seed")
             table.aotables.remove("active_windows")
             table.aotables.remove("active_hours")
             CalendarActivityConfig(
-                colorSeed = meta.colorSeed, // preserved; sheet doesn't edit color
+                colorSeed = draft.colorSeed ?: meta.colorSeed,
                 activeWindows = draft.activeWindows,
                 activeHours = draft.activeHours,
+                metaGroupField = meta.metaGroupField,
             ).writeInto(table)
             // Preserve SupersedenceConfig sub-block (baseline-cadence,
             // non-superseable, superseded_during) — only `supersedes`

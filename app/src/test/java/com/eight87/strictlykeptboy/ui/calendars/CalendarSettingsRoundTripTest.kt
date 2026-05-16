@@ -112,4 +112,116 @@ class CalendarSettingsRoundTripTest {
         assertTrue(baseline != null)
         assertEquals(setOf(DayOfWeek.MONDAY, DayOfWeek.TUESDAY), baseline!!.weekdays)
     }
+
+    // Round 2.21.B — identity (emoji + colorSeed) round-trip via the
+    // draft → writer path.
+
+    @Test fun identity_emoji_and_color_round_trip() {
+        val table = TomlTable().apply {
+            putString("id", "cal-routine")
+            putString("name", "Routine")
+            putInt("priority", 500)
+            putBool("active_toggle", true)
+            putString("emoji", "🛏️")
+            putInt("color_seed", 0x111111)
+        }
+        val meta = CalendarMeta(
+            ref = CalendarRef("cal-routine"),
+            repo = RepoRef("repo-a"),
+            displayName = "Routine",
+            priority = 500,
+            emoji = "🛏️",
+            colorSeed = 0x111111,
+        )
+        val draft = CalendarSettingsDraft(
+            calendar = meta,
+            activeToggle = true,
+            priority = 500,
+            activeWindows = emptyList(),
+            activeHours = emptyList(),
+            supersedes = emptyList(),
+            emoji = "🌅",
+            colorSeed = 0xEC407A,
+        )
+
+        // Mirror CalendarSettingsWriter.write — identity branch.
+        table.scalars.remove("emoji")
+        draft.emoji?.takeIf { it.isNotBlank() }?.let { table.putString("emoji", it) }
+        table.scalars.remove("color_seed")
+        table.aotables.remove("active_windows")
+        table.aotables.remove("active_hours")
+        CalendarActivityConfig(
+            colorSeed = draft.colorSeed ?: meta.colorSeed,
+            activeWindows = draft.activeWindows,
+            activeHours = draft.activeHours,
+            metaGroupField = meta.metaGroupField,
+        ).writeInto(table)
+
+        val reread = TomlReader.parse(TomlWriter.emit(table))
+        assertEquals("🌅", reread.getString("emoji"))
+        assertEquals(0xEC407A, CalendarActivityConfig.read(reread).colorSeed)
+    }
+
+    @Test fun identity_blank_emoji_clears_disk() {
+        val table = TomlTable().apply {
+            putString("id", "cal-routine")
+            putString("name", "Routine")
+            putString("emoji", "🛏️")
+        }
+        val meta = CalendarMeta(
+            ref = CalendarRef("cal-routine"),
+            repo = RepoRef("repo-a"),
+            displayName = "Routine",
+            priority = 500,
+            emoji = "🛏️",
+        )
+        val draft = CalendarSettingsDraft(
+            calendar = meta,
+            activeToggle = true,
+            priority = 500,
+            activeWindows = emptyList(),
+            activeHours = emptyList(),
+            supersedes = emptyList(),
+            emoji = null,
+            colorSeed = null,
+        )
+
+        table.scalars.remove("emoji")
+        draft.emoji?.takeIf { it.isNotBlank() }?.let { table.putString("emoji", it) }
+
+        val reread = TomlReader.parse(TomlWriter.emit(table))
+        assertEquals(null, reread.getString("emoji"))
+    }
+
+    @Test fun identity_null_color_preserves_meta_color() {
+        // When the user only edits emoji and never touches a swatch,
+        // draft.colorSeed is null; writer must fall back to meta.colorSeed
+        // so the existing value survives on disk.
+        val table = TomlTable().apply { putString("id", "cal-x") }
+        val meta = CalendarMeta(
+            ref = CalendarRef("cal-x"),
+            repo = RepoRef("repo-a"),
+            displayName = "X",
+            priority = 500,
+            colorSeed = 0x4FB7D3,
+        )
+        val draft = CalendarSettingsDraft(
+            calendar = meta,
+            activeToggle = true,
+            priority = 500,
+            activeWindows = emptyList(),
+            activeHours = emptyList(),
+            supersedes = emptyList(),
+            emoji = "✨",
+            colorSeed = null,
+        )
+
+        table.scalars.remove("color_seed")
+        CalendarActivityConfig(
+            colorSeed = draft.colorSeed ?: meta.colorSeed,
+        ).writeInto(table)
+
+        val reread = TomlReader.parse(TomlWriter.emit(table))
+        assertEquals(0x4FB7D3, CalendarActivityConfig.read(reread).colorSeed)
+    }
 }

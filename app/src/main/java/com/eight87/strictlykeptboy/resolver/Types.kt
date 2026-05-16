@@ -114,6 +114,12 @@ data class CalendarMeta(
      * `calendar.toml`; only its non-emptiness is consulted by v1.
      */
     val metaGroupField: String? = null,
+    /**
+     * Round 2.21.B — single-grapheme emoji used as the overlay's
+     * identity glyph in the picker + day-band chips. Sourced from
+     * `emoji = "..."` at the top level of `calendar.toml`.
+     */
+    val emoji: String? = null,
 ) {
     /**
      * Round 2.18.C — parses the `(accountType, accountName)` tuple

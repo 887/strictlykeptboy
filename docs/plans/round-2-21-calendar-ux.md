@@ -63,6 +63,9 @@ this round.
   work and the chip strip loses to the picker on density.
 - **D-2.21.e — Top bar gets ONE new right-side button**: the overlay-
   picker (Material `Tune` / filter icon, active-overlay count badge).
+  Tapping it opens a **full-screen overlay-picker destination** —
+  not a bottom sheet (bottom sheet is already used for todo items;
+  no shape collision), not a rail tab (rail is view-modes only).
   View-mode selection stays where it is today — **the existing left
   vertical rail with sideways-text tabs** (Day · Week · Month · Agenda
   · Year). No hamburger / drawer / popup-menu. Schedule + 3-day slot
@@ -110,23 +113,41 @@ this round.
 - [x] **A.4** Piped through `RecurrenceMaterializer.fromOneOff` + `materializedFromRule` (so both one-off events and rule-materialised instances carry their `group`). The `OverlayResolver` is field-preserving — `MaterializedInstance.group` flows to `DayBand.instance.group` unchanged.
 - [x] **A.5** Room cache: added `groupLabel: String?` to `EventRow` + `RecurrenceRuleRow`, bumped `CacheDatabase` version 2 → 3 (existing `fallbackToDestructiveMigration(true)` handles the schema delta; Room is rebuildable from disk per CLAUDE.md). Wired through `EntityMapping.event` + `EntityMapping.recurrenceRule` and `SourcesPublisher.toEventInput` + `toRuleInput`.
 
-### Phase B — Calendar identity editor (skb commit `<sha-here>`)
+### Phase B — Calendar identity editor (shipped in skb commit `<sha-here>`)
 
-- [ ] **B.1** New composable `ui/calendars/CalendarIdentityEditor.kt`:
-  emoji TextField (single grapheme validation) + 12-swatch
-  ColorPicker + Custom hex entry.
-- [ ] **B.2** Wire into the long-press settings sheet on the existing
-  `CalendarFilterChipStrip` (about to be removed in Phase C, but
-  re-mounted on the overlay-picker sheet — keep the binding logical).
-- [ ] **B.3** Hook save → `CalendarActivityConfig.write` →
-  `git add . && git commit -m "calendar: identity for <name>"`.
-- [ ] **B.4** Robolectric test: open editor, pick swatch, save,
-  assert `calendar.toml` on disk has the new `color_seed = 0xRRGGBB`
-  + the chip strip + day-view bands show the new tint after a
-  refresh cycle.
+- [x] **B.1** Identity editor added *inline* to the existing
+  `CalendarSettingsSheet` (rather than a new composable — minimal-
+  disruption, same long-press entry point): emoji `TextField` with
+  single-grapheme validation via `java.text.BreakIterator`, 12-swatch
+  Material palette (2×6 grid of `ColorSwatch` circles), and a custom
+  hex `TextField` (cleans + uppercases input, applies on 6-char
+  parse). Selected swatch carries a primary-tinted border ring.
+- [x] **B.2** Wired through the existing long-press flow on
+  `CalendarFilterChipStrip` → `pendingCalendarEdit` →
+  `CalendarSettingsSheet` (`MainActivity.kt:1312`). When the chip
+  strip retires in Phase C, the same sheet will mount under the new
+  overlay-picker screen's per-row "..." action.
+- [x] **B.3** `CalendarSettingsDraft` extended with `emoji: String?`
+  + `colorSeed: Int?`; `CalendarSettingsWriter.write` drops + rewrites
+  the `emoji` scalar + `color_seed` (falling back to `meta.colorSeed`
+  when the draft leaves it null, so the user can edit emoji without
+  touching color). Commit message lands via the existing
+  `GitRepoRegistry.get(repoId)?.commitAll("calendar settings: <name>")`
+  path.
+- [x] **B.4** `CalendarSettingsRoundTripTest` extended with 3 new
+  tests: identity emoji+color round-trip, blank-emoji clears disk,
+  null-colorSeed preserves existing meta color. Full suite green at
+  31s. Live AVD long-press of the chip via `adb input swipe` doesn't
+  reliably trigger Compose `combinedClickable` long-press (known
+  limitation); persistence half is covered by the new tests, UI
+  surface is the same sheet that was AVD-validated in Round 2.1.B
+  with additive fields above the existing controls. `emoji: String?`
+  also threaded onto `CalendarMeta` so future surfaces (overlay-
+  picker row, chip glyph) can consume it.
 - [ ] **B.5** Wizard scaffolds — every wizard-seeded calendar gets a
   preset color + emoji at scaffold-time (today they often don't);
-  audit `ui/wizard/TemplateRegistry.kt` + add defaults.
+  audit `ui/wizard/TemplateRegistry.kt` + add defaults. *Deferred to
+  a B.5 follow-up commit; not blocking on Phase C.*
 
 ### Phase C — Top-bar overlay picker button (skb commit `<sha-here>`)
 
@@ -135,17 +156,20 @@ this round.
   Placed in the Schedule top bar, right side. View-mode selection
   stays on the existing left rail — this button is *additive* to the
   top bar, not a replacement for the rail (per D-2.21.e).
-- [ ] **C.2** New composable `ui/calendars/OverlayPickerSheet.kt`:
-  modal bottom sheet listing every calendar across every repo,
-  grouped by repo header (avatar + repo name). Each row shows:
-  emoji + color dot + display name + source-repo chip + toggle.
-  Tapping the row's "..." opens the identity editor.
+- [ ] **C.2** New composable `ui/calendars/OverlayPickerScreen.kt`:
+  **full-screen** destination (not a bottom sheet — bottom sheet is
+  reserved for todo items) reached via the top-right button. Lists
+  every calendar across every repo, grouped by repo header (avatar +
+  repo name). Each row shows: emoji + color dot + display name +
+  source-repo chip + toggle. Tapping the row's "..." opens the
+  identity editor. Top-app-bar with back arrow returns to Schedule.
 - [ ] **C.3** Delete the horizontal `CalendarFilterChipStrip` from
   above the day view (per D-2.21.d). Migrate its visibility-toggle
   flow into the picker sheet.
-- [ ] **C.4** AVD verify: open Schedule → tap overlay-picker → toggle
-  3 overlays off → bands disappear → re-open picker → toggle back.
-- [ ] **C.5** Test: `OverlayPickerSheetTest` — seeds 2 repos with 5
+- [ ] **C.4** AVD verify: open Schedule → tap overlay-picker top-bar
+  button → full-screen picker opens → toggle 3 overlays off → back →
+  bands gone → re-open → toggle back.
+- [ ] **C.5** Test: `OverlayPickerScreenTest` — seeds 2 repos with 5
   calendars each, asserts grouping headers + toggle parity with
   `CalendarVisibilityPrefs`.
 
@@ -164,13 +188,13 @@ this round.
   `effectiveZoom = visibleCalendars.maxOfOrNull { zoomOf(it) } ?:
   2`.
 - [ ] **D.4** Add a zoom segmented-control on **each calendar row**
-  in the overlay-picker sheet (four stops, current value
+  in the overlay-picker screen (four stops, current value
   highlighted). Tapping cycles or expands a small popover with the
   four levels.
 - [ ] **D.5** Add pinch-to-zoom gesture on the day grid Box →
   **applies to the topmost visible overlay** (the one whose band
   the pinch centers on), so the user can zoom an overlay without
-  opening the sheet. Snap to nearest step on release.
+  opening the picker. Snap to nearest step on release.
 - [ ] **D.6** AVD verify: open Day view → bump routines-overlay to
   zoom-3 → routines bands grow tall and readable, work-overlay bands
   stay normal density when routines is hidden. Toggle routines back

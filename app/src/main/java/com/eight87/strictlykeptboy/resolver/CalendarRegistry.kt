@@ -169,6 +169,7 @@ class CalendarRegistry(
             tzId = parsed.tzId ?: base.tzId,
             colorSeed = parsed.activity.colorSeed ?: base.colorSeed ?: repoColorFallback,
             metaGroupField = parsed.activity.metaGroupField ?: base.metaGroupField,
+            emoji = parsed.emoji ?: base.emoji,
         )
     }
 
