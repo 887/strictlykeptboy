@@ -167,7 +167,7 @@ Bonus (not in original B numbering, kept under B):
 - [x] **C.3** Default the picker selection to `RichDemo` on first launch. Picker is now state-driven with an explicit Confirm button (was tap-to-pick); selection initialises to `DemoPerspectiveChoice.RichDemo`.
 - [x] **C.4** When `RichDemo` is selected, dispatch to `RichDemoSeeder.seedIfNeeded()` instead of `DemoRepoSeeder.seed()`; both writers share the same `RepoStore.add(RepoConfig)` tail in `MainActivity`. New `RichDemoRegistrar.buildConfig(repoRoot)` reads `.strictlykeptboy/repo.toml` (or falls back to filesystem discovery) to derive `repoId` / `defaultCalendarId` / `defaultTodolistId` for the rich-demo repo. `isDemo = true` so demo-mode chrome kicks in.
 
-## Phase D — Tests + AVD smoke
+## Phase D — Tests + AVD smoke — shipped in 5183a5f
 
 - [x] **D.1** `RichDemoSeederIdempotencyTest` — seeds twice into the same tmp dir, asserts second call no-ops, asserts pref flag is set. Covered by `RichDemoSeederTest` (3 cases: first-extract, second-call-no-op, reset-re-enables-reseed) — verified Phase D pass.
 - [x] **D.2** `RichDemoSeederSymlinkTest` — asserts `CLAUDE.md` is a symlink to `AGENTS.md` after extraction (round-trips per CLAUDE.md's symlink-correctness rule). Already shipped Phase B — verified.
