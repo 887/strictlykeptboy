@@ -39,12 +39,24 @@ import kotlinx.serialization.json.jsonPrimitive
  */
 enum class ListKind { Calendars, Todolists }
 
+/** Round 2.21 Phase D.2 — per-overlay zoom range (also re-exposed on the companion). */
+internal const val ZOOM_MIN = 1
+internal const val ZOOM_MAX = 4
+internal const val ZOOM_DEFAULT = 2
+
 @Serializable
 data class VisibilityEntry(
     val id: String,
     val label: String,
     val visible: Boolean = true,
     val repoId: String = "",
+    /**
+     * Round 2.21 Phase D.2 — per-overlay zoom level ∈ {1,2,3,4}.
+     * Default 2 ≈ 80dp/h. The effective day-view grid zoom is the
+     * max across all visible overlays so the densest overlay's
+     * readability wins (D-2.21.g).
+     */
+    val zoom: Int = ZOOM_DEFAULT,
 )
 
 @Serializable
@@ -81,6 +93,32 @@ class CalendarVisibilityPrefs internal constructor(
             cur[idx] = cur[idx].copy(visible = visible)
         }
         setEntries(cur)
+    }
+
+    /**
+     * Round 2.21 Phase D.2 — set per-overlay zoom. Clamps to `1..4` and
+     * synthesizes an entry (default visible) if the calendar hasn't been
+     * touched before.
+     */
+    fun setZoom(id: String, zoom: Int, repoId: String = "") {
+        val clamped = zoom.coerceIn(ZOOM_MIN, ZOOM_MAX)
+        val cur = _state.value.ordered.toMutableList()
+        val idx = matchIndex(cur, id, repoId)
+        if (idx < 0) {
+            cur.add(
+                VisibilityEntry(id = id, label = id, visible = true, repoId = repoId, zoom = clamped),
+            )
+        } else {
+            cur[idx] = cur[idx].copy(zoom = clamped)
+        }
+        setEntries(cur)
+    }
+
+    /** Round 2.21 Phase D.2 — per-overlay zoom lookup; default [ZOOM_DEFAULT]. */
+    fun zoomOf(id: String, repoId: String = ""): Int {
+        val cur = _state.value.ordered
+        val idx = matchIndex(cur, id, repoId)
+        return if (idx < 0) ZOOM_DEFAULT else cur[idx].zoom.coerceIn(ZOOM_MIN, ZOOM_MAX)
     }
 
     /** Lookup-only — returns `true` (default visible) when not in the store. */
@@ -130,11 +168,14 @@ class CalendarVisibilityPrefs internal constructor(
             val root = json.parseToJsonElement(raw).jsonObject
             val ordered = root["ordered"]?.jsonArray.orEmpty().map { el ->
                 val obj = el.jsonObject
+                val rawZoom = obj["zoom"]?.jsonPrimitive?.contentOrNull?.toIntOrNull()
+                    ?: ZOOM_DEFAULT
                 VisibilityEntry(
                     id = obj["id"]?.jsonPrimitive?.contentOrNull.orEmpty(),
                     label = obj["label"]?.jsonPrimitive?.contentOrNull.orEmpty(),
                     visible = obj["visible"]?.jsonPrimitive?.boolean ?: true,
                     repoId = obj["repoId"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                    zoom = rawZoom.coerceIn(ZOOM_MIN, ZOOM_MAX),
                 )
             }
             VisibilityState(ordered)
@@ -142,6 +183,10 @@ class CalendarVisibilityPrefs internal constructor(
     }
 
     companion object {
+        /** Round 2.21 Phase D.2 — zoom range re-exposed for public callers. */
+        const val ZOOM_MIN = com.eight87.strictlykeptboy.ui.settings.ZOOM_MIN
+        const val ZOOM_MAX = com.eight87.strictlykeptboy.ui.settings.ZOOM_MAX
+        const val ZOOM_DEFAULT = com.eight87.strictlykeptboy.ui.settings.ZOOM_DEFAULT
         private const val PREFS_FILE = "list_visibility_v1"
         private val DefaultJson = Json {
             ignoreUnknownKeys = true

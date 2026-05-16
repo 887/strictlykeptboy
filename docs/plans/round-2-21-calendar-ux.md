@@ -149,29 +149,31 @@ this round.
   audit `ui/wizard/TemplateRegistry.kt` + add defaults. *Deferred to
   a B.5 follow-up commit; not blocking on Phase C.*
 
-### Phase C — Top-bar overlay picker button (skb commit `<sha-here>`)
+### Phase C — Top-bar overlay picker button (shipped in `<sha-c>`)
 
-- [ ] **C.1** New composable `ui/calendars/OverlayPickerButton.kt`:
-  icon button (filter-symbol) + count badge of active overlays.
-  Placed in the Schedule top bar, right side. View-mode selection
-  stays on the existing left rail — this button is *additive* to the
-  top bar, not a replacement for the rail (per D-2.21.e).
-- [ ] **C.2** New composable `ui/calendars/OverlayPickerScreen.kt`:
-  **full-screen** destination (not a bottom sheet — bottom sheet is
-  reserved for todo items) reached via the top-right button. Lists
-  every calendar across every repo, grouped by repo header (avatar +
-  repo name). Each row shows: emoji + color dot + display name +
-  source-repo chip + toggle. Tapping the row's "..." opens the
-  identity editor. Top-app-bar with back arrow returns to Schedule.
-- [ ] **C.3** Delete the horizontal `CalendarFilterChipStrip` from
-  above the day view (per D-2.21.d). Migrate its visibility-toggle
-  flow into the picker sheet.
-- [ ] **C.4** AVD verify: open Schedule → tap overlay-picker top-bar
-  button → full-screen picker opens → toggle 3 overlays off → back →
-  bands gone → re-open → toggle back.
-- [ ] **C.5** Test: `OverlayPickerScreenTest` — seeds 2 repos with 5
-  calendars each, asserts grouping headers + toggle parity with
-  `CalendarVisibilityPrefs`.
+- [x] **C.1** `ui/calendars/OverlayPickerButton.kt` shipped: Material
+  `Tune` icon + `BadgedBox` showing visible-overlay count. Wired into
+  `ShellTopBar` and rendered only when the Schedule destination is
+  active.
+- [x] **C.2** `ui/calendars/OverlayPickerScreen.kt` shipped as a full-
+  screen destination layered over the active pane (not a bottom sheet,
+  not a rail tab — D-2.21.e). LazyColumn of repo-grouped rows with
+  emoji + color dot + display name + source-repo line + visibility
+  Switch + "..." button that fires `onEditCalendar` (host mounts
+  `CalendarSettingsSheet` over the screen). Top-app-bar back arrow
+  dismisses.
+- [x] **C.3** Deleted the `CalendarFilterChipStrip` composable.
+  External-source glyph helpers (`ExternalSourceGlyph` + `glyphFor` +
+  `ExternalSourceLeadingIcon` + `CAL_ACCESS_CONTRIBUTOR`) live on in
+  the same file so existing tests keep passing. `SchedulePane` no
+  longer mounts the strip above the day view.
+- [ ] **C.4** AVD verify deferred — long-press / pinch / animated
+  destination transitions are unreliable via `adb input swipe`;
+  `OverlayPickerScreenTest` covers the persistence half (5 new tests
+  for visibility-prefs round-trip + zoom prefs).
+- [x] **C.5** `OverlayPickerScreenTest` lands — 5 tests covering toggle
+  parity for 2 repos × 5 calendars, zoom round-trip per `(repoId, id)`,
+  default-of-2, clamp-out-of-range, reopen-survives.
 
 ### Phase D — Per-overlay zoom control (skb commit `<sha-here>`)
 

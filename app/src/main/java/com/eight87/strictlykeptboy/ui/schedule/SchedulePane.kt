@@ -24,7 +24,6 @@ import com.eight87.strictlykeptboy.ui.adaptive.LocalWindowWidthSizeClass
 import com.eight87.strictlykeptboy.ui.adaptive.MasterDetailLayout
 import com.eight87.strictlykeptboy.ui.adaptive.WindowWidthSizeClass
 import com.eight87.strictlykeptboy.ui.adaptive.isTwoPane
-import com.eight87.strictlykeptboy.ui.calendars.CalendarFilterChipStrip
 import com.eight87.strictlykeptboy.ui.scaffold.ScheduleViewTab
 import com.eight87.strictlykeptboy.ui.settings.CalendarVisibilityPrefs
 import java.time.DayOfWeek
@@ -92,13 +91,11 @@ fun SchedulePane(
                 widthClass = widthClass,
                 master = {
                     Column(modifier = Modifier.testTag(TestTagScheduleMasterPane)) {
-                        if (calendarVisibility != null && state.calendarsFlow != null) {
-                            CalendarFilterChipStrip(
-                                calendarsFlow = state.calendarsFlow!!,
-                                visibilityPrefs = calendarVisibility,
-                                onLongPressCalendar = onLongPressCalendar ?: {},
-                            )
-                        }
+                        // Round 2.21 Phase C.3 — chip strip removed (D-2.21.d);
+                        // overlay management lives in OverlayPickerScreen reached
+                        // via the new top-bar button.
+                        @Suppress("UNUSED_EXPRESSION") calendarVisibility
+                        @Suppress("UNUSED_EXPRESSION") onLongPressCalendar
                         ScheduleMasterContent(
                             activeRepoName = activeRepoName,
                             state = state,
@@ -119,13 +116,9 @@ fun SchedulePane(
             )
         } else {
             Column(modifier = Modifier.fillMaxSize().testTag(TestTagScheduleMasterPane)) {
-                if (calendarVisibility != null && state.calendarsFlow != null) {
-                    CalendarFilterChipStrip(
-                        calendarsFlow = state.calendarsFlow!!,
-                        visibilityPrefs = calendarVisibility,
-                        onLongPressCalendar = onLongPressCalendar ?: {},
-                    )
-                }
+                // Round 2.21 Phase C.3 — chip strip removed (D-2.21.d).
+                @Suppress("UNUSED_EXPRESSION") calendarVisibility
+                @Suppress("UNUSED_EXPRESSION") onLongPressCalendar
                 ScheduleMasterContent(
                     activeRepoName = activeRepoName,
                     state = state,

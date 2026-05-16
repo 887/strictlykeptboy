@@ -383,6 +383,10 @@ private fun SkbAppShellContent(
         color = MaterialTheme.colorScheme.background,
         modifier = Modifier.fillMaxSize().testTag(TestTagAppShell),
     ) {
+        // Round 2.21 Phase C — overlay picker overlay state. When true, the
+        // full-screen [OverlayPickerScreen] sits on top of whatever the
+        // active destination is (back navigates to it).
+        var overlayPickerOpen by rememberSaveable { mutableStateOf(false) }
         Column(modifier = Modifier.fillMaxSize()) {
             ShellTopBar(
                 activeRepoName = activeRepoName,
@@ -399,6 +403,12 @@ private fun SkbAppShellContent(
                 onRepoSwitcherClick = { selected = TopDestination.Repos },
                 onSettingsTap = { selected = TopDestination.Settings },
                 modePrefs = settingsAccess.modePrefs,
+                // Round 2.21 Phase C.1 — overlay-picker icon, only shown on
+                // the Schedule destination + only when wiring is present.
+                overlayPickerCalendars =
+                    if (selected == TopDestination.Schedule) scheduleState.calendarsFlow else null,
+                overlayPickerPrefs = calendarVisibility,
+                onOverlayPickerClick = { overlayPickerOpen = true },
             )
             Row(modifier = Modifier.fillMaxSize()) {
                 // Left rail only renders when the destination has view-mode
@@ -514,6 +524,19 @@ private fun SkbAppShellContent(
                             )
                         }
                     }
+                    // Round 2.21 Phase C.2 — full-screen overlay picker.
+                    // Mounted above the active pane; back navigates to it.
+                    val calsFlow = scheduleState.calendarsFlow
+                    if (overlayPickerOpen && calendarVisibility != null && calsFlow != null) {
+                        com.eight87.strictlykeptboy.ui.calendars.OverlayPickerScreen(
+                            calendarsFlow = calsFlow,
+                            visibilityPrefs = calendarVisibility,
+                            onBack = { overlayPickerOpen = false },
+                            onEditCalendar = { meta ->
+                                onLongPressCalendar?.invoke(meta)
+                            },
+                        )
+                    }
                 }
             }
         }
@@ -539,6 +562,16 @@ private fun ShellTopBar(
      */
     onSettingsTap: () -> Unit,
     modePrefs: com.eight87.strictlykeptboy.ui.settings.ModePrefs? = null,
+    /**
+     * Round 2.21 Phase C.1 — when non-null + prefs non-null, the
+     * overlay-picker icon button renders just before the settings cog.
+     * Host opens [com.eight87.strictlykeptboy.ui.calendars.OverlayPickerScreen]
+     * on tap.
+     */
+    overlayPickerCalendars:
+        StateFlow<List<com.eight87.strictlykeptboy.resolver.CalendarMeta>>? = null,
+    overlayPickerPrefs: com.eight87.strictlykeptboy.ui.settings.CalendarVisibilityPrefs? = null,
+    onOverlayPickerClick: () -> Unit = {},
 ) {
     // enableEdgeToEdge() is on in MainActivity — content draws under the
     // status bar by default. Push the top-bar Surface down past the system
@@ -586,6 +619,15 @@ private fun ShellTopBar(
                     dest = dest,
                     selected = dest == selectedDest,
                     onClick = { onSelectDest(dest) },
+                )
+            }
+            // Round 2.21 Phase C.1 — overlay-picker icon (only when the
+            // Schedule destination is active + wiring is present).
+            if (overlayPickerCalendars != null && overlayPickerPrefs != null) {
+                com.eight87.strictlykeptboy.ui.calendars.OverlayPickerButton(
+                    calendarsFlow = overlayPickerCalendars,
+                    visibilityPrefs = overlayPickerPrefs,
+                    onClick = onOverlayPickerClick,
                 )
             }
             // Round 2.16.F — global app-settings cog, immediately before
