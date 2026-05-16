@@ -243,7 +243,14 @@ private fun ScheduleMasterContent(
         calendars.associate { it.ref to !it.metaGroupField.isNullOrBlank() }
     }
     val effectiveZoom = remember(calendars, visState) {
-        if (calendarVisibility == null || calendars.isEmpty()) {
+        // Round 2.23 Phase C (D-2.23.a) — global override wins when set.
+        val override = visState.globalZoomOverride
+        if (override != null) {
+            override.coerceIn(
+                com.eight87.strictlykeptboy.ui.settings.ZOOM_MIN,
+                com.eight87.strictlykeptboy.ui.settings.ZOOM_MAX,
+            )
+        } else if (calendarVisibility == null || calendars.isEmpty()) {
             com.eight87.strictlykeptboy.ui.settings.ZOOM_DEFAULT
         } else {
             val hiddenKeys = visState.ordered
@@ -278,15 +285,30 @@ private fun ScheduleMasterContent(
                 onBandTap = onBandTap,
             )
             // Round 2.21 Phase E.3 — 3-day timeline anchored at `date`.
-            ScheduleViewTab.ThreeDay -> ScheduleThreeDayView(
-                anchor = date,
-                schedule = rendered,
-                modifier = Modifier.fillMaxSize(),
-                onBandTap = onBandTap,
-                effectiveZoom = effectiveZoom,
-                onDragReschedule = onDragReschedule,
-            )
-            ScheduleViewTab.Day -> ScheduleDayView(
+            ScheduleViewTab.ThreeDay -> Column(modifier = Modifier.fillMaxSize()) {
+                if (calendarVisibility != null) {
+                    ZoomLevelRow(
+                        selectedOverride = visState.globalZoomOverride,
+                        onSelect = { calendarVisibility.setGlobalZoomOverride(it) },
+                    )
+                }
+                ScheduleThreeDayView(
+                    anchor = date,
+                    schedule = rendered,
+                    modifier = Modifier.fillMaxSize(),
+                    onBandTap = onBandTap,
+                    effectiveZoom = effectiveZoom,
+                    onDragReschedule = onDragReschedule,
+                )
+            }
+            ScheduleViewTab.Day -> Column(modifier = Modifier.fillMaxSize()) {
+                if (calendarVisibility != null) {
+                    ZoomLevelRow(
+                        selectedOverride = visState.globalZoomOverride,
+                        onSelect = { calendarVisibility.setGlobalZoomOverride(it) },
+                    )
+                }
+                ScheduleDayView(
                 date = date,
                 schedule = rendered,
                 modifier = Modifier.fillMaxSize(),
@@ -308,7 +330,8 @@ private fun ScheduleMasterContent(
                         ?: effectiveZoom
                 },
                 onDragReschedule = onDragReschedule,
-            )
+                )
+            }
             ScheduleViewTab.Week -> {
                 val weekStart = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
                 ScheduleWeekView(

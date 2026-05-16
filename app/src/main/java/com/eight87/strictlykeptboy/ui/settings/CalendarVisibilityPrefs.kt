@@ -62,6 +62,13 @@ data class VisibilityEntry(
 @Serializable
 data class VisibilityState(
     val ordered: List<VisibilityEntry> = emptyList(),
+    /**
+     * Round 2.23 Phase C (D-2.23.a) — global zoom override for the Day /
+     * 3-day timeline. `null` ⇒ legacy max-of-visible-overlays behaviour
+     * (per D-2.21.g); explicit Int ∈ {1..4} forces that zoom regardless
+     * of which overlays are visible. Wired by `ZoomLevelRow`.
+     */
+    val globalZoomOverride: Int? = null,
 )
 
 class CalendarVisibilityPrefs internal constructor(
@@ -74,10 +81,25 @@ class CalendarVisibilityPrefs internal constructor(
     val state: StateFlow<VisibilityState> = _state.asStateFlow()
 
     fun setEntries(entries: List<VisibilityEntry>) {
-        val v = VisibilityState(entries)
+        val v = _state.value.copy(ordered = entries)
         prefs.edit().putString(key, json.encodeToString(v)).apply()
         _state.value = v
     }
+
+    /**
+     * Round 2.23 Phase C (D-2.23.a) — set the global zoom override. Pass
+     * `null` to revert to max-of-visible-overlays (auto). Int values clamp
+     * to [ZOOM_MIN..ZOOM_MAX].
+     */
+    fun setGlobalZoomOverride(override: Int?) {
+        val clamped = override?.coerceIn(ZOOM_MIN, ZOOM_MAX)
+        val v = _state.value.copy(globalZoomOverride = clamped)
+        prefs.edit().putString(key, json.encodeToString(v)).apply()
+        _state.value = v
+    }
+
+    /** Round 2.23 Phase C — current global zoom override, or null. */
+    fun globalZoomOverride(): Int? = _state.value.globalZoomOverride
 
     /**
      * Toggle visibility for an entry matched by (id, repoId). Legacy
@@ -178,7 +200,9 @@ class CalendarVisibilityPrefs internal constructor(
                     zoom = rawZoom.coerceIn(ZOOM_MIN, ZOOM_MAX),
                 )
             }
-            VisibilityState(ordered)
+            val overrideRaw = root["globalZoomOverride"]?.jsonPrimitive?.contentOrNull
+            val override = overrideRaw?.toIntOrNull()?.coerceIn(ZOOM_MIN, ZOOM_MAX)
+            VisibilityState(ordered, override)
         }.getOrDefault(VisibilityState())
     }
 
