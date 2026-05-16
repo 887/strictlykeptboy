@@ -284,6 +284,14 @@ private fun SkbAppShellContent(
 
     val scheduleTab by scheduleState.selectedTab.collectAsState()
 
+    // Round 2.23.1 / D.118 — Reviews destination filter state, hoisted
+    // here so the left rail (built below) and `ReviewsPane` (rendered
+    // by `SkbAppDestinationContent`) share a single source of truth.
+    // Default `All` matches the previous in-pane default.
+    var reviewsFilter by rememberSaveable {
+        mutableStateOf(com.eight87.strictlykeptboy.ui.reviews.ReviewsFilter.All)
+    }
+
     // Per-destination rail item set. Each entry maps to either a pane's
     // existing tab enum (Schedule, Tasks) or stays empty (Repos /
     // Together / Wizard / Settings — Settings owns its own master-detail
@@ -300,10 +308,17 @@ private fun SkbAppShellContent(
                 },
             )
         }
+        TopDestination.Reviews -> com.eight87.strictlykeptboy.ui.reviews.ReviewsFilter.entries.map { f ->
+            RailItem(
+                key = f.name,
+                labelRes = com.eight87.strictlykeptboy.ui.reviews.reviewsFilterLabelRes(f),
+                selected = f == reviewsFilter,
+                onClick = { reviewsFilter = f },
+            )
+        }
         TopDestination.Together,
         TopDestination.Repos,
         TopDestination.Wizard,
-        TopDestination.Reviews,
         TopDestination.Settings -> emptyList()
     }
 
@@ -381,6 +396,7 @@ private fun SkbAppShellContent(
                     modifier = Modifier.fillMaxSize().testTag(TestTagShellContent),
                 ) {
                     SkbAppDestinationContent(
+                        reviewsFilter = reviewsFilter,
                         selected = selected,
                         activeRepoName = activeRepoName,
                         scheduleState = scheduleState,
@@ -460,6 +476,8 @@ private fun SkbAppShellContent(
  */
 @Composable
 private fun SkbAppDestinationContent(
+    reviewsFilter: com.eight87.strictlykeptboy.ui.reviews.ReviewsFilter =
+        com.eight87.strictlykeptboy.ui.reviews.ReviewsFilter.All,
     selected: TopDestination,
     activeRepoName: String,
     scheduleState: ScheduleViewState,
@@ -564,6 +582,7 @@ private fun SkbAppDestinationContent(
                 items = items,
                 boyHonorific = identityState?.honorific?.ifBlank { "Sir" } ?: "Sir",
                 boyPraiseTerm = identityState?.praise?.ifBlank { "good boy" } ?: "good boy",
+                filter = reviewsFilter,
             )
         }
         TopDestination.Settings -> SettingsPane(

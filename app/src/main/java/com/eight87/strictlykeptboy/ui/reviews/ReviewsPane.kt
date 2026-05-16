@@ -14,6 +14,8 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.annotation.StringRes
+import com.eight87.strictlykeptboy.R
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -53,6 +55,22 @@ const val TestTagReviewSubmit = "ReviewSubmit"
 enum class ReviewsSide { Dom, Boy }
 enum class ReviewsFilter { All, Unread, ReactionsOnly, Threaded }
 
+/**
+ * Round 2.23.1 / D.118 — labelRes resolver for the vertical left rail.
+ *
+ * The shell uses this to build the `RailItem` list for the Reviews
+ * destination (mirrors `scheduleTabLabelRes` for Schedule). Kept in
+ * the `reviews` package so the enum and its labels evolve together
+ * (SOLID-S — single reason to change).
+ */
+@StringRes
+fun reviewsFilterLabelRes(filter: ReviewsFilter): Int = when (filter) {
+    ReviewsFilter.All -> R.string.reviews_filter_all
+    ReviewsFilter.Unread -> R.string.reviews_filter_unread
+    ReviewsFilter.ReactionsOnly -> R.string.reviews_filter_reactions
+    ReviewsFilter.Threaded -> R.string.reviews_filter_threaded
+}
+
 data class ReviewEntry(
     val commitSha: String,
     val author: String,
@@ -70,16 +88,23 @@ data class RenderedResponse(
     val cuteCodedLgtm: Boolean,
 )
 
+/**
+ * Round 2.23.1 / D.118 — `filter` is hoisted. The shell owns the
+ * filter state and renders the filter picker as vertical rail items
+ * (matching Schedule / Tasks) — this pane no longer draws horizontal
+ * `FilterChip`s at the top. Tests / call-sites that don't pass a
+ * filter get `All` (full list).
+ */
 @Composable
 fun ReviewsPane(
     side: ReviewsSide,
     items: List<ReviewEntry>,
     boyHonorific: String = "Sir",
     boyPraiseTerm: String = "good boy",
+    filter: ReviewsFilter = ReviewsFilter.All,
     onSubmitResponse: (commitSha: String, reactions: List<String>, body: String) -> Unit = { _, _, _ -> },
     modifier: Modifier = Modifier,
 ) {
-    var filter by remember { mutableStateOf(ReviewsFilter.All) }
     val filtered = remember(items, filter) {
         when (filter) {
             ReviewsFilter.All -> items
@@ -92,16 +117,6 @@ fun ReviewsPane(
     Column(
         modifier = modifier.fillMaxSize().padding(12.dp).testTag(TestTagReviewsPane),
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            ReviewsFilter.entries.forEach { f ->
-                FilterChip(
-                    selected = f == filter,
-                    onClick = { filter = f },
-                    label = { Text(f.name) },
-                )
-            }
-        }
-        Spacer(Modifier.height(8.dp))
         if (filtered.isEmpty()) {
             Card(
                 Modifier

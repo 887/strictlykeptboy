@@ -745,6 +745,12 @@
     <string name="schedule_view_tab_agenda">Agenda</string>
     <string name="schedule_view_tab_year">Year</string>
 
+    <!-- ReviewsFilter labels (D.118 — vertical rail across destinations). -->
+    <string name="reviews_filter_all">All</string>
+    <string name="reviews_filter_unread">Unread</string>
+    <string name="reviews_filter_reactions">Reactions</string>
+    <string name="reviews_filter_threaded">Threaded</string>
+
     <!-- TaskViewTab labels. -->
     <string name="task_view_tab_combined">Combined</string>
     <string name="task_view_tab_today">Today</string>

@@ -2315,3 +2315,29 @@ We deliberately read from `reviews/` (not `feedback/`, despite the
 task brief): the on-disk schema is `reviews/<sha>/reviewable_change.md`
 and the cross-references in the Phase YY draft + DM-Z.3 use that path;
 honouring the actual schema avoids creating a second source of truth.
+
+## D.118 — Vertical left rail is universal across content destinations (Round 2.23.1)
+
+The `RailColumn` + `RailItem` pattern in `ui/scaffold/SkbScheduleRail.kt`
+(rotated-text 52dp-wide sideways tabs, accent stripe on selection,
+tonearmboy `LibraryRail` parity) is the **only** view-mode switcher
+allowed inside content destinations. No `TabRow` / `ScrollableTabRow`
+inside Schedule, Tasks, or Reviews panes. Reviews used to render
+horizontal `FilterChip`s at the top of its pane (Phase DDD.13) — Round
+2.23.1 removes that and hoists the `ReviewsFilter` state into
+`SkbAppShell`, where it builds rail items via `reviewsFilterLabelRes`
+exactly the way Schedule builds them via `scheduleTabLabelRes`.
+
+Rationale: consistency + the established sideways-text rail vocabulary
+the user already reads on every other destination. A horizontal tab
+row inside a pane while a vertical rail is rendered alongside it is
+two switchers for one decision — the established pattern wins.
+
+Scope: applies to *view-mode-style* switchers (the same kind that lives
+on the rail today). It does NOT outlaw filter chips that are part of
+domain content (e.g. event-form category chips, calendar overlay
+chips) — those aren't navigation, they're inline form controls.
+
+`SettingsPane` keeps its master-detail category list (settings owns
+its own internal navigation, and the shell-rail is empty on that
+destination by design).
