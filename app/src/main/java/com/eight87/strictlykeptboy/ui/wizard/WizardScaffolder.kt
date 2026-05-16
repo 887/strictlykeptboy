@@ -137,6 +137,11 @@ object WizardScaffolder {
                 putString("role", role.id)
                 putInt("priority", role.priority)
                 putString("emoji", role.emoji)
+                // Round 2.21.B.5 — every wizard-seeded calendar lands with
+                // a color_seed from the locked role→swatch map so the
+                // overlay-picker dot, chip, and per-band tint all render
+                // from first paint. Users override via the identity editor.
+                putInt("color_seed", role.colorSeed)
                 putString("tz_id", tzId)
                 if (role == RoleId.Kink) putStringArray("tags", listOf("kink"))
             }

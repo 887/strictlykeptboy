@@ -103,4 +103,52 @@ class WizardScaffolderTest {
         assertTrue("alt_terms array present", idToml.contains("alt_terms"))
         assertTrue("alternate term present", idToml.contains("sweet thing"))
     }
+
+    @Test fun `wizard-scaffolded calendars carry preset emoji and color_seed`() = runTest {
+        // Round 2.21.B.5 — every wizard-seeded calendar must land with
+        // non-null emoji + color_seed on disk so downstream surfaces
+        // (overlay picker rows, chip glyph, band tint) render from the
+        // first paint without a user edit.
+        val rolesUnderTest = setOf(
+            RoleId.SelfCare, RoleId.Workout, RoleId.Work,
+            RoleId.Social, RoleId.Kink,
+        )
+        val draft = WizardDraft(
+            alignment = Alignment.Submissive,
+            lifestyle = Lifestyle.SingleStrict,
+            roles = rolesUnderTest,
+            displayName = "color-seed-roundtrip",
+        ).normalize()
+        val outcome = WizardScaffolder.materialize(
+            parentDir = tmp.newFolder("parent-colors"),
+            draft = draft,
+            author = AuthorIdentity("tester", "tester@example.com"),
+        )
+        val root = outcome.rootDir.toPath()
+        for ((role, calId) in outcome.calendarIds) {
+            val toml = String(
+                Files.readAllBytes(root.resolve("calendars/$calId/calendar.toml")),
+                Charsets.UTF_8,
+            )
+            assertTrue(
+                "${role.id} calendar.toml must contain emoji = \"${role.emoji}\"",
+                toml.contains("emoji = \"${role.emoji}\""),
+            )
+            // color_seed is a TOML int — accept either 0xRRGGBB hex form or
+            // decimal, both round-trip through TomlReader.
+            val decimal = role.colorSeed.toString()
+            val hex = "0x%06X".format(role.colorSeed)
+            assertTrue(
+                "${role.id} calendar.toml must contain color_seed ($decimal or $hex)",
+                toml.contains("color_seed = $decimal") ||
+                    toml.contains("color_seed = $hex"),
+            )
+            // Sibling codec round-trip — CalendarActivityConfig.readFrom
+            // should resolve the same int back from disk.
+            val cfg = com.eight87.strictlykeptboy.store.CalendarActivityConfig.readFrom(
+                root.resolve("calendars/$calId/calendar.toml"),
+            )
+            assertEquals(role.colorSeed, cfg.colorSeed)
+        }
+    }
 }

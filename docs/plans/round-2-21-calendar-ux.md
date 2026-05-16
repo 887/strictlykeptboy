@@ -144,10 +144,15 @@ this round.
   with additive fields above the existing controls. `emoji: String?`
   also threaded onto `CalendarMeta` so future surfaces (overlay-
   picker row, chip glyph) can consume it.
-- [ ] **B.5** Wizard scaffolds — every wizard-seeded calendar gets a
-  preset color + emoji at scaffold-time (today they often don't);
-  audit `ui/wizard/TemplateRegistry.kt` + add defaults. *Deferred to
-  a B.5 follow-up commit; not blocking on Phase C.*
+- [x] **B.5** Wizard scaffolds — every wizard-seeded calendar now lands
+  with a preset color_seed + emoji at scaffold-time. `RoleId` gained a
+  `colorSeed` field anchored to the 12-swatch palette from D-2.21.b;
+  `WizardScaffolder` writes `color_seed` alongside `emoji` into
+  `calendar.toml`. Round-trip test in `WizardScaffolderTest`
+  (`wizard-scaffolded calendars carry preset emoji and color_seed`)
+  parses every role's calendar.toml back through
+  `CalendarActivityConfig.readFrom` to assert the seed survives.
+  Shipped — see commit trailer.
 
 ### Phase C — Top-bar overlay picker button (shipped in `57a2bb9`)
 

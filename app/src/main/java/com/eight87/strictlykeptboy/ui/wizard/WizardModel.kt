@@ -84,24 +84,37 @@ fun Lifestyle.labelFor(alignment: Alignment): String {
  * `calendars/<id>/calendar.toml` `name = ...` field by [WizardScaffolder].
  * Translatable UI labels resolve via `RoleId.labelString()` in `ui/a11y/`.
  */
-enum class RoleId(val id: String, val label: String, val emoji: String, val priority: Int) {
-    Work("work", "Work", "💼", 550),
-    University("university", "University", "🎓", 550),
-    Freelance("freelance", "Freelance", "🧰", 540),
-    Workout("workout", "Workout", "🏋️", 500),
-    Study("study", "Study", "📚", 500),
-    Kink("kink", "Kink", "🖤", 700),
-    Social("social", "Social", "☕", 400),
-    Family("family", "Family", "👪", 500),
-    Creative("creative", "Creative", "🎨", 400),
-    Hobby("hobby", "Hobby", "🎲", 380),
-    Recovery("recovery", "Recovery", "🛁", 600),
-    Spirituality("spirituality", "Spirituality", "🕯️", 500),
-    Health("health", "Health", "🩺", 650),
-    Finance("finance", "Finance", "💸", 450),
-    Household("household", "Household", "🧺", 450),
-    PetCare("pet-care", "Pet Care", "🐾", 600),
-    SelfCare("self-care", "Self-Care", "🪥", 600);
+enum class RoleId(
+    val id: String,
+    val label: String,
+    val emoji: String,
+    val priority: Int,
+    /**
+     * Round 2.21.B.5 — wizard-scaffold default color seed, anchored to the
+     * 12-swatch palette from `CalendarSettingsSheet` (D-2.21.b). Every
+     * wizard-seeded calendar lands with a non-null `color_seed` and `emoji`
+     * so the overlay-picker rows / chips render with a stable hue from
+     * first paint. Users override via the per-calendar identity editor.
+     */
+    val colorSeed: Int,
+) {
+    Work("work", "Work", "💼", 550, colorSeed = 0x42A5F5),         // blue
+    University("university", "University", "🎓", 550, colorSeed = 0x5C6BC0), // indigo
+    Freelance("freelance", "Freelance", "🧰", 540, colorSeed = 0x29B6F6),    // light blue
+    Workout("workout", "Workout", "🏋️", 500, colorSeed = 0x66BB6A),         // green
+    Study("study", "Study", "📚", 500, colorSeed = 0x7E57C2),               // deep purple
+    Kink("kink", "Kink", "🖤", 700, colorSeed = 0xAB47BC),                  // purple
+    Social("social", "Social", "☕", 400, colorSeed = 0xEC407A),            // pink
+    Family("family", "Family", "👪", 500, colorSeed = 0x8D6E63),            // brown
+    Creative("creative", "Creative", "🎨", 400, colorSeed = 0xEF5350),      // red
+    Hobby("hobby", "Hobby", "🎲", 380, colorSeed = 0xFFA726),               // orange
+    Recovery("recovery", "Recovery", "🛁", 600, colorSeed = 0x26A69A),      // teal
+    Spirituality("spirituality", "Spirituality", "🕯️", 500, colorSeed = 0xFFA726), // orange
+    Health("health", "Health", "🩺", 650, colorSeed = 0xEF5350),            // red
+    Finance("finance", "Finance", "💸", 450, colorSeed = 0x66BB6A),         // green
+    Household("household", "Household", "🧺", 450, colorSeed = 0x26C6DA),   // cyan
+    PetCare("pet-care", "Pet Care", "🐾", 600, colorSeed = 0x8D6E63),       // brown
+    SelfCare("self-care", "Self-Care", "🪥", 600, colorSeed = 0x26A69A);    // teal
 
     companion object {
         fun fromId(id: String): RoleId? = entries.firstOrNull { it.id == id }
