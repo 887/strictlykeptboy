@@ -611,20 +611,24 @@ Deep-dives: [`data-model.md`](data-model.md) extension DM-K, [`ui-spec.md`](ui-s
 - [ ] **CC.5** Comment author chip rendering (same shape as event chip) (Round 4 — later)
 - [ ] **CC.6** Threaded `in_reply_to` rendering (indented under parent) (Round 4 — later)
 
-## Phase DD — Drag-to-reschedule + pinch-to-zoom (pinch half shipped in Round 2.21 D.5 `16d63b7`)
+## Phase DD — Drag-to-reschedule + pinch-to-zoom (pinch half shipped in Round 2.21 D.5 `16d63b7`; drag math-core shipped in Round 2.22 B commit `f2c6700`)
 
 Pinch-to-zoom subsumed by Round 2.21's per-overlay zoom model (D-2.21.g/h) —
 levels {1=40 / 2=80 / 3=160 / 4=320 dp/h} replace the original 5m/15m/30m/1h
 proposal; per-overlay persistence in `CalendarVisibilityPrefs` supersedes the
-original "per device" persistence wording. Drag-to-reschedule half remains
-open for Round 4.
+original "per device" persistence wording. Drag-to-reschedule math core
+(pure-Kotlin `DragReschedule.kt` with snap, single-instance move, recurring
+splits — covered by `DragRescheduleTest`) shipped Round 2.22 B; the Compose
+gesture-wiring + dialog UI is glue-code deferred to a later round when
+on-device verification is in hand (same gesture-coexistence limit as
+Round 2.21 D.5).
 
-- [ ] **DD.1** Long-press detector on event chips (Day + Week views) (Round 4 — later)
-- [ ] **DD.2** Drag gesture with grid snapping (configurable grid; default 15min) (Round 4 — later)
-- [ ] **DD.3** Drop commit with auto-message `move event "<title>" from <old> to <new>` (Round 4 — later)
+- [~] **DD.1** Long-press detector on event chips (Day + Week views) — math core ready (Round 2.22 B); Compose wiring deferred
+- [~] **DD.2** Drag gesture with grid snapping (configurable grid; default 15min) — math core ready (Round 2.22 B `DragReschedule.snapToGrid`); Compose wiring deferred
+- [~] **DD.3** Drop commit with auto-message `move event "<title>" from <old> to <new>` — `DragReschedule.commitMessageFor` ready (Round 2.22 B); dispatch wiring deferred
 - [x] **DD.4** Pinch-to-zoom timeline — shipped in Round 2.21 D.5 commit `16d63b7` with per-overlay zoom levels {40 / 80 / 160 / 320 dp/h}.
 - [x] **DD.5** Zoom-level persistence — shipped in Round 2.21 D.2 commit `587d401` (per-overlay via `CalendarVisibilityPrefs.setZoom(repoId, calendarId, level)`; supersedes the original per-device wording).
-- [ ] **DD.6** Recurrence drag: prompt "this instance only / this and future / entire series" — creates appropriate exception or rule edit (Round 4 — later)
+- [~] **DD.6** Recurrence drag: prompt "this instance only / this and future / entire series" — three pure transforms shipped in Round 2.22 B (`moveRecurringInstance`, `splitRecurringRule`, `rewriteRuleDtstart`); AlertDialog mount + write dispatch deferred
 
 ## Phase EE — Inline-markdown body styling — shipped in this change (Round 2 batch 5)
 
