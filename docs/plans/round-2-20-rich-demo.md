@@ -188,10 +188,10 @@ Bonus (not in original B numbering, kept under B):
 - [x] **E.2** Add `## Status: ✅ DONE` at the top of this file once all checkboxes are ticked.
 - [x] **E.3** Add a one-line entry in `docs/plans/main.md` under Round 2 pointing at this plan and noting the rich-demo repo as the new default first-launch experience.
 
-### Known follow-ups (defer to a Round 2.20.1 touch-up or fold into Round 2.15.C demo-chrome scope)
+### Known follow-ups — RESOLVED in [Round 2.20.1](round-2-20-1-demo-fixups.md)
 
-- **owner-activity-log entries all `done = true`**: Tasks view hides them, so the pre-seeded retrospective dom-reply blockquotes don't render in the demo. Either re-author so today's-entry is `done = false` (or add a "show completed" toggle to Todolists).
-- **Rich-demo appears in Settings → Import / export with active Export .ics button**: violates D-2.20.j (demo isolation). Filter `RepoConfig.kind == "demo"` out of the Import/Export pane's repo list.
+- ~~**owner-activity-log entries all `done = true`**~~: shipped in 2.20.1 Phase A (`d91d29c`). Closed 2026-05-15's entry as filed + added a pending 2026-05-16 anchor entry. (Diagnosis revealed the original "all done = true" framing was wrong: 2026-05-15.md had no `done` field already, but on real-today the only pending entry was day-0's already-overdue one — adding 2026-05-16 fixes the live-target gap.)
+- ~~**Rich-demo appears in Settings → Import / export**~~: shipped in 2.20.1 Phase B (`f5fb7a1`). Filtered `RepoConfig.isDemo` (the actual schema field name; not `kind == "demo"` as the plan suggested) at consumption time in `ImportExportScreen`. AVD-verified: Settings → Accounts → Import/export now shows the empty state when only the rich-demo is seeded.
 
 ## Verification
 

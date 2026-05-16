@@ -444,6 +444,8 @@ W.2 + W.3 shipped in commit `acbebee`; W.1, W.4..W.8 shipped in this Phase W clo
 # Round 2 — v1 scope expansion (Phases X–LL)
 
 - Round 2.20 — Rich demo data ([DONE]; `round-2-20-rich-demo.md`) — UK junior-dev kept by AI dom "Boy Keeper", 127 bundled assets, new default first-launch perspective.
+- Round 2.20.1 — Rich-demo follow-ups ([DONE]; `round-2-20-1-demo-fixups.md`) — closed 2026-05-15 activity-log + added 2026-05-16 pending anchor; filtered `isDemo` repos out of Settings → Import/Export pane.
+- Round 2.21 — Calendar UX: overlay identity + picker + zoom + grouping ([DRAFT]; `round-2-21-calendar-ux.md`) — per-overlay color + emoji editor, top-bar overlay-picker button replacing the chip strip, per-overlay 4-step zoom (40/80/160/320 dp per hour), Schedule + 3-day views, atomic-event grouping by `meta_group_field`.
 
 After Round 1, the user reviewed scope and directed that the entire
 v2-deferral pile be pulled into v1, plus signed commits demoted from
