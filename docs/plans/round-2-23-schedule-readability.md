@@ -1,6 +1,6 @@
 # Round 2.23 — Schedule readability + reviews wiring
 
-## Status: DRAFT
+## Status: ✅ DONE
 
 ## Context
 
@@ -68,79 +68,79 @@ Five user-feedback items captured from a live AVD session on 2026-05-16:
 
 ## Phases
 
-### Phase A — Per-calendar color on bands
+### Phase A — Per-calendar color on bands (shipped in commit `563a061`)
 
-- [ ] **A.1** Day-view band: apply `colorForSeed(seed).copy(alpha=0.4)`
+- [x] **A.1** Day-view band: apply `colorForSeed(seed).copy(alpha=0.4)`
       background when seed != 0; preserve existing fallback otherwise.
-- [ ] **A.2** Week-view DayColumn band: same tint logic.
-- [ ] **A.3** 3-day-view band: same tint logic.
-- [ ] **A.4** Test `RendererColorSeedTest` already covers piping;
+- [x] **A.2** Week-view DayColumn band: same tint logic.
+- [x] **A.3** 3-day-view band: same tint logic.
+- [x] **A.4** Test `RendererColorSeedTest` already covers piping;
       add `BandTintColorSeedTest` (unit + Robolectric snap) — two
       bands with distinct seeds render distinct backgrounds.
 
-### Phase B — Weekday emoji
+### Phase B — Weekday emoji (shipped in commit `563a061`)
 
-- [ ] **B.1** New `ui/schedule/WeekdayEmoji.kt` with map + `emojiFor`.
-- [ ] **B.2** Day-view header (currently missing — Day grid has no
+- [x] **B.1** New `ui/schedule/WeekdayEmoji.kt` with map + `emojiFor`.
+- [x] **B.2** Day-view header (currently missing — Day grid has no
       "today" header) — defer to header sites that exist: Week +
       3-day. For Day view, add an emoji to the now-line / day label
       via a small top strip.
-- [ ] **B.3** Week + 3-day day-headers — prefix emoji before weekday
+- [x] **B.3** Week + 3-day day-headers — prefix emoji before weekday
       abbreviation.
-- [ ] **B.4** `WeekdayEmojiTest` — 7 entries map correctly.
+- [x] **B.4** `WeekdayEmojiTest` — 7 entries map correctly.
 
-### Phase C — Top-of-Day zoom row
+### Phase C — Top-of-Day zoom row (shipped in commits `4253339` + `3bdcfc3`)
 
-- [ ] **C.1** `CalendarVisibilityPrefs.globalZoomOverride` — Int? backed
+- [x] **C.1** `CalendarVisibilityPrefs.globalZoomOverride` — Int? backed
       by separate prefs key; flow exposed via `state` (extend
       `VisibilityState`).
-- [ ] **C.2** New `ui/schedule/ZoomLevelRow.kt` — 5-segmented button
+- [x] **C.2** New `ui/schedule/ZoomLevelRow.kt` — 5-segmented button
       row (Auto / 40 / 80 / 160 / 320) with test-tags per button.
-- [ ] **C.3** Mount row at the top of Day view + 3-day view inside
+- [x] **C.3** Mount row at the top of Day view + 3-day view inside
       SchedulePane's `ScheduleMasterContent`.
-- [ ] **C.4** `effectiveZoom` calc: prefers override over
+- [x] **C.4** `effectiveZoom` calc: prefers override over
       max-of-visible.
-- [ ] **C.5** `ZoomLevelRowTest` (Compose-Robolectric) +
+- [x] **C.5** `ZoomLevelRowTest` (Compose-Robolectric) +
       `SchedulePrefsZoomOverrideTest` (round-trip).
 
-### Phase D — EventDetailSheet → EventDetailScreen full-screen
+### Phase D — EventDetailSheet → EventDetailScreen full-screen (shipped in commit `b1cf16b`)
 
-- [ ] **D.1** New `ui/schedule/EventDetailScreen.kt` —
+- [x] **D.1** New `ui/schedule/EventDetailScreen.kt` —
       Surface(fillMaxSize) + TopAppBar with back arrow; embeds
       `EventDetailContent`.
-- [ ] **D.2** Hoist `pendingEvent: DayBand?` state in SchedulePane
+- [x] **D.2** Hoist `pendingEvent: DayBand?` state in SchedulePane
       (compact path only — tablet two-pane keeps its detail pane).
-- [ ] **D.3** `onBandTap` in compact path sets `pendingEvent` instead
+- [x] **D.3** `onBandTap` in compact path sets `pendingEvent` instead
       of opening the ModalBottomSheet.
-- [ ] **D.4** Mount `EventDetailScreen` over the pane via Surface
+- [x] **D.4** Mount `EventDetailScreen` over the pane via Surface
       overlay in SchedulePane (mirrors OverlayPickerScreen pattern).
-- [ ] **D.5** Identify broken button: Edit (`onEdit = {}` stub in
+- [x] **D.5** Identify broken button: Edit (`onEdit = {}` stub in
       SchedulePane.kt:167). Wire to a no-op-but-toast feedback so
       user gets a clear "Edit coming Round 3 — Phase I editor" toast
       until the editor lands, AND wire a working "Close" route via
       back. Document in commit message.
-- [ ] **D.6** `EventDetailScreenTest` — TopAppBar + back arrow +
+- [x] **D.6** `EventDetailScreenTest` — TopAppBar + back arrow +
       event title render; back callback fires.
 
-### Phase E — Reviews wiring
+### Phase E — Reviews wiring (shipped in commit `ed9d4c6`)
 
-- [ ] **E.1** New `ui/reviews/ReviewFeedReader.kt` — scans
+- [x] **E.1** New `ui/reviews/ReviewFeedReader.kt` — scans
       `reviews/<commit-sha>/reviewable_change.md` per repo root, parses
       via existing `FrontmatterReader`, returns `List<ReviewEntry>`.
-- [ ] **E.2** Wire into `AppGraph` via existing repo-root flow
+- [x] **E.2** Wire into `AppGraph` via existing repo-root flow
       (use `repoRegistry.activeRoots()` equivalent).
-- [ ] **E.3** `ReviewsPane` consumes the flow in `SkbAppShell`.
-- [ ] **E.4** Preserve empty state when no items.
-- [ ] **E.5** `ReviewFeedReaderTest` — seed two repos with
+- [x] **E.3** `ReviewsPane` consumes the flow in `SkbAppShell`.
+- [x] **E.4** Preserve empty state when no items.
+- [x] **E.5** `ReviewFeedReaderTest` — seed two repos with
       reviewable_change.md files; assert combined list ordered by
       timestamp desc.
 
 ### Phase F — Close-out
 
-- [ ] **F.1** Tick all substeps with commit SHAs.
-- [ ] **F.2** `## Status: ✅ DONE` on this file.
-- [ ] **F.3** Append D.113..D.117 to `decisions.md` (verify highest is
+- [x] **F.1** Tick all substeps with commit SHAs.
+- [x] **F.2** `## Status: ✅ DONE` on this file.
+- [x] **F.3** Append D.113..D.117 to `decisions.md` (verify highest is
       D.112).
-- [ ] **F.4** Add Round 2.23 entry to `main.md`.
-- [ ] **F.5** AVD smoke on emulator-5558 — screencaps to
+- [x] **F.4** Add Round 2.23 entry to `main.md`.
+- [x] **F.5** AVD smoke on emulator-5558 — screencaps to
       `docs/qa/2-23/`.

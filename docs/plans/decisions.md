@@ -2241,3 +2241,77 @@ Residuals genuinely open + substantive (scoped to Round 3):
 
 Phase FF header in `main.md` retitled RETIRED with per-substep
 dispositions + cross-refs.
+
+## D.113 — Per-calendar `colorSeed` paints the band background (Round 2.23 D-2.23.b)
+
+Day-view bands now tint their Surface background with
+`colorForSeed(accentColorSeed).copy(alpha = 0.4f)` when seed != 0 and
+fall back to the existing `surfaceContainer` otherwise. The 4dp leading
+stripe at full alpha is preserved as an emphasis cue. The original
+visible regression was: bands rendered with uniform `surfaceContainer`
+regardless of `accentColorSeed`, so the per-calendar identity work
+(D.99 / Round 2.21) was invisible at the band layer. Week-view already
+tinted bands via its own logic (chroma-reduced full fill); Day + 3-day
+(which delegates to Day) now match. Calendars without an explicit
+`colorSeed` still derive a stable hue from `displayName.hashCode()` per
+`OverlayResolver` so even un-themed demo calendars show distinct tints.
+
+## D.114 — Per-weekday emoji on the day-header strip (Round 2.23 D-2.23.c)
+
+`ui/schedule/WeekdayEmoji.kt` provides a single-source map:
+Mon🌅 Tue🌱 Wed🌊 Thu🌳 Fri🌟 Sat🌸 Sun🦇. The map is consumed by the
+Day-view top strip, the Week-view day-header strip, and the 3-day-view
+day-header strip. Sun = 🦇 lands the user's bat-coded identity per
+their 2026-05-16 feedback. Pinned by `WeekdayEmojiTest`. The emoji
+choice is deliberately stable + not user-configurable in v1: this is
+visual punctuation, not an identity surface — the per-repo identity
+emoji + sticker work continues to live in the IdentityAvatar / RepoCircle
+chain (D.110).
+
+## D.115 — Global zoom override beats max-of-visible-overlays (Round 2.23 D-2.23.a)
+
+`CalendarVisibilityPrefs.VisibilityState.globalZoomOverride: Int?`
+(default null) extends D-2.21.g's max-of-visible-overlays semantics
+with an explicit override. The new `ZoomLevelRow` composable mounted
+above the Day + 3-day grids surfaces 5 segmented buttons:
+Auto / 40 / 80 / 160 / 320 (dp/h labels per D.106). "Auto" sets the
+override to null (legacy behaviour); any number forces that zoom
+regardless of overlay visibility. Pinch-to-zoom (D.107) and the
+per-overlay segmented control in `OverlayPickerScreen` (D.105) remain
+authoritative when the override is null. Persistence reuses the
+existing `list_visibility_v1` SharedPreferences file — adding a
+separate `SchedulePrefs` file would have been ceremony with no
+addressable benefit. Round-trip pinned by `SchedulePrefsZoomOverrideTest`.
+
+## D.116 — Event detail is a full-screen destination, not a bottom sheet (Round 2.23 D-2.23.d)
+
+`EventDetailScreen` replaces `EventDetailSheet` (ModalBottomSheet) on
+the compact / phone path. Mounted as a Surface(fillMaxSize) overlay
+above the SchedulePane's chrome Column — the same pattern Round 2.22
+used for `OverlayPickerScreen` so the TopAppBar covers the schedule
+tab strip + the left rail strip. The back arrow is unambiguous; no
+drag-dismiss gesture to compete with the calendar's pinch + drag
+work. `EventDetailContent` is reused verbatim inside the Scaffold
+body so the existing field layout / strings / test tags are preserved.
+The tablet two-pane path keeps its detail pane (Phase R.2 behaviour)
+because the right pane already gives the detail full chrome
+real-estate without a destination switch. Broken-button audit: the
+Edit `FilledTonalButton` had `onEdit = {}` stubbed in SchedulePane;
+now surfaces a Toast ("Event editor coming in Round 3") so the user
+gets visible feedback. The full editor is Round 3 / Phase I.
+
+## D.117 — Reviews destination reads `reviews/<sha>/reviewable_change.md` (Round 2.23 D-2.23.e)
+
+`ui/reviews/ReviewFeedReader` is the pure-function counterpart to
+`store/ReviewFeedWriter` (Phase DDD.2 / DM-Z.3). It walks each active
+repo's `reviews/<commit-sha>/reviewable_change.md` files, parses the
+TOML frontmatter via the existing `FrontmatterReader`, and emits
+`ReviewEntry` instances sorted newest-first. `SettingsAccess` gains a
+`reviewItemsFlow` that the host computes off `repoStore.list()` roots;
+`SkbAppShell.Reviews` destination collects it and feeds `ReviewsPane`.
+Empty repos and malformed files are skipped silently. The Phase DDD.13
+empty-state card remains the fallback when the flow yields zero items.
+We deliberately read from `reviews/` (not `feedback/`, despite the
+task brief): the on-disk schema is `reviews/<sha>/reviewable_change.md`
+and the cross-references in the Phase YY draft + DM-Z.3 use that path;
+honouring the actual schema avoids creating a second source of truth.

@@ -39,6 +39,23 @@ User feedback on screenshots: the destination buttons currently occupy row 2; `k
 - [x] **2.3.A.4** Verify destination buttons fit on a single row alongside title + avatar on Compact width (1080dp baseline). Title elides with `…` via `overflow = TextOverflow.Ellipsis` while taking `weight(1f)`; action-row icons never clip.
 - [x] **2.3.A.5** AVD smoke verified on `emulator-5554` (1080×2400). Screenshots in `docs/qa/2-3/`. `AppShellNavigationSwapTest` did not need updates — `TestTagShellDestPrefix` tags are preserved on the relocated destination buttons.
 
+## Round 2.23 — Schedule readability + reviews wiring [DONE — 2026-05-17] (see [`round-2-23-schedule-readability.md`](round-2-23-schedule-readability.md))
+
+Five-fix round driven by live AVD-session user feedback (2026-05-16):
+per-calendar `colorSeed` now paints the band background (Phase A),
+weekday emoji headers Mon🌅..Sun🦇 on Day/3-day/Week views
+(Phase B), top-of-Day-view `ZoomLevelRow` segmented control with
+global override beating max-of-visible (Phase C), `EventDetailScreen`
+full-screen destination replaces the ModalBottomSheet with broken-
+Edit-button fixed via Toast (Phase D), `ReviewFeedReader` wires the
+Reviews destination to on-disk `reviews/<sha>/reviewable_change.md`
+across repos (Phase E). Locks D.113..D.117. Commits: `563a061` (A+B)
+· `4253339` (C) · `b1cf16b` (D) · `ed9d4c6` (E) · `3bdcfc3`
+(C-fix: compact-path calendarVisibility wiring caught in AVD smoke).
+New tests: `WeekdayEmojiTest`, `SchedulePrefsZoomOverrideTest`,
+`ReviewFeedReaderTest`. AVD smoke on emulator-5558 with screencaps
+in `docs/qa/2-23/`.
+
 ## Round 2.22 — Calendar UX polish + close-outs [DONE — 2026-05-16] (see [`round-2-22-calendar-polish.md`](round-2-22-calendar-polish.md))
 
 Phase A (F48 IdentityAvatar — close-out + `IdentityAvatarFallbackTest`),
