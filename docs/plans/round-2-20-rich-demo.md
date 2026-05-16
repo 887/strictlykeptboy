@@ -146,7 +146,7 @@ Target: ~50 sub-steps; every sub-step yields one or a small bundle of concrete f
 - [x] **A.57** Add `reviews/<sample-commit-sha>/reviewable_change.md` (one sample per D.84 — a strictly-kept-mode review entry the dom can react to; body has a "locked / collar / good-boy / paw / heart / fire / thumbsup / 🦇 / smirk" legend so users see the reaction surface even before Phase YY ships fully).
 - [x] **A.58** Walk the whole asset tree, verify every event/task file parses against `docs/plans/data-model.md` schemas (frontmatter fences correct, UUIDv7 IDs, RRULEs valid per RFC5545, no dangling `supersedes` references, no two events with the same UUID).
 
-## Phase B — Seeder (shipped in <SHA>)
+## Phase B — Seeder (shipped in 6adfeb6)
 
 - [x] **B.1** Added `RichDemoSeeder.kt` at `app/src/main/java/com/eight87/strictlykeptboy/demo/RichDemoSeeder.kt` — `suspend fun seedIfNeeded(parentDir: File): Result<File>` extracts the bundled asset tree under `<parentDir>/rich-demo/`. Surface also exposes `isSeeded()` + `resetSeededFlag()` for downstream reset hooks. All I/O on `Dispatchers.IO`.
 - [x] **B.2** Asset enumeration via `_manifest.txt` (one POSIX relative path per line). `Files.copy(AssetManager.open(...), target, REPLACE_EXISTING)` per entry; intermediate dirs created with `Files.createDirectories`. **Note:** AGP's default `androidResources.ignoreAssetsPattern` strips dot-prefixed paths from APK assets; relaxed the pattern in `app/build.gradle.kts` so `.strictlykeptboy/repo.toml` survives packaging. The symlink-marker file was renamed from `.claudemd-is-symlink` → `claudemd-is-symlink.marker` to dodge a separate aapt2 quirk on individual dotfiles.
