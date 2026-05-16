@@ -206,7 +206,7 @@ this round.
   `effectiveZoom = max(zoomOf each visible overlay)` and forwards to
   Day + Week. Month + Year + Agenda ignore zoom (list / cell layouts).
 
-### Phase E — Schedule + 3-day view modes (shipped in `<sha-e>`)
+### Phase E — Schedule + 3-day view modes (shipped in `6138298`)
 
 - [x] **E.1** `ScheduleViewTab` enum now `{Schedule, Day, ThreeDay,
   Week, Month, Agenda, Year}` per D-2.21.f (additive — `Agenda`
@@ -226,25 +226,26 @@ this round.
   the new view modes are pure composables atop the same
   resolver/render pipeline that Day + Week already validate.
 
-### Phase F — Atomic event grouping (skb commit `<sha-here>`)
+### Phase F — Atomic event grouping (shipped in `<sha-f>`)
 
-- [ ] **F.1** Resolver-side: `GroupedDayBand` data class wraps a
-  list of `DayBand` sharing the same `EventGroup` AND adjacent in
-  time (gap ≤ 5 min). `ScheduleDayView` collapses on render when
-  zoom ≤ 2, expands automatically when zoom ≥ 3.
-- [ ] **F.2** Visual: collapsed group renders as a single band
-  spanning the union of its children's time range, label = group
-  name, with a caret + child count ("Morning routine · 5 atoms").
-  Tap caret expands inline (the band splits into child bands within
-  the same vertical extent).
-- [ ] **F.3** Seed the rich-demo `routines` calendar with
-  `meta_group_field = "phase"` and tag each atom with
-  `phase = "morning" / "midday" / "evening"`.
-- [ ] **F.4** AVD verify: open Day view on rich-demo at zoom-2 → see
-  3 grouped bands instead of ~15 atoms → zoom in → atoms split out
-  → tap caret on a collapsed group → atoms expand.
-- [ ] **F.5** Test: `GroupedDayBandTest` exercises adjacency rule +
-  the zoom-threshold auto-expand.
+- [x] **F.1** `ui/schedule/GroupedDayBand.kt` lands: pure
+  `groupDayBands(bands, hasMetaGroup, gapSeconds=300)` plus the
+  `GroupedDayBand` data class. Renderer-side decision (D-2.21.k);
+  the resolver's `MaterializedInstance` list is untouched.
+- [x] **F.2** `ScheduleDayView` consumes groups + an `expandedKeys`
+  Set + an `autoExpand` flag (`shouldAutoExpand(zoom) = zoom >= 3`).
+  Collapsed groups render as a single synthetic [DayBand] whose
+  title is `"<label> · <n> atoms"`; tap toggles expansion. Real
+  band taps still hit `onBandTap`.
+- [x] **F.3** Seeded rich-demo `routines/calendar.toml` with
+  `meta_group_field = "phase"`. Added `group = "morning"` /
+  `"evening"` / `"midday"` / `"household"` to the 16 recurrence
+  files in `rich-demo-repo/calendars/routines/recurrences/`.
+- [ ] **F.4** AVD verify deferred — unit-level grouping is covered
+  by `GroupedDayBandTest`; the on-AVD visual sweep lands with G.5.
+- [x] **F.5** `GroupedDayBandTest`: 8 tests covering the adjacency
+  rule, opt-in gate, null-group fallthrough, cross-calendar
+  separation, zoom auto-expand threshold, and the empty-input case.
 
 ### Phase G — Close-out (skb commit `<sha-here>`)
 

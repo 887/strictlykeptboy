@@ -196,6 +196,9 @@ private fun ScheduleMasterContent(
         ?: kotlinx.coroutines.flow.MutableStateFlow(
             com.eight87.strictlykeptboy.ui.settings.VisibilityState(),
         )).collectAsState()
+    val metaGroupByCalendar = remember(calendars) {
+        calendars.associate { it.ref to !it.metaGroupField.isNullOrBlank() }
+    }
     val effectiveZoom = remember(calendars, visState) {
         if (calendarVisibility == null || calendars.isEmpty()) {
             com.eight87.strictlykeptboy.ui.settings.ZOOM_DEFAULT
@@ -246,6 +249,7 @@ private fun ScheduleMasterContent(
                 onBandTap = onBandTap,
                 onPlanTrip = onPlanTrip,
                 effectiveZoom = effectiveZoom,
+                metaGroupByCalendar = metaGroupByCalendar,
             )
             ScheduleViewTab.Week -> {
                 val weekStart = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))

@@ -88,6 +88,12 @@ fun ScheduleDayView(
      * via [com.eight87.strictlykeptboy.ui.settings.CalendarVisibilityPrefs.zoomOf].
      */
     effectiveZoom: Int = 2,
+    /**
+     * Round 2.21 Phase F.2 — per-calendar opt-in to atomic grouping.
+     * Sourced from `CalendarMeta.metaGroupField != null`. Calendars
+     * missing from this map are treated as opted-out (no grouping).
+     */
+    metaGroupByCalendar: Map<com.eight87.strictlykeptboy.resolver.CalendarRef, Boolean> = emptyMap(),
 ) {
     val day = schedule?.days?.firstOrNull { it.date == date }
     val bands = day?.bands.orEmpty()
@@ -102,6 +108,14 @@ fun ScheduleDayView(
 
     val hourHeight = hourHeightForZoom(effectiveZoom)
     val scroll = rememberScrollState()
+    // Round 2.21 Phase F.2 — per-group expansion state. Auto-expand
+    // when zoom ≥ GROUP_AUTO_EXPAND_ZOOM (= 3); below that, collapsed
+    // groups can still be expanded on caret-tap.
+    val groups = remember(bands, metaGroupByCalendar) {
+        groupDayBands(bands = bands, hasMetaGroup = metaGroupByCalendar)
+    }
+    val autoExpand = shouldAutoExpand(effectiveZoom)
+    var expandedKeys by remember { mutableStateOf(setOf<String>()) }
     Row(
         modifier = modifier
             .fillMaxSize()
@@ -112,7 +126,13 @@ fun ScheduleDayView(
         Box(modifier = Modifier.fillMaxWidth().height(hourHeight * 24)) {
             HourLines(hourHeight = hourHeight, onTapHour = { hr -> onAddAt(LocalTime.of(hr, 0)) })
             BandsLayer(
-                bands = bands,
+                groups = groups,
+                autoExpand = autoExpand,
+                expandedKeys = expandedKeys,
+                onToggleGroup = { key ->
+                    expandedKeys = if (key in expandedKeys) expandedKeys - key
+                    else expandedKeys + key
+                },
                 hourHeight = hourHeight,
                 onBandTap = onBandTap,
                 defaultWriteRepoId = defaultWriteRepoId,
@@ -120,6 +140,28 @@ fun ScheduleDayView(
             if (isToday) NowLine(hourHeight = hourHeight)
         }
     }
+}
+
+/** Stable per-group key — first child's instanceId is unique on the day. */
+private fun groupKey(g: GroupedDayBand): String = "grp-${g.first.instance.instanceId}"
+
+/**
+ * Round 2.21 Phase F.2 — build a synthetic [DayBand] that visually
+ * represents a collapsed [GroupedDayBand]. The instance spans the
+ * union of children's time range; the title carries the group label
+ * + "· N atoms" so the band reads as a folder. The synthetic
+ * instanceId is prefixed `grp-` so tap handlers + caller code can
+ * distinguish it from a real instance.
+ */
+private fun makeCollapsedSyntheticBand(g: GroupedDayBand): DayBand {
+    val first = g.first.instance
+    val last = g.last.instance
+    val syntheticInstance = first.copy(
+        effectiveEnd = last.effectiveEnd,
+        title = "${g.groupLabel.orEmpty()} · ${g.children.size} atoms",
+        source = first.source, // preserved so instanceId getter works
+    )
+    return g.first.copy(instance = syntheticInstance)
 }
 
 @Composable
@@ -157,14 +199,27 @@ private fun HourLines(hourHeight: Dp, onTapHour: (Int) -> Unit) {
 
 @Composable
 private fun BandsLayer(
-    bands: List<DayBand>,
+    groups: List<GroupedDayBand>,
+    autoExpand: Boolean,
+    expandedKeys: Set<String>,
+    onToggleGroup: (String) -> Unit,
     hourHeight: Dp,
     onBandTap: (DayBand) -> Unit,
     defaultWriteRepoId: String,
 ) {
+    // Flatten groups to (band, syntheticGroupKey?). Synthetic key
+    // tracks "this band is the folder for group X — taps should
+    // expand, not open detail".
+    data class Renderable(val band: DayBand, val groupKey: String?)
+    val renderables: List<Renderable> = groups.flatMap { g ->
+        val key = "grp-${g.first.instance.instanceId}"
+        if (!g.isCollapsedGroup) g.children.map { Renderable(it, null) }
+        else if (autoExpand || key in expandedKeys) g.children.map { Renderable(it, null) }
+        else listOf(Renderable(makeCollapsedSyntheticBand(g), key))
+    }
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val widthPx = maxWidth
-        bands.forEach { band ->
+        renderables.forEach { (band, groupKey) ->
             val laneWidth = widthPx / band.totalLanes.coerceAtLeast(1)
             val laneOffsetX = laneWidth * band.laneIndex
 
@@ -188,7 +243,11 @@ private fun BandsLayer(
                     .padding(2.dp),
             ) {
                 Surface(
-                    onClick = { onBandTap(band) },
+                    onClick = {
+                        // Round 2.21 Phase F.2 — synthetic group folder taps
+                        // toggle expansion; real bands open detail.
+                        if (groupKey != null) onToggleGroup(groupKey) else onBandTap(band)
+                    },
                     color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = bandAlpha),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier

@@ -6,6 +6,7 @@ created_at = 2026-05-09T08:00:00+01:00
 updated_at = 2026-05-09T08:00:00+01:00
 author = "01900000-0000-7000-8000-0000000000b0"
 title = "Cleaning"
+group = "household"
 dtstart = 2026-05-16T09:30:00
 duration = "PT90M"
 tz_id = "Europe/London"
