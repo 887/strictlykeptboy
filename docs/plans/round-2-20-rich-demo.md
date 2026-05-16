@@ -160,12 +160,12 @@ Bonus (not in original B numbering, kept under B):
 - [x] **B.7** Authoring helper `./gradlew :app:regenerateRichDemoManifest` in `app/build.gradle.kts` — walks `src/main/assets/rich-demo-repo/`, regenerates `_manifest.txt` (sorted, POSIX paths). NOT wired into the build graph; run on demand after editing demo content.
 - [x] **B.8** Unit tests: `RichDemoSeederTest` (3 cases: first-extract / no-op-on-second-call / reset-re-enables-reseed), `RichDemoSeederSymlinkTest` (CLAUDE.md → AGENTS.md symlink content equality + isSymbolicLink assertion), `RichDemoManifestCoverageTest` (recursive `AssetManager.list()` walk equals the `_manifest.txt` set — catches forgotten manifest regeneration).
 
-## Phase C — Picker integration
+## Phase C — Picker integration — shipped in 27744ab
 
-- [ ] **C.1** Extend `LifestyleCard` (or sibling enum) with a `RichDemo` perspective row labeled "Kept Life — full week" + subtitle "the example we ship that shows everything", displayed FIRST in the picker.
-- [ ] **C.2** In the Round 2.15 demo-perspective picker UI, render the rich-demo row with a distinct "Recommended" pill + a longer descriptive paragraph (the others stay one-line).
-- [ ] **C.3** Default the picker selection to `RichDemo` on first launch.
-- [ ] **C.4** When `RichDemo` is selected, dispatch to `RichDemoSeeder.seed()` instead of `DemoRepoSeeder.seed()`; both writers share the same `RepoStore.register` tail so the rest of the app sees them identically.
+- [x] **C.1** Extend `LifestyleCard` (or sibling enum) with a `RichDemo` perspective row labeled "Kept Life — full week" + subtitle "the example we ship that shows everything", displayed FIRST in the picker. Landed via sibling sealed type `DemoPerspectiveChoice` (`RichDemo` / `Lifestyle(card)`) in `ui/wizard/intro/IntroWizardHost.kt` — keeps `LifestyleCard` as a closed set of scaffolder-compatible perspectives.
+- [x] **C.2** In the Round 2.15 demo-perspective picker UI, render the rich-demo row with a distinct "Recommended" pill + a longer descriptive paragraph (the others stay one-line).
+- [x] **C.3** Default the picker selection to `RichDemo` on first launch. Picker is now state-driven with an explicit Confirm button (was tap-to-pick); selection initialises to `DemoPerspectiveChoice.RichDemo`.
+- [x] **C.4** When `RichDemo` is selected, dispatch to `RichDemoSeeder.seedIfNeeded()` instead of `DemoRepoSeeder.seed()`; both writers share the same `RepoStore.add(RepoConfig)` tail in `MainActivity`. New `RichDemoRegistrar.buildConfig(repoRoot)` reads `.strictlykeptboy/repo.toml` (or falls back to filesystem discovery) to derive `repoId` / `defaultCalendarId` / `defaultTodolistId` for the rich-demo repo. `isDemo = true` so demo-mode chrome kicks in.
 
 ## Phase D — Tests + AVD smoke
 
