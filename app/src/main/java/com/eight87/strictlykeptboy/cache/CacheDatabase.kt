@@ -63,7 +63,7 @@ import com.eight87.strictlykeptboy.cache.entities.TaskRow
         EventFtsRow::class,
         TaskFtsRow::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = false,
 )
 abstract class CacheDatabase : RoomDatabase() {

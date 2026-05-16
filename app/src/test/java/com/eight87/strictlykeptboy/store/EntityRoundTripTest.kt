@@ -32,6 +32,49 @@ class EntityRoundTripTest {
         assertEquals(e, back)
     }
 
+    @Test fun eventGroupRoundTrip() {
+        // Round 2.21.A.3 — `group` is preserved across serialize/parse.
+        val e = Event(
+            header = header,
+            title = "Brush teeth",
+            start = "2026-05-15T07:00:00+02:00",
+            end = "2026-05-15T07:02:00+02:00",
+            calendarId = "0190a0aa-1c1d-7000-8a0a-000000000001",
+            group = "Morning routine",
+        )
+        val back = Event.fromDoc(FrontmatterReader.parse(FrontmatterWriter.serialize(e.toDoc())))
+        assertEquals("Morning routine", back.group)
+        assertEquals(e, back)
+    }
+
+    @Test fun eventGroupNullByDefault() {
+        val e = Event(
+            header = header,
+            title = "Dentist",
+            start = "2026-05-12T14:00:00+02:00",
+            end = "2026-05-12T14:45:00+02:00",
+            calendarId = "0190a0aa-1c1d-7000-8a0a-000000000001",
+        )
+        val back = Event.fromDoc(FrontmatterReader.parse(FrontmatterWriter.serialize(e.toDoc())))
+        assertEquals(null, back.group)
+    }
+
+    @Test fun recurrenceGroupRoundTrip() {
+        val r = RecurrenceRule(
+            header = header,
+            title = "Cardio",
+            dtstart = "2026-01-05T17:00:00",
+            duration = "PT30M",
+            tzId = "Europe/Berlin",
+            rrule = "FREQ=WEEKLY;BYDAY=MO,WE,FR",
+            calendarId = "0190a0aa-1c1d-7000-8a0a-000000000020",
+            group = "Workout",
+        )
+        val back = RecurrenceRule.fromDoc(FrontmatterReader.parse(FrontmatterWriter.serialize(r.toDoc())))
+        assertEquals("Workout", back.group)
+        assertEquals(r, back)
+    }
+
     @Test fun recurrenceRoundTrip() {
         val r = RecurrenceRule(
             header = header,

@@ -99,6 +99,14 @@ data class Event(
     val materializedAt: String? = null,
     /** Phase XX.9 / AT-I.1 inline `[[subbeat]]` array preserved verbatim across materialization. */
     val subbeats: List<AtomicTemplateSubbeat> = emptyList(),
+    /**
+     * Round 2.21.A.3 — optional grouping label. When the source
+     * calendar's `meta_group_field` is set, consecutive events sharing
+     * the same `group` value are visually collapsed at zoom ≤ 2 (per
+     * D-2.21.j/k). The literal string here is the user-visible group
+     * name ("Morning routine", "Grooming"). `null` ⇒ ungrouped.
+     */
+    val group: String? = null,
     val body: String = "",
 ) : TypedEntity {
     override val schemaVersion: Int get() = header.schemaVersion
@@ -123,6 +131,7 @@ data class Event(
         t.putInt("priority_override", priorityOverride)
         t.putString("external_uid", externalUid)
         if (private) t.putBool("private", true)
+        group?.takeIf { it.isNotBlank() }?.let { t.putString("group", it) }
         // Phase XX.8 / AT-H.3 — additive audit fields. Resolver ignores
         // them; they exist for `skb routine undo <materialized-at>` and
         // for surfacing "where did this event come from?" in the UI.
@@ -163,6 +172,7 @@ data class Event(
                 priorityOverride = t.getInt("priority_override"),
                 externalUid = t.getString("external_uid"),
                 private = t.getBool("private") ?: false,
+                group = t.getString("group")?.takeIf { it.isNotBlank() },
                 materializedFrom = t.getString("materialized_from"),
                 materializedSourceEvent = t.getString("materialized_source_event"),
                 materializedAt = t.getString("materialized_at"),
@@ -210,6 +220,8 @@ data class RecurrenceRule(
      * Default `false` keeps existing rule files round-tripping unchanged.
      */
     val inverted: Boolean = false,
+    /** Round 2.21.A.3 — optional grouping label, see [Event.group]. */
+    val group: String? = null,
     val body: String = "",
 ) : TypedEntity {
     override val schemaVersion: Int get() = header.schemaVersion
@@ -235,6 +247,7 @@ data class RecurrenceRule(
         if (!busy) t.putBool("busy", false)
         if (!active) t.putBool("active", false)
         if (inverted) t.putBool("inverted", true)
+        group?.takeIf { it.isNotBlank() }?.let { t.putString("group", it) }
         return FrontmatterDoc(t, body)
     }
 
@@ -260,6 +273,7 @@ data class RecurrenceRule(
                 busy = t.getBool("busy") ?: true,
                 active = t.getBool("active") ?: true,
                 inverted = t.getBool("inverted") ?: false,
+                group = t.getString("group")?.takeIf { it.isNotBlank() },
                 body = doc.body,
             )
         }

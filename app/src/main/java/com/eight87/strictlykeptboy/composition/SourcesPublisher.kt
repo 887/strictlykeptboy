@@ -171,6 +171,7 @@ class SourcesPublisher(
             isBusy = row.busy,
             location = row.location,
             externalUid = row.externalUid,
+            group = row.groupLabel,
         )
     }
 
@@ -190,6 +191,7 @@ class SourcesPublisher(
             active = row.active,
             emoji = row.emoji,
             body = row.body,
+            group = row.groupLabel,
         )
     }
 

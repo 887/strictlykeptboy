@@ -106,6 +106,14 @@ data class CalendarMeta(
      * `CAL_ACCESS_CONTRIBUTOR` (500).
      */
     val externalAccessLevel: Int? = null,
+    /**
+     * Round 2.21.A.2 — opt-in atomic-event grouping. When non-blank,
+     * the renderer's grouping pass (Phase F) collapses adjacent events
+     * sharing the same `group` label into a single visual band at low
+     * zoom levels. The literal string echoes `meta_group_field` from
+     * `calendar.toml`; only its non-emptiness is consulted by v1.
+     */
+    val metaGroupField: String? = null,
 ) {
     /**
      * Round 2.18.C — parses the `(accountType, accountName)` tuple
@@ -203,6 +211,8 @@ data class EventInput(
      * read it.
      */
     val external: ExternalSource? = null,
+    /** Round 2.21.A.3 — see [com.eight87.strictlykeptboy.store.Event.group]. */
+    val group: String? = null,
 )
 
 /**
@@ -229,6 +239,8 @@ data class RecurrenceInput(
     val isPrivate: Boolean = false,
     val isBusy: Boolean = true,
     val author: PersonRef? = null,
+    /** Round 2.21.A.3 — see [com.eight87.strictlykeptboy.store.Event.group]. */
+    val group: String? = null,
 )
 
 /**
@@ -326,6 +338,8 @@ data class MaterializedInstance(
      * (future) writeback layer consult it.
      */
     val external: ExternalSource? = null,
+    /** Round 2.21.A.3 — see [com.eight87.strictlykeptboy.store.Event.group]. */
+    val group: String? = null,
 ) {
     val effectiveInterval: ZonedInterval get() = ZonedInterval(effectiveStart, effectiveEnd)
     /** Stable per-render id usable as Compose key and as cache primary key. */

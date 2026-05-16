@@ -53,6 +53,15 @@ data class CalendarActivityConfig(
     val activeWindows: List<DateRange> = emptyList(),
     /** Per-day-of-week hour ranges during which this calendar is active. */
     val activeHours: List<HourRange> = emptyList(),
+    /**
+     * Round 2.21.A.2 — opt-in atomic-event grouping. Names which TOML key
+     * on this calendar's events carries the group label (e.g. `"phase"`,
+     * `"category"`). v1: the engine reads events' typed `group` field
+     * regardless of this string's value; presence of any non-empty value
+     * here enables grouping. The literal string round-trips on disk so
+     * later versions can honour arbitrary key names.
+     */
+    val metaGroupField: String? = null,
 ) {
 
     /** Inclusive-on-both-ends date interval. Negative ranges are dropped at parse-time. */
@@ -68,10 +77,12 @@ data class CalendarActivityConfig(
             val colorSeed = table.getInt("color_seed")
             val activeWindows = readDateRangeArray(table, "active_windows")
             val activeHours = readHourRangeArray(table, "active_hours")
+            val metaGroupField = table.getString("meta_group_field")?.takeIf { it.isNotBlank() }
             return CalendarActivityConfig(
                 colorSeed = colorSeed,
                 activeWindows = activeWindows,
                 activeHours = activeHours,
+                metaGroupField = metaGroupField,
             )
         }
 
@@ -128,6 +139,7 @@ data class CalendarActivityConfig(
     /** Write additive fields into [table]. Existing non-activity fields are untouched. */
     fun writeInto(table: TomlTable) {
         colorSeed?.let { table.putInt("color_seed", it) }
+        metaGroupField?.takeIf { it.isNotBlank() }?.let { table.putString("meta_group_field", it) }
         if (activeWindows.isNotEmpty()) {
             val rows = activeWindows.map { r ->
                 TomlTable().apply {

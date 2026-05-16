@@ -40,6 +40,8 @@ data class EventRow(
     val externalUid: String?,
     val privateFlag: Boolean,
     val sourcePath: String,
+    /** Round 2.21.A.3 — atomic-event grouping label. */
+    val groupLabel: String? = null,
 )
 
 @Entity(tableName = "tasks", primaryKeys = ["repoId", "id"])
@@ -88,6 +90,8 @@ data class RecurrenceRuleRow(
     val tagsJson: String,
     val body: String,
     val sourcePath: String,
+    /** Round 2.21.A.3 — atomic-event grouping label. */
+    val groupLabel: String? = null,
 )
 
 @Entity(tableName = "exceptions", primaryKeys = ["repoId", "ruleId", "instanceDate"])

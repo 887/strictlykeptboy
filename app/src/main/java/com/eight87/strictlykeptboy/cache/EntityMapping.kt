@@ -56,6 +56,7 @@ internal object EntityMapping {
         externalUid = e.externalUid,
         privateFlag = e.private,
         sourcePath = sourcePath,
+        groupLabel = e.group,
     )
 
     fun task(repoId: String, t: Task, sourcePath: String): TaskRow = TaskRow(
@@ -103,6 +104,7 @@ internal object EntityMapping {
             tagsJson = encodeTags(r.tags),
             body = r.body,
             sourcePath = sourcePath,
+            groupLabel = r.group,
         )
 
     fun exception(repoId: String, x: StoreException, sourcePath: String): ExceptionRow =

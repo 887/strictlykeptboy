@@ -61,9 +61,12 @@ this round.
   button + sheet. *Rationale:* user explicitly said "i don't want
   those overlays to be scrolable" — keeping both surfaces is double
   work and the chip strip loses to the picker on density.
-- **D-2.21.e — Top bar gets two right-side buttons**: view-mode
-  selector (existing) and the new overlay-picker. Both icon buttons,
-  Material symbols. Active-overlay count rendered as a badge.
+- **D-2.21.e — Top bar gets ONE new right-side button**: the overlay-
+  picker (Material `Tune` / filter icon, active-overlay count badge).
+  View-mode selection stays where it is today — **the existing left
+  vertical rail with sideways-text tabs** (Day · Week · Month · Agenda
+  · Year). No hamburger / drawer / popup-menu. Schedule + 3-day slot
+  into that same rail as two new entries.
 - **D-2.21.f — View modes are Google's set + Year**: Schedule
   (agenda list, no time grid), Day, 3-day, Week, Month, Year. Year
   stays. *Rationale:* the user explicitly anchored the spec to
@@ -99,18 +102,13 @@ this round.
 
 ## Phases
 
-### Phase A — Data: identity fields on `calendar.toml` (skb commit `<sha-here>`)
+### Phase A — Data: identity fields on `calendar.toml` (shipped in `<pending>`)
 
-- [ ] **A.1** Confirm `CalendarActivityConfig` already round-trips
-  `emoji` + `color_seed`. (Spot-check: yes per
-  `resolver/CalendarRegistry.kt:135` + `store/CalendarActivityConfig.kt:28`.)
-- [ ] **A.2** Add `meta_group_field: String?` to
-  `CalendarActivityConfig` with read + write. Test round-trip.
-- [ ] **A.3** Add an `EventGroup` type in `resolver/Types.kt`
-  representing the value extracted from `event[meta_group_field]`
-  (or `null` if unset). Add it to `MaterializedInstance`.
-- [ ] **A.4** Pipe `EventGroup` through `RecurrenceMaterializer` +
-  `OverlayResolver` so it reaches `DayBand`.
+- [x] **A.1** Confirmed `CalendarActivityConfig` round-trips `color_seed` (verified per `resolver/CalendarRegistry.kt:135` + `store/CalendarActivityConfig.kt:28`). `emoji` is read directly in `CalendarRegistry` and was already wired.
+- [x] **A.2** Added `metaGroupField: String?` to `CalendarActivityConfig` (`meta_group_field` on disk). Blank values normalised to `null` on both read + write. 5 new round-trip tests in `CalendarActivityConfigParseTest`.
+- [x] **A.3** Carried as `group: String?` on `Event` + `RecurrenceRule` entities (disk: `group = "Morning routine"`), threaded through to `EventInput` + `RecurrenceInput` + `MaterializedInstance` so the renderer can see it on every band. `metaGroupField` lives on `CalendarMeta` (sourced from the config) so callers can decide *whether* to honour the labels without a per-event lookup. 2 new round-trip tests in `EntityRoundTripTest`.
+- [x] **A.4** Piped through `RecurrenceMaterializer.fromOneOff` + `materializedFromRule` (so both one-off events and rule-materialised instances carry their `group`). The `OverlayResolver` is field-preserving — `MaterializedInstance.group` flows to `DayBand.instance.group` unchanged.
+- [x] **A.5** Room cache: added `groupLabel: String?` to `EventRow` + `RecurrenceRuleRow`, bumped `CacheDatabase` version 2 → 3 (existing `fallbackToDestructiveMigration(true)` handles the schema delta; Room is rebuildable from disk per CLAUDE.md). Wired through `EntityMapping.event` + `EntityMapping.recurrenceRule` and `SourcesPublisher.toEventInput` + `toRuleInput`.
 
 ### Phase B — Calendar identity editor (skb commit `<sha-here>`)
 
@@ -134,8 +132,9 @@ this round.
 
 - [ ] **C.1** New composable `ui/calendars/OverlayPickerButton.kt`:
   icon button (filter-symbol) + count badge of active overlays.
-  Placed in the Schedule top bar, right side, next to the existing
-  view-mode selector.
+  Placed in the Schedule top bar, right side. View-mode selection
+  stays on the existing left rail — this button is *additive* to the
+  top bar, not a replacement for the rail (per D-2.21.e).
 - [ ] **C.2** New composable `ui/calendars/OverlayPickerSheet.kt`:
   modal bottom sheet listing every calendar across every repo,
   grouped by repo header (avatar + repo name). Each row shows:
@@ -189,8 +188,11 @@ this round.
   badge. Mirrors Google Calendar's Schedule view.
 - [ ] **E.3** New composable `ui/schedule/ScheduleThreeDayView.kt`:
   three day-grids side by side. Respects zoom.
-- [ ] **E.4** Update the existing top-bar view-mode selector
-  (drop-down or menu) to the new six-item set (Year still in).
+- [ ] **E.4** Add Schedule + 3-day entries to the existing left-rail
+  view-mode list (sideways-text vertical tabs). Final order:
+  `Schedule · Day · 3-day · Week · Month · Agenda · Year` (slot the
+  two new ones alongside the existing five — no hamburger / drawer /
+  drop-down). Tablet master-detail pane uses the same rail.
 - [ ] **E.5** AVD verify each mode renders + transitions clean.
 
 ### Phase F — Atomic event grouping (skb commit `<sha-here>`)

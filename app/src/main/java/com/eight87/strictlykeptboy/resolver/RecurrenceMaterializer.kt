@@ -135,6 +135,7 @@ class RecurrenceMaterializer {
         priorityOverride = event.priorityOverride,
         author = event.author,
         external = event.external,
+        group = event.group,
     )
 
     private fun materializedFromRule(
@@ -160,6 +161,7 @@ class RecurrenceMaterializer {
         isPrivate = rule.isPrivate,
         isBusy = rule.isBusy,
         author = rule.author,
+        group = rule.group,
     )
 
     /**

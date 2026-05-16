@@ -150,4 +150,38 @@ class CalendarActivityConfigParseTest {
         assertEquals(false, routine.routine)
         assertEquals(listOf("cal-routine"), supersedence.supersedes)
     }
+
+    // Round 2.21.A.2 — meta_group_field round-trip + back-compat.
+
+    @Test fun meta_group_field_absent_yields_null() {
+        val cfg = CalendarActivityConfig.read(TomlReader.parse(""))
+        assertNull(cfg.metaGroupField)
+    }
+
+    @Test fun meta_group_field_read_round_trip() {
+        val toml = """meta_group_field = "phase""""
+        val cfg = CalendarActivityConfig.read(TomlReader.parse(toml))
+        assertEquals("phase", cfg.metaGroupField)
+    }
+
+    @Test fun meta_group_field_blank_treated_as_null() {
+        val toml = """meta_group_field = """""
+        val cfg = CalendarActivityConfig.read(TomlReader.parse(toml))
+        assertNull(cfg.metaGroupField)
+    }
+
+    @Test fun meta_group_field_writes_when_set() {
+        val out = TomlTable()
+        CalendarActivityConfig(metaGroupField = "category").writeInto(out)
+        val s = TomlWriter.emit(out)
+        assertTrue(s.contains("meta_group_field"))
+        assertTrue(s.contains("category"))
+    }
+
+    @Test fun meta_group_field_omits_when_null() {
+        val out = TomlTable()
+        CalendarActivityConfig(metaGroupField = null).writeInto(out)
+        val s = TomlWriter.emit(out)
+        assertTrue(!s.contains("meta_group_field"))
+    }
 }

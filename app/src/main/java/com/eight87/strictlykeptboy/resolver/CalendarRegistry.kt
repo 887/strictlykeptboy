@@ -168,6 +168,7 @@ class CalendarRegistry(
             supersedes = parsed.supersedence.supersedes.map { CalendarRef(it) },
             tzId = parsed.tzId ?: base.tzId,
             colorSeed = parsed.activity.colorSeed ?: base.colorSeed ?: repoColorFallback,
+            metaGroupField = parsed.activity.metaGroupField ?: base.metaGroupField,
         )
     }
 
