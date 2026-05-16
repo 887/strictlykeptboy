@@ -41,6 +41,8 @@ const val TestTagIntroPicker = "IntroWizard-Picker"
 const val TestTagIntroPickerConfirm = "IntroWizard-Confirm"
 const val TestTagIntroRichDemoRow = "IntroWizard-Card-RichDemo"
 const val TestTagIntroRichDemoPill = "IntroWizard-RichDemo-Pill"
+const val TestTagIntroEmptyRow = "IntroWizard-Card-Empty"
+const val TestTagIntroSupportedScenarios = "IntroWizard-SupportedScenarios"
 
 /**
  * Round 2.20 Phase C — what the picker emits.
@@ -61,7 +63,21 @@ sealed class DemoPerspectiveChoice {
     /** Round 2.20 — the pre-baked rich demo (extracted from APK assets). */
     data object RichDemo : DemoPerspectiveChoice()
 
-    /** Round 2.15 — wizard-scaffolder-driven perspective. */
+    /**
+     * Round 2.22 follow-up — no demo. User lands on an empty Schedule
+     * and can build their own repo from the "+ New" entry-point.
+     */
+    data object Empty : DemoPerspectiveChoice()
+
+    /**
+     * Round 2.15 — wizard-scaffolder-driven perspective. Retained as a
+     * sealed branch so [com.eight87.strictlykeptboy.demo.DemoRepoSeeder]
+     * stays compilable for tests + future use, but **no longer reachable
+     * from [IntroWizardHost]'s picker** (Round 2.22 follow-up — we only
+     * ship one set of demo data, the rich kept-life demo). The five
+     * lifestyle scenarios are surfaced as read-only "supported scenarios"
+     * disclosure in the picker instead.
+     */
     data class Lifestyle(val card: LifestyleCard) : DemoPerspectiveChoice()
 }
 
@@ -157,8 +173,8 @@ private fun ManifestoStep() {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
-            "Tap Continue to pick a demo perspective. Demo data is read-only — " +
-                "explore the app first, then build your own calendar when you're ready.",
+            "Tap Continue to explore the demo or start with an empty calendar. " +
+                "Demo data is read-only — switch any time from Repositories.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -170,7 +186,13 @@ private fun PerspectivePickerStep(
     onConfirm: (DemoPerspectiveChoice) -> Unit,
     onBack: () -> Unit,
 ) {
-    val lifestyleCards = listOf(
+    // Round 2.22 follow-up — only two pickable options: the rich kept-life
+    // demo (the one set of demo data we actually ship) or an empty
+    // calendar. The five legacy lifestyle perspectives are surfaced
+    // below as read-only "supported scenarios" disclosure so users see
+    // the intents skb is built for — without implying that we have
+    // curated demo content for each one.
+    val supportedScenarios = listOf(
         LifestyleCard.PetKeptByAi,
         LifestyleCard.PetKeptByPartner,
         LifestyleCard.PetSelfKept,
@@ -194,11 +216,10 @@ private fun PerspectivePickerStep(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text("Pick your demo", style = MaterialTheme.typography.titleMedium)
+            Text("Start with", style = MaterialTheme.typography.titleMedium)
             Text(
-                "Each perspective seeds a read-only demo repo with " +
-                    "matching calendars, tasks, identity, and voice. You can switch " +
-                    "demos any time from Repositories.",
+                "Pick the rich demo to explore every skb feature, or start " +
+                    "with an empty calendar and build your own from scratch.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -247,32 +268,78 @@ private fun PerspectivePickerStep(
                 }
             }
 
-            // Legacy lifestyle perspectives — one-line each.
-            lifestyleCards.forEach { card ->
-                val selected = (selection as? DemoPerspectiveChoice.Lifestyle)?.card == card
-                Card(
-                    onClick = { selection = DemoPerspectiveChoice.Lifestyle(card) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("IntroWizard-Card-${card.name}"),
-                    colors = if (selected) {
-                        CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                        )
-                    } else {
-                        CardDefaults.cardColors()
-                    },
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+            // Empty calendar row.
+            val isEmptySelected = selection is DemoPerspectiveChoice.Empty
+            Card(
+                onClick = { selection = DemoPerspectiveChoice.Empty },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(TestTagIntroEmptyRow),
+                colors = if (isEmptySelected) {
+                    CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    )
+                } else {
+                    CardDefaults.cardColors()
+                },
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        "📭  Empty calendar",
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(
+                        "Start clean. Build your own repo from the + button.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            // Supported-scenarios disclosure — read-only, not pickable.
+            // Lists the intents skb is built around so users understand
+            // what's supported without implying each has its own demo.
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp)
+                    .testTag(TestTagIntroSupportedScenarios),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    "Other scenarios skb supports",
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    "These intents are first-class in the app even though we " +
+                        "only ship one curated demo. Build any of them from " +
+                        "scratch in your own repo.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                supportedScenarios.forEach { card ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp),
+                        verticalAlignment = ComposeAlign.Top,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
                         Text(
-                            "${card.emoji}  ${perspectiveTitle(card)}",
+                            card.emoji,
                             style = MaterialTheme.typography.titleMedium,
                         )
-                        Text(
-                            perspectiveBlurb(card),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                perspectiveTitle(card),
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                            Text(
+                                perspectiveBlurb(card),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
             }

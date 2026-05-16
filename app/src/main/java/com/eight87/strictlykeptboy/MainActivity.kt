@@ -481,7 +481,17 @@ class MainActivity : ComponentActivity() {
                     com.eight87.strictlykeptboy.ui.wizard.intro.IntroWizardHost(
                         onPerspectiveChosen = { choice ->
                             scope.launch {
+                                // Round 2.22 follow-up — empty pick: skip
+                                // seeding entirely, drop user on empty
+                                // Schedule. They build their own repo from
+                                // the "+ New" entry-point.
+                                if (choice is com.eight87.strictlykeptboy.ui.wizard.intro.DemoPerspectiveChoice.Empty) {
+                                    graph.demoModePrefs.setActive(false)
+                                    firstLaunchDone = true
+                                    return@launch
+                                }
                                 val config = when (choice) {
+                                    is com.eight87.strictlykeptboy.ui.wizard.intro.DemoPerspectiveChoice.Empty -> error("handled above")
                                     is com.eight87.strictlykeptboy.ui.wizard.intro.DemoPerspectiveChoice.Lifestyle -> {
                                         val card = choice.card
                                         val outcome = com.eight87.strictlykeptboy.demo.DemoRepoSeeder.seed(
