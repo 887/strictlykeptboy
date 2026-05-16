@@ -91,7 +91,7 @@ calendars/work/recurrences/lunch-break.md
 calendars/work/recurrences/sprint-demo.md
 calendars/work/recurrences/sprint-planning.md
 calendars/work/recurrences/sprint-retro.md
-.claudemd-is-symlink
+claudemd-is-symlink.marker
 identities/ai-dom.md
 identities/demo-boy.md
 identity.toml
