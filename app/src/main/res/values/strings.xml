@@ -737,7 +737,9 @@
     <string name="cd_dest_settings">Settings</string>
 
     <!-- ScheduleViewTab labels. -->
+    <string name="schedule_view_tab_schedule">Schedule</string>
     <string name="schedule_view_tab_day">Day</string>
+    <string name="schedule_view_tab_3day">3-day</string>
     <string name="schedule_view_tab_week">Week</string>
     <string name="schedule_view_tab_month">Month</string>
     <string name="schedule_view_tab_agenda">Agenda</string>

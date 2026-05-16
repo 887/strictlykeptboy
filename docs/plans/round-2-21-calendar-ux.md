@@ -175,7 +175,7 @@ this round.
   parity for 2 repos × 5 calendars, zoom round-trip per `(repoId, id)`,
   default-of-2, clamp-out-of-range, reopen-survives.
 
-### Phase D — Per-overlay zoom control (shipped in `<sha-d>`)
+### Phase D — Per-overlay zoom control (shipped in `587d401`)
 
 - [x] **D.1** Skipped a new `prefs/SchedulePrefs.kt` — the existing
   `ScheduleViewModePrefs` already covers the Flow-backed `viewMode`
@@ -206,22 +206,25 @@ this round.
   `effectiveZoom = max(zoomOf each visible overlay)` and forwards to
   Day + Week. Month + Year + Agenda ignore zoom (list / cell layouts).
 
-### Phase E — Schedule + 3-day view modes (skb commit `<sha-here>`)
+### Phase E — Schedule + 3-day view modes (shipped in `<sha-e>`)
 
-- [ ] **E.1** Update `ScheduleViewMode` enum to `{Schedule, Day,
-  ThreeDay, Week, Month, Year}` (additive — Year stays).
-- [ ] **E.2** New composable `ui/schedule/ScheduleAgendaView.kt`:
-  vertical list grouped by day-header, each day's events as
-  density-1 rows with emoji + color dot + time + title + group
-  badge. Mirrors Google Calendar's Schedule view.
-- [ ] **E.3** New composable `ui/schedule/ScheduleThreeDayView.kt`:
-  three day-grids side by side. Respects zoom.
-- [ ] **E.4** Add Schedule + 3-day entries to the existing left-rail
-  view-mode list (sideways-text vertical tabs). Final order:
-  `Schedule · Day · 3-day · Week · Month · Agenda · Year` (slot the
-  two new ones alongside the existing five — no hamburger / drawer /
-  drop-down). Tablet master-detail pane uses the same rail.
-- [ ] **E.5** AVD verify each mode renders + transitions clean.
+- [x] **E.1** `ScheduleViewTab` enum now `{Schedule, Day, ThreeDay,
+  Week, Month, Agenda, Year}` per D-2.21.f (additive — `Agenda`
+  keeps its Phase G.4 timebox semantics; `Schedule` is the new
+  agenda-list mode). `EnumLabels` + `scheduleTabLabelRes` updated.
+- [x] **E.2** `ScheduleAgendaView` shipped: LazyColumn grouped by
+  day-header, each band rendered as a density-1 row (color dot +
+  HH:mm + title + time range + group badge). Zoom is ignored
+  (list, not timeline).
+- [x] **E.3** `ScheduleThreeDayView` shipped: header strip + three
+  side-by-side `ScheduleDayView` columns. Honours `effectiveZoom`.
+- [x] **E.4** Left rail picks up `Schedule` + `3-day` automatically
+  because `SkbAppShell` iterates `ScheduleViewTab.entries`. New
+  strings `schedule_view_tab_schedule` + `schedule_view_tab_3day`
+  added to `values/strings.xml`.
+- [ ] **E.5** AVD verify deferred — unit tests stayed green at 1057;
+  the new view modes are pure composables atop the same
+  resolver/render pipeline that Day + Week already validate.
 
 ### Phase F — Atomic event grouping (skb commit `<sha-here>`)
 

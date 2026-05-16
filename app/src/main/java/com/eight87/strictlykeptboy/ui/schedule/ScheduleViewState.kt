@@ -153,7 +153,15 @@ class ScheduleViewState(
 
     private fun rangeAndModeFor(d: LocalDate, t: ScheduleViewTab): Pair<DateRange, ViewMode> =
         when (t) {
+            // Round 2.21 Phase E.1 — Schedule (agenda list) renders the
+            // current week's worth of bands sorted by start; resolver-side
+            // it's a 7-day range with Agenda view-mode for sort + grouping.
+            ScheduleViewTab.Schedule -> {
+                val start = d.with(TemporalAdjusters.previousOrSame(weekStart))
+                DateRange(start, start.plusDays(6)) to ViewMode.Agenda
+            }
             ScheduleViewTab.Day -> DateRange(d, d) to ViewMode.Day
+            ScheduleViewTab.ThreeDay -> DateRange(d, d.plusDays(2)) to ViewMode.Week
             ScheduleViewTab.Week -> {
                 val start = d.with(TemporalAdjusters.previousOrSame(weekStart))
                 DateRange(start, start.plusDays(6)) to ViewMode.Week

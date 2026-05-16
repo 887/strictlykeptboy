@@ -11,7 +11,14 @@ package com.eight87.strictlykeptboy.ui.scaffold
  * `ScheduleViewTab.labelString()` in `ui/a11y/EnumLabels.kt`.
  */
 enum class ScheduleViewTab(val label: String) {
+    // Round 2.21 Phase E.1 — Schedule + ThreeDay added per D-2.21.f to
+    // mirror Google Calendar's view set (Year stays). Final rail order:
+    // Schedule · Day · 3-day · Week · Month · Agenda · Year. `Schedule`
+    // is the agenda-list mode; `Agenda` keeps its Phase G.4 meaning as
+    // the timebox view — distinct surfaces.
+    Schedule("Schedule"),
     Day("Day"),
+    ThreeDay("ThreeDay"),
     Week("Week"),
     Month("Month"),
     Agenda("Agenda"),

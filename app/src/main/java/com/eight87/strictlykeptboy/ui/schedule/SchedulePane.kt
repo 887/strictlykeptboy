@@ -223,6 +223,22 @@ private fun ScheduleMasterContent(
         @Suppress("UNUSED_VARIABLE") val _repo = activeRepoName
         @Suppress("UNUSED_VARIABLE") val _sync = onSyncClick
         when (selectedTab) {
+            // Round 2.21 Phase E.2 — Schedule (agenda list) mirrors
+            // Google Calendar's Schedule view; resolver range is the
+            // week containing `date` per ScheduleViewState.
+            ScheduleViewTab.Schedule -> ScheduleAgendaView(
+                schedule = rendered,
+                modifier = Modifier.fillMaxSize(),
+                onBandTap = onBandTap,
+            )
+            // Round 2.21 Phase E.3 — 3-day timeline anchored at `date`.
+            ScheduleViewTab.ThreeDay -> ScheduleThreeDayView(
+                anchor = date,
+                schedule = rendered,
+                modifier = Modifier.fillMaxSize(),
+                onBandTap = onBandTap,
+                effectiveZoom = effectiveZoom,
+            )
             ScheduleViewTab.Day -> ScheduleDayView(
                 date = date,
                 schedule = rendered,
