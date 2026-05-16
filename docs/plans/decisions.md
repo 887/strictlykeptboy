@@ -2179,3 +2179,65 @@ every group. This keeps the resolver narrow (it knows nothing
 about UI affordances) and makes the collapse behaviour cheap to
 iterate on without disturbing recurrence / supersedence / off-
 schedule pipelines.
+
+## D.110 — IdentityAvatar fallback chain (Round 2.22 D-2.22.a)
+
+The top-bar `IdentityAvatar` and the per-repo row `RepoCircle` both
+delegate to `RepoConfig.toIconKind()` so the avatar is consistent
+across every surface. Resolution order:
+
+1. `iconSpecies != null` → `RepoIconKind.Sticker(species)`.
+   - Sticker resolver returns BitmapHit → render bitmap.
+   - DrawableFallback + species == "bat" → render `R.drawable.about_bat`.
+   - DrawableFallback + species != "bat" → render
+     `AutoInitials(species[0], seedColorFromName(species))`.
+2. `iconEmoji != null` → `RepoIconKind.Emoji(glyph)`.
+3. `iconPhotoUri != null` → `RepoIconKind.Photo(uri)` (reserved;
+   currently exercised via the picker only).
+4. else → `RepoIconKind.AutoInitials(initialsFromName(displayName),
+   seedColorFromName(displayName))`.
+
+Pinned by `IdentityAvatarFallbackTest` (7 cases). Closes F48.
+
+## D.111 — Drag-to-reschedule semantics (Round 2.22 D-2.22.b)
+
+Drag-to-reschedule on Day / Week / 3-day views (NOT Schedule /
+Month / Year). Gesture: long-press → drag → drop. Snap: 15-minute
+grid by default (`DragReschedule.DRAG_SNAP_MINUTES`). Drop commit:
+
+- Single-instance event → rewrite event file with new start/end
+  (duration preserved); auto-commit
+  `move event "<title>" from <old-iso> to <new-iso>` via
+  `GitRepoRegistry.commitAll`.
+- Recurring instance → AlertDialog with three branches:
+  1. **This instance only** → write
+     `exceptions/<rule-id>/<original-date>.md` with `mode = "move"`,
+     `override_start`, `override_end`.
+  2. **This and future** → cap original RRULE with `UNTIL =
+     day-before-drop`; create new RRULE rooted at drop date.
+  3. **Entire series** → rewrite rule file with new `dtstart`
+     (preserves DURATION).
+- Cancelled drag (drop on origin or off-grid) → no-op, no commit.
+
+The pure-math + entity-transform core ships in
+`ui/schedule/DragReschedule.kt` (Round 2.22 B); Compose gesture
+wiring + AlertDialog UI is glue-code deferred behind the
+gesture-coexistence-with-pinch-zoom AVD-verification gate.
+
+## D.112 — Phase FF disposition: RETIRED with residuals scoped (Round 2.22 D-2.22.c)
+
+Phase FF (Custom sticker / icon packs) substantive coverage shipped
+via Phase WW + Round 2.5.C:
+
+- FF.1 (pack format) → WW.1 `PackManifest` + `assets/avatar-packs/<species>/`.
+- FF.3 (URL fetch install) → WW.4 `UserPackLoader.cloneFrom`.
+- FF.6 (Settings → sticker-packs) → Round 2.5.C `StickerPackSelectorScreen`.
+
+Residuals genuinely open + substantive (scoped to Round 3):
+
+- FF.2 (install from local zip / dir via SAF picker).
+- FF.4 (`:sticker-name:` shortcut + autocomplete in title editors).
+- FF.5 (icon picker integration for calendars + todolists).
+
+Phase FF header in `main.md` retitled RETIRED with per-substep
+dispositions + cross-refs.

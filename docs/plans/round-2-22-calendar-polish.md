@@ -1,6 +1,6 @@
 # Round 2.22 — Calendar UX polish + close-outs
 
-## Status: DRAFT
+## Status: ✅ DONE
 
 ## Context
 
@@ -143,7 +143,7 @@ a Round 2.23 polish slice when on-device verification is in hand.
   UI without rederiving the algorithm.
 - [x] **B.9** Commit.
 
-### Phase C — Phase FF audit + disposition (shipped in commit `2c1654a`)
+### Phase C — Phase FF audit + disposition (shipped in commit `8dd7879`)
 
 - [x] **C.1** Audited each FF substep against shipped surfaces
   (`UserPackLoader`, `PackManifest`, `AvatarPackPrefs`,
@@ -159,16 +159,16 @@ a Round 2.23 polish slice when on-device verification is in hand.
   scoped to Round 3 with their open boxes preserved.
 - [x] **C.5** Commit.
 
-### Phase D — Close-out
+### Phase D — Close-out (shipped in commit `8894fb1`)
 
-- [ ] **D.1** Tick every Round-2.22 checkbox above with the landing
-  commit SHA on each phase header.
-- [ ] **D.2** Set `## Status: ✅ DONE` at the top of this file.
-- [ ] **D.3** Append D-2.22.a / D-2.22.b / D-2.22.c to
-  `docs/plans/decisions.md` as D.110 / D.111 / D.112.
-- [ ] **D.4** Add Round 2.22 entry to `docs/plans/main.md` at the
-  top of the Round-2 section, dated 2026-05-16.
-- [ ] **D.5** Run `scripts/build-release-apk.sh --gh-release --install`.
+- [x] **D.1** Phase A / B / C headers carry their commit SHAs;
+  checkboxes ticked / partial-marked as appropriate.
+- [x] **D.2** `## Status: ✅ DONE` set at the top of this file.
+- [x] **D.3** D.110 (D-2.22.a) / D.111 (D-2.22.b) / D.112
+  (D-2.22.c) appended to `docs/plans/decisions.md`.
+- [x] **D.4** Round 2.22 entry added to `docs/plans/main.md` at
+  the top of the Round-2 section, dated 2026-05-16.
+- [x] **D.5** `scripts/build-release-apk.sh --gh-release --install`.
 
 ## Out of scope
 

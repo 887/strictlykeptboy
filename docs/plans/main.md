@@ -39,6 +39,17 @@ User feedback on screenshots: the destination buttons currently occupy row 2; `k
 - [x] **2.3.A.4** Verify destination buttons fit on a single row alongside title + avatar on Compact width (1080dp baseline). Title elides with `…` via `overflow = TextOverflow.Ellipsis` while taking `weight(1f)`; action-row icons never clip.
 - [x] **2.3.A.5** AVD smoke verified on `emulator-5554` (1080×2400). Screenshots in `docs/qa/2-3/`. `AppShellNavigationSwapTest` did not need updates — `TestTagShellDestPrefix` tags are preserved on the relocated destination buttons.
 
+## Round 2.22 — Calendar UX polish + close-outs [DONE — 2026-05-16] (see [`round-2-22-calendar-polish.md`](round-2-22-calendar-polish.md))
+
+Phase A (F48 IdentityAvatar — close-out + `IdentityAvatarFallbackTest`),
+Phase B (DD drag-to-reschedule math + entity-transform core in
+`ui/schedule/DragReschedule.kt` + 12 tests; Compose gesture wiring
+deferred behind the gesture-coexistence-with-pinch-zoom AVD gate),
+Phase C (Phase FF retired — substantive coverage via WW + 2.5.C;
+residuals FF.2 / FF.4 / FF.5 scoped to Round 3), Phase D (close-out).
+Locks D.110..D.112 (D-2.22.a..c). Commits: `870ee05` (A) ·
+`f2c6700` (B) · `8dd7879` (C). Unit-test count 1075 → 1094.
+
 ## Round 2.21 — Calendar UX: overlay identity, picker, zoom, grouping [DONE] (see [`round-2-21-calendar-ux.md`](round-2-21-calendar-ux.md))
 
 Phase A (atomic-grouping schema), B (calendar identity editor), C
@@ -683,7 +694,7 @@ viewer is reachable from the renderer.
 
 ## Phase FF — Custom sticker / icon packs — RETIRED (disposed Round 2.22 C; substantive coverage via Phase WW + Round 2.5.C; residuals scoped to future round)
 
-Round 2.22 Phase C audit (commit `2c1654a`) classifies each substep
+Round 2.22 Phase C audit (commit `8dd7879`) classifies each substep
 against shipped WW + 2.5.C surfaces. Three covered (FF.1 / FF.3 /
 FF.6), three genuinely open + substantive and scoped to future
 rounds (FF.2 local picker, FF.4 `:sticker-name:` shortcut, FF.5
