@@ -71,8 +71,13 @@ fun ScheduleWeekView(
     defaultWriteRepoId: String = "",
     /** Round 2.21 Phase D.7 — effective zoom ∈ {1..4}, default 2 (80dp/h). */
     effectiveZoom: Int = 2,
+    /** Round 2.22 / Phase B UI follow-up — long-press-and-drag drop callback. */
+    onDragReschedule: ((DayBand, java.time.OffsetDateTime) -> Unit)? = null,
 ) {
     val HourHeight = hourHeightForZoom(effectiveZoom)
+    val dragState = rememberDragRescheduleUiState()
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val hourHeightPx = with(density) { HourHeight.toPx() }
     val days = (0..6).map { weekStart.plusDays(it.toLong()) }
     val bandsByDate: Map<LocalDate, List<DayBand>> =
         schedule?.days?.associate { it.date to it.bands }.orEmpty()
@@ -147,6 +152,9 @@ fun ScheduleWeekView(
                         defaultWriteRepoId = defaultWriteRepoId,
                         hourHeight = HourHeight,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
+                        dragState = dragState,
+                        hourHeightPx = hourHeightPx,
+                        onDragReschedule = onDragReschedule,
                     )
                 }
             }
@@ -178,6 +186,9 @@ private fun DayColumn(
     defaultWriteRepoId: String,
     hourHeight: androidx.compose.ui.unit.Dp,
     modifier: Modifier = Modifier,
+    dragState: DragRescheduleUiState? = null,
+    hourHeightPx: Float = 0f,
+    onDragReschedule: ((DayBand, java.time.OffsetDateTime) -> Unit)? = null,
 ) {
     val HourHeight = hourHeight
     BoxWithConstraints(
@@ -228,12 +239,21 @@ private fun DayColumn(
                     .height(heightDp)
                     .padding(1.dp),
             ) {
+                val dragModifier = if (dragState != null && onDragReschedule != null) {
+                    Modifier.dragRescheduleBand(
+                        state = dragState,
+                        band = band,
+                        hourHeightPx = hourHeightPx,
+                        onDrop = onDragReschedule,
+                    )
+                } else Modifier
                 Surface(
                     onClick = { onBandTap(band) },
                     color = effectiveFill,
                     shape = RoundedCornerShape(8.dp),
                     modifier = Modifier
                         .fillMaxSize()
+                        .then(dragModifier)
                         .testTag("$TestTagWeekBand-${band.instance.instanceId}"),
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {

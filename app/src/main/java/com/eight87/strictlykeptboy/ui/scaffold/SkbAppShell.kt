@@ -180,6 +180,14 @@ fun SkbAppShell(
      * it. The wizard auto-advances when prefs flip.
      */
     onPickInternalStorage: () -> Unit = {},
+    /**
+     * Round 2.22 / Phase B UI follow-up — single-instance drop handler
+     * for drag-to-reschedule. MainActivity wires to
+     * [com.eight87.strictlykeptboy.ui.schedule.DragRescheduleController].
+     */
+    onSingleDrop: ((com.eight87.strictlykeptboy.resolver.DayBand, java.time.OffsetDateTime) -> Unit)? = null,
+    /** Round 2.22 / Phase B UI follow-up — recurring-rule drop handler with branch choice. */
+    onRecurringDrop: ((com.eight87.strictlykeptboy.resolver.DayBand, java.time.OffsetDateTime, com.eight87.strictlykeptboy.ui.schedule.DragRescheduleController.RecurringChoice) -> Unit)? = null,
 ) {
     ProvideWindowSizeClass(modifier = modifier) { _ ->
         SkbAppShellContent(
@@ -209,6 +217,8 @@ fun SkbAppShell(
             taskPlaybackSource = taskPlaybackSource,
             onStartTask = onStartTask,
             onPickInternalStorage = onPickInternalStorage,
+            onSingleDrop = onSingleDrop,
+            onRecurringDrop = onRecurringDrop,
         )
     }
 }
@@ -244,6 +254,8 @@ private fun SkbAppShellContent(
     onStartTask: ((String) -> Unit)? = null,
     /** Round 2.17.D — see [SkbAppShell.onPickInternalStorage]. */
     onPickInternalStorage: () -> Unit = {},
+    onSingleDrop: ((com.eight87.strictlykeptboy.resolver.DayBand, java.time.OffsetDateTime) -> Unit)? = null,
+    onRecurringDrop: ((com.eight87.strictlykeptboy.resolver.DayBand, java.time.OffsetDateTime, com.eight87.strictlykeptboy.ui.schedule.DragRescheduleController.RecurringChoice) -> Unit)? = null,
 ) {
     var selected by rememberSaveable { mutableStateOf(TopDestination.Schedule) }
     // Phase 2.1.I.2 — observe wizard re-entry requests.
@@ -373,6 +385,8 @@ private fun SkbAppShellContent(
                         importExportState = importExportState,
                         onPickImportFile = onPickImportFile,
                         onPickExportFile = onPickExportFile,
+                        onSingleDrop = onSingleDrop,
+                        onRecurringDrop = onRecurringDrop,
                     )
                     // Phase CCC — overlay the trip wizard above the active pane
                     // when open. Covers the full content area; back/cancel
@@ -443,6 +457,8 @@ private fun SkbAppDestinationContent(
     importExportState: ImportExportViewState?,
     onPickImportFile: (com.eight87.strictlykeptboy.git.RepoConfig) -> Unit,
     onPickExportFile: (com.eight87.strictlykeptboy.git.RepoConfig) -> Unit,
+    onSingleDrop: ((com.eight87.strictlykeptboy.resolver.DayBand, java.time.OffsetDateTime) -> Unit)? = null,
+    onRecurringDrop: ((com.eight87.strictlykeptboy.resolver.DayBand, java.time.OffsetDateTime, com.eight87.strictlykeptboy.ui.schedule.DragRescheduleController.RecurringChoice) -> Unit)? = null,
 ) {
     when (selected) {
         TopDestination.Schedule -> SchedulePane(
@@ -453,6 +469,8 @@ private fun SkbAppDestinationContent(
             onPlanTrip = onPlanTrip,
             calendarVisibility = calendarVisibility,
             onLongPressCalendar = onLongPressCalendar,
+            onSingleDrop = onSingleDrop,
+            onRecurringDrop = onRecurringDrop,
         )
         TopDestination.Together -> if (togetherViewModel != null) {
             TogetherPane(vm = togetherViewModel, neutralMode = neutralMode)

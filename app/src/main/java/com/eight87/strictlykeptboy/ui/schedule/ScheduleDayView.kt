@@ -116,6 +116,13 @@ fun ScheduleDayView(
      * old single-zoom behaviour.
      */
     zoomFor: (CalendarRef, RepoRef) -> Int = { _, _ -> effectiveZoom },
+    /**
+     * Round 2.22 / Phase B UI follow-up — long-press-and-drag drop
+     * callback. `null` ⇒ drag-to-reschedule disabled (tap path
+     * preserved). Caller receives `(band, snappedNewStart)` and
+     * dispatches to `DragRescheduleController` for the actual write.
+     */
+    onDragReschedule: ((DayBand, java.time.OffsetDateTime) -> Unit)? = null,
 ) {
     val day = schedule?.days?.firstOrNull { it.date == date }
     val bands = day?.bands.orEmpty()
@@ -140,6 +147,7 @@ fun ScheduleDayView(
     }
     val autoExpand = shouldAutoExpand(effectiveZoom)
     var expandedKeys by remember { mutableStateOf(setOf<String>()) }
+    val dragState = rememberDragRescheduleUiState()
     Row(
         modifier = modifier
             .fillMaxSize()
@@ -201,7 +209,24 @@ fun ScheduleDayView(
                 hourHeight = hourHeight,
                 onBandTap = onBandTap,
                 defaultWriteRepoId = defaultWriteRepoId,
+                dragState = dragState,
+                hourHeightPx = hourHeightPx,
+                onDragReschedule = onDragReschedule,
             )
+            // Round 2.22 / Phase B UI follow-up — translucent ghost band
+            // following the finger, snapped to the grid.
+            val snapped = dragState.snappedStart
+            val draggedId = dragState.draggedBandId
+            if (snapped != null && draggedId != null) {
+                val draggedBand = bands.firstOrNull { it.instance.instanceId == draggedId }
+                if (draggedBand != null) {
+                    DragGhostBand(
+                        band = draggedBand,
+                        snappedStart = snapped,
+                        hourHeight = hourHeight,
+                    )
+                }
+            }
             if (isToday) NowLine(hourHeight = hourHeight)
         }
     }
@@ -271,6 +296,9 @@ private fun BandsLayer(
     hourHeight: Dp,
     onBandTap: (DayBand) -> Unit,
     defaultWriteRepoId: String,
+    dragState: DragRescheduleUiState? = null,
+    hourHeightPx: Float = 0f,
+    onDragReschedule: ((DayBand, java.time.OffsetDateTime) -> Unit)? = null,
 ) {
     // Flatten groups to (band, syntheticGroupKey?). Synthetic key
     // tracks "this band is the folder for group X — taps should
@@ -307,6 +335,16 @@ private fun BandsLayer(
                     .height(heightDp)
                     .padding(2.dp),
             ) {
+                val dragModifier = if (
+                    dragState != null && onDragReschedule != null && groupKey == null
+                ) {
+                    Modifier.dragRescheduleBand(
+                        state = dragState,
+                        band = band,
+                        hourHeightPx = hourHeightPx,
+                        onDrop = onDragReschedule,
+                    )
+                } else Modifier
                 Surface(
                     onClick = {
                         // Round 2.21 Phase F.2 — synthetic group folder taps
@@ -317,6 +355,7 @@ private fun BandsLayer(
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier
                         .fillMaxSize()
+                        .then(dragModifier)
                         .testTag("$TestTagDayBand-${band.instance.instanceId}"),
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
@@ -379,6 +418,46 @@ private fun BandsLayer(
                 if (isOffSchedule) {
                     BandDashedBorder(color = MaterialTheme.colorScheme.error)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DragGhostBand(
+    band: DayBand,
+    snappedStart: java.time.OffsetDateTime,
+    hourHeight: Dp,
+) {
+    val durationMin = durationMinutes(band.instance.effectiveStart, band.instance.effectiveEnd)
+        .coerceAtLeast(15f)
+    val newMinutesFromMid = snappedStart.hour * 60f + snappedStart.minute
+    val topDp = hourHeight * newMinutesFromMid / 60f
+    val heightDp = hourHeight * durationMin / 60f
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(heightDp)
+            .offset(y = topDp)
+            .padding(horizontal = 4.dp)
+            .testTag("DragGhostBand"),
+    ) {
+        Surface(
+            color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.55f),
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            Column(modifier = Modifier.padding(8.dp)) {
+                Text(
+                    text = "→ %02d:%02d".format(snappedStart.hour, snappedStart.minute),
+                    style = MaterialTheme.typography.labelMedium,
+                )
+                Text(
+                    text = band.instance.title,
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }

@@ -1287,6 +1287,64 @@ class MainActivity : ComponentActivity() {
                         // `cal-trip-<uuidv7>/` overlay into the active repo and
                         // commits atomically. Falls back to no-op (Result.failure)
                         // if no active repo exists yet.
+                        // Round 2.22 / Phase B UI follow-up — drag-to-reschedule.
+                        // Resolve the band's source entity from disk, then
+                        // route through DragRescheduleController.
+                        onSingleDrop = { band, newStart ->
+                            val eventId = (band.instance.source as? com.eight87.strictlykeptboy.resolver.InstanceSource.OneOff)
+                                ?.eventId?.id ?: return@SkbAppShell
+                            val repoId = band.instance.repo.id
+                            val cfg = graph.repoStore.list().firstOrNull { it.repoId == repoId }
+                                ?: return@SkbAppShell
+                            scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                runCatching {
+                                    val results = com.eight87.strictlykeptboy.store.RepoScanner
+                                        .scanAll(java.io.File(cfg.rootDir))
+                                    val event = results
+                                        .filterIsInstance<com.eight87.strictlykeptboy.store.ParseResult.Success>()
+                                        .mapNotNull { it.entity as? com.eight87.strictlykeptboy.store.Event }
+                                        .firstOrNull { it.id == eventId } ?: return@runCatching
+                                    com.eight87.strictlykeptboy.ui.schedule.DragRescheduleController
+                                        .handleSingleDrop(
+                                            rootDir = java.io.File(cfg.rootDir),
+                                            repoId = cfg.repoId,
+                                            event = event,
+                                            newStart = newStart,
+                                            nowIso = java.time.OffsetDateTime.now().toString(),
+                                        )
+                                }
+                            }
+                        },
+                        onRecurringDrop = { band, newStart, choice ->
+                            val src = band.instance.source as? com.eight87.strictlykeptboy.resolver.InstanceSource.RuleInstance
+                                ?: return@SkbAppShell
+                            val ruleId = src.ruleId.id
+                            val origDate = src.originalStart.toLocalDate()
+                            val repoId = band.instance.repo.id
+                            val cfg = graph.repoStore.list().firstOrNull { it.repoId == repoId }
+                                ?: return@SkbAppShell
+                            scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                runCatching {
+                                    val results = com.eight87.strictlykeptboy.store.RepoScanner
+                                        .scanAll(java.io.File(cfg.rootDir))
+                                    val rule = results
+                                        .filterIsInstance<com.eight87.strictlykeptboy.store.ParseResult.Success>()
+                                        .mapNotNull { it.entity as? com.eight87.strictlykeptboy.store.RecurrenceRule }
+                                        .firstOrNull { it.id == ruleId } ?: return@runCatching
+                                    com.eight87.strictlykeptboy.ui.schedule.DragRescheduleController
+                                        .handleRecurringDrop(
+                                            rootDir = java.io.File(cfg.rootDir),
+                                            repoId = cfg.repoId,
+                                            rule = rule,
+                                            originalDate = origDate,
+                                            newStart = newStart,
+                                            choice = choice,
+                                            author = cfg.authorIdentity.name,
+                                            nowIso = java.time.OffsetDateTime.now().toString(),
+                                        )
+                                }
+                            }
+                        },
                         onTripMaterialize = { tripDraft ->
                             runCatching {
                                 val activeName = graph.defaultWriteRepoName.value

@@ -67,6 +67,18 @@ fun SchedulePane(
      * [CalendarSettingsSheet]. `null` ⇒ no-op.
      */
     onLongPressCalendar: ((CalendarMeta) -> Unit)? = null,
+    /**
+     * Round 2.22 / Phase B UI follow-up — single-instance drop handler.
+     * Caller wires to [DragRescheduleController.handleSingleDrop].
+     * `null` ⇒ drag-to-reschedule disabled.
+     */
+    onSingleDrop: ((DayBand, java.time.OffsetDateTime) -> Unit)? = null,
+    /**
+     * Round 2.22 / Phase B UI follow-up — recurring drop handler with
+     * user's branch choice. Caller wires to
+     * [DragRescheduleController.handleRecurringDrop].
+     */
+    onRecurringDrop: ((DayBand, java.time.OffsetDateTime, DragRescheduleController.RecurringChoice) -> Unit)? = null,
 ) {
     androidx.compose.runtime.LaunchedEffect(state) {
         com.eight87.strictlykeptboy.perf.PerfTraceRecorder.begin(
@@ -78,6 +90,23 @@ fun SchedulePane(
     val rendered by state.rendered.collectAsState()
 
     var detailBand by remember { mutableStateOf<DayBand?>(null) }
+    // Round 2.22 / Phase B UI follow-up — pending recurring drop awaits
+    // the user's branch choice in the prompt dialog.
+    var pendingRecurringDrop by remember {
+        mutableStateOf<Pair<DayBand, java.time.OffsetDateTime>?>(null)
+    }
+    val onDragReschedule: ((DayBand, java.time.OffsetDateTime) -> Unit)? = remember(onSingleDrop, onRecurringDrop) {
+        if (onSingleDrop == null && onRecurringDrop == null) null
+        else { band, newStart ->
+            if (band.isRecurringInstance()) {
+                if (onRecurringDrop != null) {
+                    pendingRecurringDrop = band to newStart
+                }
+            } else {
+                onSingleDrop?.invoke(band, newStart)
+            }
+        }
+    }
 
     val activeNowBand = remember(rendered) {
         rendered?.let { rs -> findActiveBand(rs.days.flatMap { it.bands }) }
@@ -104,6 +133,7 @@ fun SchedulePane(
                             onBandTap = { detailBand = it },
                             onPlanTrip = onPlanTrip,
                             calendarVisibility = calendarVisibility,
+                            onDragReschedule = onDragReschedule,
                         )
                     }
                 },
@@ -127,6 +157,7 @@ fun SchedulePane(
                     onSyncClick = onSyncClick,
                     onBandTap = { detailBand = it },
                     onPlanTrip = onPlanTrip,
+                    onDragReschedule = onDragReschedule,
                 )
             }
             detailBand?.let { band ->
@@ -136,6 +167,17 @@ fun SchedulePane(
                     onEdit = { /* Phase I/K — stubbed */ },
                 )
             }
+        }
+
+        pendingRecurringDrop?.let { (band, newStart) ->
+            DragRescheduleRecurrencePrompt(
+                eventTitle = band.instance.title,
+                onChoice = { choice ->
+                    pendingRecurringDrop = null
+                    onRecurringDrop?.invoke(band, newStart, choice)
+                },
+                onDismiss = { pendingRecurringDrop = null },
+            )
         }
 
         if (eventCreateController != null) {
@@ -183,6 +225,7 @@ private fun ScheduleMasterContent(
     onBandTap: (DayBand) -> Unit,
     onPlanTrip: (() -> Unit)? = null,
     calendarVisibility: CalendarVisibilityPrefs? = null,
+    onDragReschedule: ((DayBand, java.time.OffsetDateTime) -> Unit)? = null,
 ) {
     val selectedTab by state.selectedTab.collectAsState()
     val date by state.date.collectAsState()
@@ -241,6 +284,7 @@ private fun ScheduleMasterContent(
                 modifier = Modifier.fillMaxSize(),
                 onBandTap = onBandTap,
                 effectiveZoom = effectiveZoom,
+                onDragReschedule = onDragReschedule,
             )
             ScheduleViewTab.Day -> ScheduleDayView(
                 date = date,
@@ -263,6 +307,7 @@ private fun ScheduleMasterContent(
                     calendarVisibility?.zoomOf(calRef.id, repoRef.id)
                         ?: effectiveZoom
                 },
+                onDragReschedule = onDragReschedule,
             )
             ScheduleViewTab.Week -> {
                 val weekStart = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
@@ -273,6 +318,7 @@ private fun ScheduleMasterContent(
                     onBandTap = onBandTap,
                     onSwipeWeek = { delta -> state.setDate(date.plusWeeks(delta.toLong())) },
                     effectiveZoom = effectiveZoom,
+                    onDragReschedule = onDragReschedule,
                 )
             }
             ScheduleViewTab.Month -> ScheduleMonthView(

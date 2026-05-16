@@ -40,6 +40,8 @@ fun ScheduleThreeDayView(
     today: LocalDate = LocalDate.now(),
     defaultWriteRepoId: String = "",
     effectiveZoom: Int = 2,
+    /** Round 2.22 / Phase B UI follow-up — long-press-and-drag drop callback. */
+    onDragReschedule: ((DayBand, java.time.OffsetDateTime) -> Unit)? = null,
 ) {
     val dates = (0..2).map { anchor.plusDays(it.toLong()) }
     Column(modifier = modifier.fillMaxSize().testTag(TestTagThreeDayView)) {
@@ -88,6 +90,7 @@ fun ScheduleThreeDayView(
                         isToday = d == today,
                         defaultWriteRepoId = defaultWriteRepoId,
                         effectiveZoom = effectiveZoom,
+                        onDragReschedule = onDragReschedule,
                     )
                 }
             }
