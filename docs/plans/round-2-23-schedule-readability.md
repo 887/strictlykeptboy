@@ -144,3 +144,55 @@ Five user-feedback items captured from a live AVD session on 2026-05-16:
 - [x] **F.4** Add Round 2.23 entry to `main.md`.
 - [x] **F.5** AVD smoke on emulator-5558 — screencaps to
       `docs/qa/2-23/`.
+
+---
+
+## Round 2.23.1 follow-up (shipped in commit `45808a2`)
+
+User feedback on the Round 2.23 Reviews work (2026-05-17):
+1. "all the reviews aren't hooked up in the demo data"
+2. "reviews use horizontal tabs at the top rather than our established
+   patterns of vertical tabs on the left"
+
+### Fix 1 — Reviews uses the vertical left rail (D.118)
+
+- [x] **2.23.1.A.1** `ReviewsPane` drops the `Row { FilterChip(...) }`
+      at the top. Accepts a hoisted `filter: ReviewsFilter` param
+      (default `All` preserves test ergonomics).
+- [x] **2.23.1.A.2** `SkbAppShell` builds rail items for the Reviews
+      destination via `reviewsFilterLabelRes(...)`, mirroring the
+      Schedule `scheduleTabLabelRes` pattern. Reuses the existing
+      `RailColumn` + `RailItem` — no new primitive.
+- [x] **2.23.1.A.3** New strings: `reviews_filter_{all,unread,reactions,threaded}`.
+- [x] **2.23.1.A.4** `ReviewsPaneVerticalRailTest` asserts none of the
+      four filter labels render inside the pane semantics tree, and
+      that the external filter param routes correctly.
+- [x] **2.23.1.A.5** D.118 added to `decisions.md` — vertical rail is
+      universal across content destinations.
+
+### Fix 2 — Demo seeds a real review timeline
+
+- [x] **2.23.1.B.1** Add 14 `reviews/<sha>/reviewable_change.md` files
+      under `assets/rich-demo-repo/reviews/`, referencing real event
+      `global_id`s from the demo's two-week May 2026 window
+      (routine compliance, gym buddy session, Saturday scene, mum's
+      brunch, Friday-drinks two-pint rule, coffee-after-14 correction,
+      phone-in-bed correction, etc.).
+- [x] **2.23.1.B.2** `_manifest.txt` regenerated via
+      `:app:regenerateRichDemoManifest` (142 entries, +14).
+- [x] **2.23.1.B.3** `RichDemoReviewSeedTest` (Robolectric) extracts
+      the demo to a tmp dir and asserts
+      `ReviewFeedReader.scan(...).size >= 12`.
+
+### AVD evidence (emulator-5558)
+
+`docs/qa/2-23/reviews-vertical-rail.png` shows the rail rendering on
+the left with rotated `All / Unread / Reactions / Threaded` labels
+and the demo's seeded review cards populating the list. No horizontal
+TabRow at the top. `reviews-demo-seeded.png` is the same surface.
+
+### Test delta
+
+1103 (Round 2.18 close-out) -> 1115 passing (+ ReviewsPaneVerticalRailTest
+× 3 cases, RichDemoReviewSeedTest × 1, plus the Round 2.23 additions
+that landed in `ed9d4c6`).
