@@ -276,5 +276,6 @@ When Phase W release engineering lands: every dep in the APK gets inventoried by
 ## Currently in flight (autonomous-mode markers)
 
 - **Round 1 (Phases A–W): ✅ COMPLETE.** Closed out in the Phase W release-engineering commit. Release APK builds with R8 + resource shrinking enabled, installs + launches on `emulator-5554`, end-to-end `scripts/build-release-apk.sh` dry-run produces `release/latest.apk`. Round 2 (Phases X–LL) is the next active scope.
-- **Tests:** 369 passing under `:app:testDebugUnitTest` as of the Phase W close-out commit.
+- **Tests:** 1017 passing under `:app:testDebugUnitTest` as of the Round 2.18 close-out commit.
 - **AVD-validated:** every UI-affecting phase through Phase W; Phase W additionally smoke-tested the release-signed (debug-keystore fallback) + R8-minified APK on `emulator-5554`.
+- **Round 2.18 (system calendar replacement): ✅ COMPLETE.** CalendarContractBridge + sync adapter + intent filters + DAVx⁵ onboarding all shipped. AVD-smoked. App handles `.ics` and publishes events to other Android apps via Account type `com.eight87.strictlykeptboy`.

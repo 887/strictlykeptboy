@@ -1,6 +1,6 @@
 # Round 2.18 — Replace the Android system calendar
 
-## Status: 📋 DRAFT — not yet started, see round-2-17 for foundational storage work that this round builds on
+## Status: ✅ DONE
 
 Planning. No code changes yet. Predecessor: Round 2.16 (now-playing + todolist
 unification), Round 2.17 (storage folder + import/export/restore — ✅ DONE). Sister plan: `docs/plans/round-2-15-demo-first-onboarding.md`.
@@ -774,7 +774,7 @@ repos slot in identically.
 - [x] **H.5** Doc page in `docs/external-calendars.md` mirroring
   the same content for users who read the repo.
 
-## Phase I — Default-app discovery onboarding
+## Phase I — Default-app discovery onboarding — shipped in d1eb974
 
 Shipped in commit `d1eb974`.
 
@@ -962,14 +962,16 @@ bare-AVD scope.
   right pane; chip strip is intact at the top of the left pane.
   WM reset after.
 
-## Phase K — Plan-file close
+## Phase K — Plan-file close — shipped in this change
 
-- [ ] **K.1** Tick every phase header with the landing jj change ID.
-- [ ] **K.2** Mark `## Status: ✅ DONE`.
-- [ ] **K.3** Cross-reference from `docs/plans/main.md`.
-- [ ] **K.4** Update `docs/plans/decisions.md` with the new
-  D.88..D.95 entries that map to D-2.18.a..i.
-- [ ] **K.5** Update root `CLAUDE.md` "Currently in flight" section.
+- [x] **K.1** Tick every phase header with the landing git short SHA.
+- [x] **K.2** Mark `## Status: ✅ DONE`.
+- [x] **K.3** Cross-reference from `docs/plans/main.md`.
+- [x] **K.4** Update `docs/plans/decisions.md` with the new
+  D.90..D.98 entries that map to D-2.18.a..i. (D.88 + D.89 already
+  consumed by Round 2.17 close-out and Round 2.18 Phase B's privacy
+  companion; next free number was D.90.)
+- [x] **K.5** Update root `CLAUDE.md` "Currently in flight" section.
 
 ## Verification (cross-phase)
 

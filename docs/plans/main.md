@@ -39,6 +39,10 @@ User feedback on screenshots: the destination buttons currently occupy row 2; `k
 - [x] **2.3.A.4** Verify destination buttons fit on a single row alongside title + avatar on Compact width (1080dp baseline). Title elides with `…` via `overflow = TextOverflow.Ellipsis` while taking `weight(1f)`; action-row icons never clip.
 - [x] **2.3.A.5** AVD smoke verified on `emulator-5554` (1080×2400). Screenshots in `docs/qa/2-3/`. `AppShellNavigationSwapTest` did not need updates — `TestTagShellDestPrefix` tags are preserved on the relocated destination buttons.
 
+## Round 2.18 — Replace the Android system calendar [DONE] (see [`round-2-18-calendar-replacement.md`](round-2-18-calendar-replacement.md))
+
+CalendarContractBridge (Phase A) + permission UX (B) + UI surfacing (C) + two-way edit (D) + intent filters (E) + reminder parity (F) + sync adapter publishing skb as Android Account type `com.eight87.strictlykeptboy` (G) + DAVx⁵ / Exchange onboarding (H) + default-app discovery (I) + tests & AVD smoke (J) all shipped. Locks D.90..D.98 (D-2.18.a..i).
+
 **Sub-step counts (post-cleanup sweep):**
 
 - Total sub-steps: **469**

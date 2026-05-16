@@ -1939,3 +1939,127 @@ Exchange / DAVx5 calendars alongside skb's file-backed repos.
 
 The privacy policy at `docs/privacy-policy.md` carries this paragraph
 verbatim once Round 2.18 ships.
+
+## D.90 — Bridge direction: read-in primary, write-out opt-in (Round 2.18 D-2.18.a)
+
+External calendars (Google / Exchange / DAVx⁵-backed CalDAV / iCloud /
+Nextcloud) flow *into* skb's resolver via a `CalendarContractBridge`
+that publishes synthetic `CalendarMeta` + materialized events for the
+visible window. Skb's repo events do **not** automatically appear in
+CalendarContract — that path is gated behind a separate Settings
+toggle "Make skb visible to other Android apps" which enables the
+Phase G sync adapter. Read-in is the common case (users want their
+outside calendars in skb); write-out is opt-in (Wear OS / Auto /
+commute predictions / third-party widgets benefit). Both bridges
+exist; the user picks which side.
+
+## D.91 — skb publishes as Android Account type `com.eight87.strictlykeptboy` (Round 2.18 D-2.18.b)
+
+Gated behind the Settings toggle in D.90. When enabled, every active
+skb repo becomes one CalendarContract `Calendars` row under account
+`(name="<repoId>@local", type="com.eight87.strictlykeptboy")`. This
+makes skb events visible to every other calendar-aware app on the
+device (Wear OS, Auto, Google Now, third-party widgets) for free —
+the entire point of CalendarContract is exactly this fan-out.
+Building bespoke surfaces for each consumer is infinite work; one
+sync-adapter surface is finite work.
+
+## D.92 — No native CalDAV / EWS / EAS / Google / Microsoft Graph client (Round 2.18 D-2.18.c)
+
+Skb does not implement CalDAV, EWS, EAS, Google's REST API, or
+Microsoft Graph. Users pair skb with DAVx⁵ (CalDAV: Google, iCloud,
+Nextcloud, Fastmail, Posteo, mailbox.org) and Android's stock
+Exchange account for MS365 / on-prem Exchange. Phase H ships a
+"Connect external calendars" settings screen that links out to
+DAVx⁵ on Play / F-Droid and to *Settings → Add account → Exchange*
+via `Settings.ACTION_ADD_ACCOUNT` with
+`EXTRA_ACCOUNT_TYPES=["com.android.exchange"]`. Each protocol would
+be months of work and would duplicate what DAVx⁵ already does well.
+Better to be a great consumer of the existing ecosystem.
+
+## D.93 — Intent-filter set: match Etar exactly (Round 2.18 D-2.18.d)
+
+The MainActivity / event aliases declare the Etar surface area:
+`time/epoch`, `vnd.android.cursor.item/event`,
+`vnd.android.cursor.dir/event`, `text/calendar`,
+`MAIN + APP_CALENDAR + LAUNCHER`. Plus a path-pattern filter for
+`https://*/*.ics` with `category.BROWSABLE` so .ics links in a
+browser also land in skb. Etar is the AOSP-derived reference
+replacement; matching its set means skb appears in every system
+chooser the stock app appears in. Adding more filters than that
+risks intercepting unrelated stuff — the manifest's custom
+deep-link schemes from Phase MM / Phase O.2 stay untouched and
+are orthogonal to this work.
+
+## D.94 — External calendar → synthetic repo mapping (Round 2.18 D-2.18.e)
+
+Every external Calendar = one synthetic repo with id
+`system/<accountType>/<accountName>` (e.g.
+`system/com.google/someone@gmail.com`). Each
+`CalendarContract.Calendars` row inside that account becomes one
+`CalendarRef` with id `cal-<calendarContractId>`. `displayName` =
+`CALENDAR_DISPLAY_NAME`. `colorSeed` = `CALENDAR_COLOR` (raw int,
+hashed into the M3E tint pipeline the same way repo seeds are).
+Synthetic repos appear in `CalendarRegistry.state` flagged via
+`CalendarKind.External` (extending the existing
+`enum class CalendarKind { Regular, Timebox, External }`). Chip
+strip, settings UI, resolver, supersedence, active-windows all
+work unchanged because they operate on `CalendarMeta`, not disk.
+Reusing existing resolver infrastructure is the architectural point.
+
+## D.95 — Two-way edit gated on `CAL_ACCESS_CONTRIBUTOR` (Round 2.18 D-2.18.f)
+
+Skb writes back via `ContentResolver.update(Events.CONTENT_URI, ...)`
+without `CALLER_IS_SYNCADAPTER` when
+`CALENDAR_ACCESS_LEVEL >= CAL_ACCESS_CONTRIBUTOR`; the OS routes the
+change to the owning sync adapter, which pushes upstream on next
+sync. For `CAL_ACCESS_READ` / `FREEBUSY` / `NONE`, skb shows the
+event as a non-editable badge ("Read-only — owned by Google
+Calendar"). Recurring-event edits offer the standard "this event /
+this and following / all" tri-choice (CalendarContract requires
+the caller to do this — no built-in helper). Half-baked two-way
+edit silently failing on read-only calendars would be worse than
+no edit; we surface the constraint instead.
+
+## D.96 — Calendar permissions are lazy, scoped, reversible (Round 2.18 D-2.18.g)
+
+`READ_CALENDAR` / `WRITE_CALENDAR` are declared in the manifest
+(they have to be, to be requestable at runtime) but skb never calls
+`requestPermissions` until the user toggles
+*Settings → External calendars → Show system calendars* to ON.
+The toggle's secondary line: "Grants skb access to every calendar
+on this device, including ones from other accounts. You can revoke
+this anytime in Android Settings." `WRITE_CALENDAR` is requested
+only when the user first tries to edit an external event. If
+denied, skb falls back to read-only treatment globally and the
+toggle reverts. Bundling at install is louder than the feature
+deserves; lazy request with clear copy keeps the trust budget
+intact.
+
+## D.97 — Home-screen month-view widget deferred to Round 2.19 (Round 2.18 D-2.18.h)
+
+Skb already has the Phase VV countdown widget and Phase EEE "now"
+widget. A month-view homescreen calendar widget (Google Calendar
+style) is a separate large piece of work (RemoteViews weekly grid,
+AppWidgetProvider data binding through CalendarContract + repo
+resolver) and is pushed to Round 2.19. Round 2.18 ships the
+data-layer bridge + intent-filter claim + two-way edit + sync
+adapter; widget development against the bridge can proceed
+independently once 2.18 lands.
+
+## D.98 — Skb owns reminder UX for rendered events; cannot silence source apps (Round 2.18 D-2.18.i)
+
+Skb's existing `ReminderBroadcastReceiver` + `Reminder.kt` layer
+(Phase F) schedules and fires alarms for external events too: at
+sync time we read `CalendarContract.Reminders` rows, translate to
+skb's internal `Reminder` records, and respect skb's per-repo
+notif policy + quiet-hours + dom-persona register. We do NOT
+disable the source adapter's reminder service — that requires
+deeper integration than CalendarContract allows. Net effect:
+external events with reminders may fire twice (once from Google
+Calendar's notifier, once from skb). Mitigation: a Settings toggle
+"Suppress system calendar notifications" that opens the OS
+notification-channel settings for the source apps so the user can
+mute them manually. Silencing other apps from inside skb is not
+technically possible (no IPC for "please don't notify"); a
+link-out is the honest UX.
