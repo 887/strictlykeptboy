@@ -197,7 +197,7 @@ DST policy decisions (provisional, finalised in Phase E):
       - `TogetherInputFormTzPickerTest` — participant tz dropdown
         renders and updates state.
 
-### Phase E — DST edge-case test corpus (AA.5) — shipped in commit 6072b62
+### Phase E — DST edge-case test corpus (AA.5) — shipped in commit 6dd92b0
 
 - [x] **E.1** New `DstEdgeCaseTest.kt` (resolver tests):
       - **Spring-forward — non-existent local time.** Event at
