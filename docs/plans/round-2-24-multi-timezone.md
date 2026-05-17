@@ -112,7 +112,7 @@ DST policy decisions (provisional, finalised in Phase E):
       per-event tz (`EventRow` has no `tzId`; only `RecurrenceRuleRow`
       carries one, which is correct per RFC5545). No migration needed.
 
-### Phase B — Resolver display conversion — shipped in commit cf3a885
+### Phase B — Resolver display conversion — shipped in commit 46bf374
 
 - [x] **B.1** New `resolver/TzResolver.kt`: pure top-level function
       ```
