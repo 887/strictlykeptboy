@@ -39,6 +39,43 @@ User feedback on screenshots: the destination buttons currently occupy row 2; `k
 - [x] **2.3.A.4** Verify destination buttons fit on a single row alongside title + avatar on Compact width (1080dp baseline). Title elides with `…` via `overflow = TextOverflow.Ellipsis` while taking `weight(1f)`; action-row icons never clip.
 - [x] **2.3.A.5** AVD smoke verified on `emulator-5554` (1080×2400). Screenshots in `docs/qa/2-3/`. `AppShellNavigationSwapTest` did not need updates — `TestTagShellDestPrefix` tags are preserved on the relocated destination buttons.
 
+## Round 2.27 — Keeper-prompt mechanic + persona realism [DONE — 2026-05-17] (see [`round-2-27-keeper-prompts.md`](round-2-27-keeper-prompts.md))
+
+Cage-keeping reframed: deletes the daily "morning cage check for
+bruises" tone-broken ritual and replaces it with a first-class
+**keeper-prompt** event kind. Additive schema (`requires_response`,
+`prompt_kind`, `prompt_target`) routes prompts through
+`FromEventsProjector` to `TaskSource.KeeperPrompt`; response files at
+`calendars/<cal>/cage-check-responses/<rule>/<date>.md` close
+instances (mirrors `deviations/` in reverse). `TaskRow` renders
+prompt-kind glyph + Keeper chip + "open Nd" pill + Respond button;
+`PromptResponseSheet` writes the reply. Rich-demo-repo grows realistic
+persona content: sleep blocks, new `gaming` / `voice-chat` /  `play`
+calendars (Helldivers, D&D Wednesday, playtime unlock), engineer
+tasks (deploy hotfix / OKR doc / oncall handoff), software-eng-conf
+weekend supersedence. Locks D.131. Commits across phases A–G:
+`48ad3f5` (A) · `a3ea234` (B + D.2/D.4) · `4896d55` + `40ae42f` (C + D.1/D.3) ·
+`1b5e68a` (E + F: demo content) · `de7509e` (G: decisions.md + status DONE).
+
+## Round 2.26 — Tasks rebuild: vertical rail + unified day-of feed [DONE — 2026-05-17] (see [`round-2-26-tasks.md`](round-2-26-tasks.md))
+
+`TopDestination.Tasks` reinstated (removed in Round 2.16.E) with
+vertical left rail (parity with Schedule / Reviews per D.118). New
+`TasksFilter` enum (Today / Upcoming / All / Per-list / Done) drops
+the vague Combined + the misclassified Shopping. "Today" merges
+todolist tasks with `CalendarKind.Timebox` bands from
+`RenderedSchedule` into one ordered feed (overdue → chronological
+interleave → pinned standing). `TimeboxRow.kt` mirrors `TaskRow`'s
+shape with a calendar-coloured accent strip + clock glyph.
+`IndexerSnapshotPublisher` learned to read `todolist.toml` for real
+display names; `TaskEntityMapping.kt` maps Room rows → `TaskItem`.
+Demo seed: 15 realistic tasks across groceries / home /
+work-sprint-25 / routines / play (4 due today, 3 overdue, 4 upcoming,
+2 no-due, 2 done) + new `timeboxes` calendar with 3 today timeboxes.
+Locks D.130. Commits: `ad7e9a2` (A) · `f1668f5` (B) · `4896d55` (C) ·
+`1a2820e` (D + E demo seed) · `6a4b106` (F: rich-demo task wiring) ·
+`4df31dc` (G: decisions.md + status DONE).
+
 ## Round 2.25 — Now / Next surface unification [DONE — 2026-05-17] (see [`round-2-25-now-next.md`](round-2-25-now-next.md))
 
 User-feedback round (2026-05-17): the bottom bar's "No active task"
@@ -621,17 +658,17 @@ Three modes, picked per-mirror at setup time:
 - [ ] **Z.4** Fallback warning UI on no-LFS providers ("this provider does not support LFS; large attachments stored inline") (Round 4 — later)
 - [ ] **Z.5** Migration helper: convert existing repo's large in-tree attachments to LFS (`skb migrate --lfs`) (Round 4 — later)
 
-## Phase AA — Multi-timezone first-class
+## Phase AA — Multi-timezone first-class [DONE — pulled forward as Round 2.24, 2026-05-17] (see [`round-2-24-multi-timezone.md`](round-2-24-multi-timezone.md))
 
 Deep-dives: [`data-model.md`](data-model.md) extension DM-L, [`resolver.md`](resolver.md) extension RV-H+I, [`ui-spec.md`](ui-spec.md) extension UI-V.
 
-- [ ] **AA.1** Per-event `tz_id` field (additive, optional, non-breaking) (Round 4 — later)
-- [ ] **AA.2** Repo default tz in `repo.toml` (Round 4 — later)
-- [ ] **AA.3** Display-tz toggle in top bar; per-event "pin to event tz" flag (Round 4 — later)
-- [ ] **AA.4** Multi-tz common-time finder (Round 4 — later)
-- [ ] **AA.5** DST edge-case test corpus (Round 4 — later)
-- [ ] **AA.6** `skb tz convert <event-id> <new-tz>` CLI subcommand (Round 4 — later)
-- [ ] **AA.7** Participant-tz declaration in Together-tab common-time UI (Round 4 — later)
+- [x] **AA.1** Per-event `tz_id` field (additive, optional, non-breaking) — shipped `c1dcac7`
+- [x] **AA.2** Repo default tz in `repo.toml` — shipped `c1dcac7` via shared `store/RepoMetaReader.kt`
+- [x] **AA.3** Display-tz toggle in top bar; per-event "pin to event tz" flag — shipped `3bf0fe1` (DisplayTzChip + pinned-event badge)
+- [x] **AA.4** Multi-tz common-time finder — shipped `5bdb471` (CommonTimeFinder.Query.participantTz)
+- [x] **AA.5** DST edge-case test corpus — shipped `6dd92b0` (5-case `DstEdgeCaseTest`)
+- [x] **AA.6** `skb tz convert <event-id> <new-tz>` CLI subcommand — shipped `fd6dd0e` (with `--shift-instant` flag)
+- [x] **AA.7** Participant-tz declaration in Together-tab common-time UI — shipped `5bdb471` (per-row `ExposedDropdownMenuBox`)
 
 ## Phase BB — Weather overlay
 
