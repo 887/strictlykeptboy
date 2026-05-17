@@ -55,7 +55,7 @@
 
 ## Phase A — Rail wiring + filter enum (no behavior change yet)
 
-shipped in commit <see Round 2.26.A commit>
+shipped in commit ad7e9a2
 
 - [x] **A.1** Add `TopDestination.Tasks` back to the enum in
       `app/src/main/java/com/eight87/strictlykeptboy/ui/scaffold/SkbAppShell.kt`
