@@ -9,6 +9,7 @@ import com.eight87.skb.cli.commands.ModeGroup
 import com.eight87.skb.cli.commands.RepoGroup
 import com.eight87.skb.cli.commands.ReviewGroup
 import com.eight87.skb.cli.commands.TaskGroup
+import com.eight87.skb.cli.commands.TzGroup
 import com.eight87.skb.cli.feedback.CommentGroup
 import com.eight87.skb.cli.feedback.ReactGroup
 import com.eight87.skb.cli.feedback.RefSetWriteBackCommand
@@ -106,6 +107,7 @@ fun main(args: Array<String>) {
   skb.subcommands(
     EventGroup(ctxOf),
     TaskGroup(ctxOf),
+    TzGroup(ctxOf),
     CalGroup(ctxOf),
     RepoGroup(ctxOf),
     ForkCommand(ctxOf),

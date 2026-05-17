@@ -221,27 +221,28 @@ DST policy decisions (provisional, finalised in Phase E):
 - [ ] **E.3** `decisions.md` D.121 promotes D-2.24.g + D-2.24.h from
       "provisional" to "locked" once Phase E passes.
 
-### Phase F — `skb tz convert` CLI (AA.6)
+### Phase F — `skb tz convert` CLI (AA.6) — shipped in commit <pending>
 
-- [ ] **F.1** New file
+- [x] **F.1** New file
       `cli/src/main/kotlin/com/eight87/skb/cli/commands/TzCommands.kt`
       registering `skb tz convert <event-id> <new-tz>
       [--shift-instant] [--repo <root>]`. Wired into `Main.kt`
       dispatch.
-- [ ] **F.2** Locate the entity file via existing
-      `RepoDiscovery` + an id→path lookup (walk events/tasks
-      buckets); read via `MiniToml`; rewrite via existing
-      `AtomicWriter` + commit via `GitCommitter`. Commit message
-      auto-format: `tz: convert "<title>" → <new-tz>
-      (<local|instant>)`.
-- [ ] **F.3** Conversion semantics:
+- [x] **F.2** Locate the entity file via existing
+      `RepoDiscovery` + an id→path lookup (walk events +
+      recurrences buckets across every calendar); read via
+      `MiniToml`; rewrite via existing `AtomicWriter` + commit via
+      `GitCommitter`. Commit message auto-format:
+      `tz: convert "<title>" → <new-tz> (<local|instant>)`.
+- [x] **F.3** Conversion semantics:
       - Default (no `--shift-instant`): parse `start` + `end` as
         local-clock in old tz, re-emit as same local-clock in new
         tz. `tz_id = <new-tz>` written.
       - `--shift-instant`: parse `start` + `end` as instants in old
         tz, re-emit as the same instant rendered in new tz.
-      - Recurring rules: same logic against `dtstart`.
-- [ ] **F.4** Tests in `cli/src/test/`:
+      - Recurring rules: same logic against `dtstart` (bare
+        local-datetime form preserved); `rrule` body untouched.
+- [x] **F.4** Tests in `cli/src/test/`:
       `TzConvertCommandTest` covering both branches (one-off event +
       recurring rule) and the error cases (unknown event-id, invalid
       zone). Verify the resulting file decodes via `MiniToml` round-

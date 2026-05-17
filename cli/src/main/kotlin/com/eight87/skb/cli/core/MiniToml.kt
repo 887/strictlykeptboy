@@ -66,6 +66,8 @@ class TomlTable {
   fun putStringArray(key: String, v: List<String>) = put(key, TomlStringArray(v))
 
   fun get(key: String): TomlValue? = entries.firstOrNull { it.first == key }?.second
+  /** Insertion-ordered view of all (key, value) pairs. */
+  fun entries(): List<Pair<String, TomlValue>> = entries.toList()
   fun getString(key: String): String? = (get(key) as? TomlString)?.v
   fun getInt(key: String): Long? = (get(key) as? TomlInt)?.v
   fun getBool(key: String): Boolean? = (get(key) as? TomlBool)?.v
