@@ -474,3 +474,54 @@ R.X self-check: all 9 boxes pass. F45, F46, F59 marked RESOLVED in their respect
 ### Audit pass 2026-05-16 — Round 2.20.1 follow-up
 
 - **F67 — Migratory `runTest` canary (`UncaughtExceptionsBeforeTest`).** During the 2.20.1 close-out sweep, the full `:app:testDebugUnitTest` run fails on a single test class that's *always different across runs* — first `TripScaffolderTest.materialize car trip skips flight events`, then `StickerPackScaffoldTest`, then `WizardAtomDtstartTest.scaffolded rules carry spread dtstarts`, etc. The failure is always `kotlinx.coroutines.test.UncaughtExceptionsBeforeTest: There were uncaught exceptions before the test started`. The accumulator persists across test classes in the Gradle worker JVM, and *whichever* `runTest`-based test runs after the leak is the canary. Workaround so far: switching individual canaries from `runTest` to `kotlinx.coroutines.runBlocking` makes the failure migrate to the next canary rather than disappear — these tests don't need virtual-time control, so `runBlocking` is fine, but it's not a root-cause fix. **Real root cause hypothesis:** an upstream test launches a coroutine on a shared dispatcher (no `Dispatchers.setMain` anywhere in tests; no `setDefaultUncaughtExceptionHandler` anywhere in either source set) that throws inside the kotlinx-coroutines-test global exception accumulator. The polluter doesn't bisect cleanly to a single test class because the failure mode depends on Gradle worker scheduling. Reproduced by running `--tests com.eight87.strictlykeptboy.store.* --tests com.eight87.strictlykeptboy.system.* --tests com.eight87.strictlykeptboy.ui.trip.*` together (each pair-or-package individually green), but not by any 2-package combo of store/system/port/composition/resolver. **Action:** when this becomes a release-blocker (or noisy enough), audit every `runTest { ... }` block for unhandled `launch { }` inside; consider a global `@get:Rule` that clears the kotlinx-coroutines-test exception state at `@Before`, or add `forkEvery = 1` to the Gradle test task (slower CI, but isolates JVM workers). **Priority:** medium (CI noise). **Status:** ✅ RESOLVED via `forkEvery = 100` on `:app:testDebugUnitTest` in `app/build.gradle.kts` (commit `<pending>`). Measured at the sweet spot: green under repeated runs (~55s) vs broken-baseline (intermittent failures) vs forkEvery = 1 (~6m wall clock). The `runBlocking` workarounds on `TripScaffolderTest` + `WizardAtomDtstartTest` are retained — those tests don't need `runTest`'s virtual-time control, and `runBlocking` is the more honest framework for IO-only suspend tests. A proper *root-cause* fix would still be welcome (audit the upstream coroutine leak), but the cure is no longer the bottleneck. **Genuine bug fixed in the same sweep:** `TodayTaskListTest.today_overdue_fromEvents_pinned_all_appear` was failing because `forToday(today)` parameterised the date but `isOverdue` used `LocalDate.now()` — fixed by inlining the overdue check against the parameter rather than delegating to `isOverdue`.
+
+### Audit pass 2026-05-17 — five-axis SOLID sweep
+
+Five parallel read-only audits ran (composition root / DI, resolver
+purity, god-files, Liskov + sealed types, ISP + package hygiene).
+Overall posture is healthy. Consolidated findings, severity-sorted:
+
+**[H] — high-leverage fixes (action this round)**
+
+1. **`CalendarSettingsWriter` takes whole `AppGraph` for one method.** Both the composition-root and ISP audits independently flag the same site: `ui/calendars/CalendarSettingsWriter.kt:30,96,133` receives `graph: AppGraph` and only reads `graph.repoStore.list()`. Narrow to `RepoStore` (or a `fun interface RepoConfigLookup { fun find(repoId): RepoConfig? }`). Three signature changes + call-site updates.
+2. **Wrong-direction imports** (R.X.6 violations):
+   - `git/RepoConfig.kt:5-7` imports `ui.theming.{RepoIconKind, initialsFromName, seedColorFromName}`. `git/` → `ui/` is forbidden. Fix: move `toIconKind()` to `ui/theming/` as an extension function on `RepoConfig`.
+   - `store/AccessAggregator.kt:5-6` imports `ui.share.{ShareLink, ShareMode}`. `store/` → `ui/` is forbidden. Fix: move `ShareLink` + `ShareMode` types to a neutral package (proposal: `share/` at top level, or into `store/`).
+3. **`CalendarRegistry.kt` lives in `resolver/` but does file I/O** (reads `calendars/<id>/calendar.toml`, lists directories, runs on `Dispatchers.IO`, exposes a `StateFlow`). Resolver must be pure. Fix: move to `composition/CalendarRegistry.kt` (next to `IndexerSnapshotPublisher`); carry its Robolectric test along (the test currently forces resolver tests to depend on Android).
+4. **Clock-injection leaks**: `resolver/OverlayResolver.kt:34` (`now: ZonedDateTime = ZonedDateTime.now()`) and `resolver/Renderer.kt:52` (`now = ZonedDateTime.now(renderTz)`). Defaults leak side-effects into any test or call site that omits the argument. Fix: drop defaults; require explicit `now` from the call site (ViewModels / composition root already inject `now` where it matters).
+
+**[M] — should-fix when next touching the area**
+
+5. **SSH `NotImplementedError` is now reachable** in production: `git/auth/CredentialBindings.kt:60` (`AuthMethod.Ssh` branch). The Add-Repo wizard's `AddRepoAuth` enum exposes `Ssh`. Fix: either gate `AddRepoAuth.Ssh` in the wizard with a "coming soon" disabled state, or close F4 by implementing the SSH binding.
+6. **User-reachable `error()` crashes**:
+   - `MainActivity.kt:1585` — `error("no active repo — run the lifestyle wizard first")` from the wizard-bypass path; should route to a dialog or wizard redirect, not crash.
+   - `ui/share/ShareLinkGenerator.kt:50` — `error("Cannot share a repo with no remotes")` reachable for no-origin repos (D.74 first-class). Disable Share / show tooltip instead.
+7. **Sealed-variant exhaustiveness**:
+   - `ui/settings/RepoMoveJobDialog.kt:89,99` — `when (progress)` over sealed `RepoMover.Progress` with `else -> {}`. Make exhaustive.
+   - `cache/Indexer.kt:176` — `else -> { /* ignored */ }` over the sealed entity hierarchy; new variants silently fail to index. Replace with explicit `is RawEntity, is ... -> Unit` so the compiler flags additions.
+8. **God-files past 800 LOC** (R.X.4): `MainActivity.kt` (1884) and `WizardNavHost.kt` (1282) are genuine god-files with multiple unrelated concerns and clean natural seams. `SkbAppShell.kt` (729) extracts cleanly via `SkbAppDestinationContent` split. `AppGraph.kt` (1017) wants 2-3 sub-graphs out (`SystemCalendarGraph`, `AvatarGraph`, `TaskPlaybackGraph`). `ScheduleDayView.kt` (684), `Entities.kt` (681), `RepoSettingsScreen.kt` (734), and `GitRepo.kt` (674) are cohesive-by-nature — leave alone.
+9. **`SkbAppShell` 50-param signature**. The composition root's wiring is leaking into one composable. Fix: split into `ShellContext` (services) + `ShellCallbacks` (actions) + `ShellSelections` (state), pass three params instead of fifty.
+10. **`ScheduleDayView` takes whole `RenderedSchedule?`** when it needs only `schedule?.days.firstOrNull { it.date == date }`. Sibling views (`ScheduleWeek/Month/Year/Agenda/ThreeDay/Timebox`) have the same shape. Narrow via a `DayBandSource` (`fun get(date: LocalDate): RenderedDay?`) — matches the canonical anti-pattern called out in R.X.1.
+
+**[L] — quick wins (action opportunistically)**
+
+11. `AppGraph` mutable hand-off slots exposed as raw `MutableStateFlow` / `@Volatile var` (`safPermissionRevoked`, `parentPickerHandle`, `defaultWriteRepoName`, `wizardEntryRequest`, `visibleDateRange`) — hide via `StateFlow` + narrow setters.
+12. `AppGraph.bindIdentityToActiveRepo` + `bindModeToActiveRepo` are near-duplicates; extract `ensureRegistered(cfg)` helper.
+13. `AppGraph` `stateIn(GlobalScope, ...)` and `GlobalScope.launch` calls inside the composition root — use `appScope` for symmetry.
+14. `AppGraph.activeRepoName` deprecated alias still consumed in MainActivity (3+ sites); finish the rename.
+15. `resolver/Types.kt` at 465 LOC holds ~12 unrelated data classes — split into `Refs.kt`, `Inputs.kt`, `Outputs.kt`, `ViewMode.kt` when convenient.
+16. `DeviationInput.kind` + `OverrideInput.kind` are stringly-typed (`"skipped"|"partial"|"completed-early"|"completed-late"` / `"force-show"|"force-show-for-range"`) — promote to sealed interfaces so the `when` chains in `OverlayResolver.kt:51-53` + `ActiveSetEvaluator.kt:45-50` become exhaustive.
+17. `AuthMethod` enum — strong sealed-type candidate; per-variant secret-storage would delete the soft `error("non-OAuth … reached forOAuth")` branch in `CredentialBindings`.
+18. `SyncButtonState` enum — sealed with `Error(reason: SyncError)` + `Success(duration: Long)` would let toasts show meaningful copy.
+19. Add a CI/lint guard forbidding `java.io.*`, `java.nio.*`, `okhttp3.*`, `org.eclipse.jgit.*`, `androidx.room.*`, `android.*`, and `\.now\(` inside `resolver/`. Prevents purity regressions.
+
+**Explicit non-issues (audit confirmed clean)**
+
+- `composition/` → `ui/` imports are intentional (composition is the wiring layer).
+- No `okhttp3`, JGit, or Room imports inside `resolver/` except the one `CalendarRegistry` finding.
+- `cache/` package is clean.
+- `MaterializedInstance` is a single data class, no Liskov-throwing subtypes.
+- Most narrow interfaces are in place (`TodayEventSource`, `BriefingSource`, `CommonTimeFinderPort`, `BusySource`, `TaskNowPlayingState/TransportCommands/QueueCommands`).
+- `ScheduleDayView.kt` (684), `Entities.kt` (681), `RepoSettingsScreen.kt` (734), `GitRepo.kt` (674) — cohesive-by-nature, **do not split**.
+
+Action plan: subagent fan-out for #1, #2, #3, #4, #7, #10 lands as the immediate "Round 2.28 — SOLID hygiene" wave. Larger splits (#8 MainActivity, #9 SkbAppShell, AppGraph sub-graphs) are tracked for staged follow-up.
