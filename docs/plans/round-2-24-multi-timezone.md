@@ -169,7 +169,7 @@ DST policy decisions (provisional, finalised in Phase E):
       - `BandTzBadgeTest` — NY-pinned event in a Berlin display shows
         "✈ New York" badge; same-zone event omits the badge.
 
-### Phase D — Together multi-tz common-time finder (AA.4, AA.7) — shipped in commit <pending>
+### Phase D — Together multi-tz common-time finder (AA.4, AA.7) — shipped in commit 5bdb471
 
 - [x] **D.1** Extend `CommonTimeFinder.Query` with `participantTz:
       Map<RepoRef, ZoneId>` (default empty → all participants in
