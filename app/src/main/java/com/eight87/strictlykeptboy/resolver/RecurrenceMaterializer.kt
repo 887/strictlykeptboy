@@ -139,6 +139,9 @@ class RecurrenceMaterializer {
         requiresResponse = event.requiresResponse,
         promptKind = event.promptKind,
         promptTarget = event.promptTarget,
+        // Round 2.24 / D-2.24.a — pass through the event's source-of-truth
+        // tz pin (null when the event is unpinned).
+        sourceTzId = event.tzId,
     )
 
     private fun materializedFromRule(
@@ -168,6 +171,10 @@ class RecurrenceMaterializer {
         requiresResponse = rule.requiresResponse,
         promptKind = rule.promptKind,
         promptTarget = rule.promptTarget,
+        // Round 2.24 / D-2.24.a — RRULEs already require a tzId; carry
+        // it through every materialized instance so the renderer can
+        // convert to a caller-supplied display zone.
+        sourceTzId = rule.tzId.id,
     )
 
     /**

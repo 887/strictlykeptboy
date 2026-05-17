@@ -225,6 +225,14 @@ data class EventInput(
     val promptKind: com.eight87.strictlykeptboy.store.PromptKind? = null,
     /** Round 2.27 / D-2.27.a — see [com.eight87.strictlykeptboy.store.Event.promptTarget]. */
     val promptTarget: com.eight87.strictlykeptboy.store.PromptTarget? = null,
+    /**
+     * Round 2.24 / D-2.24.a — per-event timezone pin. `null` ⇒ event is
+     * unpinned and resolves in the repo-default (or system) zone at
+     * render time. When set, the event's `start`/`end` are already
+     * anchored to this zone by the caller, and the renderer will
+     * convert to the display zone (if any) at the render lip.
+     */
+    val tzId: String? = null,
 )
 
 /**
@@ -364,6 +372,14 @@ data class MaterializedInstance(
     val promptKind: com.eight87.strictlykeptboy.store.PromptKind? = null,
     /** Round 2.27 / D-2.27.a — see [com.eight87.strictlykeptboy.store.Event.promptTarget]. */
     val promptTarget: com.eight87.strictlykeptboy.store.PromptTarget? = null,
+    /**
+     * Round 2.24 / D-2.24.a — source-of-truth tz pin carried from the
+     * originating [EventInput.tzId] (one-offs) or [RecurrenceInput.tzId]
+     * (rule instances). `null` ⇒ event was unpinned at the source.
+     * Drives the UI's "✈ <zone>" badge (Phase C) and the renderer's
+     * source→display conversion (Phase B.3).
+     */
+    val sourceTzId: String? = null,
 ) {
     val effectiveInterval: ZonedInterval get() = ZonedInterval(effectiveStart, effectiveEnd)
     /** Stable per-render id usable as Compose key and as cache primary key. */

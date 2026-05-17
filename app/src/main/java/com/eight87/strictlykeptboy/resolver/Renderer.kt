@@ -50,6 +50,15 @@ class Renderer(
         sources: Sources,
         renderTz: ZoneId = ZoneId.systemDefault(),
         now: ZonedDateTime = ZonedDateTime.now(renderTz),
+        /**
+         * Round 2.24 / D-2.24.c — caller-supplied display zone. When
+         * non-null, every materialized instance's `effectiveStart` /
+         * `effectiveEnd` is converted to this zone (preserving the
+         * absolute instant) before overlay layering. When `null`
+         * (default), existing [renderTz] semantics are preserved —
+         * instances render in their source tz exactly as today.
+         */
+        displayTzId: ZoneId? = null,
     ): RenderedSchedule = withContext(Dispatchers.Default) {
         val rangeFrom = range.start.atStartOfDay(renderTz)
         val rangeToExclusive = (range.endInclusive ?: range.start).plusDays(1).atStartOfDay(renderTz)
@@ -81,7 +90,13 @@ class Renderer(
             .map { materializer.fromOneOff(it) }
             .filter { it.effectiveStart.isBefore(rangeToExclusive) && it.effectiveEnd.isAfter(rangeFrom) }
 
-        val allInstances = oneOffs + materializedRules
+        val allInstances = (oneOffs + materializedRules).let { list ->
+            // Round 2.24 / D-2.24.c — convert each instance's zoned times
+            // to the caller-supplied display zone, preserving the absolute
+            // instant. When `displayTzId == null` the existing renderTz
+            // semantics are preserved bit-for-bit.
+            if (displayTzId == null) list else list.map { it.withDisplayZone(displayTzId) }
+        }
 
         val layered = overlay.layer(
             activeCalendars = active,
@@ -172,6 +187,19 @@ class Renderer(
         count <= 7 -> 2
         else -> 3
     }
+
+    /**
+     * Round 2.24 / D-2.24.c — converts every zoned-time field on a
+     * [MaterializedInstance] to [zone], preserving the absolute instant.
+     * Pure: returns a new instance, mutates nothing.
+     */
+    private fun MaterializedInstance.withDisplayZone(zone: ZoneId): MaterializedInstance =
+        copy(
+            originalStart = originalStart.withZoneSameInstant(zone),
+            originalEnd = originalEnd.withZoneSameInstant(zone),
+            effectiveStart = effectiveStart.withZoneSameInstant(zone),
+            effectiveEnd = effectiveEnd.withZoneSameInstant(zone),
+        )
 
     private fun enumerateDays(range: DateRange): List<LocalDate> {
         val end = range.endInclusive ?: range.start

@@ -112,9 +112,9 @@ DST policy decisions (provisional, finalised in Phase E):
       per-event tz (`EventRow` has no `tzId`; only `RecurrenceRuleRow`
       carries one, which is correct per RFC5545). No migration needed.
 
-### Phase B — Resolver display conversion
+### Phase B — Resolver display conversion — shipped in commit cf3a885
 
-- [ ] **B.1** New `resolver/TzResolver.kt`: pure top-level function
+- [x] **B.1** New `resolver/TzResolver.kt`: pure top-level function
       ```
       effectiveDisplayTz(
         eventTz: ZoneId?,        // null = unpinned
@@ -127,18 +127,18 @@ DST policy decisions (provisional, finalised in Phase E):
       for the **display** side. `eventTz ?: repoDefault ?:
       systemDefault` for the **source** side. Display conversion =
       `instantAtSource.atZone(displaySide)`.
-- [ ] **B.2** Extend `MaterializedInstance` with `sourceTzId:
+- [x] **B.2** Extend `MaterializedInstance` with `sourceTzId:
       String?` carrying the event's `tz_id` (rule's `tz_id` for
       recurring instances). `effectiveStart`/`effectiveEnd` remain
       `ZonedDateTime` but now the source zone is preserved so the UI
       can decide whether to badge.
-- [ ] **B.3** `Renderer.render` accepts a new optional
+- [x] **B.3** `Renderer.render` accepts a new optional
       `displayTz: ZoneId? = null` parameter (overrides `renderTz`).
       Each one-off + rule materialisation re-zones to the resolved
       display tz. `RecurrenceMaterializer` already produces
       `ZonedDateTime` in the rule's tz — keep that as source, convert
       at render lip.
-- [ ] **B.4** Tests:
+- [x] **B.4** Tests:
       - `TzResolverTest` — full matrix of (eventTz × repoDefault ×
         displayOverride) → expected effective tz.
       - `RendererTzConversionTest` — event with
