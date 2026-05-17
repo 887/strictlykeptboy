@@ -29,6 +29,7 @@ import com.eight87.strictlykeptboy.theme.StrictlyKeptBoyTheme
 import com.eight87.strictlykeptboy.ui.scaffold.SkbAppShell
 import com.eight87.strictlykeptboy.ui.schedule.ScheduleViewState
 import com.eight87.strictlykeptboy.ui.tasks.TasksViewState
+import com.eight87.strictlykeptboy.ui.tasks.toTaskItem
 import com.eight87.strictlykeptboy.ui.together.TogetherViewModel
 import com.eight87.strictlykeptboy.ui.wizard.AgeGateScreen
 import com.eight87.strictlykeptboy.ui.wizard.WizardScaffolder
@@ -711,6 +712,67 @@ class MainActivity : ComponentActivity() {
                     val tasksViewState = graph.tasksViewState
                     androidx.compose.runtime.LaunchedEffect(Unit) {
                         val evaluator = com.eight87.strictlykeptboy.resolver.ActiveSetEvaluator()
+                        // Round 2.26.F.1 — lazy todolist.toml resolver,
+                        // cached across DAO reads so we don't re-parse
+                        // `<repoRoot>/todolists/<id>/todolist.toml` on
+                        // every snapshot tick. Cleared whenever the
+                        // configured repo set changes (rootDir may change).
+                        // (uuid → info) cache, populated per repo via a
+                        // full scan of <repoRoot>/todolists/*/todolist.toml
+                        // since the on-disk dir name is a slug, not the
+                        // UUID that task frontmatter references.
+                        val todolistByUuid =
+                            java.util.concurrent.ConcurrentHashMap<String, com.eight87.strictlykeptboy.ui.tasks.TodolistInfo>()
+                        val scannedRepos = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+                        var lastRepoIdsKey = ""
+                        fun scanRepoTomls(repoRoot: java.io.File, repoId: String) {
+                            if (scannedRepos.putIfAbsent("$repoId@${repoRoot.absolutePath}", true) != null) return
+                            val todolistsDir = java.io.File(repoRoot, "todolists")
+                            if (!todolistsDir.isDirectory) return
+                            todolistsDir.listFiles()?.forEach { dir ->
+                                val toml = java.io.File(dir, "todolist.toml")
+                                if (!toml.isFile) return@forEach
+                                runCatching {
+                                    val txt = toml.readText(Charsets.UTF_8)
+                                    val tbl = com.eight87.strictlykeptboy.store.TomlReader.parse(txt)
+                                    val uuid = tbl.getString("id") ?: return@runCatching
+                                    val displayName = tbl.getString("name")
+                                    val emoji = tbl.getString("emoji")
+                                    val colorSeed = tbl.getString("color")
+                                        ?: tbl.getString("color_seed")
+                                    val priority = tbl.getInt("priority") ?: 0
+                                    val modeStr = tbl.getString("mode")?.lowercase()
+                                    val mode = if (modeStr == "shopping") {
+                                        com.eight87.strictlykeptboy.ui.tasks.TodolistMode.Shopping
+                                    } else com.eight87.strictlykeptboy.ui.tasks.TodolistMode.Standard
+                                    todolistByUuid["$repoId::$uuid"] =
+                                        com.eight87.strictlykeptboy.ui.tasks.buildTodolistInfo(
+                                            todolistId = uuid,
+                                            repoId = repoId,
+                                            meta = null,
+                                            fallbackDisplayName = displayName,
+                                            fallbackEmoji = emoji,
+                                            fallbackColorSeed = colorSeed,
+                                            fallbackPriority = priority,
+                                            fallbackMode = mode,
+                                        )
+                                }
+                            }
+                        }
+                        fun readTomlInfo(
+                            repoRoot: java.io.File,
+                            repoId: String,
+                            todolistId: String,
+                            meta: com.eight87.strictlykeptboy.resolver.TodolistMeta?,
+                        ): com.eight87.strictlykeptboy.ui.tasks.TodolistInfo {
+                            scanRepoTomls(repoRoot, repoId)
+                            todolistByUuid["$repoId::$todolistId"]?.let { return it }
+                            return com.eight87.strictlykeptboy.ui.tasks.buildTodolistInfo(
+                                todolistId = todolistId,
+                                repoId = repoId,
+                                meta = meta,
+                            )
+                        }
                         kotlinx.coroutines.flow.combine(
                             graph.snapshot,
                             graph.defaultWriteRepoName,
@@ -775,9 +837,54 @@ class MainActivity : ComponentActivity() {
                             }
                             val withDemo = if (hasDemo) nonFromEvents
                             else nonFromEvents + demoSubstepped
+                            // Round 2.26.F.1 — pull real disk-backed tasks
+                            // from the Room cache for every repo flagged
+                            // `drawTasksFrom`. Maps via TaskEntityMapping
+                            // + todolist.toml lazy resolver so the rows
+                            // carry real list names (not raw ids).
+                            val repoIdsKey = repos.joinToString(",") { "${it.repoId}@${it.rootDir}" }
+                            if (repoIdsKey != lastRepoIdsKey) {
+                                todolistByUuid.clear()
+                                scannedRepos.clear()
+                                lastRepoIdsKey = repoIdsKey
+                            }
+                            val drawingRepos = repos.filter { it.drawTasksFrom }
+                            val realTasks = if (drawingRepos.isEmpty()) emptyList()
+                            else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                val out = mutableListOf<com.eight87.strictlykeptboy.ui.tasks.TaskItem>()
+                                for (cfg in drawingRepos) {
+                                    val repoRoot = java.io.File(cfg.rootDir)
+                                    val taskRows = runCatching {
+                                        graph.cacheDatabase.tasks().listAll(cfg.repoId)
+                                    }.getOrElse { emptyList() }
+                                    val standingRows = runCatching {
+                                        graph.cacheDatabase.standingTasks().listAll(cfg.repoId)
+                                    }.getOrElse { emptyList() }
+                                    for (row in taskRows) {
+                                        val meta = snap.todolists.firstOrNull {
+                                            it.ref.id == row.todolistId && it.repo.id == cfg.repoId
+                                        }
+                                        val info = readTomlInfo(repoRoot, cfg.repoId, row.todolistId, meta)
+                                        out += row.toTaskItem(info)
+                                    }
+                                    for (row in standingRows) {
+                                        val meta = snap.todolists.firstOrNull {
+                                            it.ref.id == row.todolistId && it.repo.id == cfg.repoId
+                                        }
+                                        val info = readTomlInfo(repoRoot, cfg.repoId, row.todolistId, meta)
+                                        out += row.toTaskItem(info)
+                                    }
+                                }
+                                out
+                            }
+                            // De-dupe: real-disk wins over demo/FromEvents
+                            // collisions by id.
+                            val realIds = realTasks.mapTo(mutableSetOf()) { it.id }
+                            val mergedBase = realTasks + withDemo.filter { it.id !in realIds } +
+                                fromEvents.filter { it.id !in realIds }
                             tasksViewState.set(
                                 cur.copy(
-                                    tasks = withDemo + fromEvents,
+                                    tasks = mergedBase,
                                     activeTodolistIds = ids,
                                     multiRepo = repos.size > 1,
                                     activeRepoOwner = owner,

@@ -246,9 +246,26 @@ optional markdown body
 
 ## Phase F — Wire schedule-feed merge + verify on AVD
 
-- [ ] **F.1** In `MainActivity` / `AppGraph` composition, pass the
+shipped (F.1 + F.3) — see commit hash at HEAD after this lands
+
+- [x] **F.1** In `MainActivity` / `AppGraph` composition, pass the
       existing `renderedScheduleFlow` (or equivalent) into
-      `TasksDestinationBody` alongside `tasksState`.
+      `TasksDestinationBody` alongside `tasksState`. **Round 2.26.F.1
+      shipped:** instead of (or in addition to) hoisting a schedule
+      flow into the Body, the actual destination-blocker was that
+      Room-cached `TaskEntity` rows from the rich-demo repo never
+      reached `TasksUiState.tasks`. Added `TaskEntityMapping.kt`
+      (`TaskRow.toTaskItem(TodolistInfo)` + standing-row overload +
+      `buildTodolistInfo` helper) and extended the `tasksViewState`
+      `LaunchedEffect` to read `cacheDatabase.tasks().listAll(repoId)`
+      + `.standingTasks().listAll(repoId)` on `Dispatchers.IO` for
+      every repo flagged `drawTasksFrom`, then map → `TaskItem` and
+      merge with the FromEvents projection + demo sub-stepped seed
+      (real-disk wins on id collision). Todolist metadata is resolved
+      via a per-repo scan of `<repoRoot>/todolists/*/todolist.toml`
+      keyed on the parsed `id` UUID (directories on disk use slug
+      names like `home` / `routines`, NOT the UUIDs that task
+      frontmatter references — id-only path lookup misses).
 - [x] **F.2** Confirm that the rich-demo-repo's
       `calendars/work/events/2026/05/` and `calendars/routines/...`
       already contain `kind = "timebox"` events for today. If not,
@@ -263,10 +280,19 @@ optional markdown body
       Calendar id `0190a0aa-1c1d-7000-8a0a-000000000012`. This is
       what `schedule.bandsFor(today).filter { it.kind ==
       CalendarKind.Timebox }` (Phase B.2) will pick up.
-- [ ] **F.3** AVD smoke on phone: install debug APK on `emulator-5558`,
+- [x] **F.3** AVD smoke on phone: install debug APK on `emulator-5558`,
       tap Tasks destination, verify (a) rail shows five rotated labels,
       (b) Today renders ≥4 task rows + ≥1 timebox row, (c) Overdue
       section red, (d) screenshot saved + Read for review.
+      **Verified 2026-05-17:** rail shows Today / Upcoming / All /
+      Per-list / Done. Overdue (6) section in red with rows including
+      `replace water filter — monthly · Routines · 5d overdue`,
+      `draft Q3 OKR doc · Sprint 25 board · 3d overdue`,
+      `call landlord re: leaking tap · Home · 2d overdue`. Today
+      section shows `buy milk`, `code review for PR #1284`,
+      `implement feature xyz`, `oat milk + vine tomatoes`. Real
+      todolist names render (not raw UUIDs) via the todolist.toml
+      scan. Screenshot at `/tmp/skb-tasks-small.png`.
 - [ ] **F.4** Tablet AVD smoke (per `pixel_tablet` requirement): same
       flow, confirm rail + body adapt to 1600×2560@160dpi.
 
