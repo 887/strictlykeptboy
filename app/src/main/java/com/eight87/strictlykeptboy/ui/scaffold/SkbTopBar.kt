@@ -81,11 +81,11 @@ internal fun ShellTopBar(
         // The `modePrefs` + `onSyncClick` params remain on the function
         // signature (null-allowed) to avoid breaking call-sites, but
         // they no longer render anything here.
-        // Round 2.16.E — Tasks removed from the top-bar icon row (the
-        // destination is gone; todolist UI lives in the expanded
-        // NowPlayingScreen sheet now).
+        // Round 2.26.A — Tasks reinstated as a TopDestination (D-2.26.a),
+        // back in the top-bar icon row between Schedule and Reviews.
         val topBarDestinations = listOf(
             TopDestination.Schedule,
+            TopDestination.Tasks,
             TopDestination.Reviews,
         )
         Row(

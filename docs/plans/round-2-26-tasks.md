@@ -55,11 +55,13 @@
 
 ## Phase A — Rail wiring + filter enum (no behavior change yet)
 
-- [ ] **A.1** Add `TopDestination.Tasks` back to the enum in
+shipped in commit <see Round 2.26.A commit>
+
+- [x] **A.1** Add `TopDestination.Tasks` back to the enum in
       `app/src/main/java/com/eight87/strictlykeptboy/ui/scaffold/SkbAppShell.kt`
       (icon: `Icons.Filled.CheckCircleOutline` or existing tasks icon).
       Update `TopDestination.labelString()` mapping in `EnumLabels.kt`.
-- [ ] **A.2** Introduce `enum class TasksFilter { Today, Upcoming, All,
+- [x] **A.2** Introduce `enum class TasksFilter { Today, Upcoming, All,
       PerList, Done }` in
       `app/src/main/java/com/eight87/strictlykeptboy/ui/tasks/TasksFilter.kt`
       (new file). Add `tasksFilterLabelRes(f: TasksFilter): Int` in
@@ -67,18 +69,20 @@
       string resources `task_filter_today`, `task_filter_upcoming`,
       `task_filter_all`, `task_filter_per_list`, `task_filter_done` to
       `app/src/main/res/values/strings.xml`.
-- [ ] **A.3** In `SkbAppShell.kt`, extend the `railItems` `when` to
+- [x] **A.3** In `SkbAppShell.kt`, extend the `railItems` `when` to
       build rail items for `TopDestination.Tasks` from
       `TasksFilter.entries`. Hoist `tasksFilter` state alongside the
       existing `reviewsFilter` `rememberSaveable` block.
-- [ ] **A.4** In the destination-content `when`, add a
+- [x] **A.4** In the destination-content `when`, add a
       `TopDestination.Tasks -> TasksPane(...)` branch. Re-introduce
       `TasksPane.kt` as a thin composable that delegates to a new
       `TasksDestinationBody(filter, tasksState, scheduleState, ...)`.
-- [ ] **A.5** Wire `TasksFilter.PerList` to expose the existing
+      Body is a stub ("filter = X" placeholder) — Subagent 2 fills in
+      the unified day-of feed in Phase B.
+- [x] **A.5** Wire `TasksFilter.PerList` to expose the existing
       per-list selector inline (re-use `TaskSourceRail.kt` chips, but
       mounted under the rail-driven body, not as a header).
-- [ ] **A.6** Keep `ExpandedNowPlayingTaskBody.kt` working by switching
+- [x] **A.6** Keep `ExpandedNowPlayingTaskBody.kt` working by switching
       its internal chip-strip to a `Row<FilterChip>` over `TasksFilter`
       instead of `TaskViewTab`; deprecate `TaskViewTab` (leave the enum
       for one round, mark `@Deprecated`).

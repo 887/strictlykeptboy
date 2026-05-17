@@ -16,6 +16,7 @@ import java.time.ZonedDateTime
  * Translatable UI display routes through `TaskViewTab.labelString()` in
  * `ui/a11y/EnumLabels.kt`.
  */
+@Deprecated("Use TasksFilter (Round 2.26)")
 enum class TaskViewTab(val label: String) {
     Combined("Combined"),
     Today("Today"),

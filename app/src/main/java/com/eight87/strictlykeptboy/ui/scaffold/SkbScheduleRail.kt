@@ -34,6 +34,7 @@ import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.resolver.CalendarMeta
 import com.eight87.strictlykeptboy.ui.calendars.OverlayPickerButton
 import com.eight87.strictlykeptboy.ui.settings.CalendarVisibilityPrefs
+import com.eight87.strictlykeptboy.ui.tasks.TasksFilter
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -224,4 +225,19 @@ internal fun scheduleTabLabelRes(tab: ScheduleViewTab): Int = when (tab) {
     ScheduleViewTab.Month -> R.string.schedule_view_tab_month
     ScheduleViewTab.Agenda -> R.string.schedule_view_tab_agenda
     ScheduleViewTab.Year -> R.string.schedule_view_tab_year
+}
+
+/**
+ * Round 2.26.A.2 (D-2.26.h) — local label resolver mirroring
+ * [scheduleTabLabelRes] / `reviewsFilterLabelRes`. The rail needs only
+ * the `@StringRes Int` so we resolve it here (no Compose runtime
+ * dependency) — same pattern as the existing helpers in this file.
+ */
+@StringRes
+internal fun tasksFilterLabelRes(filter: TasksFilter): Int = when (filter) {
+    TasksFilter.Today -> R.string.task_filter_today
+    TasksFilter.Upcoming -> R.string.task_filter_upcoming
+    TasksFilter.All -> R.string.task_filter_all
+    TasksFilter.PerList -> R.string.task_filter_per_list
+    TasksFilter.Done -> R.string.task_filter_done
 }

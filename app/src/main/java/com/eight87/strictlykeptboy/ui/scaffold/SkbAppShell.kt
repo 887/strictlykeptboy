@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.RateReview
@@ -38,6 +39,8 @@ import com.eight87.strictlykeptboy.ui.schedule.ScheduleViewState
 import com.eight87.strictlykeptboy.ui.settings.SettingsAccess
 import com.eight87.strictlykeptboy.ui.settings.SettingsPane
 import com.eight87.strictlykeptboy.ui.tasks.TaskQuickAddRequest
+import com.eight87.strictlykeptboy.ui.tasks.TasksFilter
+import com.eight87.strictlykeptboy.ui.tasks.TasksPane
 import com.eight87.strictlykeptboy.ui.tasks.TasksViewState
 import com.eight87.strictlykeptboy.ui.together.TogetherPane
 import com.eight87.strictlykeptboy.ui.together.TogetherViewModel
@@ -100,10 +103,11 @@ const val TestTagShellSettingsCog = "ShellSettingsCog"
  */
 enum class TopDestination(val label: String, val icon: ImageVector) {
     Schedule("Schedule", Icons.Filled.CalendarMonth),
-    // Round 2.16.E — `Tasks` destination deleted. All todolist surface
-    // area now lives inside the expanded NowPlayingScreen sheet
-    // (reachable via the Schedule "Open tasks" FAB or the mini-player
-    // peek when a task is active).
+    // Round 2.26.A — `Tasks` reinstated as a TopDestination after being
+    // deleted in 2.16.E. The expanded NowPlayingScreen sheet remains
+    // (with a TasksFilter chip-strip now, per Round 2.26.A.6) but the
+    // rail-driven destination is canonical (D-2.26.a).
+    Tasks("Tasks", Icons.Filled.Checklist),
     Together("Together", Icons.Filled.Groups),
     Repos("Repos", Icons.Filled.Folder),
     Wizard("Wizard", Icons.Filled.AutoAwesome),
@@ -315,6 +319,13 @@ private fun SkbAppShellContent(
         mutableStateOf(com.eight87.strictlykeptboy.ui.reviews.ReviewsFilter.All)
     }
 
+    // Round 2.26.A.3 — Tasks destination filter state, hoisted here so
+    // the left rail and `TasksPane` share a single source of truth.
+    // Default `Today` per D-2.26.b.
+    var tasksFilter by rememberSaveable {
+        mutableStateOf(TasksFilter.Today)
+    }
+
     // Per-destination rail item set. Each entry maps to either a pane's
     // existing tab enum (Schedule, Tasks) or stays empty (Repos /
     // Together / Wizard / Settings — Settings owns its own master-detail
@@ -329,6 +340,14 @@ private fun SkbAppShellContent(
                     scheduleState.setSelectedTab(tab)
                     onPersistTab(tab)
                 },
+            )
+        }
+        TopDestination.Tasks -> TasksFilter.entries.map { f ->
+            RailItem(
+                key = f.name,
+                labelRes = tasksFilterLabelRes(f),
+                selected = f == tasksFilter,
+                onClick = { tasksFilter = f },
             )
         }
         TopDestination.Reviews -> com.eight87.strictlykeptboy.ui.reviews.ReviewsFilter.entries.map { f ->
@@ -431,6 +450,8 @@ private fun SkbAppShellContent(
                 ) {
                     SkbAppDestinationContent(
                         reviewsFilter = reviewsFilter,
+                        tasksFilter = tasksFilter,
+                        tasksState = tasksState,
                         selected = selected,
                         activeRepoName = activeRepoName,
                         scheduleState = scheduleState,
@@ -547,6 +568,8 @@ private fun SkbAppShellContent(
 private fun SkbAppDestinationContent(
     reviewsFilter: com.eight87.strictlykeptboy.ui.reviews.ReviewsFilter =
         com.eight87.strictlykeptboy.ui.reviews.ReviewsFilter.All,
+    tasksFilter: TasksFilter = TasksFilter.Today,
+    tasksState: TasksViewState,
     selected: TopDestination,
     activeRepoName: String,
     scheduleState: ScheduleViewState,
@@ -589,6 +612,10 @@ private fun SkbAppDestinationContent(
             onSingleDrop = onSingleDrop,
             onRecurringDrop = onRecurringDrop,
             onOpenEventDetailFullScreen = onOpenEventDetailFullScreen,
+        )
+        TopDestination.Tasks -> TasksPane(
+            filter = tasksFilter,
+            tasksState = tasksState,
         )
         TopDestination.Together -> if (togetherViewModel != null) {
             TogetherPane(vm = togetherViewModel, neutralMode = neutralMode)

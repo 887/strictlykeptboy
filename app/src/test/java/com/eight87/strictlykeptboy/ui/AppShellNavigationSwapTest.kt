@@ -30,12 +30,12 @@ import org.robolectric.annotation.Config
 /**
  * Nav-swap polish — asserts the inverted layout.
  *
- *  - Phase 2.2.A.2 / Round 2.16.E: the top-bar icon row is restricted to
- *    READ surfaces (Schedule / Reviews). The full `TopDestination` enum
- *    now has 6 cases — Tasks was deleted in Round 2.16.E (todolist UI
- *    moved into the expanded NowPlayingScreen sheet); Wizard / Together
- *    / Repos / Settings are still valid routing targets, just not
- *    rendered as icon-buttons in the row.
+ *  - Phase 2.2.A.2 / Round 2.16.E / Round 2.26.A: the top-bar icon row
+ *    is restricted to READ surfaces (Schedule / Tasks / Reviews). The
+ *    full `TopDestination` enum has 7 cases — Tasks was reinstated in
+ *    Round 2.26.A (D-2.26.a) after being deleted in 2.16.E; Wizard /
+ *    Together / Repos / Settings are still valid routing targets, just
+ *    not rendered as icon-buttons in the row.
  *  - The left rail shows view-mode entries per the active destination.
  *  - Schedule rail has 5 entries (Day / Week / Month / Agenda / Year).
  *  - Together / Repos / Wizard / Reviews / Settings contribute zero
@@ -70,13 +70,14 @@ class AppShellNavigationSwapTest {
         setShell()
         composeRule.onNodeWithTag(TestTagAppShell).assertExists()
         composeRule.onNodeWithTag(TestTagShellTopBar).assertExists()
-        // Round 2.16.E — enum drops Tasks (6 cases). Only the 2 READ
-        // surfaces render as buttons.
-        assert(TopDestination.entries.size == 6) {
-            "Expected 6 TopDestination entries, got ${TopDestination.entries.size}"
+        // Round 2.26.A — Tasks reinstated (D-2.26.a); enum has 7 cases
+        // and the 3 READ surfaces render as buttons.
+        assert(TopDestination.entries.size == 7) {
+            "Expected 7 TopDestination entries, got ${TopDestination.entries.size}"
         }
         val rendered = listOf(
             TopDestination.Schedule,
+            TopDestination.Tasks,
             TopDestination.Reviews,
         )
         rendered.forEach { dest ->

@@ -25,36 +25,36 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.ui.tasks.TaskCombinedView
 import com.eight87.strictlykeptboy.ui.tasks.TaskItem
 import com.eight87.strictlykeptboy.ui.tasks.TaskPerListView
 import com.eight87.strictlykeptboy.ui.tasks.TaskShoppingView
 import com.eight87.strictlykeptboy.ui.tasks.TaskStandingView
 import com.eight87.strictlykeptboy.ui.tasks.TaskTodayView
-import com.eight87.strictlykeptboy.ui.tasks.TaskViewTab
+import com.eight87.strictlykeptboy.ui.tasks.TasksFilter
 import com.eight87.strictlykeptboy.ui.tasks.TasksViewState
 import com.eight87.strictlykeptboy.ui.tasks.TodolistMode
 import com.eight87.strictlykeptboy.ui.tasks.visibleTasks
-import com.eight87.strictlykeptboy.ui.a11y.labelString
 
 const val TestTagExpandedTaskChipStrip = "ExpandedTaskChipStrip"
 const val TestTagExpandedTaskChipPrefix = "ExpandedTaskChip-"
 const val TestTagExpandedTaskBody = "ExpandedTaskBody"
 
 /**
- * Round 2.16.D — the todolist UI inside the expanded NowPlayingScreen.
- * Renders a horizontal chip-strip of [TaskViewTab] options on top, and
- * the selected view below. View-mode state is held in `rememberSaveable`
- * with a default of [TaskViewTab.Combined].
+ * Round 2.16.D / Round 2.26.A.6 — the todolist UI inside the expanded
+ * NowPlayingScreen. Renders a horizontal chip-strip of [TasksFilter]
+ * options on top, and the selected view below. View-mode state is held
+ * in `rememberSaveable` with a default of [TasksFilter.Today].
  *
- * Hoisted out of TasksPane so the same task surfaces can be reached
- * via the swipe-up sheet. Phase E removes the Tasks tab + TasksPane.
- *
- * The body intentionally fills the remaining viewport via
- * `LazyItemScope.fillParentMaxHeight` so the inner LazyColumns inside
- * each `Task*View` can measure inside the outer NowPlayingScreen
- * LazyColumn.
+ * Round 2.26.A.6 swapped the chip enum from the deprecated
+ * `TaskViewTab` to the rail-driven [TasksFilter] so the swipe-up sheet
+ * and the rail-driven Tasks destination share a single filter
+ * vocabulary. `Upcoming` and `Done` route through the same underlying
+ * Combined/Today/Standing views for now — Subagent 2 (Phase B) will
+ * route `Today` through the unified day-of feed.
  */
 @Composable
 fun LazyItemScope.ExpandedNowPlayingTaskBody(
@@ -67,20 +67,15 @@ fun LazyItemScope.ExpandedNowPlayingTaskBody(
   val uiState by tasksState.state.collectAsState()
   val visibleTasks = uiState.visibleTasks()
 
-  var selectedTab by rememberSaveable { mutableStateOf(TaskViewTab.Combined) }
+  var selectedFilter by rememberSaveable { mutableStateOf(TasksFilter.Today) }
   var selectedListId by rememberSaveable { mutableStateOf<String?>(null) }
-
-  val effectiveTab = if (selectedTab == TaskViewTab.PerList && selectedListId != null) {
-    val tl = uiState.todolists.firstOrNull { it.id == selectedListId }
-    if (tl?.mode == TodolistMode.Shopping) TaskViewTab.Shopping else selectedTab
-  } else selectedTab
 
   Column(
     modifier = Modifier
       .fillMaxWidth()
       .testTag(TestTagExpandedTaskBody),
   ) {
-    // Chip strip — horizontal scroll for the 5 view-mode options.
+    // Chip strip — horizontal scroll for the 5 filter options.
     Row(
       modifier = Modifier
         .fillMaxWidth()
@@ -90,12 +85,19 @@ fun LazyItemScope.ExpandedNowPlayingTaskBody(
       horizontalArrangement = Arrangement.spacedBy(8.dp),
       verticalAlignment = Alignment.CenterVertically,
     ) {
-      TaskViewTab.entries.forEach { tab ->
+      TasksFilter.entries.forEach { f ->
+        val labelRes = when (f) {
+          TasksFilter.Today -> R.string.task_filter_today
+          TasksFilter.Upcoming -> R.string.task_filter_upcoming
+          TasksFilter.All -> R.string.task_filter_all
+          TasksFilter.PerList -> R.string.task_filter_per_list
+          TasksFilter.Done -> R.string.task_filter_done
+        }
         FilterChip(
-          selected = tab == effectiveTab,
-          onClick = { selectedTab = tab },
-          label = { Text(tab.labelString()) },
-          modifier = Modifier.testTag("$TestTagExpandedTaskChipPrefix${tab.name}"),
+          selected = f == selectedFilter,
+          onClick = { selectedFilter = f },
+          label = { Text(stringResource(labelRes)) },
+          modifier = Modifier.testTag("$TestTagExpandedTaskChipPrefix${f.name}"),
         )
       }
     }
@@ -107,8 +109,8 @@ fun LazyItemScope.ExpandedNowPlayingTaskBody(
         .clip(RoundedCornerShape(8.dp))
         .background(MaterialTheme.colorScheme.surface),
     ) {
-      when (effectiveTab) {
-        TaskViewTab.Combined -> TaskCombinedView(
+      when (selectedFilter) {
+        TasksFilter.Today -> TaskTodayView(
           tasks = visibleTasks,
           onToggleDone = { tasksState.toggleDone(it.id) },
           onOpen = onOpenTask,
@@ -117,7 +119,19 @@ fun LazyItemScope.ExpandedNowPlayingTaskBody(
           activeRepoOwner = uiState.activeRepoOwner,
           onStartTask = onStartTask,
         )
-        TaskViewTab.Today -> TaskTodayView(
+        TasksFilter.Upcoming -> TaskCombinedView(
+          // Stub: Subagent 2 / Phase B routes Upcoming through a
+          // dedicated upcoming-only filter. For now reuse Combined so
+          // the chip is functional.
+          tasks = visibleTasks.filter { !it.done },
+          onToggleDone = { tasksState.toggleDone(it.id) },
+          onOpen = onOpenTask,
+          onLongPress = onLongPressTask,
+          multiRepo = uiState.multiRepo,
+          activeRepoOwner = uiState.activeRepoOwner,
+          onStartTask = onStartTask,
+        )
+        TasksFilter.All -> TaskCombinedView(
           tasks = visibleTasks,
           onToggleDone = { tasksState.toggleDone(it.id) },
           onOpen = onOpenTask,
@@ -126,28 +140,33 @@ fun LazyItemScope.ExpandedNowPlayingTaskBody(
           activeRepoOwner = uiState.activeRepoOwner,
           onStartTask = onStartTask,
         )
-        TaskViewTab.PerList -> TaskPerListView(
-          tasks = visibleTasks,
-          todolists = uiState.todolists,
-          activeTodolistIds = uiState.activeTodolistIds,
-          selectedListId = selectedListId,
-          onSelectList = { selectedListId = it },
-          onToggleDone = { tasksState.toggleDone(it.id) },
-          onOpen = onOpenTask,
-          multiRepo = uiState.multiRepo,
-          activeRepoOwner = uiState.activeRepoOwner,
-          onStartTask = onStartTask,
-        )
-        TaskViewTab.Shopping -> TaskShoppingView(
-          tasks = if (selectedListId != null) {
-            uiState.tasks.filter { it.todolist.id == selectedListId }
+        TasksFilter.PerList -> {
+          val selectedList = uiState.todolists.firstOrNull { it.id == selectedListId }
+          if (selectedList?.mode == TodolistMode.Shopping) {
+            TaskShoppingView(
+              tasks = uiState.tasks.filter { it.todolist.id == selectedListId },
+              onToggleDone = { tasksState.toggleDone(it.id) },
+            )
           } else {
-            uiState.tasks.filter { it.todolist.mode == TodolistMode.Shopping }
-          },
-          onToggleDone = { tasksState.toggleDone(it.id) },
-        )
-        TaskViewTab.Standing -> TaskStandingView(
-          tasks = visibleTasks,
+            TaskPerListView(
+              tasks = visibleTasks,
+              todolists = uiState.todolists,
+              activeTodolistIds = uiState.activeTodolistIds,
+              selectedListId = selectedListId,
+              onSelectList = { selectedListId = it },
+              onToggleDone = { tasksState.toggleDone(it.id) },
+              onOpen = onOpenTask,
+              multiRepo = uiState.multiRepo,
+              activeRepoOwner = uiState.activeRepoOwner,
+              onStartTask = onStartTask,
+            )
+          }
+        }
+        TasksFilter.Done -> TaskStandingView(
+          // Stub: Subagent 2 / Phase B routes Done through a dedicated
+          // done-only filter. For now reuse Standing-style row layout
+          // over the done subset.
+          tasks = visibleTasks.filter { it.done },
           onToggleDone = { tasksState.toggleDone(it.id) },
           onOpen = onOpenTask,
           onPinToday = { task, pin -> tasksState.pinStanding(task.id, pin) },
