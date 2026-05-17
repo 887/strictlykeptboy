@@ -2658,3 +2658,32 @@ next tick. Room schema bumped v3 → v4 to carry the three columns on
 `EventRow` + `RecurrenceRuleRow` (destructive migration since cache
 is rebuildable from disk per D.1).
 Plan + sub-step checkboxes: `docs/plans/round-2-27-keeper-prompts.md`.
+
+## D.121 — DST policy: spring snap-forward, fall-back earlier offset (Round 2.24 D-2.24.g + D-2.24.h, locked)
+
+Round 2.24 Phase E promotes the two provisional DST decisions from the
+multi-timezone plan to locked policy. Both follow the JDK's default
+`ZonedDateTime.of(LocalDateTime, ZoneId)` behaviour, and the resolver
+intentionally does **not** route through `ZonedDateTime.ofLocal` with a
+preferred offset — so a future refactor can't silently flip the choice.
+
+- **D-2.24.g (locked) — Spring-forward (non-existent local time).** A
+  local clock that lands inside the missing hour (e.g. NYC 2026-03-08
+  02:30, Berlin 2026-03-29 02:30) snaps to the next valid instant
+  (the wall-clock minute one hour later, on the post-transition
+  offset). dmfs lib-recur recurring-rule expansion uses the same snap.
+- **D-2.24.h (locked) — Fall-back (ambiguous local time).** A local
+  clock that occurs twice (e.g. NYC 2026-11-01 01:30) resolves to the
+  **earlier** offset — the pre-transition (DST) instance, not the
+  post-transition (standard time) repeat. Picking the later offset
+  would silently push an "evening" event past local midnight again.
+
+Verification baseline:
+`app/src/test/java/com/eight87/strictlykeptboy/resolver/DstEdgeCaseTest.kt`
+pins both cases for one-off events (NYC + Berlin), an ambiguous
+fall-back event, a `FREQ=DAILY` rule crossing the spring boundary, and
+a cross-tz `displayTzId` rendering during the one-sided-DST window
+(2026-03-15, NYC on EDT while Berlin still on CET). Policy notes also
+live inline in
+`app/src/main/java/com/eight87/strictlykeptboy/resolver/TzResolver.kt`
+as a header KDoc block citing both decisions.

@@ -197,9 +197,9 @@ DST policy decisions (provisional, finalised in Phase E):
       - `TogetherInputFormTzPickerTest` — participant tz dropdown
         renders and updates state.
 
-### Phase E — DST edge-case test corpus (AA.5)
+### Phase E — DST edge-case test corpus (AA.5) — shipped in commit 6072b62
 
-- [ ] **E.1** New `DstEdgeCaseTest.kt` (resolver tests):
+- [x] **E.1** New `DstEdgeCaseTest.kt` (resolver tests):
       - **Spring-forward — non-existent local time.** Event at
         02:30 on `2026-03-29` in `Europe/Berlin`: asserts
         materialisation snaps to `03:30 CEST` per D-2.24.g; audit
@@ -216,9 +216,11 @@ DST policy decisions (provisional, finalised in Phase E):
         "America/New_York"` from `2026-03-07` to `2026-03-14`
         (US DST = `2026-03-08`): all 8 instances materialise; UTC
         offset changes from `-05:00` to `-04:00` on day 2 onward.
-- [ ] **E.2** Document the spring/fall policy choice inline in the
-      test file (header KDoc references D-2.24.g/h).
-- [ ] **E.3** `decisions.md` D.121 promotes D-2.24.g + D-2.24.h from
+- [x] **E.2** Document the spring/fall policy choice inline in the
+      test file (header KDoc references D-2.24.g/h). Also added a
+      policy header KDoc in `resolver/TzResolver.kt` so source-side
+      readers see the lock without bouncing to the test corpus.
+- [x] **E.3** `decisions.md` D.121 promotes D-2.24.g + D-2.24.h from
       "provisional" to "locked" once Phase E passes.
 
 ### Phase F — `skb tz convert` CLI (AA.6) — shipped in commit fd6dd0e

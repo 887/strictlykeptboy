@@ -3,6 +3,41 @@ package com.eight87.strictlykeptboy.resolver
 import java.time.ZoneId
 
 /**
+ * DST policy (Round 2.24 Phase E — locked in decisions.md D.121).
+ *
+ * Source-of-truth instants on `Event` / `RecurrenceRule` are built by
+ * the caller via `LocalDateTime.atZone(ZoneId)` (or the lib-recur
+ * iterator, which routes through the same JDK rules). Two ambiguous
+ * cases arise at DST transitions:
+ *
+ * - **D-2.24.g — Spring-forward (gap).** A local clock that falls into
+ *   the missing hour (e.g. 02:30 on the US spring-forward day) snaps
+ *   to the next valid instant — the same wall-clock minute one hour
+ *   later. `ZonedDateTime.of(localDateTime, zone)` already implements
+ *   this via `ZoneRules.getValidOffsets()` returning empty + falling
+ *   through to the gap's `after()` offset. We keep the JDK default.
+ *
+ * - **D-2.24.h — Fall-back (overlap).** A local clock that occurs
+ *   twice (e.g. 01:30 on the US fall-back day) resolves to the
+ *   **earlier** offset (the pre-transition one). `ZonedDateTime.of`
+ *   with no `preferredOffset` argument gives this; we keep the
+ *   default. Selecting the later offset would silently shift a
+ *   user's "before bed" event into "after midnight, again" land.
+ *
+ * Both rules are verified by
+ * `app/src/test/java/com/eight87/strictlykeptboy/resolver/DstEdgeCaseTest.kt`,
+ * which is the cited verification baseline in decisions.md D.121.
+ * Recurring rules driven by dmfs lib-recur honour the same snap; the
+ * daily-rule-across-DST case in that file is the regression-pin.
+ *
+ * If a future refactor needs to build a `ZonedDateTime` from local
+ * parts inside this package, use the unadorned
+ * `ZonedDateTime.of(LocalDateTime, ZoneId)` constructor — do NOT call
+ * `ZonedDateTime.ofLocal(local, zone, preferredOffset)` with a
+ * non-null preferred offset, or you will diverge from the policy.
+ */
+
+/**
  * Round 2.24 / Phase B — pure timezone resolution helpers.
  *
  * `TzResolver` is intentionally stateless and top-level: it owns one
