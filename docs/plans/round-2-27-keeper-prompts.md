@@ -63,7 +63,7 @@
 - [x] **A.6** Round-trip tests in codec tests: fields absent → defaults;
       present → preserved; unknown enum → falls back gracefully.
 
-## Phase B — Resolver + projector wiring — shipped in commit PHASE_B_COMMIT
+## Phase B — Resolver + projector wiring — shipped in commit a3ea234
 
 - [x] **B.1** Add `TaskSource.KeeperPrompt` to the `TaskSource` enum
       in `ui/tasks/TaskModels.kt`.
@@ -98,11 +98,11 @@
       reply + optional "Attach photo URI" row. Confirm writes the file.
 - [x] **D.2** Add `PromptResponseWriter.kt` in `store/`. Writes the
       D-2.27.g shape; JGit auto-commit via existing commit-hook plumbing.
-      Shipped in commit PHASE_B_COMMIT.
+      Shipped in commit a3ea234.
 - [ ] **D.3** Wire the sheet open trigger from `TaskRow`'s Respond button
       via existing task detail-sheet host.
 - [x] **D.4** Unit test for the writer: round-trip through reader;
-      idempotent on same-date overwrite. Shipped in commit PHASE_B_COMMIT.
+      idempotent on same-date overwrite. Shipped in commit a3ea234.
 
 ## Phase E — Refactor cage-check demo content — shipped in commit 1b5e68a
 
