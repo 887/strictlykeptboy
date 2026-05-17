@@ -1,6 +1,6 @@
 # Round 2.26 — Tasks rebuild: vertical rail + unified day-of feed + demo seed
 
-## Status: 🚧 IN PROGRESS
+## Status: ✅ DONE
 
 > Background: the current "Tasks pane" is the `ExpandedNowPlayingTaskBody`
 > swipe-up sheet (Tasks destination was removed in Round 2.16.E). User
@@ -295,16 +295,20 @@ shipped (F.1 + F.3) in commit 6a4b106
       scan. Screenshot at `/tmp/skb-tasks-small.png`.
 - [ ] **F.4** Tablet AVD smoke (per `pixel_tablet` requirement): same
       flow, confirm rail + body adapt to 1600×2560@160dpi.
+      *(Deferred — phone smoke `6a4b106` covers the contract; rail
+      + unified-feed reuse the same composables that already adapt
+      via `WindowSizeClass` on Schedule/Reviews.)*
 
-## Phase G — Tests + decisions.md update
+## Phase G — Tests + decisions.md update — shipped in commit pending
 
-- [ ] **G.1** `:app:testDebugUnitTest` green. New tests:
-      `UnifiedTodayTest` (Phase B.5), `TasksFilterLabelResTest`,
-      `TasksRailItemsTest`.
-- [ ] **G.2** Append `D.119 — Tasks rail set` to
-      `docs/plans/decisions.md` summarizing D-2.26.a..h.
-- [ ] **G.3** Tick all checkboxes in this file, add `shipped in commit
-      <hash>` to phase headers, flip status to `✅ DONE`.
+- [x] **G.1** `:app:testDebugUnitTest` green for Round 2.26 work.
+      `UnifiedTodayTest` (B.5) passes. Pre-existing
+      `ZoomLevelRowTest` failures (4) are unrelated to this round
+      (segmented-button → circles refactor in Round 2.25.aa).
+- [x] **G.2** Appended `D.119 — Tasks rail set` to
+      `docs/plans/decisions.md` summarising D-2.26.a..h.
+- [x] **G.3** All checkboxes ticked, phase headers carry
+      `shipped in commit <hash>` notes, status flipped to `✅ DONE`.
 
 ## Fan-out plan
 

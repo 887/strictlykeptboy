@@ -2566,3 +2566,43 @@ render with `…` overflow cues; tap opens detail. Days that
 genuinely are mostly short-band (the Sun-17 demo case observed
 at the AVD smoke) still pick Spacious because even the p25
 band is short — that is correct behaviour.
+
+## D.119 — Tasks destination uses a vertical left rail (Round 2.26)
+
+Round 2.26 reinstates `TopDestination.Tasks` (removed in Round 2.16.E)
+as a first-class content destination with the same vertical-rail
+affordance Schedule and Reviews use (D.118). Locks:
+
+- **D-2.26.a** `TopDestination.Tasks` is back; the swipe-up
+  `ExpandedNowPlayingTaskBody` remains for playback context but the
+  rail-driven destination is canonical.
+- **D-2.26.b** Filter set is `Today / Upcoming / All / Per-list /
+  Done`. `Combined` (vague) and `Shopping` (a todolist mode, not a
+  filter) are dropped. Default is `Today`.
+- **D-2.26.c** Today is unified: today's todolist tasks AND the day's
+  `RenderedSchedule` timebox bands appear in one ordered list —
+  overdue first, then chronological interleave of timeboxes + due-today
+  tasks (no-due tasks at the bottom of the day-bucket), pinned standing
+  last.
+- **D-2.26.d** Timebox rows reuse the `TaskRow` shape with a
+  calendar-coloured accent stripe + clock glyph + "HH:mm–HH:mm ·
+  CalendarName" chip (`TimeboxRow.kt`).
+- **D-2.26.e** Bottom bar stays Schedule-only; "next due in N min" is
+  rendered inline above the first non-empty section on the Tasks
+  destination.
+- **D-2.26.f** Demo data lives in the rich-demo-repo per
+  `project_strictlykeptboy_repo_is_identity` — no app-level demo
+  injection at boot.
+- **D-2.26.g** Rich-demo todolists: `groceries`, `home`,
+  `work-sprint-25`, `routines`, `play` (plus pre-existing `cat-care` /
+  `daily-rituals` / `owner-activity-log`).
+- **D-2.26.h** `tasksFilterLabelRes` resolver in `SkbScheduleRail.kt`
+  mirrors `scheduleTabLabelRes` + `reviewsFilterLabelRes`.
+
+Wired end-to-end: `IndexerSnapshotPublisher` learned to read
+`<repoRoot>/todolists/<slug>/todolist.toml` (slug-named dirs whose `id`
+field is the UUID surfaced via the codec); `TaskEntityMapping.kt` maps
+Room `TaskRow` + `StandingTaskRow` → `TaskItem`. MainActivity's
+`tasksViewState` `LaunchedEffect` merges disk-backed tasks with the
+existing FromEvents projection (real-disk wins on id collision).
+Plan + sub-step checkboxes: `docs/plans/round-2-26-tasks.md`.
