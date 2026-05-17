@@ -2606,3 +2606,55 @@ Room `TaskRow` + `StandingTaskRow` → `TaskItem`. MainActivity's
 `tasksViewState` `LaunchedEffect` merges disk-backed tasks with the
 existing FromEvents projection (real-disk wins on id collision).
 Plan + sub-step checkboxes: `docs/plans/round-2-26-tasks.md`.
+
+## D.120 — Keeper-prompt mechanic (Round 2.27)
+
+Round 2.27 ships a first-class keeper-prompt event kind: the dom/keeper
+authors an event that demands a response from the boy (photo, text,
+or check-in), it projects into the boy's todolist as a task, and stays
+open until cleared by writing a sibling response file. Locks:
+
+- **D-2.27.a** Schema is additive: `requires_response: bool`,
+  `prompt_kind: "photo"|"text"|"check-in"`, `prompt_target: "keeper"|
+  "self"` — three optional fields on existing event/recurrence
+  frontmatter. Composes with RRULE + inverted + supersedence without
+  a new file type. Old files without the fields parse as
+  `requires_response = false` (default false ⇒ zero behaviour change).
+- **D-2.27.b** Codec extension: `Event` + `RecurrenceRule` in
+  `store/Entities.kt` round-trip the three fields; optional on read,
+  omitted on write when default-valued (diff-minimal).
+- **D-2.27.c** Spawn path: `FromEventsProjector` routes
+  `requiresResponse = true` instances to a new
+  `TaskSource.KeeperPrompt`. No new synthetic todolist.
+- **D-2.27.d** Persistence: prompt-spawned tasks stay in Today +
+  Overdue until cleared. The `isOverdue` predicate carries
+  yesterday's unanswered photo prompt into today's "Overdue" section
+  automatically.
+- **D-2.27.e** Visual cue: prompt-kind glyph (📸/💬/🔒) prefixing the
+  title; "Keeper" `SuggestionChip` author badge; persistence pill
+  "open Nd" in `colorScheme.errorContainer` when open ≥1 day.
+- **D-2.27.f** Row affordance: trailing "Respond" `TextButton`
+  replaces the checkbox on keeper-prompt rows. Long-press writes a
+  synthetic "(marked answered offline)" response file.
+- **D-2.27.g** Response shape: file at
+  `calendars/<cal-id>/cage-check-responses/<prompt-id>/<yyyy-mm-dd>.md`
+  with frontmatter `schema_version`, `id`, `kind = "prompt_response"`,
+  `prompt_id`, `prompt_instance_date`, `responder`, `created_at`,
+  optional `attachment`. Existence of file = CLOSED (mirrors the
+  inverted-habit `deviations/` pattern in reverse: default OPEN,
+  explicit file CLOSED).
+- **D-2.27.h** Recurrence: reuse RRULE. Spontaneous-feeling prompts
+  are hand-authored one-offs, not a random generator.
+- **D-2.27.i** The bruise-check daily-rituals entry is deleted, not
+  refactored. The inverted-habit `cage-stays-on` recurrence stays
+  (asserts the 24/7 default). Cage-photo Sunday + mid-week feels-check
+  + irregular dom-overlay one-offs replace the medical framing.
+
+Wired end-to-end: `MaterializedInstance` carries the three fields;
+`PromptResponseReader` walks the response tree and drops cleared
+instances from projection; `PromptResponseWriter` writes the response
+file + triggers an `Indexer.fullScan` so the row disappears on the
+next tick. Room schema bumped v3 → v4 to carry the three columns on
+`EventRow` + `RecurrenceRuleRow` (destructive migration since cache
+is rebuildable from disk per D.1).
+Plan + sub-step checkboxes: `docs/plans/round-2-27-keeper-prompts.md`.

@@ -1,6 +1,6 @@
 # Round 2.27 — Keeper-prompt mechanic + persona realism
 
-## Status: 🚧 IN PROGRESS
+## Status: ✅ DONE
 
 > Background: the current "morning cage check for bruises" daily-rituals
 > entry is tone-broken — the cage-check ritual was supposed to be the
@@ -181,17 +181,20 @@
       "playtime — cage off window", body in Keeper voice. (Play
       TODOLIST already exists from Round 2.26.D; this is the CALENDAR.)
 
-## Phase G — Tests + decisions.md + plan status DONE
+## Phase G — Tests + decisions.md + plan status DONE — shipped in commit pending
 
-- [ ] **G.1** `:app:testDebugUnitTest` green; new tests A.6, B.4, D.4
-      pass.
-- [ ] **G.2** AVD smoke on `emulator-5558`: Tasks Today shows a keeper-
-      prompt row with 📸 glyph + Keeper chip; Overdue shows the E.7
-      prompt with "open 2d" pill; Respond opens sheet; writing reply
-      makes row disappear; screenshot saved.
-- [ ] **G.3** Append `D.120 — keeper-prompt mechanic` to `decisions.md`
-      summarising D-2.27.a..i.
-- [ ] **G.4** All checkboxes ticked; phase headers carry
+- [x] **G.1** `:app:testDebugUnitTest` green; new tests A.6, B.4, D.4
+      pass. Only pre-existing `ZoomLevelRowTest` (4) failures remain
+      (unrelated — segmented-button→circles refactor in 2.25.aa).
+- [x] **G.2** AVD smoke on `emulator-5558` shipped with commit
+      `40ae42f`: Today shows the demo KeeperPrompt row with 📸 glyph,
+      purple "Keeper" chip, red "open 2d" pill, blue "Respond" button;
+      Respond opens the bottom sheet titled "📸 send proof you're
+      still caged · Respond to keeper"; reply text enables Send.
+      Screenshot at `/tmp/skb-keeper-prompts.png`.
+- [x] **G.3** Appended `D.120 — keeper-prompt mechanic` to
+      `docs/plans/decisions.md` summarising D-2.27.a..i.
+- [x] **G.4** All checkboxes ticked; phase headers carry
       `shipped in commit <hash>` notes; status flipped to ✅ DONE.
 
 ## Fan-out plan
