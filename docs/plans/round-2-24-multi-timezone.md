@@ -148,7 +148,7 @@ DST policy decisions (provisional, finalised in Phase E):
         across spring DST in Berlin display correctly shifts by 4h
         (post-DST) vs 5h (pre-DST).
 
-### Phase C — Display-tz toggle UI (AA.3) — shipped in commit PHASE_C_COMMIT
+### Phase C — Display-tz toggle UI (AA.3) — shipped in commit 3bf0fe1
 
 - [x] **C.1** `CalendarVisibilityPrefs`: added `displayTzId: String?` to
       `VisibilityState` + `setDisplayTzId(zoneId: String?)` /
