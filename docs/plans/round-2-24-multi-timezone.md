@@ -88,7 +88,7 @@ DST policy decisions (provisional, finalised in Phase E):
 
 ## Phases
 
-### Phase A — Data model: per-event tz_id + repo default_tz_id (AA.1, AA.2) — shipped in commit 1af4917
+### Phase A — Data model: per-event tz_id + repo default_tz_id (AA.1, AA.2) — shipped in commit c1dcac7
 
 - [x] **A.1** Audit `Event` data class: confirm absence of `tz_id`
       (today only `RecurrenceRule` carries it). Add nullable
