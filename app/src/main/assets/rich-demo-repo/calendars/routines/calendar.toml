@@ -4,6 +4,7 @@ kind = "calendar"
 name = "Routines"
 emoji = "🧴"
 color = "#88c057"
+color_seed = 2733814
 priority = 500
 meta_group_field = "phase"
 tz_id = "Europe/London"

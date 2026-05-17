@@ -79,6 +79,16 @@ fun SchedulePane(
      * [DragRescheduleController.handleRecurringDrop].
      */
     onRecurringDrop: ((DayBand, java.time.OffsetDateTime, DragRescheduleController.RecurringChoice) -> Unit)? = null,
+    /**
+     * Round 2.25 follow-up — when wired, band taps on the compact (phone)
+     * path route the chosen [DayBand] up to the host shell instead of
+     * mounting [EventDetailScreen] inline. The host then renders
+     * `EventDetailScreen` above the chrome (top-bar + left rail), so the
+     * detail surface is genuinely full-screen. When null, falls back to
+     * the legacy in-pane mount (used by previews / tests that don't plumb
+     * the hoist).
+     */
+    onOpenEventDetailFullScreen: ((DayBand) -> Unit)? = null,
 ) {
     androidx.compose.runtime.LaunchedEffect(state) {
         com.eight87.strictlykeptboy.perf.PerfTraceRecorder.begin(
@@ -154,7 +164,18 @@ fun SchedulePane(
                     state = state,
                     onPersistTab = onPersistTab,
                     onSyncClick = onSyncClick,
-                    onBandTap = { detailBand = it },
+                    // Round 2.25 follow-up — when the host wired
+                    // `onOpenEventDetailFullScreen`, route band taps up
+                    // there so the detail surface is hoisted above the
+                    // shell chrome (rail + top-bar). Otherwise fall back
+                    // to the in-pane mount preserved below.
+                    onBandTap = { band ->
+                        if (onOpenEventDetailFullScreen != null) {
+                            onOpenEventDetailFullScreen.invoke(band)
+                        } else {
+                            detailBand = band
+                        }
+                    },
                     onPlanTrip = onPlanTrip,
                     // Round 2.23 Phase C — needed so the ZoomLevelRow
                     // mounts in compact (phone) mode too.
@@ -164,25 +185,27 @@ fun SchedulePane(
             }
             // Round 2.23 Phase D (D-2.23.d) — full-screen event detail
             // replaces the legacy ModalBottomSheet for the compact path.
-            // Mounted at the SchedulePane root so its TopAppBar covers
-            // the schedule tab strip. The bottom-sheet wrapper is
-            // retired from this surface.
-            detailBand?.let { band ->
-                val ctx = androidx.compose.ui.platform.LocalContext.current
-                EventDetailScreen(
-                    band = band,
-                    onBack = { detailBand = null },
-                    // Phase D.5 — surface a clear "coming soon" toast
-                    // instead of the silent no-op the legacy stub had.
-                    // The event editor is Round 3 / Phase I work.
-                    onEdit = {
-                        android.widget.Toast.makeText(
-                            ctx,
-                            "Event editor coming in Round 3",
-                            android.widget.Toast.LENGTH_SHORT,
-                        ).show()
-                    },
-                )
+            // Round 2.25 follow-up — only render the in-pane fallback
+            // when the host did NOT wire `onOpenEventDetailFullScreen`.
+            // The wired path hoists to SkbAppShell so the detail surface
+            // truly covers the rail + top-bar (user feedback 2026-05-17:
+            // "clicking on an appointment should open it as a fullscreen
+            // overlay not as this inline one").
+            if (onOpenEventDetailFullScreen == null) {
+                detailBand?.let { band ->
+                    val ctx = androidx.compose.ui.platform.LocalContext.current
+                    EventDetailScreen(
+                        band = band,
+                        onBack = { detailBand = null },
+                        onEdit = {
+                            android.widget.Toast.makeText(
+                                ctx,
+                                "Event editor coming in Round 3",
+                                android.widget.Toast.LENGTH_SHORT,
+                            ).show()
+                        },
+                    )
+                }
             }
         }
 

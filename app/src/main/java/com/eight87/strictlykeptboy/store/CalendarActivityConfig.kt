@@ -74,7 +74,12 @@ data class CalendarActivityConfig(
 
     companion object {
         fun read(table: TomlTable): CalendarActivityConfig {
+            // Round 2.25 follow-up — accept either `color_seed = <int>` or the
+            // canonical CalDAV-style `color = "#RRGGBB"` hex string. When both
+            // are present, the int wins (it's the more specific key). Malformed
+            // hex resolves to null without throwing — keeps legacy files safe.
             val colorSeed = table.getInt("color_seed")
+                ?: table.getString("color")?.let { parseHexColorOrNull(it) }
             val activeWindows = readDateRangeArray(table, "active_windows")
             val activeHours = readHourRangeArray(table, "active_hours")
             val metaGroupField = table.getString("meta_group_field")?.takeIf { it.isNotBlank() }
@@ -134,6 +139,21 @@ data class CalendarActivityConfig(
 
         private fun parseLocalTimeOrNull(raw: String): LocalTime? =
             runCatching { LocalTime.parse(raw.trim()) }.getOrNull()
+
+        /**
+         * Parse `#RRGGBB` / `RRGGBB` / `#AARRGGBB` / `AARRGGBB` into a signed
+         * Int suitable for `Color(int)`. Whitespace tolerated. Returns null
+         * for anything malformed — callers fall back to the hash-based seed.
+         */
+        private fun parseHexColorOrNull(raw: String): Int? {
+            val s = raw.trim().removePrefix("#")
+            if (s.length != 6 && s.length != 8) return null
+            val parsed = runCatching { java.lang.Long.parseLong(s, 16) }.getOrNull() ?: return null
+            // 6-hex form is opaque RGB; promote to 0xFFRRGGBB so the Int round-
+            // trips through Color() without losing alpha.
+            val rgba = if (s.length == 6) (0xFF000000L or parsed) else parsed
+            return rgba.toInt()
+        }
     }
 
     /** Write additive fields into [table]. Existing non-activity fields are untouched. */

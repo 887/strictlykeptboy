@@ -4,6 +4,7 @@ kind = "calendar"
 name = "Beans (cat)"
 emoji = "🐈"
 color = "#e8a87c"
+color_seed = 16754470
 priority = 750
 tz_id = "Europe/London"
 created_at = 2026-01-01T00:00:00+01:00

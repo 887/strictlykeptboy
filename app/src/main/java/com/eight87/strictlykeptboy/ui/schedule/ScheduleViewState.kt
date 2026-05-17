@@ -84,22 +84,46 @@ class ScheduleViewState(
     init {
         val visFlow = visibilityFlow ?: MutableStateFlow(VisibilityState())
         val repoCfgFlow = repoConfigsFlow ?: MutableStateFlow(emptyList())
-        scope.launch {
-            combine(_date, _selectedTab, snapshotFlow, sourcesFlow, visFlow, repoCfgFlow) {
-                args ->
+        // Round 2.25 follow-up — when the caller wires the registry-
+        // enriched `calendarsFlow`, fold its CalendarMeta entries into
+        // the snapshot we hand to the renderer. The raw IndexerSnapshot
+        // synthesizes CalendarMeta(displayName=id, colorSeed=null) from
+        // Room rows, so without this overlay the OverlayResolver never
+        // sees per-calendar colorSeed values and every band ends up at
+        // the `inst.calendar.id.hashCode()` fallback hue (which
+        // coincidentally clusters green for the demo's calendar ids,
+        // matching the user feedback 2026-05-17 "all the stuff in the
+        // demo calendars is still green").
+        val enrichedCalendars: StateFlow<List<CalendarMeta>?> =
+            calendarsFlow?.let { src ->
+                // Adapt non-null `StateFlow<List<CalendarMeta>>` into a
+                // nullable-element flow so the combine arm can be `null`
+                // when the caller didn't wire `calendarsFlow` at all.
                 @Suppress("UNCHECKED_CAST")
-                Sextuple(
+                src as StateFlow<List<CalendarMeta>?>
+            } ?: MutableStateFlow<List<CalendarMeta>?>(null)
+        scope.launch {
+            combine(
+                _date, _selectedTab, snapshotFlow, sourcesFlow, visFlow, repoCfgFlow,
+                enrichedCalendars,
+            ) { args ->
+                @Suppress("UNCHECKED_CAST")
+                Septuple(
                     args[0] as LocalDate,
                     args[1] as ScheduleViewTab,
                     args[2] as RepoSnapshot,
                     args[3] as Renderer.Sources,
                     args[4] as VisibilityState,
                     args[5] as List<RepoConfig>,
+                    args[6] as List<CalendarMeta>?,
                 )
             }.collect { q ->
                 val (range, viewMode) = rangeAndModeFor(q.a, q.b)
+                val enrichedSnap = q.g?.let { enriched ->
+                    overlayEnrichedCalendars(q.c, enriched)
+                } ?: q.c
                 val (repoFilteredSnap, repoFilteredSrc) =
-                    applyRepoOverlay(q.c, q.d, q.f)
+                    applyRepoOverlay(enrichedSnap, q.d, q.f)
                 val (filteredSnap, filteredSrc) =
                     applyVisibility(repoFilteredSnap, repoFilteredSrc, q.e)
                 _rendered.value = renderer.render(
@@ -111,6 +135,31 @@ class ScheduleViewState(
                 )
             }
         }
+    }
+
+    /**
+     * Round 2.25 follow-up — replace the synthesized [CalendarMeta]
+     * entries (one-per-id-with-only-displayName) with the registry-
+     * enriched ones from disk (colorSeed, priority, supersedence,
+     * activeWindows, etc.). Keyed on `(repoId, calendarId)`. Any
+     * synthesized meta without a matching enriched entry is preserved
+     * (handles in-flight calendars whose `calendar.toml` hasn't been
+     * read yet).
+     */
+    private fun overlayEnrichedCalendars(
+        snap: RepoSnapshot,
+        enriched: List<CalendarMeta>,
+    ): RepoSnapshot {
+        if (enriched.isEmpty()) return snap
+        val byKey = enriched.associateBy { it.repo.id to it.ref.id }
+        val merged = snap.calendars.map { synth ->
+            byKey[synth.repo.id to synth.ref.id] ?: synth
+        }
+        // Include any enriched entries with no matching synth (rare —
+        // happens when calendar.toml exists but no events do yet).
+        val synthKeys = snap.calendars.map { it.repo.id to it.ref.id }.toSet()
+        val extras = enriched.filter { (it.repo.id to it.ref.id) !in synthKeys }
+        return snap.copy(calendars = merged + extras)
     }
 
     private fun applyRepoOverlay(
@@ -187,6 +236,9 @@ class ScheduleViewState(
     private data class Quintuple<A, B, C, D, E>(val a: A, val b: B, val c: C, val d: D, val e: E)
     private data class Sextuple<A, B, C, D, E, F>(
         val a: A, val b: B, val c: C, val d: D, val e: E, val f: F,
+    )
+    private data class Septuple<A, B, C, D, E, F, G>(
+        val a: A, val b: B, val c: C, val d: D, val e: E, val f: F, val g: G,
     )
 }
 

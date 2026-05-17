@@ -363,6 +363,16 @@ private fun SkbAppShellContent(
     // settings and it's dumb"). The picker now mirrors the same
     // Surface(fillMaxSize) idiom that the TripWizardNavHost uses.
     var overlayPickerOpen by rememberSaveable { mutableStateOf(false) }
+    // Round 2.25 follow-up — full-screen event-detail overlay state.
+    // Hoisted here (rather than nested in SchedulePane) so the detail
+    // surface covers the rail + top-bar. Mirrors the same outer-Box
+    // mount pattern Round 2.22 used for OverlayPickerScreen
+    // (Round 2.23 Phase D shipped EventDetailScreen inside the
+    // destination-content Box, which left the rail still visible —
+    // this hoist closes that loop).
+    var pendingEventDetail by remember {
+        mutableStateOf<com.eight87.strictlykeptboy.resolver.DayBand?>(null)
+    }
     NowPlayingSheetHost(
         source = taskPlaybackSource,
         tasksState = tasksState,
@@ -446,6 +456,7 @@ private fun SkbAppShellContent(
                         onPickExportFile = onPickExportFile,
                         onSingleDrop = onSingleDrop,
                         onRecurringDrop = onRecurringDrop,
+                        onOpenEventDetailFullScreen = { pendingEventDetail = it },
                     )
                     // Phase CCC — overlay the trip wizard above the active pane
                     // when open. Covers the full content area; back/cancel
@@ -495,6 +506,31 @@ private fun SkbAppShellContent(
                 )
             }
         }
+        // Round 2.25 follow-up — full-screen EventDetailScreen mount.
+        // Mounted at the same outer-Box level as OverlayPickerScreen
+        // so the detail surface covers the rail + top-bar (the in-pane
+        // mount inside SchedulePane leaked the rail through). The
+        // back arrow on EventDetailScreen clears `pendingEventDetail`,
+        // restoring the underlying pane with scroll state intact.
+        pendingEventDetail?.let { band ->
+            val detailCtx = androidx.compose.ui.platform.LocalContext.current
+            Surface(
+                color = MaterialTheme.colorScheme.background,
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                com.eight87.strictlykeptboy.ui.schedule.EventDetailScreen(
+                    band = band,
+                    onBack = { pendingEventDetail = null },
+                    onEdit = {
+                        android.widget.Toast.makeText(
+                            detailCtx,
+                            "Event editor coming in Round 3",
+                            android.widget.Toast.LENGTH_SHORT,
+                        ).show()
+                    },
+                )
+            }
+        }
       }  // end outer Box
     }
     }  // end NowPlayingSheetHost
@@ -538,6 +574,8 @@ private fun SkbAppDestinationContent(
     onPickExportFile: (com.eight87.strictlykeptboy.git.RepoConfig) -> Unit,
     onSingleDrop: ((com.eight87.strictlykeptboy.resolver.DayBand, java.time.OffsetDateTime) -> Unit)? = null,
     onRecurringDrop: ((com.eight87.strictlykeptboy.resolver.DayBand, java.time.OffsetDateTime, com.eight87.strictlykeptboy.ui.schedule.DragRescheduleController.RecurringChoice) -> Unit)? = null,
+    /** Round 2.25 follow-up — host-owned full-screen event-detail opener. */
+    onOpenEventDetailFullScreen: ((com.eight87.strictlykeptboy.resolver.DayBand) -> Unit)? = null,
 ) {
     when (selected) {
         TopDestination.Schedule -> SchedulePane(
@@ -550,6 +588,7 @@ private fun SkbAppDestinationContent(
             onLongPressCalendar = onLongPressCalendar,
             onSingleDrop = onSingleDrop,
             onRecurringDrop = onRecurringDrop,
+            onOpenEventDetailFullScreen = onOpenEventDetailFullScreen,
         )
         TopDestination.Together -> if (togetherViewModel != null) {
             TogetherPane(vm = togetherViewModel, neutralMode = neutralMode)

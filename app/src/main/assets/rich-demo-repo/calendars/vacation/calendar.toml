@@ -4,6 +4,7 @@ kind = "calendar"
 name = "Vacation"
 emoji = "✈️"
 color = "#6db1bf"
+color_seed = 2541274
 priority = 900
 tz_id = "Europe/London"
 created_at = 2026-01-01T00:00:00+01:00

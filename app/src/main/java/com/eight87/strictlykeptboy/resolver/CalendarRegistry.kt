@@ -93,9 +93,19 @@ class CalendarRegistry(
             Files.list(calendarsDir).use { listing ->
                 listing.forEach { calDir ->
                     if (!Files.isDirectory(calDir)) return@forEach
-                    val calendarId = calDir.fileName.toString()
+                    val dirName = calDir.fileName.toString()
                     val tomlPath = calDir.resolve("calendar.toml")
-                    val parsed = readCalendarToml(tomlPath, calendarId) ?: return@forEach
+                    val parsed = readCalendarToml(tomlPath, dirName) ?: return@forEach
+                    // Round 2.25 follow-up — the indexer keys events by
+                    // their frontmatter `calendar_id = "<uuid>"`, not by
+                    // the calendar's directory name. Prefer the TOML
+                    // `id` field as the canonical CalendarRef id so the
+                    // enriched CalendarMeta merges correctly into the
+                    // snapshot consumed by OverlayResolver (otherwise
+                    // every band falls through to the
+                    // `inst.calendar.id.hashCode()` fallback hue and
+                    // the per-calendar colorSeed never reaches paint).
+                    val calendarId = parsed.canonicalId ?: dirName
                     diskKeys += cfg.repoId to calendarId
                     val key = cfg.repoId to calendarId
                     val synth = byKey[key]
@@ -125,6 +135,7 @@ class CalendarRegistry(
             val text = String(Files.readAllBytes(path), StandardCharsets.UTF_8)
             val table = TomlReader.parse(text)
             ParsedCalendarToml(
+                canonicalId = table.getString("id")?.takeIf { it.isNotBlank() },
                 displayName = table.getString("name")
                     ?: table.getString("display_name")
                     ?: calendarId,
@@ -175,6 +186,14 @@ class CalendarRegistry(
 
     /** Parsed-but-not-yet-overlaid `calendar.toml` view. */
     private data class ParsedCalendarToml(
+        /**
+         * Round 2.25 follow-up — the canonical CalendarRef id from the
+         * TOML `id = "<uuid>"` field. `null` when the file omits the
+         * key, in which case the directory name is used as a fallback.
+         * The indexer keys events by this UUID, so getting this right
+         * is load-bearing for the snapshot merge.
+         */
+        val canonicalId: String? = null,
         val displayName: String,
         val priority: Int,
         val routine: RoutineCalendarConfig,

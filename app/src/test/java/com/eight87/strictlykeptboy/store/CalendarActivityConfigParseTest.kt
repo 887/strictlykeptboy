@@ -184,4 +184,45 @@ class CalendarActivityConfigParseTest {
         val s = TomlWriter.emit(out)
         assertTrue(!s.contains("meta_group_field"))
     }
+
+    // Round 2.25 follow-up — hex `color = "#RRGGBB"` is the CalDAV-canonical
+    // form. Reader accepts it as a fallback when `color_seed = <int>` is
+    // absent, so externally-authored TOML (and our shipped demo repo) gets
+    // non-null colorSeed values without an extra migration step.
+
+    @Test fun reads_color_hex_string_when_color_seed_absent() {
+        val toml = """color = "#f4a261""""
+        val cfg = CalendarActivityConfig.read(TomlReader.parse(toml))
+        // Opaque 0xFFF4A261 → signed Int.
+        assertEquals(0xFFF4A261.toInt(), cfg.colorSeed)
+    }
+
+    @Test fun reads_color_hex_without_hash_prefix() {
+        val toml = """color = "f4a261""""
+        val cfg = CalendarActivityConfig.read(TomlReader.parse(toml))
+        assertEquals(0xFFF4A261.toInt(), cfg.colorSeed)
+    }
+
+    @Test fun color_seed_int_wins_when_both_present() {
+        val toml = """
+            color_seed = 12345
+            color = "#ffffff"
+        """.trimIndent()
+        val cfg = CalendarActivityConfig.read(TomlReader.parse(toml))
+        assertEquals(12345, cfg.colorSeed)
+    }
+
+    @Test fun malformed_hex_color_yields_null() {
+        val toml = """color = "not-a-color""""
+        val cfg = CalendarActivityConfig.read(TomlReader.parse(toml))
+        assertNull(cfg.colorSeed)
+    }
+
+    @Test fun short_hex_color_yields_null() {
+        // 3-digit form (`#abc`) is not supported by the parser; falls through
+        // to null instead of throwing.
+        val toml = """color = "#abc""""
+        val cfg = CalendarActivityConfig.read(TomlReader.parse(toml))
+        assertNull(cfg.colorSeed)
+    }
 }
