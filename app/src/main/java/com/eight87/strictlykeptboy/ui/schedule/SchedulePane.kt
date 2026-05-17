@@ -282,7 +282,7 @@ private fun ScheduleMasterContent(
     val metaGroupByCalendar = remember(calendars) {
         calendars.associate { it.ref to !it.metaGroupField.isNullOrBlank() }
     }
-    val effectiveZoom = remember(calendars, visState) {
+    val effectiveZoom = remember(calendars, visState, rendered, date) {
         // Round 2.23 Phase C (D-2.23.a) — global override wins when set.
         val override = visState.globalZoomOverride
         if (override != null) {
@@ -290,21 +290,16 @@ private fun ScheduleMasterContent(
                 com.eight87.strictlykeptboy.ui.settings.ZOOM_MIN,
                 com.eight87.strictlykeptboy.ui.settings.ZOOM_MAX,
             )
-        } else if (calendarVisibility == null || calendars.isEmpty()) {
-            com.eight87.strictlykeptboy.ui.settings.ZOOM_DEFAULT
         } else {
-            val hiddenKeys = visState.ordered
-                .filter { !it.visible }
-                .map { it.repoId to it.id }
-                .toSet()
-            val visEntries = visState.ordered.associateBy { it.repoId to it.id }
-            val zooms = calendars
-                .filter { (it.repo.id to it.ref.id) !in hiddenKeys }
-                .map {
-                    visEntries[it.repo.id to it.ref.id]?.zoom
-                        ?: com.eight87.strictlykeptboy.ui.settings.ZOOM_DEFAULT
-                }
-            (zooms.maxOrNull() ?: com.eight87.strictlykeptboy.ui.settings.ZOOM_DEFAULT)
+            // Round 2.25.x (D.127) — density-driven Auto. Pick the
+            // smallest zoom level where the shortest visible event
+            // clears the readability threshold. Falls back to the
+            // historic default when nothing is visible.
+            val visibleInstances = rendered?.days
+                ?.flatMap { d -> d.bands.map { it.instance } }
+                .orEmpty()
+            com.eight87.strictlykeptboy.resolver.AutoZoomResolver
+                .derive(visibleInstances)
                 .coerceIn(
                     com.eight87.strictlykeptboy.ui.settings.ZOOM_MIN,
                     com.eight87.strictlykeptboy.ui.settings.ZOOM_MAX,

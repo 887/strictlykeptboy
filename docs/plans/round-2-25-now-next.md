@@ -121,3 +121,26 @@ dumb consumer.
 - [x] **E.3** Append D.120..D.125 to `docs/plans/decisions.md`
       mirroring D-2.25.a..f.
 - [x] **E.4** Add Round 2.25 entry to `docs/plans/main.md`.
+
+### Round 2.25.x trailer — readable demo by default
+
+User feedback (2026-05-17): "schedule and when we click on the day
+tab on view version where we can actually read 5min entries?
+currently we can't... automatic currently selects a shit zoom level
+that makes our demo data genuinely display like crap." Two fixes
+shipped together:
+
+- [x] **X.1** Default schedule view = Schedule (agenda). See
+      `app/src/main/java/com/eight87/strictlykeptboy/ui/schedule/ScheduleViewModePrefs.kt`
+      `load()` returning `ScheduleViewTab.Schedule`. Existing users
+      keep their stored pick (migration is implicit — empty prefs
+      only). Test: `ScheduleViewModeDefaultTest`. Decision D.126.
+- [x] **X.2** Density-aware Auto zoom. New pure resolver
+      `resolver/AutoZoomResolver.kt` picks the smallest zoom level
+      where the shortest visible event clears 14 dp; wired into
+      `ui/schedule/SchedulePane.kt` (`effectiveZoom` calc). 5-min
+      demo content auto-picks level 4 (Spacious / 320 dp/h). Tests:
+      `AutoZoomResolverTest`. Decision D.127.
+- [x] **X.3** AVD smoke on `emulator-5558`: agenda lands by default,
+      Day view Auto = Spacious (level 4) for the dense demo. Evidence
+      `docs/qa/2-25/agenda-default.png` + `day-auto-readable.png`.

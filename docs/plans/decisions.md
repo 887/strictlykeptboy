@@ -2447,3 +2447,39 @@ bottom bar uses a `LaunchedEffect` ticker; the notification
 relies on `AppGraph.nowNextFlow`'s 60s emission triggering a
 re-post (cheap because `setOnlyAlertOnce(true)` suppresses any
 alert noise).
+
+## D.126 — Default schedule view is Schedule (agenda), not Day (Round 2.25.x)
+
+`ScheduleViewModePrefs.load()` returns `ScheduleViewTab.Schedule`
+when prefs are empty / unrecognised, replacing the historic
+default of `ScheduleViewTab.Day`. The Kept Life demo (and any
+similarly dense schedule) is dominated by 5-minute atomic events
+(`Morning alarm`, `Cage on`, `Brush teeth`, `Get dressed`, …). On
+the Day grid at the historic default zoom (level 2 ≈ 80 dp/h),
+those bands render at ~6.7 dp — too thin to read the title, let
+alone the time range. The agenda list is the readable
+representation for dense first-launch content; existing users
+keep their prior pick (load() returns the stored value
+unchanged), so this only flips empty prefs to the new default.
+
+## D.127 — "Auto" zoom is density-driven, not max-of-overlays (Round 2.25.x)
+
+When the global zoom override is unset, `effectiveZoom` is no
+longer `max(zoomOf visible overlays) ?: 2` — that fallback
+ignored content entirely and consistently picked level 2 for the
+demo. New rule (in `resolver/AutoZoomResolver.derive`): pick the
+smallest zoom level ∈ {1..4} where the shortest visible event
+clears `READABLE_BAND_DP = 14`. Concrete picks:
+
+- 5-min events ⇒ level 4 (320 dp/h, band ≈ 26.7 dp)
+- 15-min events ⇒ level 2 (80 dp/h, band ≈ 20 dp)
+- 30-min / 1h events ⇒ level 1 (40 dp/h, band ≥ 20 dp)
+- mixed ⇒ driven by the shortest event in the visible range
+- empty rendered range ⇒ DEFAULT_ZOOM = 2
+
+The picker consumes `RenderedSchedule.days.flatMap{bands}`, so
+each view (Day / 3-day / Week) reads from its own resolver range
+and adapts to whatever overlays are visible there. The per-row
+segmented zoom control + pinch-to-zoom still set explicit
+per-calendar zoom (D-2.21.h / D-2.21.i); when the user picks an
+explicit level via the global override chip, that wins over Auto.

@@ -40,7 +40,7 @@ class ScheduleViewModePrefs internal constructor(private val prefs: SharedPrefer
     private fun load(): ScheduleViewTab =
         prefs.getString(KEY_TAB, null)
             ?.let { runCatching { ScheduleViewTab.valueOf(it) }.getOrNull() }
-            ?: ScheduleViewTab.Day
+            ?: ScheduleViewTab.Schedule
 
     private fun loadGroupByRepo(): Boolean =
         prefs.getBoolean(KEY_GROUP_BY_REPO, false)

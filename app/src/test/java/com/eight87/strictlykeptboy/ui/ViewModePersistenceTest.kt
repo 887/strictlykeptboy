@@ -21,12 +21,15 @@ class ViewModePersistenceTest {
         return ScheduleViewModePrefs.open(ctx)
     }
 
-    @Test fun default_is_day() {
+    @Test fun default_is_schedule() {
+        // Round 2.25.x (D.126) — fresh prefs default to Schedule (agenda).
+        // The Day grid renders demo 5-min events as unreadable slivers; the
+        // agenda list is the readable representation on first launch.
         val ctx = ApplicationProvider.getApplicationContext<Context>()
         ctx.getSharedPreferences(ScheduleViewModePrefs.PREFS_FILE, Context.MODE_PRIVATE)
             .edit().clear().commit()
         val prefs = openFresh()
-        check(prefs.selected.value == ScheduleViewTab.Day)
+        check(prefs.selected.value == ScheduleViewTab.Schedule)
     }
 
     @Test fun set_week_then_reopen_restores_week() {
