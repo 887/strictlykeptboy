@@ -179,7 +179,7 @@ sees a readable "Morning routine · N atoms" band at low zoom.
       pick Compact/Normal explicitly and SEE the grouping take effect.
 - [x] **Y.6** Decision D.128 appended to `docs/plans/decisions.md`.
 
-### Round 2.25.z trailer — p25 Auto zoom + sub-readable tap cue (shipped {SHA_PLACEHOLDER})
+### Round 2.25.z trailer — p25 Auto zoom + sub-readable tap cue (shipped ec2dfbb)
 
 User feedback (2026-05-17): "isolated 5-min outliers (dom-overlay
 text pings, social check-ins) shouldn't drag Auto to Spacious.
