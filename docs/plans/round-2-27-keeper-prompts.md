@@ -79,7 +79,7 @@
       projects today only; one-off with no response projects exactly
       one task; closed prompt projects zero.
 
-## Phase C — UI signaling for keeper-prompt rows — shipped in commit <CD-HASH>
+## Phase C — UI signaling for keeper-prompt rows — shipped in commit 40ae42f
 
 - [x] **C.1** Extend `TaskRow.kt`: when source == `KeeperPrompt`,
       render prompt-kind glyph before title; render "Keeper" author chip
@@ -100,7 +100,7 @@
       (`task_prompt_sheet_title`, `_reply_label`, `_attachment_label`,
       `_cancel`, `_send`).
 
-## Phase D — Response mechanism — Phase D.1 + D.3 shipped in commit <CD-HASH>
+## Phase D — Response mechanism — Phase D.1 + D.3 shipped in commit 40ae42f
 
 - [x] **D.1** Add `PromptResponseSheet.kt` in `ui/tasks/`. OutlinedTextField
       reply + optional "Attach photo URI" row. Confirm writes the file.
