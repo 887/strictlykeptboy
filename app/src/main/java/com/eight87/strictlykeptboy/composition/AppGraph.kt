@@ -20,6 +20,7 @@ import com.eight87.strictlykeptboy.git.RepoStore
 import com.eight87.strictlykeptboy.git.auth.SecretsStore
 import com.eight87.strictlykeptboy.notif.BriefingRuntime
 import com.eight87.strictlykeptboy.notif.BriefingSource
+import com.eight87.strictlykeptboy.notif.NowNextNotificationProvider
 import com.eight87.strictlykeptboy.notif.SyncEventNotificationBridge
 import com.eight87.strictlykeptboy.resolver.CommonTimeFinder
 import com.eight87.strictlykeptboy.resolver.DateRange
@@ -853,6 +854,17 @@ class AppGraph(private val appContext: Context) {
                 runCatching { externalReminderScheduler.refresh(externals) }
             }
         }
+
+        // Round 2.25 Phase C — re-post the ongoing Now/Next notification
+        // on every snapshot tick (indexer pulse + 60s relative-time
+        // refresh per D-2.25.d / D-2.25.f). `setOnlyAlertOnce(true)`
+        // suppresses any alert noise; the user only sees the line copy
+        // animate.
+        appScope.launch {
+            nowNextFlow.collect { snap ->
+                runCatching { nowNextNotifications.post(snap) }
+            }
+        }
     }
 
     /**
@@ -961,6 +973,11 @@ class AppGraph(private val appContext: Context) {
                 .getOrElse { emptyList() }
             NowNextResolver.derive(todays, at = at, tomorrow = tomorrows)
         }.stateIn(appScope, SharingStarted.Eagerly, NowNextSnapshot.Empty)
+    }
+
+    /** Round 2.25 Phase C — ongoing-notification builder + poster. */
+    val nowNextNotifications: NowNextNotificationProvider by lazy {
+        NowNextNotificationProvider(appContext)
     }
 
     /** Round 2.16.B — facet adapter that the sheet host passes into

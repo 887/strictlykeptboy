@@ -69,7 +69,7 @@ dumb consumer.
       next-is-grouped-band-start, next-within-grouped-band,
       multi-calendar ordering.
 
-### Phase B — Bottom-bar `NowNextRow` — shipped in commit `__pending__`
+### Phase B — Bottom-bar `NowNextRow` — shipped in commit `5260036`
 
 - [x] **B.1** Refactor the "No active task / Tap to pick one"
       rendering in `NowPlayingSheetHost.kt`. Left column reads
@@ -82,17 +82,19 @@ dumb consumer.
       asserts both render; empty snapshot asserts legacy "No active
       task" copy.
 
-### Phase C — Ongoing notification
+### Phase C — Ongoing notification — shipped in commit `__pending__`
 
-- [ ] **C.1** New `notif/NowNextNotificationProvider.kt`: builds the
+- [x] **C.1** New `notif/NowNextNotificationProvider.kt`: builds the
       ongoing notification from a `NowNextSnapshot`. Channel
-      `now_next` (create if missing).
-- [ ] **C.2** Indexer-pulse update wire: collect `nowNextFlow` →
-      rebuild + post.
-- [ ] **C.3** `AlarmManager` boundary alarm at `next.start` (or
-      `now.end`, whichever is sooner) for exact refresh. Fallback
-      `PeriodicWorkRequest` at 15-min cadence.
-- [ ] **C.4** `NowNextNotificationProviderTest` (Robolectric) —
+      `now_next` (created lazily by the provider).
+- [x] **C.2** Indexer-pulse update wire: collect `nowNextFlow` →
+      rebuild + post in `AppGraph.parkRuntimes`.
+- [ ] **C.3** `AlarmManager` boundary alarm at `next.start` —
+      **DEFERRED**: the 60s ticker inside `nowNextFlow` already gives
+      sub-minute freshness at the boundary, and exact-alarm
+      permission on API 31+ is a per-user opt-in we don't want to
+      silently demand. Re-open if user reports stale boundary copy.
+- [x] **C.4** `NowNextNotificationProviderTest` (Robolectric) —
       asserts built notification title + content match the snapshot.
 
 ### Phase D — Widget surfaces
