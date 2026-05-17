@@ -525,3 +525,22 @@ Overall posture is healthy. Consolidated findings, severity-sorted:
 - `ScheduleDayView.kt` (684), `Entities.kt` (681), `RepoSettingsScreen.kt` (734), `GitRepo.kt` (674) — cohesive-by-nature, **do not split**.
 
 Action plan: subagent fan-out for #1, #2, #3, #4, #7, #10 lands as the immediate "Round 2.28 — SOLID hygiene" wave. Larger splits (#8 MainActivity, #9 SkbAppShell, AppGraph sub-graphs) are tracked for staged follow-up.
+
+### Audit pass 2026-05-17 — ReposPane god-file split (Round 2.28 SOLID hygiene)
+
+Single-shot opus refactor of `ui/repos/ReposPane.kt` per R.X.4 (>800 LOC threshold). Pure structural split — no behaviour change. Hoisted composables retain narrow state-hoisted signatures (SOLID-I).
+
+**Before:** `ReposPane.kt` 1214 LOC (god-file: entry point + ReposList + 2 banners + Mode sealed type + ReposDetailPane + RepoSettingsHost + 5 disk helpers).
+
+**After (`app/src/main/java/com/eight87/strictlykeptboy/ui/repos/`):**
+
+- `ReposPane.kt` — 374 LOC. Top-level entry point + state hoisting + compact/two-pane dispatch + `StickerPacksHost` (kept here because both compact branch + `ReposDetailPane` consume it).
+- `ReposList.kt` — 272 LOC. Master-list composable (header row, demo banner, banner conditionals, RepoCard loop, Add-repo footer).
+- `ReposDetailPane.kt` — 155 LOC. Tablet detail pane mode dispatcher.
+- `RepoSettingsHost.kt` — 346 LOC. `RepoSettingsScreen` wiring + on-disk calendar/identity/mode codec helpers (`scanCalendars`, `setCalendarActive`, `createCalendar`, `writeCalendarSheetDraft`, `parsePronounsPair`) — helpers ONLY used by this host so kept co-located per cohesion (SOLID-S).
+- `RepoBanners.kt` — 123 LOC. `SafPermissionRevokedBanner` + `BackupFolderReminderBanner` + their `TestTag*` constants.
+- `ReposMode.kt` — 13 LOC. `internal sealed interface Mode` (formerly private to ReposPane, now shared by ReposPane + ReposDetailPane).
+
+Total LOC across the six files: 1283 (vs. 1214 originally — +69 LOC of new package/import headers, no logic duplication).
+
+R.X self-check: all 6 new files under the 500-LOC second-look line; largest (`RepoSettingsHost.kt` 346) bundles cohesive disk codec helpers used solely by its single composable. AVD-smoke confirmed on `emulator-5558`: Repos rail renders identically (Repositories header, demo banner, RepoCard with all 5 toggles, More-settings deeplink into RepoSettingsHost showing calendar list). Screenshot: `/tmp/skb-repos-refactor.png`.
