@@ -1341,4 +1341,5 @@
     <string name="settings_external_calendars_calendar_defaults_label">Calendar app defaults</string>
     <string name="settings_external_calendars_calendar_defaults_helper">Opens Android\'s default-apps screen so you can pick (or change) which app handles .ics files and calendar invites.</string>
     <string name="settings_external_calendars_calendar_defaults_action">Open</string>
+    <string name="share_no_remote_notice">This repo has no Git remote configured. Add a remote in repo settings to generate a share link.</string>
 </resources>

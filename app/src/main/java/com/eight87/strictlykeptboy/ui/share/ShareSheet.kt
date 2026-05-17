@@ -33,6 +33,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.git.RepoConfig
+import com.eight87.strictlykeptboy.share.ShareMode
 
 const val TestTagShareSheet = "ShareSheet"
 const val TestTagShareModeReadOnly = "Share-Mode-ReadOnly"
@@ -169,10 +170,20 @@ internal fun ShareSheetContent(
             }
         }
 
+        if (link == null) {
+            // SOLID Liskov fix #6 — no-origin repo: explain why Share
+            // is disabled instead of crashing in ShareLinkGenerator.
+            Text(
+                stringResource(R.string.share_no_remote_notice),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
         OutlinedTextField(
-            value = TextFieldValue(link),
+            value = TextFieldValue(link.orEmpty()),
             onValueChange = { /* read-only display */ },
             readOnly = true,
+            enabled = link != null,
             label = { Text(stringResource(R.string.share_link_field_label)) },
             modifier = Modifier
                 .fillMaxWidth()
@@ -181,11 +192,13 @@ internal fun ShareSheetContent(
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TextButton(
-                onClick = { onCopy(link) },
+                onClick = { link?.let(onCopy) },
+                enabled = link != null,
                 modifier = Modifier.testTag(TestTagShareCopy),
             ) { Text(stringResource(R.string.share_copy)) }
             TextButton(
-                onClick = { onSend(link) },
+                onClick = { link?.let(onSend) },
+                enabled = link != null,
                 modifier = Modifier.testTag(TestTagShareSend),
             ) { Text(stringResource(R.string.share_send)) }
         }
@@ -232,12 +245,15 @@ internal fun ShareSheetContent(
         }
 
         // Phase RR.2 — QR preview of the link (Apache-2.0 ZXing).
-        SharedRepoQrPreview(
-            content = link,
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag(TestTagShareQrPreview),
-        )
+        // SOLID Liskov fix #6 — only render QR when we have a link.
+        if (link != null) {
+            SharedRepoQrPreview(
+                content = link,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(TestTagShareQrPreview),
+            )
+        }
     }
 }
 

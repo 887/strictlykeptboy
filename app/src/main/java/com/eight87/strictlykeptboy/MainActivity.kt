@@ -1031,7 +1031,7 @@ class MainActivity : ComponentActivity() {
                             scope.launch(kotlinx.coroutines.Dispatchers.IO) {
                                 com.eight87.strictlykeptboy.ui.calendars.CalendarSettingsWriter
                                     .writePriority(
-                                        graph = graph,
+                                        repoStore = graph.repoStore,
                                         repoId = meta.repo.id,
                                         calendarId = meta.ref.id,
                                         calendarDisplayName = meta.displayName,
@@ -1046,7 +1046,7 @@ class MainActivity : ComponentActivity() {
                             scope.launch(kotlinx.coroutines.Dispatchers.IO) {
                                 com.eight87.strictlykeptboy.ui.calendars.CalendarSettingsWriter
                                     .writeColorSeed(
-                                        graph = graph,
+                                        repoStore = graph.repoStore,
                                         repoId = meta.repo.id,
                                         calendarId = meta.ref.id,
                                         calendarDisplayName = meta.displayName,
@@ -1588,7 +1588,16 @@ class MainActivity : ComponentActivity() {
                                 val activeName = graph.defaultWriteRepoName.value
                                 val cfg = graph.repoStore.list().firstOrNull { it.displayName == activeName }
                                     ?: graph.repoStore.list().firstOrNull()
-                                    ?: error("no active repo — run the lifestyle wizard first")
+                                if (cfg == null) {
+                                    // SOLID Liskov fix #6 — soft-fail
+                                    // instead of `error()`: route the
+                                    // user into the lifestyle wizard
+                                    // rather than crashing (or silently
+                                    // swallowing inside runCatching).
+                                    graph.wizardEntryRequest.value =
+                                        com.eight87.strictlykeptboy.ui.wizard.WizardScreen.Welcome
+                                    return@runCatching
+                                }
                                 com.eight87.strictlykeptboy.ui.trip.TripScaffolder.materialize(
                                     repoRoot = java.io.File(cfg.rootDir),
                                     draft = tripDraft,
@@ -1613,7 +1622,7 @@ class MainActivity : ComponentActivity() {
                                 scope.launch {
                                     runCatching {
                                         com.eight87.strictlykeptboy.ui.calendars.CalendarSettingsWriter
-                                            .write(graph, draft)
+                                            .write(graph.repoStore, draft)
                                     }
                                     pendingCalendarEdit = null
                                 }

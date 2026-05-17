@@ -32,6 +32,7 @@ import com.eight87.strictlykeptboy.resolver.RepoSnapshot
 import com.eight87.strictlykeptboy.sync.SyncRuntime
 import com.eight87.strictlykeptboy.sync.SyncScheduler
 import com.eight87.strictlykeptboy.sync.SyncStatusStore
+import com.eight87.strictlykeptboy.ui.theming.toIconKind
 import com.eight87.strictlykeptboy.notif.NotificationPrefs
 import com.eight87.strictlykeptboy.prefs.ParentLocation
 import com.eight87.strictlykeptboy.prefs.ParentLocationMigrator

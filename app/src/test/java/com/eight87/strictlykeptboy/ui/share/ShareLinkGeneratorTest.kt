@@ -6,9 +6,9 @@ import com.eight87.strictlykeptboy.git.RemoteBinding
 import com.eight87.strictlykeptboy.git.RemoteName
 import com.eight87.strictlykeptboy.git.RepoConfig
 import com.eight87.strictlykeptboy.git.Transport
+import com.eight87.strictlykeptboy.share.ShareMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -41,7 +41,7 @@ class ShareLinkGeneratorTest {
                 mode = ShareMode.ReadOnly,
                 expiry = ShareLinkGenerator.Expiry.None,
             ),
-        )
+        )!!
         val encoded = ShareLinkCodec.encode(link)
         val decoded = ShareLinkCodec.decode(encoded)!!
         assertEquals(listOf(origin.url), decoded.urls)
@@ -56,7 +56,7 @@ class ShareLinkGeneratorTest {
                 mode = ShareMode.ReadWrite,
                 expiry = ShareLinkGenerator.Expiry.None,
             ),
-        )
+        )!!
         val decoded = ShareLinkCodec.decode(ShareLinkCodec.encode(link))!!
         assertEquals(ShareMode.ReadWrite, decoded.mode)
     }
@@ -70,7 +70,7 @@ class ShareLinkGeneratorTest {
                 expiry = ShareLinkGenerator.Expiry.Days(7),
             ),
             now = now,
-        )
+        )!!
         assertEquals("2026-05-08T00:00:00Z", link.expiryIso)
         val decoded = ShareLinkCodec.decode(ShareLinkCodec.encode(link))!!
         assertEquals("2026-05-08T00:00:00Z", decoded.expiryIso)
@@ -84,7 +84,7 @@ class ShareLinkGeneratorTest {
                 expiry = ShareLinkGenerator.Expiry.None,
                 includeMirrorRemotes = false,
             ),
-        )
+        )!!
         assertEquals(listOf(origin.url), link.urls)
     }
 
@@ -96,7 +96,7 @@ class ShareLinkGeneratorTest {
                 expiry = ShareLinkGenerator.Expiry.None,
                 includeMirrorRemotes = true,
             ),
-        )
+        )!!
         assertEquals(listOf(origin.url, mirror.url), link.urls)
         val decoded = ShareLinkCodec.decode(ShareLinkCodec.encode(link))!!
         assertEquals(listOf(origin.url, mirror.url), decoded.urls)
@@ -131,9 +131,35 @@ class ShareLinkGeneratorTest {
                 calendarId = "cal-7",
                 sourceLabel = "weekend cal",
             ),
-        )
+        )!!
         val decoded = ShareLinkCodec.decode(ShareLinkCodec.encode(link))!!
         assertEquals("cal-7", decoded.calendarId)
         assertEquals("weekend cal", decoded.sourceLabel)
+    }
+
+    // SOLID Liskov fix #6 — no-origin repos (D.74 first-class) used to
+    // crash with `error("Cannot share a repo with no remotes")`. The
+    // soft-failure contract is: `build` and `buildUri` return null and
+    // the call site (ShareSheetContent) disables the Share affordance.
+    @Test fun build_returns_null_for_no_remote_repo() {
+        val link = ShareLinkGenerator.build(
+            makeRepo(emptyList()),
+            ShareLinkGenerator.SharePolicy(
+                mode = ShareMode.ReadOnly,
+                expiry = ShareLinkGenerator.Expiry.None,
+            ),
+        )
+        assertNull(link)
+    }
+
+    @Test fun buildUri_returns_null_for_no_remote_repo() {
+        val uri = ShareLinkGenerator.buildUri(
+            makeRepo(emptyList()),
+            ShareLinkGenerator.SharePolicy(
+                mode = ShareMode.ReadOnly,
+                expiry = ShareLinkGenerator.Expiry.None,
+            ),
+        )
+        assertNull(uri)
     }
 }

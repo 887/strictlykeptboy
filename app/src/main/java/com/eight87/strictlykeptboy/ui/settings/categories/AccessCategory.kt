@@ -23,7 +23,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.store.AccessRow
-import com.eight87.strictlykeptboy.ui.share.ShareMode
+import com.eight87.strictlykeptboy.share.ShareMode
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter

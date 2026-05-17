@@ -11,6 +11,7 @@ import com.eight87.strictlykeptboy.store.Identity
 import com.eight87.strictlykeptboy.store.JournalEntry
 import com.eight87.strictlykeptboy.store.Override
 import com.eight87.strictlykeptboy.store.ParseResult
+import com.eight87.strictlykeptboy.store.RawEntity
 import com.eight87.strictlykeptboy.store.RecurrenceRule
 import com.eight87.strictlykeptboy.store.RepoScanner
 import com.eight87.strictlykeptboy.store.StandingTask
@@ -173,7 +174,11 @@ class Indexer(private val db: CacheDatabase) {
                     is Override -> overrides += e to rel
                     is JournalEntry -> journal += e to rel
                     is Identity -> identities += e to rel
-                    else -> { /* RawEntity + meta types — Phase D scope-trim, ignored */ }
+                    // SOLID fix #7 — explicit per-variant ignore so the
+                    // compiler flags any new TypedEntity addition. Today
+                    // only RawEntity falls here (meta / unknown-kind
+                    // files round-trip via Phase D scope-trim).
+                    is RawEntity -> Unit
                 }
             }
         }

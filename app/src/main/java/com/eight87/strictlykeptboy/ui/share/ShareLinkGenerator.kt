@@ -1,6 +1,8 @@
 package com.eight87.strictlykeptboy.ui.share
 
 import com.eight87.strictlykeptboy.git.RepoConfig
+import com.eight87.strictlykeptboy.share.ShareLink
+import com.eight87.strictlykeptboy.share.ShareMode
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
@@ -43,11 +45,20 @@ object ShareLinkGenerator {
         data class At(val instant: Instant) : Expiry
     }
 
-    fun build(repo: RepoConfig, policy: SharePolicy, now: Instant = Instant.now()): ShareLink {
+    /**
+     * Returns `null` for a no-origin repo (D.74 first-class). Callers
+     * must gate the Share affordance — [ShareSheetContent] disables the
+     * copy/send buttons and shows a "no remote configured" notice
+     * rather than displaying a generated URI.
+     *
+     * SOLID Liskov fix #6 — was `error("Cannot share a repo with no
+     * remotes")`, which crashed user-reachable code paths.
+     */
+    fun build(repo: RepoConfig, policy: SharePolicy, now: Instant = Instant.now()): ShareLink? {
         val all = repo.remotes.map { it.url }
         val primaryUrl = repo.remotes.firstOrNull { it.name == repo.primaryRemote }?.url
             ?: all.firstOrNull()
-            ?: error("Cannot share a repo with no remotes")
+            ?: return null
         val urls = if (policy.includeMirrorRemotes && all.size > 1) {
             buildList { add(primaryUrl); addAll(all.filter { it != primaryUrl }) }
         } else {
@@ -70,6 +81,7 @@ object ShareLinkGenerator {
         )
     }
 
-    fun buildUri(repo: RepoConfig, policy: SharePolicy, now: Instant = Instant.now()): String =
-        ShareLinkCodec.encode(build(repo, policy, now))
+    /** Returns `null` when [build] returns null (no-origin repo). */
+    fun buildUri(repo: RepoConfig, policy: SharePolicy, now: Instant = Instant.now()): String? =
+        build(repo, policy, now)?.let { ShareLinkCodec.encode(it) }
 }

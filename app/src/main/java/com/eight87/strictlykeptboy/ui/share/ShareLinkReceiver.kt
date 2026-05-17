@@ -1,5 +1,8 @@
 package com.eight87.strictlykeptboy.ui.share
 
+import com.eight87.strictlykeptboy.share.ShareLink
+import com.eight87.strictlykeptboy.share.ShareMode
+
 /**
  * Phase O.2 — classifies an incoming `strictlykeptboy://share` URI into an
  * action the composition root should take.

@@ -5,6 +5,7 @@ import com.eight87.strictlykeptboy.git.RepoConfig
 import com.eight87.strictlykeptboy.ui.theming.RepoIconKind
 import com.eight87.strictlykeptboy.ui.theming.initialsFromName
 import com.eight87.strictlykeptboy.ui.theming.seedColorFromName
+import com.eight87.strictlykeptboy.ui.theming.toIconKind
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue

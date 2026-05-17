@@ -2,8 +2,8 @@ package com.eight87.strictlykeptboy.store
 
 import com.eight87.strictlykeptboy.git.RepoConfig
 import com.eight87.strictlykeptboy.git.RepoStore
-import com.eight87.strictlykeptboy.ui.share.ShareLink
-import com.eight87.strictlykeptboy.ui.share.ShareMode
+import com.eight87.strictlykeptboy.share.ShareLink
+import com.eight87.strictlykeptboy.share.ShareMode
 
 /**
  * Round 2.2.D.6 — read-only aggregator for the global Access category.

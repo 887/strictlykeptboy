@@ -5,8 +5,8 @@ import androidx.test.core.app.ApplicationProvider
 import com.eight87.strictlykeptboy.git.AuthorIdentity
 import com.eight87.strictlykeptboy.git.RepoConfig
 import com.eight87.strictlykeptboy.git.RepoStore
-import com.eight87.strictlykeptboy.ui.share.ShareLink
-import com.eight87.strictlykeptboy.ui.share.ShareMode
+import com.eight87.strictlykeptboy.share.ShareLink
+import com.eight87.strictlykeptboy.share.ShareMode
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

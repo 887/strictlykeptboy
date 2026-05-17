@@ -1,7 +1,7 @@
 package com.eight87.strictlykeptboy.ui.calendars
 
-import com.eight87.strictlykeptboy.composition.AppGraph
 import com.eight87.strictlykeptboy.git.GitRepoRegistry
+import com.eight87.strictlykeptboy.git.RepoStore
 import com.eight87.strictlykeptboy.store.CalendarActivityConfig
 import com.eight87.strictlykeptboy.store.RoutineCalendarConfig
 import com.eight87.strictlykeptboy.store.SupersedenceConfig
@@ -27,10 +27,10 @@ import kotlinx.coroutines.withContext
  */
 object CalendarSettingsWriter {
 
-    suspend fun write(graph: AppGraph, draft: CalendarSettingsDraft) {
+    suspend fun write(repoStore: RepoStore, draft: CalendarSettingsDraft) {
         withContext(Dispatchers.IO) {
             val meta = draft.calendar
-            val cfg = graph.repoStore.list().firstOrNull { it.repoId == meta.repo.id } ?: return@withContext
+            val cfg = repoStore.list().firstOrNull { it.repoId == meta.repo.id } ?: return@withContext
             val root = Path.of(cfg.rootDir)
             val tomlPath = root.resolve("calendars/${meta.ref.id}/calendar.toml")
             Files.createDirectories(tomlPath.parent)
@@ -93,14 +93,14 @@ object CalendarSettingsWriter {
      * one scalar.
      */
     suspend fun writePriority(
-        graph: AppGraph,
+        repoStore: RepoStore,
         repoId: String,
         calendarId: String,
         calendarDisplayName: String,
         newPriority: Int,
     ) {
         withContext(Dispatchers.IO) {
-            val cfg = graph.repoStore.list().firstOrNull { it.repoId == repoId } ?: return@withContext
+            val cfg = repoStore.list().firstOrNull { it.repoId == repoId } ?: return@withContext
             val root = Path.of(cfg.rootDir)
             val tomlPath = root.resolve("calendars/$calendarId/calendar.toml")
             Files.createDirectories(tomlPath.parent)
@@ -130,14 +130,14 @@ object CalendarSettingsWriter {
      * [writePriority]'s shape.
      */
     suspend fun writeColorSeed(
-        graph: AppGraph,
+        repoStore: RepoStore,
         repoId: String,
         calendarId: String,
         calendarDisplayName: String,
         colorSeed: Int,
     ) {
         withContext(Dispatchers.IO) {
-            val cfg = graph.repoStore.list().firstOrNull { it.repoId == repoId } ?: return@withContext
+            val cfg = repoStore.list().firstOrNull { it.repoId == repoId } ?: return@withContext
             val root = Path.of(cfg.rootDir)
             val tomlPath = root.resolve("calendars/$calendarId/calendar.toml")
             Files.createDirectories(tomlPath.parent)

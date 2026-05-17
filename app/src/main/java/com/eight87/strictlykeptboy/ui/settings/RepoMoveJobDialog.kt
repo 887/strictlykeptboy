@@ -78,6 +78,9 @@ fun RepoMoveJobDialog(
             }
         },
         confirmButton = {
+            // SOLID fix #7 — exhaustive over RepoMover.Progress so any
+            // new variant trips the compiler. Idle / Running render no
+            // confirm button (dismiss-side cancel covers in-flight).
             when (progress) {
                 is RepoMover.Progress.Done,
                 is RepoMover.Progress.Cancelled,
@@ -86,17 +89,21 @@ fun RepoMoveJobDialog(
                         onClick = onDone,
                         modifier = Modifier.testTag(TestTagRepoMoveDone),
                     ) { Text("OK") }
-                else -> {}
+                is RepoMover.Progress.Idle,
+                is RepoMover.Progress.Running -> Unit
             }
         },
         dismissButton = {
+            // SOLID fix #7 — exhaustive over RepoMover.Progress.
             when (progress) {
                 is RepoMover.Progress.Running, is RepoMover.Progress.Idle ->
                     TextButton(
                         onClick = { mover.cancel() },
                         modifier = Modifier.testTag(TestTagRepoMoveCancel),
                     ) { Text(stringResource(R.string.repo_mover_cancel)) }
-                else -> {}
+                is RepoMover.Progress.Done,
+                is RepoMover.Progress.Cancelled,
+                is RepoMover.Progress.Failed -> Unit
             }
         },
     )

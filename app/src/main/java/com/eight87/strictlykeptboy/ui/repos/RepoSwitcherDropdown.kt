@@ -41,6 +41,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.height
 import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.git.RepoConfig
+import com.eight87.strictlykeptboy.ui.theming.toIconKind
 import com.eight87.strictlykeptboy.store.ModeTomlCodec
 import com.eight87.strictlykeptboy.store.RepoMode
 import androidx.compose.runtime.LaunchedEffect
