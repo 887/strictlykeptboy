@@ -96,7 +96,7 @@ private fun AgendaDayHeader(date: LocalDate, formatter: DateTimeFormatter) {
             .testTag("$TestTagAgendaDayHeader-$date"),
     ) {
         Text(
-            text = formatter.format(date),
+            text = "${emojiFor(date.dayOfWeek)}  ${formatter.format(date)}",
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.SemiBold,
