@@ -2,6 +2,7 @@ package com.eight87.strictlykeptboy.ui
 
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import com.eight87.strictlykeptboy.resolver.asDayBandSource
 import com.eight87.strictlykeptboy.theme.StrictlyKeptBoyTheme
 import com.eight87.strictlykeptboy.ui.schedule.ScheduleYearView
 import com.eight87.strictlykeptboy.ui.schedule.TestTagYearMonth
@@ -39,7 +40,7 @@ class ScheduleYearViewTest {
 
         composeRule.setContent {
             StrictlyKeptBoyTheme {
-                ScheduleYearView(year = 2026, schedule = sched)
+                ScheduleYearView(year = 2026, dayBands = sched.asDayBandSource())
             }
         }
         composeRule.onNodeWithTag(TestTagYearView).assertExists()

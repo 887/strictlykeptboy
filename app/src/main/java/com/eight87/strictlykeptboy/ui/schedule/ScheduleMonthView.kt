@@ -25,7 +25,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.resolver.DayBand
-import com.eight87.strictlykeptboy.resolver.RenderedSchedule
+import com.eight87.strictlykeptboy.resolver.DayBandSource
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.temporal.TemporalAdjusters
@@ -47,7 +47,7 @@ private const val MaxChipsPerCell = 3
 @Composable
 fun ScheduleMonthView(
     monthAnchor: LocalDate,
-    schedule: RenderedSchedule?,
+    dayBands: DayBandSource,
     modifier: Modifier = Modifier,
     onDayTap: (LocalDate) -> Unit = {},
     onOverflowTap: (LocalDate) -> Unit = {},
@@ -60,8 +60,8 @@ fun ScheduleMonthView(
     val firstOfMonth = monthAnchor.withDayOfMonth(1)
     val gridStart = firstOfMonth.with(TemporalAdjusters.previousOrSame(weekStart))
 
-    val bandsByDate: Map<LocalDate, List<DayBand>> =
-        schedule?.days?.associate { it.date to it.bands }.orEmpty()
+    // Round 2026-05-17 [M] #10 — narrow handle. Bands pulled per-cell
+    // from [dayBands]; 42 calls per render.
 
     Column(modifier = modifier.fillMaxSize().testTag(TestTagMonthView)) {
         // Day-of-week header.
@@ -88,7 +88,7 @@ fun ScheduleMonthView(
                     val isToday = date == today
                     MonthCell(
                         date = date,
-                        bands = bandsByDate[date].orEmpty(),
+                        bands = dayBands.bandsFor(date),
                         inMonth = inMonth,
                         isToday = isToday,
                         onDayTap = onDayTap,

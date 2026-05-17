@@ -4,6 +4,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.assertCountEquals
+import com.eight87.strictlykeptboy.resolver.asDayBandSource
 import com.eight87.strictlykeptboy.theme.StrictlyKeptBoyTheme
 import com.eight87.strictlykeptboy.ui.schedule.ScheduleTimeboxView
 import com.eight87.strictlykeptboy.ui.schedule.TestTagTimeboxCard
@@ -50,7 +51,7 @@ class ScheduleTimeboxViewTest {
 
         composeRule.setContent {
             StrictlyKeptBoyTheme {
-                ScheduleTimeboxView(date = today, schedule = sched)
+                ScheduleTimeboxView(date = today, dayBands = sched.asDayBandSource())
             }
         }
 

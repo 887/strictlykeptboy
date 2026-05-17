@@ -3,6 +3,7 @@ package com.eight87.strictlykeptboy.ui
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import com.eight87.strictlykeptboy.resolver.asDayBandSource
 import com.eight87.strictlykeptboy.theme.StrictlyKeptBoyTheme
 import com.eight87.strictlykeptboy.ui.schedule.ScheduleMonthView
 import com.eight87.strictlykeptboy.ui.schedule.TestTagMonthCell
@@ -32,7 +33,7 @@ class ScheduleMonthViewTest {
 
         composeRule.setContent {
             StrictlyKeptBoyTheme {
-                ScheduleMonthView(monthAnchor = anchor, schedule = sched, today = anchor)
+                ScheduleMonthView(monthAnchor = anchor, dayBands = sched.asDayBandSource(), today = anchor)
             }
         }
         composeRule.onNodeWithTag(TestTagMonthView).assertExists()
@@ -47,7 +48,7 @@ class ScheduleMonthViewTest {
             StrictlyKeptBoyTheme {
                 ScheduleMonthView(
                     monthAnchor = anchor,
-                    schedule = PhaseGTestFixtures.schedule(mapOf(anchor to emptyList())),
+                    dayBands = PhaseGTestFixtures.schedule(mapOf(anchor to emptyList())).asDayBandSource(),
                     today = anchor,
                     onDayTap = { tapped = it },
                 )

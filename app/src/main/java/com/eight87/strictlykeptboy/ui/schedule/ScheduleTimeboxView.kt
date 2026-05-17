@@ -34,7 +34,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.resolver.CalendarKind
 import com.eight87.strictlykeptboy.resolver.DayBand
-import com.eight87.strictlykeptboy.resolver.RenderedSchedule
+import com.eight87.strictlykeptboy.resolver.DayBandSource
 import com.eight87.strictlykeptboy.ui.share.isForeignBand
 import kotlinx.coroutines.delay
 import java.time.LocalDate
@@ -54,13 +54,13 @@ const val TestTagTimeboxExternalAccountHeader = "TimeboxExternalAccountHeader"
  * Phase G.4 — today's planned focus blocks rendered edge-to-edge as
  * large cards (~120dp tall). The "now" block is visually emphasized.
  *
- * Stateless. Caller passes today's [RenderedSchedule] (single-day
+ * Stateless. Caller passes a narrow [DayBandSource] (single-day
  * range) and the current instant for now-detection.
  */
 @Composable
 fun ScheduleTimeboxView(
     date: LocalDate,
-    schedule: RenderedSchedule?,
+    dayBands: DayBandSource,
     modifier: Modifier = Modifier,
     onBandTap: (DayBand) -> Unit = {},
     /** Phase CCC.10 / HV-G.3 — opens the trip wizard from the empty-state CTA. */
@@ -68,8 +68,7 @@ fun ScheduleTimeboxView(
     /** Round 2.2.C.2 — default-write repo for `isForeignBand`. Empty = chip suppressed. */
     defaultWriteRepoId: String = "",
 ) {
-    val day = schedule?.days?.firstOrNull { it.date == date }
-    val allBands = day?.bands.orEmpty()
+    val allBands = dayBands.bandsFor(date)
     // Round 2.2.C.9 — primary list is Timebox-kind only; Regular bands flow into a secondary section.
     val timeboxBands = allBands.filter { it.kind == CalendarKind.Timebox }
     val regularBands = allBands.filter { it.kind != CalendarKind.Timebox }

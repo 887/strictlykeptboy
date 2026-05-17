@@ -22,7 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.resolver.DayBand
-import com.eight87.strictlykeptboy.resolver.RenderedSchedule
+import com.eight87.strictlykeptboy.resolver.DayBandSource
 import java.time.LocalDate
 
 const val TestTagThreeDayView = "ScheduleThreeDayView"
@@ -38,7 +38,7 @@ const val TestTagThreeDayColumn = "ThreeDayColumn"
 @Composable
 fun ScheduleThreeDayView(
     anchor: LocalDate,
-    schedule: RenderedSchedule?,
+    dayBands: DayBandSource,
     modifier: Modifier = Modifier,
     onBandTap: (DayBand) -> Unit = {},
     today: LocalDate = LocalDate.now(),
@@ -106,7 +106,7 @@ fun ScheduleThreeDayView(
                 ) {
                     ScheduleDayView(
                         date = d,
-                        schedule = schedule,
+                        dayBands = dayBands,
                         onBandTap = onBandTap,
                         isToday = d == today,
                         defaultWriteRepoId = defaultWriteRepoId,

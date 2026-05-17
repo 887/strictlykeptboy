@@ -28,7 +28,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.resolver.DayBand
-import com.eight87.strictlykeptboy.resolver.RenderedSchedule
+import com.eight87.strictlykeptboy.resolver.DayBandSource
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -50,12 +50,17 @@ const val TestTagAgendaEmpty = "AgendaEmpty"
  */
 @Composable
 fun ScheduleAgendaView(
-    schedule: RenderedSchedule?,
+    dates: List<LocalDate>,
+    dayBands: DayBandSource,
     modifier: Modifier = Modifier,
     onBandTap: (DayBand) -> Unit = {},
 ) {
-    val days = schedule?.days.orEmpty()
-    val totalBands = days.sumOf { it.bands.size }
+    // Round 2026-05-17 [M] #10 — Agenda needs *which dates* to iterate;
+    // host derives this from the rendered range. Per-day bands come
+    // from the narrow [DayBandSource].
+    val daysWithBands: List<Pair<LocalDate, List<DayBand>>> =
+        dates.map { it to dayBands.bandsFor(it) }
+    val totalBands = daysWithBands.sumOf { it.second.size }
 
     if (totalBands == 0) {
         Box(
@@ -74,12 +79,12 @@ fun ScheduleAgendaView(
     val dateFormatter = remember { DateTimeFormatter.ofPattern("EEE, MMM d") }
 
     LazyColumn(modifier = modifier.fillMaxSize().testTag(TestTagAgendaView)) {
-        days.forEach { day ->
-            if (day.bands.isEmpty()) return@forEach
-            item(key = "agenda-header-${day.date}") {
-                AgendaDayHeader(date = day.date, formatter = dateFormatter)
+        daysWithBands.forEach { (date, bands) ->
+            if (bands.isEmpty()) return@forEach
+            item(key = "agenda-header-$date") {
+                AgendaDayHeader(date = date, formatter = dateFormatter)
             }
-            items(day.bands, key = { b -> "agenda-row-${b.instance.instanceId}" }) { band ->
+            items(bands, key = { b -> "agenda-row-${b.instance.instanceId}" }) { band ->
                 AgendaRow(band = band, onBandTap = onBandTap)
             }
         }

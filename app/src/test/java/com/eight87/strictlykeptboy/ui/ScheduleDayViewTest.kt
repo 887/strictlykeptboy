@@ -11,6 +11,7 @@ import com.eight87.strictlykeptboy.resolver.InstanceSource
 import com.eight87.strictlykeptboy.resolver.MaterializedInstance
 import com.eight87.strictlykeptboy.resolver.RenderedDay
 import com.eight87.strictlykeptboy.resolver.RenderedSchedule
+import com.eight87.strictlykeptboy.resolver.asDayBandSource
 import com.eight87.strictlykeptboy.resolver.RepoRef
 import com.eight87.strictlykeptboy.resolver.ViewMode
 import com.eight87.strictlykeptboy.theme.StrictlyKeptBoyTheme
@@ -68,7 +69,7 @@ class ScheduleDayViewTest {
 
         composeRule.setContent {
             StrictlyKeptBoyTheme {
-                ScheduleDayView(date = date, schedule = sched, isToday = false)
+                ScheduleDayView(date = date, dayBands = sched.asDayBandSource(), isToday = false)
             }
         }
 
@@ -93,7 +94,7 @@ class ScheduleDayViewTest {
 
         composeRule.setContent {
             StrictlyKeptBoyTheme {
-                ScheduleDayView(date = date, schedule = sched, isToday = false)
+                ScheduleDayView(date = date, dayBands = sched.asDayBandSource(), isToday = false)
             }
         }
 

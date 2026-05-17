@@ -41,7 +41,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.resolver.DayBand
-import com.eight87.strictlykeptboy.resolver.RenderedSchedule
+import com.eight87.strictlykeptboy.resolver.DayBandSource
 import com.eight87.strictlykeptboy.ui.share.isForeignBand
 import kotlinx.coroutines.delay
 import java.time.LocalDate
@@ -59,14 +59,14 @@ private val GutterWidth = 44.dp
 /**
  * Phase G.2 — 7-column week timeline.
  *
- * Stateless. Takes a 7-day [RenderedSchedule] plus the week-start
+ * Stateless. Takes a narrow [DayBandSource] plus the week-start
  * [LocalDate]. Horizontal swipe deltas (>72.dp) trigger
  * [onSwipeWeek] with -1 (previous) / +1 (next).
  */
 @Composable
 fun ScheduleWeekView(
     weekStart: LocalDate,
-    schedule: RenderedSchedule?,
+    dayBands: DayBandSource,
     modifier: Modifier = Modifier,
     onBandTap: (DayBand) -> Unit = {},
     onSwipeWeek: (Int) -> Unit = {},
@@ -84,7 +84,7 @@ fun ScheduleWeekView(
     val hourHeightPx = with(density) { HourHeight.toPx() }
     val days = (0..6).map { weekStart.plusDays(it.toLong()) }
     val bandsByDate: Map<LocalDate, List<DayBand>> =
-        schedule?.days?.associate { it.date to it.bands }.orEmpty()
+        days.associateWith { dayBands.bandsFor(it) }
 
     val scroll = rememberScrollState()
 

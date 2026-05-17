@@ -2,6 +2,7 @@ package com.eight87.strictlykeptboy.ui
 
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import com.eight87.strictlykeptboy.resolver.asDayBandSource
 import com.eight87.strictlykeptboy.theme.StrictlyKeptBoyTheme
 import com.eight87.strictlykeptboy.ui.schedule.ScheduleWeekView
 import com.eight87.strictlykeptboy.ui.schedule.TestTagWeekColumn
@@ -31,7 +32,7 @@ class ScheduleWeekViewTest {
 
         composeRule.setContent {
             StrictlyKeptBoyTheme {
-                ScheduleWeekView(weekStart = weekStart, schedule = sched, today = today)
+                ScheduleWeekView(weekStart = weekStart, dayBands = sched.asDayBandSource(), today = today)
             }
         }
 
@@ -55,7 +56,7 @@ class ScheduleWeekViewTest {
             StrictlyKeptBoyTheme {
                 ScheduleWeekView(
                     weekStart = weekStart,
-                    schedule = PhaseGTestFixtures.schedule(mapOf(weekStart to emptyList())),
+                    dayBands = PhaseGTestFixtures.schedule(mapOf(weekStart to emptyList())).asDayBandSource(),
                     today = today,
                     onSwipeWeek = { swipes += it },
                 )

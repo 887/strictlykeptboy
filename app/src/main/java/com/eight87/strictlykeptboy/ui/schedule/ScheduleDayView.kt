@@ -47,7 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
 import com.eight87.strictlykeptboy.resolver.CalendarRef
 import com.eight87.strictlykeptboy.resolver.DayBand
-import com.eight87.strictlykeptboy.resolver.RenderedSchedule
+import com.eight87.strictlykeptboy.resolver.DayBandSource
 import com.eight87.strictlykeptboy.resolver.RepoRef
 import com.eight87.strictlykeptboy.ui.share.isForeignBand
 import kotlinx.coroutines.delay
@@ -101,11 +101,11 @@ private val GutterWidth = 56.dp
 /** Public mirror so sibling composables (3-day) can match the gutter width. */
 internal val DayViewGutterWidth = GutterWidth
 
-/** Phase F.4 — stateless day view consuming a [RenderedSchedule]. */
+/** Phase F.4 — stateless day view consuming a narrow [DayBandSource]. */
 @Composable
 fun ScheduleDayView(
     date: LocalDate,
-    schedule: RenderedSchedule?,
+    dayBands: DayBandSource,
     modifier: Modifier = Modifier,
     onAddAt: (LocalTime) -> Unit = {},
     onBandTap: (DayBand) -> Unit = {},
@@ -161,8 +161,7 @@ fun ScheduleDayView(
      */
     sharedScrollState: androidx.compose.foundation.ScrollState? = null,
 ) {
-    val day = schedule?.days?.firstOrNull { it.date == date }
-    val bands = day?.bands.orEmpty()
+    val bands = dayBands.bandsFor(date)
 
     if (bands.isEmpty()) {
         EmptyScheduleState(

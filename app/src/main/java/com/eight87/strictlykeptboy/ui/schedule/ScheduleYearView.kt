@@ -24,7 +24,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
-import com.eight87.strictlykeptboy.resolver.RenderedSchedule
+import com.eight87.strictlykeptboy.resolver.DayBandSource
 import java.time.LocalDate
 import java.time.Month
 import java.time.YearMonth
@@ -44,15 +44,13 @@ const val TestTagYearMonthCell = "YearMonthCell"
 @Composable
 fun ScheduleYearView(
     year: Int,
-    schedule: RenderedSchedule?,
+    dayBands: DayBandSource,
     modifier: Modifier = Modifier,
     onMonthTap: (Month) -> Unit = {},
 ) {
-    val countsByDate: Map<LocalDate, Int> =
-        schedule?.days?.associate { it.date to it.bands.size }.orEmpty()
-    // Round 2.2.C.1-paint — pick the first band's accentColorSeed (if any) per day for the heat-cell tint.
-    val seedByDate: Map<LocalDate, Int> =
-        schedule?.days?.associate { it.date to (it.bands.firstOrNull()?.accentColorSeed ?: 0) }.orEmpty()
+    // Round 2026-05-17 [M] #10 — narrow handle. Per-cell counts +
+    // accent seeds are pulled lazily inside [MiniMonth] from
+    // [dayBands] instead of eagerly building whole-year maps.
 
     val isLandscape = LocalConfiguration.current.screenWidthDp >= 600 ||
         LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -67,8 +65,7 @@ fun ScheduleYearView(
             MiniMonth(
                 year = year,
                 month = month,
-                countsByDate = countsByDate,
-                seedByDate = seedByDate,
+                dayBands = dayBands,
                 onTap = { onMonthTap(month) },
             )
         }
@@ -79,8 +76,7 @@ fun ScheduleYearView(
 private fun MiniMonth(
     year: Int,
     month: Month,
-    countsByDate: Map<LocalDate, Int>,
-    seedByDate: Map<LocalDate, Int>,
+    dayBands: DayBandSource,
     onTap: () -> Unit,
 ) {
     val ym = YearMonth.of(year, month)
@@ -109,9 +105,10 @@ private fun MiniMonth(
                     val dayOfMonth = cellIdx - leadingBlanks + 1
                     if (dayOfMonth in 1..ym.lengthOfMonth()) {
                         val date = ym.atDay(dayOfMonth)
-                        val count = countsByDate[date] ?: 0
+                        val bands = dayBands.bandsFor(date)
+                        val count = bands.size
                         val intensity = intensityForCount(count)
-                        val seed = seedByDate[date] ?: 0
+                        val seed = bands.firstOrNull()?.accentColorSeed ?: 0
                         val seedColor = colorForSeed(seed)
                         val baseColor = if (seedColor == Color.Unspecified)
                             MaterialTheme.colorScheme.primary

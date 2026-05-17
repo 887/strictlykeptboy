@@ -20,6 +20,8 @@ import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.resolver.CalendarMeta
 import com.eight87.strictlykeptboy.resolver.DayBand
+import com.eight87.strictlykeptboy.resolver.DayBandSource
+import com.eight87.strictlykeptboy.resolver.asDayBandSource
 import com.eight87.strictlykeptboy.ui.adaptive.LocalWindowWidthSizeClass
 import com.eight87.strictlykeptboy.ui.adaptive.MasterDetailLayout
 import com.eight87.strictlykeptboy.ui.adaptive.WindowWidthSizeClass
@@ -280,6 +282,14 @@ private fun ScheduleMasterContent(
     val selectedTab by state.selectedTab.collectAsState()
     val date by state.date.collectAsState()
     val rendered by state.rendered.collectAsState()
+    // Round 2026-05-17 [M] #10 — narrow the schedule god-handle to a
+    // [DayBandSource] before passing it to leaf views (ISP / R.X.1).
+    val dayBandSource: DayBandSource = remember(rendered) {
+        rendered?.asDayBandSource() ?: DayBandSource.Empty
+    }
+    val renderedDates = remember(rendered) {
+        rendered?.days?.map { it.date }.orEmpty()
+    }
     // Round 2.21 Phase D.3 — effective zoom = max(zoom of currently
     // visible overlays). Falls back to default 2 when prefs / calendars
     // aren't wired (tests / previews).
@@ -331,7 +341,8 @@ private fun ScheduleMasterContent(
             // Google Calendar's Schedule view; resolver range is the
             // week containing `date` per ScheduleViewState.
             ScheduleViewTab.Schedule -> ScheduleAgendaView(
-                schedule = rendered,
+                dates = renderedDates,
+                dayBands = dayBandSource,
                 modifier = Modifier.fillMaxSize(),
                 onBandTap = onBandTap,
             )
@@ -351,7 +362,7 @@ private fun ScheduleMasterContent(
                 }
                 ScheduleThreeDayView(
                     anchor = date,
-                    schedule = rendered,
+                    dayBands = dayBandSource,
                     modifier = Modifier.fillMaxSize(),
                     onBandTap = onBandTap,
                     effectiveZoom = effectiveZoom,
@@ -373,7 +384,7 @@ private fun ScheduleMasterContent(
                 }
                 ScheduleDayView(
                 date = date,
-                schedule = rendered,
+                dayBands = dayBandSource,
                 modifier = Modifier.fillMaxSize(),
                 onBandTap = onBandTap,
                 onPlanTrip = onPlanTrip,
@@ -399,7 +410,7 @@ private fun ScheduleMasterContent(
                 val weekStart = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
                 ScheduleWeekView(
                     weekStart = weekStart,
-                    schedule = rendered,
+                    dayBands = dayBandSource,
                     modifier = Modifier.fillMaxSize(),
                     onBandTap = onBandTap,
                     onSwipeWeek = { delta -> state.setDate(date.plusWeeks(delta.toLong())) },
@@ -409,7 +420,7 @@ private fun ScheduleMasterContent(
             }
             ScheduleViewTab.Month -> ScheduleMonthView(
                 monthAnchor = date,
-                schedule = rendered,
+                dayBands = dayBandSource,
                 modifier = Modifier.fillMaxSize(),
                 onDayTap = { d ->
                     state.setDate(d)
@@ -420,14 +431,14 @@ private fun ScheduleMasterContent(
             )
             ScheduleViewTab.Agenda -> ScheduleTimeboxView(
                 date = date,
-                schedule = rendered,
+                dayBands = dayBandSource,
                 modifier = Modifier.fillMaxSize(),
                 onBandTap = onBandTap,
                 onPlanTrip = onPlanTrip,
             )
             ScheduleViewTab.Year -> ScheduleYearView(
                 year = date.year,
-                schedule = rendered,
+                dayBands = dayBandSource,
                 modifier = Modifier.fillMaxSize(),
                 onMonthTap = { m ->
                     state.setDate(date.withMonth(m.value).withDayOfMonth(1))
