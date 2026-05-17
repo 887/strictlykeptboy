@@ -2370,3 +2370,80 @@ full row makes the active swatch legible at glance (the user couldn't
 tell which color was which when it was a 14dp dot next to the emoji).
 Reusing `IdentitySwatches` + `ColorSwatch` from `CalendarSettingsSheet`
 keeps the palette source-of-truth single.
+
+## D.120 — Single source for Now/Next; UI/notification/widget all consume the same flow (Round 2.25 D-2.25.a)
+
+`resolver/NowNextResolver.derive(today, at, tomorrow)` is the
+only place "what is now" and "what is next" are computed.
+`AppGraph.nowNextFlow: StateFlow<NowNextSnapshot>` is the single
+hand-off; the bottom NowPlayingSheetHost peek row, the ongoing
+notification, and the homescreen / lockscreen widget(s) all read
+the same snapshot. No surface re-derives the pair.
+
+Rationale: the user explicitly asked for the same "Now / Next"
+information on three surfaces. Centralising the derivation
+guarantees they never disagree; future tweaks (e.g. preferring
+tagged-as-routine over ad-hoc) land in one file.
+
+## D.121 — "Next" carries into tomorrow at the late-night cusp (Round 2.25 D-2.25.b)
+
+When today's materialised list has no event whose `start > now`,
+the resolver looks at tomorrow's list. So at 23:00, "Next:
+brush teeth · in 7h 31m" still renders something useful instead
+of "no upcoming". The cusp behaviour is part of the contract,
+not a quirk of any individual surface.
+
+## D.122 — Bottom-bar layout: left = active, right = Next pair, silence when no next (Round 2.25 D-2.25.c)
+
+`NowPlayingSheetHost`'s peek row keeps the left column unchanged
+in behaviour (tap target opens the active task or "pick one"
+sheet); when `now != null` it overrides the legacy "No active
+task" copy with `Now: <emoji> <title>`. The right column renders
+`Next: <emoji> <title>` line 1 + `in 2h 15m` line 2. **When
+`next == null`, the right column renders nothing.** No "no
+upcoming" boilerplate — silence is fine.
+
+## D.123 — Now/Next notification is LOW + ongoing + only-alert-once on a dedicated channel (Round 2.25 D-2.25.d)
+
+`notif/NowNextNotificationProvider` builds an
+`NotificationCompat.Builder` against channel `now_next` (created
+lazily by the provider), priority LOW, `setOngoing(true)`,
+`setOnlyAlertOnce(true)`, `category = CATEGORY_STATUS`. Title =
+`Now: <title>` (or `No active task`); body = `Next: <title> ·
+in 2h 15m`. Tap opens MainActivity with `FLAG_ACTIVITY_SINGLE_TOP`.
+Updates are driven by collecting `nowNextFlow` inside
+`AppGraph.parkRuntimes`.
+
+Exact `AlarmManager.setExactAndAllowWhileIdle` at the
+`next.start` boundary is **deferred**: the 60s ticker inside
+`nowNextFlow` already gives sub-minute boundary freshness, and
+`SCHEDULE_EXACT_ALARM` on API 31+ is a per-user opt-in we don't
+want to silently demand. Re-open if users report stale boundary
+copy.
+
+## D.124 — Widget surfaces consume the same snapshot via a shared binder (Round 2.25 D-2.25.e)
+
+`widget/common/WidgetRenderer.bindNowNext(views, snapshot, …)` is
+the shared formatter. `NowWidgetProvider.bindAbsent` now reads
+the snapshot from `WidgetGraph.nowNextProvider` (installed by
+`AppGraph.parkRuntimes`) and surfaces `Next: <title>` + `in 2h
+15m` into the otherwise-empty subbeat + remaining slots when no
+event is currently active. The provider also force-refreshes the
+widget on every `nowNextFlow` change so the widget's view stays
+fresh between AlarmManager periodic updates.
+
+`CountdownWidgetProvider` keeps its pinned-event semantics and
+will consume the same helper when its empty branch is exercised.
+
+## D.125 — Relative-time copy ticks locally without re-querying the snapshot (Round 2.25 D-2.25.f)
+
+The snapshot carries `now_at: Instant` and absolute
+`next.start: ZonedDateTime`. Render-side, each surface owns a
+60-second local ticker that recomputes
+`formatRelative(Duration.between(now, next.start))` against the
+live clock. The snapshot itself is only re-queried on indexer
+pulse + on the `AppGraph` 60s tick that updates `now_at`. The
+bottom bar uses a `LaunchedEffect` ticker; the notification
+relies on `AppGraph.nowNextFlow`'s 60s emission triggering a
+re-post (cheap because `setOnlyAlertOnce(true)` suppresses any
+alert noise).

@@ -1,6 +1,6 @@
 # Round 2.25 — Now / Next surface unification
 
-## Status: DRAFT
+## Status: ✅ DONE
 
 ## Context
 
@@ -97,7 +97,7 @@ dumb consumer.
 - [x] **C.4** `NowNextNotificationProviderTest` (Robolectric) —
       asserts built notification title + content match the snapshot.
 
-### Phase D — Widget surfaces — shipped in commit `__pending__`
+### Phase D — Widget surfaces — shipped in commit `b7846dc`
 
 - [x] **D.1** Shared `widget/common/WidgetRenderer.bindNowNext`
       helper.
@@ -115,9 +115,9 @@ dumb consumer.
 
 ### Phase E — Close-out
 
-- [ ] **E.1** Tick A..D with commit SHAs in this plan and in
+- [x] **E.1** Tick A..D with commit SHAs in this plan and in
       `docs/plans/main.md`.
-- [ ] **E.2** `## Status: ✅ DONE` on this file.
-- [ ] **E.3** Append D.120..D.125 to `docs/plans/decisions.md`
+- [x] **E.2** `## Status: ✅ DONE` on this file.
+- [x] **E.3** Append D.120..D.125 to `docs/plans/decisions.md`
       mirroring D-2.25.a..f.
-- [ ] **E.4** Add Round 2.25 entry to `docs/plans/main.md`.
+- [x] **E.4** Add Round 2.25 entry to `docs/plans/main.md`.

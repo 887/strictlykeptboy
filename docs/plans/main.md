@@ -39,6 +39,23 @@ User feedback on screenshots: the destination buttons currently occupy row 2; `k
 - [x] **2.3.A.4** Verify destination buttons fit on a single row alongside title + avatar on Compact width (1080dp baseline). Title elides with `…` via `overflow = TextOverflow.Ellipsis` while taking `weight(1f)`; action-row icons never clip.
 - [x] **2.3.A.5** AVD smoke verified on `emulator-5554` (1080×2400). Screenshots in `docs/qa/2-3/`. `AppShellNavigationSwapTest` did not need updates — `TestTagShellDestPrefix` tags are preserved on the relocated destination buttons.
 
+## Round 2.25 — Now / Next surface unification [DONE — 2026-05-17] (see [`round-2-25-now-next.md`](round-2-25-now-next.md))
+
+User-feedback round (2026-05-17): the bottom bar's "No active task"
+copy is fine to know but useless on its own; the user wants
+"brush your teeth in 2 hours and 15mins" as a `Next:` block — and
+the same Now/Next pair on the ongoing notification and the
+homescreen widget. Phase A lands the pure `NowNextResolver` +
+`AppGraph.nowNextFlow` (8-case test); Phase B threads the
+snapshot into `MiniPlayer` via `NowPlayingSheetHost` + a 60s
+local re-render tick; Phase C posts an ongoing LOW-priority
+notification on a dedicated `now_next` channel; Phase D folds
+the snapshot into `NowWidgetProvider`'s empty branch via a
+shared `WidgetRenderer.bindNowNext` helper. Locks D.120..D.125.
+Commits: `415b055` (A) · `5260036` (B) · `3836ebc` (C) ·
+`b7846dc` (D). AVD-smoked on emulator-5558 with screencaps in
+`docs/qa/2-25/`.
+
 ## Round 2.23 — Schedule readability + reviews wiring [DONE — 2026-05-17] (see [`round-2-23-schedule-readability.md`](round-2-23-schedule-readability.md))
 
 Five-fix round driven by live AVD-session user feedback (2026-05-16):
