@@ -544,3 +544,15 @@ Single-shot opus refactor of `ui/repos/ReposPane.kt` per R.X.4 (>800 LOC thresho
 Total LOC across the six files: 1283 (vs. 1214 originally — +69 LOC of new package/import headers, no logic duplication).
 
 R.X self-check: all 6 new files under the 500-LOC second-look line; largest (`RepoSettingsHost.kt` 346) bundles cohesive disk codec helpers used solely by its single composable. AVD-smoke confirmed on `emulator-5558`: Repos rail renders identically (Repositories header, demo banner, RepoCard with all 5 toggles, More-settings deeplink into RepoSettingsHost showing calendar list). Screenshot: `/tmp/skb-repos-refactor.png`.
+
+### Audit-pass 2026-05-17 update — Wave 5 status (commit 519647e)
+
+- **[M] #8b — partial.** MainActivity launchers + RepoTomlScanner + ShareActionHandler + ExportContentBuilder + RestoreReindex + HumanBytes extracted to dedicated homes. MainActivity dropped from 1884 → 1856 LOC — only the launcher *registrations* moved out; the inline call bodies inside `setContent { … }` stayed. Further dismantling (CalendarIntentDispatcher, the bigger inline blocks) deferred.
+- **[L] #11 — completion.** `AppGraph.wizardEntryRequest` is now read-only `StateFlow` + a `setWizardEntryRequest` setter; the clear path routes through a new `ShellCallbacks.onWizardFinished` wired from `MainActivity`. Test `WizardEntryRequestTest` updated.
+- **ZoomLevelRowTest repair.** The 4 pre-existing failures (stale since 2.25.aa segmented-button → circles refactor) fixed by wrapping each option in `Modifier.selectable(role = RadioButton)` so `assertIsSelected()` sees state on the testTag node. Test count now clean.
+- **Org-limit bounce note.** Wave 5 subagents G5 (MainActivity split) and H5 (wizardEntryRequest + ZoomLevelRowTest) both hit the org's monthly usage limit before they could commit. Their work was already in the working tree and consistent; the orchestrator patched 8 remaining unresolved references (renamed launcher field accesses + non-local return labels inside `also { l -> }` reassigned lambdas), verified `:app:assembleDebug` + `:app:testDebugUnitTest` green, and committed as `519647e`.
+
+Still open from this audit pass (deferred / out-of-scope this run):
+
+- MainActivity inline body dismantling — the bulk of the 1856 LOC remaining is `setContent { … }` Compose-tree wiring + the deep-link dispatcher's inline branches. A genuine split would extract a `MainActivityCompose.kt` host carrying the entire `setContent` block as a top-level `@Composable fun MainScreen(...)`. Risk: high; recompose-stability surface is large. Track for Round 2.29 or later.
+- `AuthMethod` SSH variant closure — `git/auth/CredentialBindings.kt` still throws `NotImplementedError` in the `is AuthMethod.Ssh` branch. The wizard gate from `351634c` keeps users out for now; closing F4 (real SSH key handling) is its own round.
