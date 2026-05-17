@@ -462,13 +462,29 @@ private fun RemoteAuthStep(
             )
             Text(stringResource(R.string.add_repo_auth_pat))
         }
+        // Fix #5 (audit 2026-05-17) — SSH option is gated until F4 ships
+        // the SshBinding implementation (CredentialBindings.kt:60 throws
+        // NotImplementedError on AuthMethod.Ssh today). Render disabled
+        // with a "Coming soon" subtext; keep the enum variant so the
+        // wiring stays intact for when F4 closes.
         Row(verticalAlignment = Alignment.CenterVertically) {
             RadioButton(
-                selected = auth == AddRepoAuth.Ssh,
-                onClick = { onAuth(AddRepoAuth.Ssh) },
+                selected = false,
+                onClick = null,
+                enabled = false,
                 modifier = Modifier.testTag(TestTagAddRepoAuthSsh),
             )
-            Text(stringResource(R.string.add_repo_auth_ssh))
+            Column {
+                Text(
+                    stringResource(R.string.add_repo_auth_ssh),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                )
+                Text(
+                    stringResource(R.string.add_repo_auth_ssh_coming_soon),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
 
         if (auth == AddRepoAuth.OAuthDevice) {

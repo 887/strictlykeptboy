@@ -428,7 +428,8 @@
     <string name="add_repo_auth_prompt">How should we authenticate?</string>
     <string name="add_repo_auth_oauth">Sign in with browser (OAuth Device Flow)</string>
     <string name="add_repo_auth_pat">Use a Personal Access Token (PAT)</string>
-    <string name="add_repo_auth_ssh">SSH key (deferred)</string>
+    <string name="add_repo_auth_ssh">SSH key</string>
+    <string name="add_repo_auth_ssh_coming_soon">Coming soon</string>
     <string name="add_repo_oauth_next_hint">OAuth flow will run when you tap Next.</string>
     <string name="add_repo_oauth_starting">Starting…</string>
     <string name="add_repo_oauth_requesting_code">Requesting code…</string>
