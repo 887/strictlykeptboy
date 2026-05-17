@@ -117,6 +117,16 @@ data class Event(
     val promptKind: PromptKind? = null,
     /** Round 2.27 / D-2.27.a — who the prompt is from. `null` when [requiresResponse] is `false`. */
     val promptTarget: PromptTarget? = null,
+    /**
+     * Round 2.24 / D-2.24.a — optional per-event timezone pin. When
+     * `null`, the event resolves in the repo-default tz at render time.
+     * When set (e.g. `"America/New_York"`), the event's `start`/`end`
+     * instants are interpreted in this zone and converted to the display
+     * tz on render. Stored verbatim — the resolver code that consumes
+     * this field handles malformed-zone fallback so codec-level
+     * validation does not reject hand-edited files.
+     */
+    val tzId: String? = null,
     val body: String = "",
 ) : TypedEntity {
     override val schemaVersion: Int get() = header.schemaVersion
@@ -148,6 +158,9 @@ data class Event(
         if (requiresResponse) t.putBool("requires_response", true)
         promptKind?.let { t.putString("prompt_kind", it.tomlValue) }
         promptTarget?.let { t.putString("prompt_target", it.tomlValue) }
+        // Round 2.24 / D-2.24.a — per-event tz pin. Omit on write when
+        // null so unpinned events stay byte-identical on round-trip.
+        tzId?.takeIf { it.isNotBlank() }?.let { t.putString("tz_id", it) }
         // Phase XX.8 / AT-H.3 — additive audit fields. Resolver ignores
         // them; they exist for `skb routine undo <materialized-at>` and
         // for surfacing "where did this event come from?" in the UI.
@@ -192,6 +205,7 @@ data class Event(
                 requiresResponse = t.getBool("requires_response") ?: false,
                 promptKind = PromptKind.fromToml(t.getString("prompt_kind")),
                 promptTarget = PromptTarget.fromToml(t.getString("prompt_target")),
+                tzId = t.getString("tz_id")?.takeIf { it.isNotBlank() },
                 materializedFrom = t.getString("materialized_from"),
                 materializedSourceEvent = t.getString("materialized_source_event"),
                 materializedAt = t.getString("materialized_at"),

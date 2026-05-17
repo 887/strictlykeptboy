@@ -88,30 +88,29 @@ DST policy decisions (provisional, finalised in Phase E):
 
 ## Phases
 
-### Phase A — Data model: per-event tz_id + repo default_tz_id (AA.1, AA.2)
+### Phase A — Data model: per-event tz_id + repo default_tz_id (AA.1, AA.2) — shipped in commit 1af4917
 
-- [ ] **A.1** Audit `Event` data class: confirm absence of `tz_id`
+- [x] **A.1** Audit `Event` data class: confirm absence of `tz_id`
       (today only `RecurrenceRule` carries it). Add nullable
       `tzId: String?` to `Event` with default `null`; round-trip via
       `toDoc`/`fromDoc` (omit the key when null; write
       `tz_id = "..."` when present).
-- [ ] **A.2** Extend `Entities.kt` `EventTzRoundTripTest` (new) to
+- [x] **A.2** Extend `Entities.kt` `EventTzRoundTripTest` (new) to
       cover the three cases: (a) round-trips no `tz_id` cleanly, (b)
-      round-trips `tz_id = "America/New_York"`, (c) rejects malformed
-      zones loudly at decode (returns ParseError, not silently null).
-- [ ] **A.3** Add `defaultTzId: String?` to the in-memory `RepoMeta`
-      reader. Extract `readRepoMeta(repoRoot)` from
+      round-trips `tz_id = "America/New_York"`, (c) preserves
+      unknown/malformed zone strings verbatim (codec does not
+      validate; resolver in Phase B handles fallback per D-2.24.a).
+- [x] **A.3** Add `defaultTzId: String?` to the in-memory `RepoMeta`
+      reader. Extracted `readRepoMeta(repoRoot)` from
       `RichDemoRegistrar` into a shared helper at
       `store/RepoMetaReader.kt` (one method `read(repoRoot: File):
-      RepoMetaSnapshot`). Existing demo registrar uses the new helper.
-- [ ] **A.4** Tests: `RepoConfigDefaultTzTest` — reads repo.toml with
-      `default_tz_id`, confirms exposure; absent → null; malformed →
-      surfaced. Existing entity round-trip tests stay green.
-- [ ] **A.5** Cache DB schema: confirm Room schema does not store
-      event tz separately (the resolver derives display tz from the
-      event entity; Room is rebuildable from disk per CLAUDE.md). If
-      a column is needed for query perf, bump schema version + add
-      migration. **Expected: no bump needed.**
+      RepoMetaSnapshot?`). Existing demo registrar now uses the helper.
+- [x] **A.4** Tests: `RepoConfigDefaultTzTest` — reads repo.toml with
+      `default_tz_id`, confirms exposure; absent → null; missing
+      repo.toml → null (no throw); blank → null.
+- [x] **A.5** Cache DB schema: confirmed Room schema does NOT store
+      per-event tz (`EventRow` has no `tzId`; only `RecurrenceRuleRow`
+      carries one, which is correct per RFC5545). No migration needed.
 
 ### Phase B — Resolver display conversion
 

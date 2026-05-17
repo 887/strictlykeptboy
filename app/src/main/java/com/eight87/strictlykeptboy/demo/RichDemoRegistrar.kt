@@ -2,6 +2,7 @@ package com.eight87.strictlykeptboy.demo
 
 import com.eight87.strictlykeptboy.git.AuthorIdentity
 import com.eight87.strictlykeptboy.git.RepoConfig
+import com.eight87.strictlykeptboy.store.RepoMetaReader
 import com.eight87.strictlykeptboy.store.TomlReader
 import com.eight87.strictlykeptboy.store.TomlValue
 import java.io.File
@@ -43,16 +44,16 @@ object RichDemoRegistrar {
      * `calendars/`, `todolists/`, etc.
      */
     fun buildConfig(repoRoot: File): RepoConfig {
-        val meta = readRepoMeta(repoRoot)
-        val repoId = meta?.scalar("id") ?: repoRoot.name
-        val displayName = meta?.scalar("name")?.let { DISPLAY_NAME } ?: DISPLAY_NAME
-        val defaultCalendarId = meta?.scalar("default_calendar")
-            ?: meta?.scalar("default_calendar_id")
+        // Round 2.24.A.3 — route through the shared RepoMetaReader so
+        // the demo registrar is no longer the canonical reader.
+        val meta = RepoMetaReader.read(repoRoot)
+        val repoId = meta?.id ?: repoRoot.name
+        val displayName = meta?.name?.let { DISPLAY_NAME } ?: DISPLAY_NAME
+        val defaultCalendarId = meta?.defaultCalendarId
             ?: discoverFirstCalendarId(repoRoot)
-        val defaultTodolistId = meta?.scalar("default_todolist")
-            ?: meta?.scalar("default_todolist_id")
+        val defaultTodolistId = meta?.defaultTodolistId
             ?: discoverFirstTodolistId(repoRoot)
-        val emoji = meta?.scalar("emoji") ?: "✨"
+        val emoji = meta?.emoji ?: "✨"
         return RepoConfig(
             repoId = repoId,
             displayName = displayName,
@@ -69,13 +70,6 @@ object RichDemoRegistrar {
     }
 
     // --- internals --------------------------------------------------
-
-    private fun readRepoMeta(repoRoot: File): com.eight87.strictlykeptboy.store.TomlTable? {
-        val file = File(repoRoot, ".strictlykeptboy/repo.toml")
-        if (!file.isFile) return null
-        return runCatching { TomlReader.parse(file.readText(Charsets.UTF_8)) }
-            .getOrNull()
-    }
 
     private fun com.eight87.strictlykeptboy.store.TomlTable.scalar(key: String): String? =
         (scalars[key] as? TomlValue.Str)?.value
