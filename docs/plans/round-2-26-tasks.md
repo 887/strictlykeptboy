@@ -114,16 +114,16 @@ shipped in commit ad7e9a2
 
 ## Phase C — TaskRow + TimeboxRow polish
 
-- [ ] **C.1** Add `TimeboxRow.kt` in `ui/tasks/`. Same outer Surface
+- [x] **C.1** Add `TimeboxRow.kt` in `ui/tasks/`. Same outer Surface
       shape as `TaskRow` (4dp accent strip, 64dp row height); leading
       strip is the calendar color, then a `Schedule` icon (Material
       Symbols `Schedule`) in place of the checkbox, then title + range
       chip "HH:mm–HH:mm · CalendarName". Long-press routes to the
       schedule's existing event detail overlay.
-- [ ] **C.2** Polish `TaskRow.kt`: when `item.isOverdue`, paint the
+- [x] **C.2** Polish `TaskRow.kt`: when `item.isOverdue`, paint the
       title in `colorScheme.error` (not just the due chip). Add a
       Round-2.26 KDoc.
-- [ ] **C.3** Verify `TaskRow` priority-dot tiers still read at the
+- [x] **C.3** Verify `TaskRow` priority-dot tiers still read at the
       new 64dp height; nudge the priority-dot from 10dp → 12dp for
       tap-target legibility.
 - [ ] **C.4** Section headers in `TaskUnifiedTodayView`: M3 `Text`

@@ -46,6 +46,11 @@ const val TestTagTaskStartButton = "TaskStartButton"
  * UI-J row layout — 4dp left accent, checkbox, title, due chip, list chip.
  * Used by Combined / Today / Per-list / Standing. Shopping has its own
  * bigger-checkbox variant in [TaskShoppingView].
+ *
+ * Round 2.26.C.2 — when [TaskItem.isOverdue] is true, the title text is
+ * also painted in `colorScheme.error` (previously only the due chip
+ * carried the overdue tint). Round 2.26.C.3 nudged the priority dot
+ * from 10dp to 12dp for tap-target legibility at the 64dp row height.
  */
 @Composable
 fun TaskRow(
@@ -119,8 +124,11 @@ fun TaskRow(
                     style = MaterialTheme.typography.titleSmall.let {
                         if (dim) it.copy(textDecoration = TextDecoration.LineThrough) else it
                     },
-                    color = if (dim) MaterialTheme.colorScheme.onSurfaceVariant
-                    else MaterialTheme.colorScheme.onSurface,
+                    color = when {
+                        dim -> MaterialTheme.colorScheme.onSurfaceVariant
+                        item.isOverdue -> MaterialTheme.colorScheme.error
+                        else -> MaterialTheme.colorScheme.onSurface
+                    },
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.testTag("$TestTagTaskTitle-${item.id}"),
@@ -261,7 +269,7 @@ private fun PriorityDot(level: Int) {
     }
     Box(
         modifier = Modifier
-            .size(10.dp)
+            .size(12.dp)
             .background(color, shape = androidx.compose.foundation.shape.CircleShape),
     )
 }
