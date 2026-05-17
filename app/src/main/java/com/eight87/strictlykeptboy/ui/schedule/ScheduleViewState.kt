@@ -20,6 +20,7 @@ import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.ZonedDateTime
 import java.time.temporal.TemporalAdjusters
 
 /**
@@ -48,7 +49,7 @@ class ScheduleViewState(
     private val sourcesFlow: StateFlow<Renderer.Sources>,
     /**
      * Round 2.1.B.2 / B.8 — full calendar list across all repos, overlaid
-     * with TOML fields by [com.eight87.strictlykeptboy.resolver.CalendarRegistry].
+     * with TOML fields by [com.eight87.strictlykeptboy.composition.CalendarRegistry].
      * Surfaced for the [CalendarFilterChipStrip] rendered above the
      * schedule grid. Defaults to derived-from-snapshot when not injected.
      */
@@ -138,6 +139,7 @@ class ScheduleViewState(
                     snapshot = filteredSnap,
                     sources = filteredSrc,
                     renderTz = tz,
+                    now = ZonedDateTime.now(tz),
                     displayTzId = displayTz,
                 )
             }

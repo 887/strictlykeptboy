@@ -639,8 +639,8 @@ class AppGraph(private val appContext: Context) {
      * `calendars/<id>/calendar.toml` from each configured repo and
      * overlays parsed fields onto the synthesized [snapshot].
      */
-    val calendarRegistry: com.eight87.strictlykeptboy.resolver.CalendarRegistry by lazy {
-        com.eight87.strictlykeptboy.resolver.CalendarRegistry(
+    val calendarRegistry: com.eight87.strictlykeptboy.composition.CalendarRegistry by lazy {
+        com.eight87.strictlykeptboy.composition.CalendarRegistry(
             repoStore = repoStore,
             synthesizedSnapshot = snapshot,
             scope = appScope,

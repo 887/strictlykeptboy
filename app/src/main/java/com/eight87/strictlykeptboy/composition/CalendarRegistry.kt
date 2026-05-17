@@ -1,13 +1,17 @@
-package com.eight87.strictlykeptboy.resolver
+package com.eight87.strictlykeptboy.composition
 
 import com.eight87.strictlykeptboy.git.RepoConfig
 import com.eight87.strictlykeptboy.git.RepoStore
+import com.eight87.strictlykeptboy.resolver.CalendarMeta
+import com.eight87.strictlykeptboy.resolver.CalendarRef
+import com.eight87.strictlykeptboy.resolver.DateRange
+import com.eight87.strictlykeptboy.resolver.HourRange
+import com.eight87.strictlykeptboy.resolver.RepoRef
+import com.eight87.strictlykeptboy.resolver.RepoSnapshot
 import com.eight87.strictlykeptboy.store.CalendarActivityConfig
-import com.eight87.strictlykeptboy.store.EntityPath
 import com.eight87.strictlykeptboy.store.RoutineCalendarConfig
 import com.eight87.strictlykeptboy.store.SupersedenceConfig
 import com.eight87.strictlykeptboy.store.TomlReader
-import com.eight87.strictlykeptboy.store.TomlTable
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path

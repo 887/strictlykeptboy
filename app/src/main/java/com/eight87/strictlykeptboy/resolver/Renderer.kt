@@ -49,7 +49,7 @@ class Renderer(
         snapshot: RepoSnapshot,
         sources: Sources,
         renderTz: ZoneId = ZoneId.systemDefault(),
-        now: ZonedDateTime = ZonedDateTime.now(renderTz),
+        now: ZonedDateTime,
         /**
          * Round 2.24 / D-2.24.c — caller-supplied display zone. When
          * non-null, every materialized instance's `effectiveStart` /

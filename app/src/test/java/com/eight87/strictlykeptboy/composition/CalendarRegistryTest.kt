@@ -1,10 +1,14 @@
-package com.eight87.strictlykeptboy.resolver
+package com.eight87.strictlykeptboy.composition
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.eight87.strictlykeptboy.git.AuthorIdentity
 import com.eight87.strictlykeptboy.git.RepoConfig
 import com.eight87.strictlykeptboy.git.RepoStore
+import com.eight87.strictlykeptboy.resolver.CalendarMeta
+import com.eight87.strictlykeptboy.resolver.CalendarRef
+import com.eight87.strictlykeptboy.resolver.RepoRef
+import com.eight87.strictlykeptboy.resolver.RepoSnapshot
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path

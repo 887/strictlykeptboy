@@ -31,7 +31,7 @@ class OverlayResolver(
         rangeTo: ZonedDateTime,
         deviations: List<DeviationInput> = emptyList(),
         overrides: List<OverrideInput> = emptyList(),
-        now: ZonedDateTime = ZonedDateTime.now(),
+        now: ZonedDateTime,
     ): LayeredView {
         val calMetaByRef = snapshot.calendars.associateBy { it.ref }
 

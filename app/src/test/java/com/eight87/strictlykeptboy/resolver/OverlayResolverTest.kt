@@ -26,6 +26,7 @@ class OverlayResolverTest {
         val v = overlay.layer(
             setOf(CalendarRef("c1")), instances, snap,
             zdt("2026-05-11T00:00:00"), zdt("2026-05-12T00:00:00"),
+            now = zdt("2026-05-11T00:00:00"),
         )
         val bands = v.bandsByDay.getValue(LocalDate.parse("2026-05-11"))
         assertEquals(3, bands.size)
@@ -43,6 +44,7 @@ class OverlayResolverTest {
         val v = overlay.layer(
             setOf(CalendarRef("c1")), instances, snap,
             zdt("2026-05-11T00:00:00"), zdt("2026-05-12T00:00:00"),
+            now = zdt("2026-05-11T00:00:00"),
         )
         val bands = v.bandsByDay.getValue(LocalDate.parse("2026-05-11"))
         assertEquals(2, bands.size)
@@ -106,6 +108,7 @@ class OverlayResolverTest {
         val v = overlay.layer(
             setOf(CalendarRef("work"), CalendarRef("vacation")), listOf(e), snap,
             zdt("2026-05-11T00:00:00"), zdt("2026-05-12T00:00:00"),
+            now = zdt("2026-05-11T00:00:00"),
         )
         val band = v.bandsByDay.getValue(LocalDate.parse("2026-05-11")).single()
         assertEquals(CalendarRef("vacation"), band.supersededByCalendar)
@@ -127,6 +130,7 @@ class OverlayResolverTest {
             setOf(CalendarRef("work"), CalendarRef("vacation")), listOf(e), snap,
             zdt("2026-05-11T00:00:00"), zdt("2026-05-12T00:00:00"),
             overrides = listOf(ov),
+            now = zdt("2026-05-11T00:00:00"),
         )
         val band = v.bandsByDay.getValue(LocalDate.parse("2026-05-11")).single()
         assertNull(band.supersededByCalendar)
@@ -141,6 +145,7 @@ class OverlayResolverTest {
         val v = overlay.layer(
             setOf(CalendarRef("low"), CalendarRef("high")), instances, snap,
             zdt("2026-05-11T00:00:00"), zdt("2026-05-12T00:00:00"),
+            now = zdt("2026-05-11T00:00:00"),
         )
         val bands = v.bandsByDay.getValue(LocalDate.parse("2026-05-11"))
         val byInstance = bands.associateBy { it.instance.instanceId }
