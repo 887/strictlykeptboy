@@ -221,7 +221,7 @@ DST policy decisions (provisional, finalised in Phase E):
 - [ ] **E.3** `decisions.md` D.121 promotes D-2.24.g + D-2.24.h from
       "provisional" to "locked" once Phase E passes.
 
-### Phase F — `skb tz convert` CLI (AA.6) — shipped in commit <pending>
+### Phase F — `skb tz convert` CLI (AA.6) — shipped in commit fd6dd0e
 
 - [x] **F.1** New file
       `cli/src/main/kotlin/com/eight87/skb/cli/commands/TzCommands.kt`
