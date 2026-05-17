@@ -145,7 +145,7 @@ shipped together:
       Day view Auto = Spacious (level 4) for the dense demo. Evidence
       `docs/qa/2-25/agenda-default.png` + `day-auto-readable.png`.
 
-### Round 2.25.y trailer — grouped-aware Auto zoom
+### Round 2.25.y trailer — grouped-aware Auto zoom (shipped 4bd5e4d)
 
 User feedback (2026-05-17): "that's also why I wanted to group up
 chores like brushing your teeth and getting ready for bed.. so in
