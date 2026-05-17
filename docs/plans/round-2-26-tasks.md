@@ -89,7 +89,7 @@ shipped in commit ad7e9a2
 
 ## Phase B — Unified day-of feed (Today merges timeboxes + tasks)
 
-shipped in commit <pending-B>
+shipped in commit f1668f5
 
 - [x] **B.1** Add `data class UnifiedTodayItem` in
       `app/src/main/java/com/eight87/strictlykeptboy/ui/tasks/UnifiedToday.kt`
