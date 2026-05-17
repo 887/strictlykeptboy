@@ -63,19 +63,19 @@
 - [x] **A.6** Round-trip tests in codec tests: fields absent → defaults;
       present → preserved; unknown enum → falls back gracefully.
 
-## Phase B — Resolver + projector wiring
+## Phase B — Resolver + projector wiring — shipped in commit PHASE_B_COMMIT
 
-- [ ] **B.1** Add `TaskSource.KeeperPrompt` to the `TaskSource` enum
+- [x] **B.1** Add `TaskSource.KeeperPrompt` to the `TaskSource` enum
       in `ui/tasks/TaskModels.kt`.
-- [ ] **B.2** Extend `FromEventsProjector.project()` to route
+- [x] **B.2** Extend `FromEventsProjector.project()` to route
       `inst.requiresResponse == true` to `TaskSource.KeeperPrompt`.
       Skip self-targeted prompts when boy IS the keeper (single-user
       free-mode); pass author id in.
-- [ ] **B.3** New pure-function reader `PromptResponseReader.
+- [x] **B.3** New pure-function reader `PromptResponseReader.
       listAnsweredInstances(repoRoot, calId, ruleId) → Set<LocalDate>`
       walking `calendars/<cal-id>/cage-check-responses/<rule-id>/*.md`.
       Projector drops instances whose date is in the set.
-- [ ] **B.4** Unit tests: recurring prompt with yesterday's response
+- [x] **B.4** Unit tests: recurring prompt with yesterday's response
       projects today only; one-off with no response projects exactly
       one task; closed prompt projects zero.
 
@@ -96,12 +96,13 @@
 
 - [ ] **D.1** Add `PromptResponseSheet.kt` in `ui/tasks/`. OutlinedTextField
       reply + optional "Attach photo URI" row. Confirm writes the file.
-- [ ] **D.2** Add `PromptResponseWriter.kt` in `store/`. Writes the
+- [x] **D.2** Add `PromptResponseWriter.kt` in `store/`. Writes the
       D-2.27.g shape; JGit auto-commit via existing commit-hook plumbing.
+      Shipped in commit PHASE_B_COMMIT.
 - [ ] **D.3** Wire the sheet open trigger from `TaskRow`'s Respond button
       via existing task detail-sheet host.
-- [ ] **D.4** Unit test for the writer: round-trip through reader;
-      idempotent on same-date overwrite.
+- [x] **D.4** Unit test for the writer: round-trip through reader;
+      idempotent on same-date overwrite. Shipped in commit PHASE_B_COMMIT.
 
 ## Phase E — Refactor cage-check demo content — shipped in commit 1b5e68a
 

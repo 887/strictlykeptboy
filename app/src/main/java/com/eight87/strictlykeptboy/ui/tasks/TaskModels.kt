@@ -28,7 +28,7 @@ const val ACTIVE_HOURS_PRIORITY_BUMP = 50
  * Why a UI-only model: keeps Phase H's view code testable without
  * spinning up Room / RepoSnapshot / Renderer.
  */
-enum class TaskSource { Today, FromEvents, Pinned, Other }
+enum class TaskSource { Today, FromEvents, KeeperPrompt, Pinned, Other }
 
 enum class TodolistMode { Standard, Shopping }
 
@@ -206,6 +206,10 @@ fun List<TaskItem>.forToday(today: LocalDate = LocalDate.now()): List<TaskItem> 
         when {
             item.standing && item.pinnedForToday -> true
             item.source == TaskSource.FromEvents -> true
+            // Round 2.27.B.1 — keeper-prompt tasks behave like FromEvents
+            // for Today inclusion: spawned-from-an-event, surface every day
+            // until the boy clears them by writing a response file.
+            item.source == TaskSource.KeeperPrompt -> true
             item.due == today -> true
             !item.done && item.due != null && item.due.isBefore(today) -> true
             else -> false

@@ -42,9 +42,15 @@ fun TaskTodayView(
         return
     }
 
-    val dated = forToday.filter { !it.standing && it.source != TaskSource.FromEvents }
+    val dated = forToday.filter {
+        !it.standing && it.source != TaskSource.FromEvents && it.source != TaskSource.KeeperPrompt
+    }
         .sortedForCombined(today)
-    val fromEvents = forToday.filter { it.source == TaskSource.FromEvents }
+    val fromEvents = forToday.filter {
+        // Round 2.27.B.1 — keeper-prompt rows ride in the FromEvents section
+        // until Phase C gives them their own visual treatment.
+        it.source == TaskSource.FromEvents || it.source == TaskSource.KeeperPrompt
+    }
         .sortedForCombined(today)
     val pinned = forToday.filter { it.standing && it.pinnedForToday }
         .sortedWith(compareByDescending<TaskItem> { it.priority }.thenBy { it.title.lowercase() })

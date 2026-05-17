@@ -812,10 +812,37 @@ class MainActivity : ComponentActivity() {
                             // wiring is best-effort: we don't have a live
                             // resolver fold here yet, so use today's
                             // one-off events (via `graph.todayEventSource`).
+                            // Round 2.27 / Phase B.3 — per-(repoId, calId, ruleId)
+                            // response-file cache for one projector call.
+                            val responseCache = mutableMapOf<Triple<String, String, String>, Set<java.time.LocalDate>>()
+                            val reposById = repos.associateBy { it.repoId }
+                            val responseReader: (String, String) -> Set<java.time.LocalDate> = { calId, ruleId ->
+                                val cal = snap.calendars.firstOrNull { it.ref.id == calId }
+                                val repoId = cal?.repo?.id
+                                val repoRoot = repoId?.let { reposById[it]?.rootDir }
+                                if (repoRoot == null) emptySet()
+                                else responseCache.getOrPut(Triple(repoId, calId, ruleId)) {
+                                    runCatching {
+                                        com.eight87.strictlykeptboy.store.PromptResponseReader
+                                            .listAnsweredInstances(
+                                                repoRoot = java.nio.file.Paths.get(repoRoot),
+                                                calId = calId,
+                                                ruleId = ruleId,
+                                            )
+                                    }.getOrDefault(emptySet())
+                                }
+                            }
+                            // Round 2.27 / Phase B.2 — boy persona id. No
+                            // field on identity.toml carries this today;
+                            // empty string disables the single-user-self-
+                            // prompt skip until the field lands.
+                            val boyAuthorId = ""
                             val fromEvents =
                                 com.eight87.strictlykeptboy.ui.tasks.FromEventsProjector.project(
                                     instances = graph.todayEventSource.eventsForToday().map { it.instance },
                                     calendarsById = snap.calendars.associateBy { it.ref.id },
+                                    boyAuthorId = boyAuthorId,
+                                    responseReader = responseReader,
                                 )
                             // Merge: keep non-FromEvents tasks the caller
                             // pushed in via `set/addTask`; replace the
@@ -823,7 +850,8 @@ class MainActivity : ComponentActivity() {
                             // set. This is the producer the brief noted is
                             // missing for the `TaskSource.FromEvents` enum.
                             val nonFromEvents = cur.tasks.filter {
-                                it.source != com.eight87.strictlykeptboy.ui.tasks.TaskSource.FromEvents
+                                it.source != com.eight87.strictlykeptboy.ui.tasks.TaskSource.FromEvents &&
+                                    it.source != com.eight87.strictlykeptboy.ui.tasks.TaskSource.KeeperPrompt
                             }
                             // Round 2.16.C — temp sub-stepped demo tasks so
                             // the mini-player has visible content on the AVD
