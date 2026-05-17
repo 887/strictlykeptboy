@@ -7,12 +7,20 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -21,6 +29,7 @@ import com.eight87.strictlykeptboy.R
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 const val TestTagTogetherForm = "TogetherForm"
@@ -28,6 +37,7 @@ const val TestTagTogetherRepoChipPrefix = "TogetherRepoChip-"
 const val TestTagTogetherDowChipPrefix = "TogetherDowChip-"
 const val TestTagTogetherSubmit = "TogetherSubmit"
 const val TestTagTogetherEmptyRepos = "TogetherEmptyRepos"
+const val TestTagTogetherParticipantTzPrefix = "TogetherParticipantTz-"
 
 private val DateFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 private val TimeFmt = DateTimeFormatter.ofPattern("HH:mm")
@@ -77,6 +87,29 @@ fun TogetherInputForm(
                     onClick = { onToggleRepo(opt.repoId) },
                     label = { Text(opt.displayName) },
                     modifier = Modifier.testTag("$TestTagTogetherRepoChipPrefix${opt.repoId}"),
+                )
+            }
+        }
+
+        // Round 2.24 / AA.7 — per-participant tz dropdowns.
+        // Only render when at least one repo is selected; a
+        // participant without a row in [state.participantTz] inherits
+        // the viewer tz at submit time.
+        if (state.selectedRepoIds.isNotEmpty()) {
+            Text(
+                stringResource(R.string.together_section_participant_tz),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            val displayByRepo = repoOptions.associateBy({ it.repoId }, { it.displayName })
+            state.selectedRepoIds.sorted().forEach { repoId ->
+                val current = state.participantTz[repoId] ?: state.tzId
+                ParticipantTzDropdown(
+                    repoId = repoId,
+                    displayName = displayByRepo[repoId] ?: repoId,
+                    current = current,
+                    onSelect = { zone ->
+                        onUpdate { it.copy(participantTz = it.participantTz + (repoId to zone)) }
+                    },
                 )
             }
         }
@@ -165,6 +198,57 @@ fun TogetherInputForm(
                 .testTag(TestTagTogetherSubmit),
         ) {
             Text(stringResource(R.string.together_submit))
+        }
+    }
+}
+
+/**
+ * Round 2.24 / AA.7 — per-participant tz picker. `ExposedDropdownMenuBox`
+ * with the system's `ZoneId.getAvailableZoneIds()` as the option set.
+ * SRP: emits a single (repoId, ZoneId) update via [onSelect], the
+ * rest of the form state is untouched.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ParticipantTzDropdown(
+    repoId: String,
+    displayName: String,
+    current: ZoneId,
+    onSelect: (ZoneId) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val zones = remember { ZoneId.getAvailableZoneIds().sorted() }
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        OutlinedTextField(
+            value = current.id,
+            onValueChange = {},
+            readOnly = true,
+            label = {
+                Text(stringResource(R.string.together_field_participant_tz_label, displayName))
+            },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor()
+                .testTag("$TestTagTogetherParticipantTzPrefix$repoId"),
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            zones.forEach { z ->
+                DropdownMenuItem(
+                    text = { Text(z) },
+                    onClick = {
+                        onSelect(ZoneId.of(z))
+                        expanded = false
+                    },
+                )
+            }
         }
     }
 }

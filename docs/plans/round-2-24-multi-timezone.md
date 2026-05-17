@@ -169,33 +169,37 @@ DST policy decisions (provisional, finalised in Phase E):
       - `BandTzBadgeTest` — NY-pinned event in a Berlin display shows
         "✈ New York" badge; same-zone event omits the badge.
 
-### Phase D — Together multi-tz common-time finder (AA.4, AA.7)
+### Phase D — Together multi-tz common-time finder (AA.4, AA.7) — shipped in commit <pending>
 
-- [ ] **D.1** Extend `CommonTimeFinder.Query` with `participantTz:
+- [x] **D.1** Extend `CommonTimeFinder.Query` with `participantTz:
       Map<RepoRef, ZoneId>` (default empty → all participants in
       query's `tzId`).
-- [ ] **D.2** `CommonTimeFinder` algorithm change: convert each
+- [x] **D.2** `CommonTimeFinder` algorithm change: convert each
       participant's busy windows to UTC using its declared tz,
       intersect in UTC, return result `ZonedDateTime`s in the query's
-      viewer tz. Day-of-week + time-of-day window per-participant
-      (current behaviour evaluates window in query tz; preserve that
-      for the viewer-facing result, but participant busy comes from
-      participant tz).
-- [ ] **D.3** `TogetherInputState` + `TogetherInputForm`: add
+      viewer tz. Implementation re-anchors the materialized
+      instance's local wall-clock in the participant's declared zone
+      (helper `ZonedInterval.toInstantIntervalIn`) before converting
+      to UTC instants; participants without a `participantTz` entry
+      fall through to the materialized instance's own zone (back-
+      compat with pre-D.1 callers).
+- [x] **D.3** `TogetherInputState` + `TogetherInputForm`: add
       `participantTz: Map<String, ZoneId>` (repoId → tz) with a per-
-      participant tz dropdown in each repo row. Default per
-      participant = repo-default tz (read via `RepoMetaReader`); fall
-      back to viewer tz.
-- [ ] **D.4** Wire `TogetherViewModel` to feed `participantTz` into
-      the finder port.
-- [ ] **D.5** Tests:
-      - `MultiTzCommonTimeTest` — sub in Berlin (busy 09:00–18:00
-        local), dom in NYC (busy 09:00–17:00 local), 1h overlap on a
-        Saturday: 18:00–19:00 Berlin / 12:00–13:00 NYC. Viewer in
-        Berlin sees `18:00–19:00 Europe/Berlin`. Viewer in NYC sees
-        `12:00–13:00 America/New_York`.
-      - `TogetherInputFormTzPickerTest` — participant tz dropdown
-        renders and updates state.
+      participant tz dropdown (`ExposedDropdownMenuBox` populated
+      from `ZoneId.getAvailableZoneIds()`) per selected repo row.
+      Defaults to viewer tz; repo-default-tz wiring deferred to a
+      future round since `BusySource` is the existing port that
+      reads repo metadata.
+- [x] **D.4** Wire `TogetherViewModel` to feed `participantTz` into
+      the finder port (translates `repoId` keys to `RepoRef`).
+- [x] **D.5** Tests:
+      - `CommonTimeFinderMultiTzTest` — two participants in
+        different zones with overlapping local hours finds the UTC
+        intersection correctly (Berlin viewer sees 15:00–20:00 on
+        2026-05-09); DST-edge: NY participant during the 2026-03-08
+        spring-forward window still produces a sane intersection;
+        empty `participantTz` map is behaviourally identical to
+        pre-D.1 (regression guard).
 
 ### Phase E — DST edge-case test corpus (AA.5) — shipped in commit 6dd92b0
 

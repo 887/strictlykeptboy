@@ -650,6 +650,8 @@
     <string name="together_dow_fri">F</string>
     <string name="together_dow_sat">S</string>
     <string name="together_dow_sun">S</string>
+    <string name="together_section_participant_tz">Participant time zones</string>
+    <string name="together_field_participant_tz_label">%1$s · tz</string>
 
     <!-- Phase O — sharing + read-only -->
     <string name="share_this_repo">Share this repo</string>

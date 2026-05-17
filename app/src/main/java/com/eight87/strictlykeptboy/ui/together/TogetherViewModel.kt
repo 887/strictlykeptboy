@@ -61,6 +61,11 @@ class TogetherViewModel(
             val participants = busy.keys.toList().ifEmpty {
                 state.selectedRepoIds.map { RepoRef(it) }
             }
+            // Round 2.24 / D.4 — translate the form's repoId-keyed
+            // participantTz map into a RepoRef-keyed map for the
+            // finder. Empty map ⇒ pre-D.1 behaviour (back-compat).
+            val participantTzByRef = state.participantTz
+                .mapKeys { (repoId, _) -> RepoRef(repoId) }
             val slots = finder.find(
                 CommonTimeFinder.Query(
                     participants = participants,
@@ -73,6 +78,7 @@ class TogetherViewModel(
                         toExclusive = state.timeTo,
                     ),
                     tzId = state.tzId,
+                    participantTz = participantTzByRef,
                 ),
             )
             _result.value = if (slots.isEmpty()) TogetherResultState.Empty

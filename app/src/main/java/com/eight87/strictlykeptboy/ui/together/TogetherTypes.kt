@@ -54,6 +54,14 @@ data class TogetherInputState(
     val timeFrom: LocalTime = LocalTime.of(9, 0),
     val timeTo: LocalTime = LocalTime.of(22, 0),
     val tzId: ZoneId = ZoneId.systemDefault(),
+    /**
+     * Round 2.24 / D-2.24.e + AA.7 — per-participant source tz.
+     * Keyed by `repoId` (matching [selectedRepoIds]). Absent entries
+     * fall back to the viewer [tzId] at submit-time. Empty map ⇒
+     * pre-Round-2.24 behaviour preserved exactly. UI surfaces a
+     * dropdown per selected participant row in [TogetherInputForm].
+     */
+    val participantTz: Map<String, ZoneId> = emptyMap(),
 ) {
     val isSubmittable: Boolean
         get() = selectedRepoIds.isNotEmpty() &&
