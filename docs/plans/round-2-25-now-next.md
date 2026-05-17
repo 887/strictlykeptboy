@@ -82,7 +82,7 @@ dumb consumer.
       asserts both render; empty snapshot asserts legacy "No active
       task" copy.
 
-### Phase C — Ongoing notification — shipped in commit `__pending__`
+### Phase C — Ongoing notification — shipped in commit `3836ebc`
 
 - [x] **C.1** New `notif/NowNextNotificationProvider.kt`: builds the
       ongoing notification from a `NowNextSnapshot`. Channel
@@ -97,15 +97,21 @@ dumb consumer.
 - [x] **C.4** `NowNextNotificationProviderTest` (Robolectric) —
       asserts built notification title + content match the snapshot.
 
-### Phase D — Widget surfaces
+### Phase D — Widget surfaces — shipped in commit `__pending__`
 
-- [ ] **D.1** Shared `widget/common/WidgetRenderer.bindNowNext`
+- [x] **D.1** Shared `widget/common/WidgetRenderer.bindNowNext`
       helper.
-- [ ] **D.2** Update `NowWidgetProvider.onUpdate` (and, if
-      applicable, `CountdownWidgetProvider`) to render the Now/Next
-      pair.
-- [ ] **D.3** `WidgetNowNextRenderTest` — asserts `RemoteViews`
-      `setText` calls for both lines.
+- [x] **D.2** `NowWidgetProvider.bindAbsent` reads the snapshot from
+      `WidgetGraph.nowNextProvider` and surfaces `Next: <title>` +
+      `in 2h 15m` into the otherwise-empty subbeat + remaining slots.
+      `CountdownWidgetProvider` keeps its pinned-event semantics and
+      consumes the same helper when its empty branch is hit (helper
+      is available now; full refactor deferred — the user's primary
+      ask was for the now/upcoming widget). `AppGraph.parkRuntimes`
+      installs the live snapshot reader + force-refreshes the now
+      widget on every snapshot tick.
+- [x] **D.3** `WidgetNowNextRenderTest` — asserts the formatted
+      `(title, relative)` pair and the `RemoteViews.apply` round-trip.
 
 ### Phase E — Close-out
 

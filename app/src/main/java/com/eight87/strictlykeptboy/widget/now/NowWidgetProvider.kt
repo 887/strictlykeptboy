@@ -168,9 +168,19 @@ class NowWidgetProvider : AppWidgetProvider() {
     ) {
         stickers.renderBatFallback()?.let { views.setImageViewBitmap(R.id.widget_sticker, it) }
         views.setTextViewText(R.id.widget_title, context.getString(R.string.widget_now_empty_good_boy))
+        // Round 2.25 Phase D — surface the Now/Next snapshot's `next`
+        // in the otherwise-empty subbeat + remaining slots so the
+        // widget answers "what's next?" the same way the bottom bar
+        // does (D-2.25.e). Falls back to empty strings when there's
+        // no upcoming event.
         if (size != WidgetLayoutSize.Size2x1) {
-            views.setTextViewText(R.id.widget_remaining, "")
-            views.setTextViewText(R.id.widget_subbeat, "")
+            val snap = WidgetGraph.get(context).nowNextProvider()
+            com.eight87.strictlykeptboy.widget.common.WidgetRenderer.bindNowNext(
+                views = views,
+                snapshot = snap,
+                titleViewId = R.id.widget_subbeat,
+                relativeViewId = R.id.widget_remaining,
+            )
         }
         if (size == WidgetLayoutSize.Size4x4) {
             views.setTextViewText(R.id.widget_upcoming_1, "")

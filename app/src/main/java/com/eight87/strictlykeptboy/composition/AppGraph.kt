@@ -855,6 +855,18 @@ class AppGraph(private val appContext: Context) {
             }
         }
 
+        // Round 2.25 Phase D — install the Now/Next provider into the
+        // WidgetGraph singleton + ask both widget providers to refresh
+        // on every snapshot change. The provider closure reads the
+        // StateFlow value, so the snapshot stays fresh without holding
+        // a strong reference in the widget process.
+        com.eight87.strictlykeptboy.widget.WidgetGraph.installNowNextProvider { nowNextFlow.value }
+        appScope.launch {
+            nowNextFlow.collect {
+                runCatching { com.eight87.strictlykeptboy.widget.now.NowWidgetProvider.forceRefresh(appContext) }
+            }
+        }
+
         // Round 2.25 Phase C — re-post the ongoing Now/Next notification
         // on every snapshot tick (indexer pulse + 60s relative-time
         // refresh per D-2.25.d / D-2.25.f). `setOnlyAlertOnce(true)`

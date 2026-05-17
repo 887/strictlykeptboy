@@ -7,6 +7,7 @@ import com.eight87.strictlykeptboy.avatar.PackId
 import com.eight87.strictlykeptboy.avatar.PackStore
 import com.eight87.strictlykeptboy.avatar.StickerBitmapCache
 import com.eight87.strictlykeptboy.avatar.StickerResolver
+import com.eight87.strictlykeptboy.resolver.NowNextSnapshot
 import com.eight87.strictlykeptboy.widget.common.ActiveEvent
 import com.eight87.strictlykeptboy.widget.common.ActiveEventSource
 import com.eight87.strictlykeptboy.widget.common.PinnedEvent
@@ -28,6 +29,15 @@ class WidgetGraph private constructor(
     val stickerRenderer: WidgetStickerRenderer,
     val activeSpecies: () -> String,
     val neutralMode: () -> Boolean,
+    /**
+     * Round 2.25 Phase D — synchronous read of the latest Now/Next
+     * snapshot. Widget providers use this to bind a `Next: <title>
+     * · in 2h 15m` line in their (4x2 / 4x4) layouts (D-2.25.e).
+     * Default returns [NowNextSnapshot.Empty] so the widget renders
+     * its legacy empty / present state when AppGraph hasn't wired a
+     * live source yet (previews + first launch).
+     */
+    val nowNextProvider: () -> NowNextSnapshot = { NowNextSnapshot.Empty },
 ) {
 
     companion object {
@@ -44,6 +54,27 @@ class WidgetGraph private constructor(
             synchronized(this) { instance = graph }
         }
 
+        /**
+         * Round 2.25 Phase D — replace the default no-op provider with
+         * a live reader. Idempotent; AppGraph.parkRuntimes calls this
+         * once at process start. Safe under any pre-existing instance:
+         * we copy the current instance's other fields, swap the
+         * provider, and re-install.
+         */
+        fun installNowNextProvider(provider: () -> NowNextSnapshot) {
+            synchronized(this) {
+                val existing = instance
+                instance = if (existing == null) null else WidgetGraph(
+                    pinnedEventSource = existing.pinnedEventSource,
+                    activeEventSource = existing.activeEventSource,
+                    stickerRenderer = existing.stickerRenderer,
+                    activeSpecies = existing.activeSpecies,
+                    neutralMode = existing.neutralMode,
+                    nowNextProvider = provider,
+                )
+            }
+        }
+
         fun resetForTest() {
             synchronized(this) { instance = null }
         }
@@ -54,8 +85,10 @@ class WidgetGraph private constructor(
             stickerRenderer: WidgetStickerRenderer,
             activeSpecies: () -> String = { "bat" },
             neutralMode: () -> Boolean = { false },
+            nowNextProvider: () -> NowNextSnapshot = { NowNextSnapshot.Empty },
         ): WidgetGraph = WidgetGraph(
             pinnedEventSource, activeEventSource, stickerRenderer, activeSpecies, neutralMode,
+            nowNextProvider,
         )
 
         private fun createDefault(appContext: Context): WidgetGraph {
