@@ -47,7 +47,7 @@
   `routines/recurrences/morning-cage-check.md` (medical tone) and
   `kinky-rituals/recurrences/cage-off-check.md` (replaced by photo prompt).
 
-## Phase A — Schema + codec extension — shipped in commit <pending>
+## Phase A — Schema + codec extension — shipped in commit 48ad3f5
 
 - [x] **A.1** Add `requiresResponse: Boolean = false`,
       `promptKind: PromptKind?`, `promptTarget: PromptTarget?` to the
