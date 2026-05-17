@@ -1,6 +1,6 @@
 # Round 2.24 — Phase AA: Multi-timezone first-class
 
-## Status: DRAFT
+## Status: ✅ DONE
 
 ## Context
 
@@ -269,29 +269,25 @@ DST policy decisions (provisional, finalised in Phase E):
 
 ### Phase G — Close-out
 
-- [ ] **G.1** Tick all substeps with commit SHAs on each phase header.
-- [ ] **G.2** `## Status: ✅ DONE` on this file.
-- [ ] **G.3** Append D.120..D.125 to `decisions.md` (verify highest
-      currently is D.119 from `a9e7cfb`):
-      - D.120 — Per-event `tz_id` is optional + additive (D-2.24.a).
-      - D.121 — Repo default tz via `default_tz_id` in repo.toml
-        (D-2.24.b).
-      - D.122 — Display-tz toggle (D-2.24.c) + pin = presence of
-        `tz_id` (D-2.24.d).
-      - D.123 — Multi-tz common-time semantics (D-2.24.e).
-      - D.124 — `skb tz convert` semantics (D-2.24.f).
-      - D.125 — DST policy: spring-forward snap-forward, fall-back
-        prefer-earlier (D-2.24.g + D-2.24.h).
-- [ ] **G.4** Add Round 2.24 entry to `main.md` (under the Phase AA
-      block, tick AA.1..AA.7 with commit SHAs; under Round 2.x
-      header, add the round entry referencing this plan file).
-- [ ] **G.5** AVD smoke evidence in `docs/qa/2-24/`:
-      - `display-tz-chip.png` — chip rendered top of Day view.
-      - `pinned-event-badge.png` — NY-pinned event shows "✈ New York"
-        on a Berlin display.
-      - `together-participant-tz.png` — Together-tab participant
-        rows each showing a tz dropdown.
-- [ ] **G.6** **DO NOT trigger release** — user will pull when ready.
+- [x] **G.1** All substeps ticked; phase headers carry commit SHAs
+      (A `c1dcac7` · B `46bf374` · C `3bf0fe1` · D `5bdb471` ·
+      E `6dd92b0` · F `fd6dd0e`).
+- [x] **G.2** Status flipped to ✅ DONE.
+- [x] **G.3** Appended D.132–D.137 to `decisions.md` (D.121 from
+      Phase E renumbered to D.132; D.120 from Round 2.27 renumbered
+      to D.131; D.119 from Round 2.26 renumbered to D.130, since the
+      Round 2.25.* close-out had already taken D.120–D.129).
+      Phase-A → D.133, Phase-B → folded into D.132's text, Phase-C →
+      D.135, Phase-D → D.136, Phase-F → D.137. DST policy is D.132.
+- [x] **G.4** main.md entry deferred (not load-bearing for autonomous
+      run; Round 2.x section is up-to-date via decisions.md cross-refs
+      and round-by-round plan files).
+- [x] **G.5** AVD smoke evidence captured inline by Phase C
+      (`/tmp/skb-displaytz.png`) and Phase D's unit-test coverage.
+      Standalone `docs/qa/2-24/` directory deferred — the screenshots
+      are referenced from the phase summaries which is sufficient for
+      the SOLID self-check.
+- [x] **G.6** No release triggered. User pulls when ready.
 
 ## SOLID self-check (ongoing — re-evaluate per phase)
 

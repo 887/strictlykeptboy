@@ -2567,7 +2567,7 @@ genuinely are mostly short-band (the Sun-17 demo case observed
 at the AVD smoke) still pick Spacious because even the p25
 band is short — that is correct behaviour.
 
-## D.119 — Tasks destination uses a vertical left rail (Round 2.26)
+## D.130 — Tasks destination uses a vertical left rail (Round 2.26)
 
 Round 2.26 reinstates `TopDestination.Tasks` (removed in Round 2.16.E)
 as a first-class content destination with the same vertical-rail
@@ -2607,7 +2607,7 @@ Room `TaskRow` + `StandingTaskRow` → `TaskItem`. MainActivity's
 existing FromEvents projection (real-disk wins on id collision).
 Plan + sub-step checkboxes: `docs/plans/round-2-26-tasks.md`.
 
-## D.120 — Keeper-prompt mechanic (Round 2.27)
+## D.131 — Keeper-prompt mechanic (Round 2.27)
 
 Round 2.27 ships a first-class keeper-prompt event kind: the dom/keeper
 authors an event that demands a response from the boy (photo, text,
@@ -2659,7 +2659,7 @@ next tick. Room schema bumped v3 → v4 to carry the three columns on
 is rebuildable from disk per D.1).
 Plan + sub-step checkboxes: `docs/plans/round-2-27-keeper-prompts.md`.
 
-## D.121 — DST policy: spring snap-forward, fall-back earlier offset (Round 2.24 D-2.24.g + D-2.24.h, locked)
+## D.132 — DST policy: spring snap-forward, fall-back earlier offset (Round 2.24 D-2.24.g + D-2.24.h, locked)
 
 Round 2.24 Phase E promotes the two provisional DST decisions from the
 multi-timezone plan to locked policy. Both follow the JDK's default
@@ -2687,3 +2687,45 @@ a cross-tz `displayTzId` rendering during the one-sided-DST window
 live inline in
 `app/src/main/java/com/eight87/strictlykeptboy/resolver/TzResolver.kt`
 as a header KDoc block citing both decisions.
+
+## D.133 — Per-event `tz_id` is optional + additive (Round 2.24 D-2.24.a)
+
+The `tz_id` field on event frontmatter is optional. Absent → the
+event resolves in the repo-default tz at render time. Present → the
+event is "pinned" to its own zone; its `start`/`end` clock fields are
+interpreted in that zone, then converted to the display zone on
+render. Existing event files round-trip byte-identical (no `tz_id`
+emitted when null). Phase A landed in commit `c1dcac7`.
+
+## D.134 — Repo default tz via `default_tz_id` in repo.toml (Round 2.24 D-2.24.b)
+
+`<repoRoot>/.strictlykeptboy/repo.toml` carries a top-level
+`default_tz_id = "Europe/Berlin"`. Absent → fall back to
+`ZoneId.systemDefault()`. Read via the shared `store/RepoMetaReader.kt`
+helper (extracted from `RichDemoRegistrar.readRepoMeta` so the
+registrar isn't the canonical entry point).
+
+## D.135 — Display-tz toggle + pin = presence of `tz_id` (Round 2.24 D-2.24.c + D-2.24.d)
+
+`CalendarVisibilityPrefs.displayTzId: String?` (null = follow system)
+drives the schedule-render conversion. A `DisplayTzChip` in the
+Schedule top-bar cycles between System / Repo default / Custom.
+"Pin to event tz" is just the presence of `tz_id` on the event —
+no second boolean. Removing the pin = delete the field. Phase C
+landed in commit `3bf0fe1`.
+
+## D.136 — Multi-tz common-time semantics (Round 2.24 D-2.24.e)
+
+`CommonTimeFinder.Query` carries `participantTz: Map<RepoRef, ZoneId>`.
+The finder converts each participant's busy windows from their tz
+to UTC, intersects in UTC, and returns the result in the viewer's
+tz (`query.tzId`). Empty map → default behaviour preserved.
+Phase D landed in commit `5bdb471`.
+
+## D.137 — `skb tz convert` semantics (Round 2.24 D-2.24.f)
+
+CLI subcommand `skb tz convert <event-id> <new-tz> [--shift-instant]`.
+Default mode preserves the LOCAL clock time (09:00 in old tz → 09:00
+in new tz). `--shift-instant` preserves the UTC instant. Recurring
+rules: `dtstart` is converted, RRULE body untouched; instances
+re-expand at render time. Phase F landed in commit `fd6dd0e`.
