@@ -1,5 +1,7 @@
 package com.eight87.strictlykeptboy.ui.share
 
+import com.eight87.strictlykeptboy.share.ShareLink
+import com.eight87.strictlykeptboy.share.ShareMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
