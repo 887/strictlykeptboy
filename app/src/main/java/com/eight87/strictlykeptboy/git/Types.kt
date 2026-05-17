@@ -1,6 +1,12 @@
 package com.eight87.strictlykeptboy.git
 
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 import org.eclipse.jgit.lib.ObjectId
 
 /**
@@ -37,10 +43,68 @@ enum class Transport { Ssh, HttpsOAuth, HttpsPat, HttpsPublic, File }
 enum class PushPolicy { Push, PushLazy, Never }
 
 /**
- * Per-remote auth method discriminator. Concrete credentials are looked up
- * by `(repoId, remoteName)` from SecretsStore (Phase ZZ.C).
+ * Per-remote auth method discriminator. Promoted from an enum to a sealed
+ * interface in the 2026-05-17 SOLID audit (#17 Liskov / OCP): per-variant
+ * dispatch in `git/auth/CredentialBindings.kt` is now exhaustive `when`, the
+ * soft `error("non-OAuth … reached forOAuth")` dead branch is gone, and the
+ * SSH `NotImplementedError` is narrowed to `is AuthMethod.Ssh`.
+ *
+ * Wire format unchanged: each variant declares its legacy enum-name as its
+ * [SerialName], so JSON-encoded `RepoConfig` blobs on disk continue to
+ * parse round-trip (`"Ssh" | "OAuthGitHub" | "OAuthForgejo" | "ManualPat" |
+ * "None"`). Concrete credentials are still looked up by
+ * `(repoId, remoteName)` from SecretsStore (Phase ZZ.C); the data objects
+ * are pure discriminators today, with room to grow per-variant config
+ * (e.g. SSH key paths) later without breaking the wire.
  */
-enum class AuthMethod { Ssh, OAuthGitHub, OAuthForgejo, ManualPat, None }
+@Serializable(with = AuthMethodSerializer::class)
+sealed interface AuthMethod {
+    data object Ssh : AuthMethod
+    data object OAuthGitHub : AuthMethod
+    data object OAuthForgejo : AuthMethod
+    data object ManualPat : AuthMethod
+    data object None : AuthMethod
+
+    /** Legacy enum-name string used as JSON wire value + toString. */
+    val wireValue: String
+        get() = when (this) {
+            Ssh -> "Ssh"
+            OAuthGitHub -> "OAuthGitHub"
+            OAuthForgejo -> "OAuthForgejo"
+            ManualPat -> "ManualPat"
+            None -> "None"
+        }
+
+    companion object {
+        /** Map a legacy wire-format string to its [AuthMethod] variant. */
+        fun fromWire(value: String): AuthMethod = when (value) {
+            "Ssh" -> Ssh
+            "OAuthGitHub" -> OAuthGitHub
+            "OAuthForgejo" -> OAuthForgejo
+            "ManualPat" -> ManualPat
+            "None" -> None
+            else -> error("unknown AuthMethod wire value '$value'")
+        }
+    }
+}
+
+/**
+ * Bare-string serializer for [AuthMethod]. Preserves byte-for-byte JSON
+ * compatibility with the pre-sealed enum representation
+ * (`"authMethod": "OAuthGitHub"` rather than the polymorphic
+ * `{"type": "OAuthGitHub"}` default).
+ */
+internal object AuthMethodSerializer : KSerializer<AuthMethod> {
+    override val descriptor: SerialDescriptor =
+        PrimitiveSerialDescriptor("com.eight87.strictlykeptboy.git.AuthMethod", PrimitiveKind.STRING)
+
+    override fun serialize(encoder: Encoder, value: AuthMethod) {
+        encoder.encodeString(value.wireValue)
+    }
+
+    override fun deserialize(decoder: Decoder): AuthMethod =
+        AuthMethod.fromWire(decoder.decodeString())
+}
 
 /**
  * One configured remote on a repo. A repo may have zero, one, or many.

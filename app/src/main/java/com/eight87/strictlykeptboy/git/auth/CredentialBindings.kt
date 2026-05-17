@@ -18,12 +18,25 @@ import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
  */
 object CredentialBindings {
 
-    fun forOAuth(repoId: String, remote: RemoteBinding, secrets: SecretsStore): CredentialBinding {
-        val username = when (remote.authMethod) {
-            AuthMethod.OAuthGitHub -> GitHubAuth.GIT_USERNAME
-            AuthMethod.OAuthForgejo -> ForgejoAuth.GIT_USERNAME
-            else -> error("non-OAuth auth method ${remote.authMethod} reached forOAuth")
-        }
+    fun forOAuthGitHub(repoId: String, remote: RemoteBinding, secrets: SecretsStore): CredentialBinding =
+        forOAuth(repoId, remote, secrets, GitHubAuth.GIT_USERNAME)
+
+    fun forOAuthForgejo(repoId: String, remote: RemoteBinding, secrets: SecretsStore): CredentialBinding =
+        forOAuth(repoId, remote, secrets, ForgejoAuth.GIT_USERNAME)
+
+    /**
+     * Internal OAuth binding factory. The username is supplied by the
+     * per-variant entry points above — there is no longer a `when` chain
+     * (and no `error("non-OAuth … reached forOAuth")` dead branch); the
+     * sealed-type dispatch in [ProductionCredentialResolver] picks the
+     * right factory per variant.
+     */
+    private fun forOAuth(
+        repoId: String,
+        remote: RemoteBinding,
+        secrets: SecretsStore,
+        username: String,
+    ): CredentialBinding {
         return CredentialBinding { command ->
             val token = secrets.getOAuthToken(repoId, remote.name)
                 ?: throw IllegalStateException(
@@ -78,8 +91,8 @@ class ProductionCredentialResolver(
 ) : CredentialResolver {
     override fun resolve(repoId: String, remote: RemoteBinding): CredentialBinding =
         when (remote.authMethod) {
-            AuthMethod.OAuthGitHub, AuthMethod.OAuthForgejo ->
-                CredentialBindings.forOAuth(repoId, remote, secrets)
+            AuthMethod.OAuthGitHub -> CredentialBindings.forOAuthGitHub(repoId, remote, secrets)
+            AuthMethod.OAuthForgejo -> CredentialBindings.forOAuthForgejo(repoId, remote, secrets)
             AuthMethod.ManualPat -> CredentialBindings.forPat(repoId, remote, secrets)
             AuthMethod.Ssh -> CredentialBindings.forSsh(repoId, remote, secrets)
             AuthMethod.None -> CredentialBinding.None
