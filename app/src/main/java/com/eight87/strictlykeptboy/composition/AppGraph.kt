@@ -767,7 +767,14 @@ class AppGraph(private val appContext: Context) {
             .asSequence()
             .filter { evt ->
                 val date = evt.start.toLocalDate()
-                !date.isBefore(today) && !date.isAfter(today)
+                // Round 2.27 / Phase D.3 — keeper-prompt events carry
+                // over from past dates until cleared (D-2.27.d). Other
+                // events stay strict same-day.
+                if (evt.requiresResponse) {
+                    !date.isAfter(today)
+                } else {
+                    !date.isBefore(today) && !date.isAfter(today)
+                }
             }
             .map { evt ->
                 MaterializedInstance(
@@ -782,6 +789,12 @@ class AppGraph(private val appContext: Context) {
                     body = evt.body,
                     emoji = evt.emoji,
                     isAllDay = evt.isAllDay,
+                    // Round 2.27 / Phase D.3 — propagate keeper-prompt
+                    // flags so FromEventsProjector can route the
+                    // instance through TaskSource.KeeperPrompt.
+                    requiresResponse = evt.requiresResponse,
+                    promptKind = evt.promptKind,
+                    promptTarget = evt.promptTarget,
                 )
             }
             .toList()

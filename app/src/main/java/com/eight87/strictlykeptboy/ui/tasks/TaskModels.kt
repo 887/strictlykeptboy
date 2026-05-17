@@ -3,6 +3,7 @@ package com.eight87.strictlykeptboy.ui.tasks
 import androidx.compose.runtime.Immutable
 import com.eight87.strictlykeptboy.resolver.DateRange
 import com.eight87.strictlykeptboy.resolver.HourRange
+import com.eight87.strictlykeptboy.store.PromptKind
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
@@ -113,6 +114,26 @@ data class TaskItem(
      * field today; a TOML-schema-adding round may replace this.)
      */
     val estimatedDurationMs: Long = 5L * 60_000L,
+    /**
+     * Round 2.27 / Phase C.1 — populated when [source] ==
+     * [TaskSource.KeeperPrompt]. Drives the leading prompt-kind glyph
+     * in [TaskRow] (📸 / 💬 / 🔒). Null on non-prompt rows; defaults to
+     * [PromptKind.CheckIn] semantics in the renderer when null but the
+     * row is a KeeperPrompt.
+     */
+    val promptKind: PromptKind? = null,
+    /**
+     * Round 2.27 / Phase C.3 — for KeeperPrompt rows, the calendar id
+     * the prompt belongs to (used by the host to resolve the response
+     * file path). Empty on non-prompt rows.
+     */
+    val promptCalendarId: String = "",
+    /**
+     * Round 2.27 / Phase C.3 — for KeeperPrompt rows, the rule/event id
+     * that identifies the prompt (mirrors the `<rule-id>` directory in
+     * `cage-check-responses/`). Empty on non-prompt rows.
+     */
+    val promptRuleId: String = "",
 ) {
     val isOverdue: Boolean get() = !done && due != null && due.isBefore(LocalDate.now())
 }

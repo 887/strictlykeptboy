@@ -10,7 +10,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -46,6 +48,20 @@ fun TasksPane(
     onTaskOpen: (TaskItem) -> Unit = {},
     onTaskLongPress: (TaskItem) -> Unit = {},
     onStartTask: ((String) -> Unit)? = null,
+    /**
+     * Round 2.27 / Phase D.3 — invoked when the user submits a keeper-
+     * prompt response via [PromptResponseSheet]. Receives the task plus
+     * the typed reply / attachment. The host translates this into a
+     * [com.eight87.strictlykeptboy.store.PromptResponseWriter.write]
+     * call on the right repo root.
+     */
+    onPromptRespond: ((TaskItem, String, String?) -> Unit)? = null,
+    /**
+     * Round 2.27 / Phase C.3 — invoked when the user long-presses a
+     * keeper-prompt row to mark it answered without typing a reply.
+     * Host writes a synthetic empty response file.
+     */
+    onPromptMarkAnsweredOffline: ((TaskItem) -> Unit)? = null,
 ) {
     Box(
         modifier = modifier
@@ -60,6 +76,8 @@ fun TasksPane(
             onTaskOpen = onTaskOpen,
             onTaskLongPress = onTaskLongPress,
             onStartTask = onStartTask,
+            onPromptRespond = onPromptRespond,
+            onPromptMarkAnsweredOffline = onPromptMarkAnsweredOffline,
         )
     }
 }
@@ -85,8 +103,13 @@ fun TasksDestinationBody(
     onTaskOpen: (TaskItem) -> Unit = {},
     onTaskLongPress: (TaskItem) -> Unit = {},
     onStartTask: ((String) -> Unit)? = null,
+    onPromptRespond: ((TaskItem, String, String?) -> Unit)? = null,
+    onPromptMarkAnsweredOffline: ((TaskItem) -> Unit)? = null,
 ) {
     val ui by tasksState.state.collectAsState()
+    // Round 2.27 / Phase D.3 — hoisted sheet target. When non-null, the
+    // PromptResponseSheet is rendered for this task; submit clears it.
+    var responseSheetTarget by remember { mutableStateOf<TaskItem?>(null) }
     // Round 2.26.B.3 — reactive merge of tasks + rendered schedule.
     val merged by remember(tasksState, scheduleFlow) {
         combine(tasksState.state, scheduleFlow) { tasksUi, sched ->
@@ -126,10 +149,19 @@ fun TasksDestinationBody(
                     onTaskToggleDone = { tasksState.toggleDone(it.id) },
                     onTaskOpen = onTaskOpen,
                     onTimeboxTap = onTimeboxTap,
-                    onTaskLongPress = onTaskLongPress,
+                    onTaskLongPress = { task ->
+                        if (task.source == TaskSource.KeeperPrompt) {
+                            onPromptMarkAnsweredOffline?.invoke(task)
+                        } else {
+                            onTaskLongPress(task)
+                        }
+                    },
                     multiRepo = tasksUi.multiRepo,
                     activeRepoOwner = tasksUi.activeRepoOwner,
                     onStartTask = onStartTask,
+                    onTaskRespond = if (onPromptRespond != null) {
+                        { task -> responseSheetTarget = task }
+                    } else null,
                     today = now.toLocalDate(),
                     now = now,
                 )
@@ -149,5 +181,19 @@ fun TasksDestinationBody(
                 }
             }
         }
+    }
+    // Round 2.27 / Phase D.3 — mount the response sheet at the Tasks
+    // destination root so it overlays the rail + content regardless of
+    // which filter is active.
+    val target = responseSheetTarget
+    if (target != null && onPromptRespond != null) {
+        PromptResponseSheet(
+            item = target,
+            onDismiss = { responseSheetTarget = null },
+            onSubmit = { body, attachment ->
+                onPromptRespond(target, body, attachment)
+                responseSheetTarget = null
+            },
+        )
     }
 }

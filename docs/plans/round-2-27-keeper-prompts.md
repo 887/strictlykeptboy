@@ -79,28 +79,48 @@
       projects today only; one-off with no response projects exactly
       one task; closed prompt projects zero.
 
-## Phase C — UI signaling for keeper-prompt rows
+## Phase C — UI signaling for keeper-prompt rows — shipped in commit <CD-HASH>
 
-- [ ] **C.1** Extend `TaskRow.kt`: when source == `KeeperPrompt`,
+- [x] **C.1** Extend `TaskRow.kt`: when source == `KeeperPrompt`,
       render prompt-kind glyph before title; render "Keeper" author chip
       right of title; tint 4dp accent strip with source-calendar color.
-- [ ] **C.2** Persistence pill: `daysOpen = ChronoUnit.DAYS.between(due,
-      today)`. When ≥1, render "open Nd" pill in `colorScheme.error`.
-- [ ] **C.3** Replace standard checkbox with "Respond" trailing button
-      when KeeperPrompt. Long-press = "mark answered offline" (writes
-      synthetic empty response file).
-- [ ] **C.4** Strings: `task_prompt_respond`, `task_prompt_keeper_chip`,
-      `task_prompt_open_days` (plurals).
+      Source-calendar tint deferred — accent painted with
+      `colorScheme.tertiary` for KeeperPrompts as a clear differentiator.
+      Also added `promptKind` / `promptCalendarId` / `promptRuleId`
+      fields to `TaskItem` and propagated them from
+      `MaterializedInstance` in `FromEventsProjector`.
+- [x] **C.2** Persistence pill: `daysOpen = ChronoUnit.DAYS.between(due,
+      today)`. When ≥1, render "open Nd" pill in `errorContainer`.
+- [x] **C.3** Replace standard checkbox with "Respond" trailing button
+      when KeeperPrompt. Long-press routed through new
+      `onPromptMarkAnsweredOffline` host callback that writes a
+      synthetic `(marked answered offline)` response file.
+- [x] **C.4** Strings: `task_prompt_respond`, `task_prompt_keeper_chip`,
+      `task_prompt_open_days` (plurals), + sheet labels
+      (`task_prompt_sheet_title`, `_reply_label`, `_attachment_label`,
+      `_cancel`, `_send`).
 
-## Phase D — Response mechanism
+## Phase D — Response mechanism — Phase D.1 + D.3 shipped in commit <CD-HASH>
 
-- [ ] **D.1** Add `PromptResponseSheet.kt` in `ui/tasks/`. OutlinedTextField
+- [x] **D.1** Add `PromptResponseSheet.kt` in `ui/tasks/`. OutlinedTextField
       reply + optional "Attach photo URI" row. Confirm writes the file.
 - [x] **D.2** Add `PromptResponseWriter.kt` in `store/`. Writes the
       D-2.27.g shape; JGit auto-commit via existing commit-hook plumbing.
       Shipped in commit a3ea234.
-- [ ] **D.3** Wire the sheet open trigger from `TaskRow`'s Respond button
-      via existing task detail-sheet host.
+- [x] **D.3** Wire the sheet open trigger from `TaskRow`'s Respond button
+      via existing task detail-sheet host. Hoisted `responseSheetTarget`
+      state in `TasksDestinationBody`; `MainActivity.writePromptResponse`
+      resolves the repo root, calls `PromptResponseWriter.write`, then
+      re-indexes the affected repo so the FromEventsProjector picks up
+      the new response file on the next tick. Also extended
+      `renderTodaySync` in `AppGraph` to carry `requiresResponse` past
+      events (D-2.27.d carry-over) + propagate prompt fields onto
+      `MaterializedInstance`. Added `requiresResponse` + `promptKindRaw`
+      + `promptTargetRaw` columns to `EventRow` / `RecurrenceRuleRow`
+      (Room v3 → v4, `fallbackToDestructiveMigration`) so the cache
+      → SourcesPublisher path carries the flags. Added a demo
+      `keeperPromptDemoTasks` set in `TasksDemoSeed` for AVD smoke
+      coverage while the full recurrence-expansion path catches up.
 - [x] **D.4** Unit test for the writer: round-trip through reader;
       idempotent on same-date overwrite. Shipped in commit a3ea234.
 

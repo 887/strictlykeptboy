@@ -44,6 +44,7 @@ fun TaskUnifiedTodayView(
     multiRepo: Boolean = false,
     activeRepoOwner: String = "",
     onStartTask: ((String) -> Unit)? = null,
+    onTaskRespond: ((TaskItem) -> Unit)? = null,
     today: LocalDate = LocalDate.now(),
     now: ZonedDateTime = ZonedDateTime.now(),
 ) {
@@ -104,6 +105,7 @@ fun TaskUnifiedTodayView(
                         multiRepo = multiRepo,
                         activeRepoOwner = activeRepoOwner,
                         onStartTask = onStartTask,
+                        onRespond = onTaskRespond,
                     )
                     is UnifiedTodayItem.TimeboxEntry -> TimeboxRow(
                         band = entry.band,

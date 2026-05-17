@@ -57,6 +57,9 @@ internal object EntityMapping {
         privateFlag = e.private,
         sourcePath = sourcePath,
         groupLabel = e.group,
+        requiresResponse = e.requiresResponse,
+        promptKindRaw = e.promptKind?.tomlValue,
+        promptTargetRaw = e.promptTarget?.tomlValue,
     )
 
     fun task(repoId: String, t: Task, sourcePath: String): TaskRow = TaskRow(
@@ -105,6 +108,9 @@ internal object EntityMapping {
             body = r.body,
             sourcePath = sourcePath,
             groupLabel = r.group,
+            requiresResponse = r.requiresResponse,
+            promptKindRaw = r.promptKind?.tomlValue,
+            promptTargetRaw = r.promptTarget?.tomlValue,
         )
 
     fun exception(repoId: String, x: StoreException, sourcePath: String): ExceptionRow =

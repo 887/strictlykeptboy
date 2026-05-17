@@ -66,6 +66,18 @@
     <string name="tasks_today_section_pinned">Pinned</string>
     <string name="tasks_standing_unpin">Unpin from today</string>
     <string name="tasks_standing_pin">Pin to today</string>
+    <!-- Round 2.27 / Phase C.4 — keeper-prompt row affordances. -->
+    <string name="task_prompt_respond">Respond</string>
+    <string name="task_prompt_keeper_chip">Keeper</string>
+    <string name="task_prompt_sheet_title">Respond to keeper</string>
+    <string name="task_prompt_sheet_reply_label">Your reply</string>
+    <string name="task_prompt_sheet_attachment_label">Attach photo URI</string>
+    <string name="task_prompt_sheet_cancel">Cancel</string>
+    <string name="task_prompt_sheet_send">Send</string>
+    <plurals name="task_prompt_open_days">
+        <item quantity="one">open %dd</item>
+        <item quantity="other">open %dd</item>
+    </plurals>
 
     <!-- App scaffold -->
     <string name="scaffold_placeholder_coming_soon">coming soon</string>

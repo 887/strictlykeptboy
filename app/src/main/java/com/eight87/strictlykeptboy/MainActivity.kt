@@ -865,6 +865,14 @@ class MainActivity : ComponentActivity() {
                             }
                             val withDemo = if (hasDemo) nonFromEvents
                             else nonFromEvents + demoSubstepped
+                            // Round 2.27 / Phase C — surface a demo
+                            // KeeperPrompt set so the AVD smoke-test
+                            // shows the glyph + chip + pill + Respond
+                            // affordances even when the Room → events
+                            // pipeline hasn't lit up yet.
+                            val demoPrompts =
+                                com.eight87.strictlykeptboy.ui.tasks.TasksDemoSeed.keeperPromptDemoTasks
+                            val withPrompts = withDemo + demoPrompts
                             // Round 2.26.F.1 — pull real disk-backed tasks
                             // from the Room cache for every repo flagged
                             // `drawTasksFrom`. Maps via TaskEntityMapping
@@ -908,12 +916,17 @@ class MainActivity : ComponentActivity() {
                             // De-dupe: real-disk wins over demo/FromEvents
                             // collisions by id.
                             val realIds = realTasks.mapTo(mutableSetOf()) { it.id }
-                            val mergedBase = realTasks + withDemo.filter { it.id !in realIds } +
+                            val mergedBase = realTasks + withPrompts.filter { it.id !in realIds } +
                                 fromEvents.filter { it.id !in realIds }
+                            // Round 2.27 / Phase C — ensure the demo
+                            // KeeperPrompt todolist id is considered
+                            // active so the rows are visible under
+                            // `visibleTasks()`.
+                            val idsWithDemo = ids + "demo-keeper"
                             tasksViewState.set(
                                 cur.copy(
                                     tasks = mergedBase,
-                                    activeTodolistIds = ids,
+                                    activeTodolistIds = idsWithDemo,
                                     multiRepo = repos.size > 1,
                                     activeRepoOwner = owner,
                                 ),
@@ -971,6 +984,35 @@ class MainActivity : ComponentActivity() {
                         // TaskRow → controller.start(taskId).
                         taskPlaybackSource = graph.taskTransport,
                         onStartTask = { taskId -> graph.activeTaskController.start(taskId) },
+                        // Round 2.27 / Phase D.3 — keeper-prompt response
+                        // submitter. Writes the response file via
+                        // PromptResponseWriter on the repo root resolved
+                        // from the task's repoId.
+                        onPromptRespond = { task, body, attachment ->
+                            scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                runCatching {
+                                    writePromptResponse(
+                                        task = task,
+                                        body = body,
+                                        attachment = attachment,
+                                    )
+                                }
+                            }
+                        },
+                        // Round 2.27 / Phase C.3 — long-press → synthetic
+                        // empty response so the row clears without the
+                        // sheet.
+                        onPromptMarkAnsweredOffline = { task ->
+                            scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                runCatching {
+                                    writePromptResponse(
+                                        task = task,
+                                        body = "(marked answered offline)",
+                                        attachment = null,
+                                    )
+                                }
+                            }
+                        },
                         nowNextFlow = graph.nowNextFlow,
                         activeRepoNameFlow = graph.defaultWriteRepoName,
                         activeIconKindFlow = graph.activeRepoIconKind,
@@ -1783,6 +1825,47 @@ class MainActivity : ComponentActivity() {
                     ).also(GitRepoRegistry::put)
                     indexer.fullScan(cfg.repoId, gitRepo)
                 }
+            }
+        }
+    }
+
+    /**
+     * Round 2.27 / Phase D.3 — writes a keeper-prompt response file via
+     * [com.eight87.strictlykeptboy.store.PromptResponseWriter]. Resolves
+     * the repo root from `task.todolist.repoId` and the responder id
+     * from the active repo's author identity. After the write lands,
+     * triggers an incremental rescan on the affected repo so the
+     * FromEventsProjector's response-reader picks up the new file on
+     * the next tick.
+     */
+    private suspend fun writePromptResponse(
+        task: com.eight87.strictlykeptboy.ui.tasks.TaskItem,
+        body: String,
+        attachment: String?,
+    ) {
+        if (task.promptCalendarId.isBlank() || task.promptRuleId.isBlank()) return
+        val graph = pendingAppGraph ?: return
+        val due = task.due ?: java.time.LocalDate.now()
+        val repos = graph.repoStore.list()
+        val cfg = repos.firstOrNull { it.repoId == task.todolist.repoId }
+            ?: return
+        val responderId = cfg.authorIdentity.name.ifBlank { "boy" }
+        com.eight87.strictlykeptboy.store.PromptResponseWriter.write(
+            repoRoot = java.nio.file.Paths.get(cfg.rootDir),
+            calId = task.promptCalendarId,
+            ruleId = task.promptRuleId,
+            instanceDate = due,
+            responderId = responderId,
+            body = body,
+            attachment = attachment,
+        )
+        // Re-index so the response file is visible to downstream readers
+        // on the next projector evaluation.
+        runCatching {
+            val gitRepo = com.eight87.strictlykeptboy.git.GitRepoRegistry.get(cfg.repoId)
+            if (gitRepo != null) {
+                com.eight87.strictlykeptboy.cache.Indexer(graph.cacheDatabase)
+                    .fullScan(cfg.repoId, gitRepo)
             }
         }
     }

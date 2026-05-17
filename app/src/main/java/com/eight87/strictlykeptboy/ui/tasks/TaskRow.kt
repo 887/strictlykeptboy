@@ -13,12 +13,20 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.eight87.strictlykeptboy.R
+import com.eight87.strictlykeptboy.store.PromptKind
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,6 +49,9 @@ const val TestTagTaskAuthor = "TaskAuthor"
 const val TestTagTaskRepoDot = "TaskRepoDot"
 const val TestTagTaskLinkedTimebox = "TaskLinkedTimebox"
 const val TestTagTaskStartButton = "TaskStartButton"
+const val TestTagTaskPromptKeeperChip = "TaskPromptKeeperChip"
+const val TestTagTaskPromptOpenPill = "TaskPromptOpenPill"
+const val TestTagTaskPromptRespond = "TaskPromptRespond"
 
 /**
  * UI-J row layout — 4dp left accent, checkbox, title, due chip, list chip.
@@ -83,9 +94,36 @@ fun TaskRow(
      * inside the expanded NowPlayingScreen sheet.
      */
     onStartTask: ((String) -> Unit)? = null,
+    /**
+     * Round 2.27 / Phase C.3 — only invoked when [TaskItem.source] ==
+     * [TaskSource.KeeperPrompt]. When non-null, replaces the leading
+     * Checkbox with a trailing "Respond" TextButton; tapping it asks
+     * the host to open the response sheet for this prompt.
+     */
+    onRespond: ((TaskItem) -> Unit)? = null,
 ) {
-    val accent = colorFromSeed(item.todolist.colorSeed.ifBlank { item.todolist.id })
+    val isPrompt = item.source == TaskSource.KeeperPrompt
+    val accent = if (isPrompt) {
+        // Round 2.27.C.1 — KeeperPrompt rows paint the accent strip with
+        // colorScheme.tertiary so they stand out from regular
+        // calendar-derived rows. Source-calendar tint is deferred —
+        // calendar.color isn't piped end-to-end into the prompt task
+        // yet.
+        MaterialTheme.colorScheme.tertiary
+    } else {
+        colorFromSeed(item.todolist.colorSeed.ifBlank { item.todolist.id })
+    }
     val dim = item.done
+    val promptGlyph: String? = if (isPrompt) {
+        when (item.promptKind) {
+            PromptKind.Photo -> "📸"
+            PromptKind.Text -> "💬"
+            PromptKind.CheckIn, null -> "🔒"
+        }
+    } else null
+    val daysOpen: Long = if (isPrompt && item.due != null) {
+        java.time.temporal.ChronoUnit.DAYS.between(item.due, today).coerceAtLeast(0)
+    } else 0L
 
     Surface(
         tonalElevation = 0.dp,
@@ -107,32 +145,79 @@ fun TaskRow(
                     .height(64.dp)
                     .background(accent),
             )
-            Checkbox(
-                checked = item.done,
-                onCheckedChange = { onToggleDone() },
-                modifier = Modifier
-                    .padding(start = 8.dp)
-                    .testTag("$TestTagTaskCheckbox-${item.id}"),
-            )
+            if (!isPrompt) {
+                Checkbox(
+                    checked = item.done,
+                    onCheckedChange = { onToggleDone() },
+                    modifier = Modifier
+                        .padding(start = 8.dp)
+                        .testTag("$TestTagTaskCheckbox-${item.id}"),
+                )
+            } else {
+                Spacer(Modifier.width(12.dp))
+            }
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .padding(vertical = 8.dp, horizontal = 4.dp),
             ) {
-                Text(
-                    text = item.title,
-                    style = MaterialTheme.typography.titleSmall.let {
-                        if (dim) it.copy(textDecoration = TextDecoration.LineThrough) else it
-                    },
-                    color = when {
-                        dim -> MaterialTheme.colorScheme.onSurfaceVariant
-                        item.isOverdue -> MaterialTheme.colorScheme.error
-                        else -> MaterialTheme.colorScheme.onSurface
-                    },
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.testTag("$TestTagTaskTitle-${item.id}"),
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = (promptGlyph?.plus(" ") ?: "") + item.title,
+                        style = MaterialTheme.typography.titleSmall.let {
+                            if (dim) it.copy(textDecoration = TextDecoration.LineThrough) else it
+                        },
+                        color = when {
+                            dim -> MaterialTheme.colorScheme.onSurfaceVariant
+                            item.isOverdue -> MaterialTheme.colorScheme.error
+                            else -> MaterialTheme.colorScheme.onSurface
+                        },
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .testTag("$TestTagTaskTitle-${item.id}"),
+                    )
+                    if (isPrompt) {
+                        Spacer(Modifier.width(6.dp))
+                        SuggestionChip(
+                            onClick = {},
+                            label = {
+                                Text(
+                                    text = stringResource(R.string.task_prompt_keeper_chip),
+                                    style = MaterialTheme.typography.labelSmall,
+                                )
+                            },
+                            modifier = Modifier.testTag("$TestTagTaskPromptKeeperChip-${item.id}"),
+                            colors = SuggestionChipDefaults.suggestionChipColors(
+                                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                                labelColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                            ),
+                        )
+                    }
+                    if (isPrompt && daysOpen >= 1) {
+                        Spacer(Modifier.width(6.dp))
+                        Box(
+                            modifier = Modifier
+                                .background(
+                                    color = MaterialTheme.colorScheme.errorContainer,
+                                    shape = RoundedCornerShape(8.dp),
+                                )
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                .testTag("$TestTagTaskPromptOpenPill-${item.id}"),
+                        ) {
+                            Text(
+                                text = pluralStringResource(
+                                    R.plurals.task_prompt_open_days,
+                                    daysOpen.toInt(),
+                                    daysOpen.toInt(),
+                                ),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                            )
+                        }
+                    }
+                }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (multiRepo) {
                         RepoDot(
@@ -186,7 +271,16 @@ fun TaskRow(
                 PriorityDot(level = item.priority)
                 Spacer(Modifier.width(8.dp))
             }
-            if (onStartTask != null && !item.done) {
+            if (isPrompt && onRespond != null) {
+                TextButton(
+                    onClick = { onRespond(item) },
+                    modifier = Modifier
+                        .padding(end = 4.dp)
+                        .testTag("$TestTagTaskPromptRespond-${item.id}"),
+                ) {
+                    Text(stringResource(R.string.task_prompt_respond))
+                }
+            } else if (onStartTask != null && !item.done) {
                 // Round 2.16.B — temp start affordance. Phase D removes
                 // this in favour of the expanded-sheet start flow.
                 IconButton(

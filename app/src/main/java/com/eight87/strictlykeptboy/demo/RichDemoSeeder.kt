@@ -143,6 +143,11 @@ class RichDemoSeeder(
         const val REPO_DIR_NAME = "rich-demo"
 
         /** Versioned idempotency key — bump to force re-seed after content updates. */
-        const val KEY_SEEDED = "pref_rich_demo_seeded_v1"
+        // Round 2.27 / Phase E + F — bumped to v2 to force re-seed of
+        // the Phase E keeper-prompt demo content (cage-photo-sunday,
+        // cage-feels-midweek, proof-photo one-offs, seeded response)
+        // and Phase F persona realism (gaming / voice-chat / play
+        // calendars, work-sprint tasks, convention exception).
+        const val KEY_SEEDED = "pref_rich_demo_seeded_v2"
     }
 }

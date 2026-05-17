@@ -110,6 +110,9 @@ object FromEventsProjector {
             author = inst.author?.id ?: "",
             linkedEventStart = start,
             linkedEventId = ruleOrEventId,
+            promptKind = if (isPrompt) inst.promptKind else null,
+            promptCalendarId = if (isPrompt) inst.calendar.id else "",
+            promptRuleId = if (isPrompt) ruleOrEventId else "",
         )
     }
 

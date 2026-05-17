@@ -42,6 +42,12 @@ data class EventRow(
     val sourcePath: String,
     /** Round 2.21.A.3 — atomic-event grouping label. */
     val groupLabel: String? = null,
+    /** Round 2.27 / D-2.27.a — keeper-prompt flag. */
+    val requiresResponse: Boolean = false,
+    /** Round 2.27 / D-2.27.a — prompt-kind TOML string (`photo` / `text` / `check-in`). */
+    val promptKindRaw: String? = null,
+    /** Round 2.27 / D-2.27.a — prompt-target TOML string (`keeper` / `self`). */
+    val promptTargetRaw: String? = null,
 )
 
 @Entity(tableName = "tasks", primaryKeys = ["repoId", "id"])
@@ -92,6 +98,12 @@ data class RecurrenceRuleRow(
     val sourcePath: String,
     /** Round 2.21.A.3 — atomic-event grouping label. */
     val groupLabel: String? = null,
+    /** Round 2.27 / D-2.27.a — keeper-prompt flag on the rule. */
+    val requiresResponse: Boolean = false,
+    /** Round 2.27 / D-2.27.a — prompt-kind TOML string. */
+    val promptKindRaw: String? = null,
+    /** Round 2.27 / D-2.27.a — prompt-target TOML string. */
+    val promptTargetRaw: String? = null,
 )
 
 @Entity(tableName = "exceptions", primaryKeys = ["repoId", "ruleId", "instanceDate"])

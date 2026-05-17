@@ -172,6 +172,9 @@ class SourcesPublisher(
             location = row.location,
             externalUid = row.externalUid,
             group = row.groupLabel,
+            requiresResponse = row.requiresResponse,
+            promptKind = com.eight87.strictlykeptboy.store.PromptKind.fromToml(row.promptKindRaw),
+            promptTarget = com.eight87.strictlykeptboy.store.PromptTarget.fromToml(row.promptTargetRaw),
         )
     }
 
@@ -192,6 +195,9 @@ class SourcesPublisher(
             emoji = row.emoji,
             body = row.body,
             group = row.groupLabel,
+            requiresResponse = row.requiresResponse,
+            promptKind = com.eight87.strictlykeptboy.store.PromptKind.fromToml(row.promptKindRaw),
+            promptTarget = com.eight87.strictlykeptboy.store.PromptTarget.fromToml(row.promptTargetRaw),
         )
     }
 

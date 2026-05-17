@@ -122,6 +122,67 @@ object TasksDemoSeed {
     /** Tasks-with-substeps demo set for Phase C AVD scenarios. */
     val substeppedDemoTasks: List<TaskItem> = listOf(groomingDemoTask, bedtimeDemoTask)
 
+    /**
+     * Round 2.27 / Phase C — demo KeeperPrompt rows for AVD smoke-testing
+     * the C.1..C.3 + D.1 + D.3 row-affordances. Wired into MainActivity's
+     * task-merge alongside [substeppedDemoTasks]. These are *display-
+     * only*: the host's response handler will short-circuit because the
+     * `promptCalendarId` / `promptRuleId` don't match any real repo, so
+     * tapping "Respond" + Send is a no-op write — but the sheet itself
+     * opens and dismisses correctly.
+     *
+     * TODO Phase G — remove once the full Room → events pipeline carries
+     * `requires_response` end-to-end (currently only one-off events on
+     * the live snapshot path do).
+     */
+    val keeperPromptDemoTasks: List<TaskItem>
+        get() {
+            val t = today
+            val keepers = TodolistInfo(
+                id = "demo-keeper",
+                repoId = "demo",
+                name = "Dom overlay",
+                emoji = "🔒",
+                colorSeed = "dom-overlay",
+                priority = 8,
+            )
+            return listOf(
+                TaskItem(
+                    id = "demo-prompt-photo-overdue",
+                    title = "send proof you're still caged",
+                    todolist = keepers,
+                    due = t.minusDays(2),
+                    source = TaskSource.KeeperPrompt,
+                    promptKind = com.eight87.strictlykeptboy.store.PromptKind.Photo,
+                    promptCalendarId = "demo-keeper",
+                    promptRuleId = "demo-prompt-photo-overdue",
+                    author = "Keeper",
+                ),
+                TaskItem(
+                    id = "demo-prompt-text-today",
+                    title = "how does the cage feel today",
+                    todolist = keepers,
+                    due = t,
+                    source = TaskSource.KeeperPrompt,
+                    promptKind = com.eight87.strictlykeptboy.store.PromptKind.Text,
+                    promptCalendarId = "demo-keeper",
+                    promptRuleId = "demo-prompt-text-today",
+                    author = "Keeper",
+                ),
+                TaskItem(
+                    id = "demo-prompt-photo-today",
+                    title = "sunday cage photo",
+                    todolist = keepers,
+                    due = t,
+                    source = TaskSource.KeeperPrompt,
+                    promptKind = com.eight87.strictlykeptboy.store.PromptKind.Photo,
+                    promptCalendarId = "demo-keeper",
+                    promptRuleId = "demo-prompt-photo-today",
+                    author = "Keeper",
+                ),
+            )
+        }
+
     fun materialize(req: TaskQuickAddRequest): TaskItem {
         val target = req.target
         val list = when (target) {

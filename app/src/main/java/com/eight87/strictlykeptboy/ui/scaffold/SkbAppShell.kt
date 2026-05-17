@@ -38,6 +38,7 @@ import com.eight87.strictlykeptboy.ui.schedule.SchedulePane
 import com.eight87.strictlykeptboy.ui.schedule.ScheduleViewState
 import com.eight87.strictlykeptboy.ui.settings.SettingsAccess
 import com.eight87.strictlykeptboy.ui.settings.SettingsPane
+import com.eight87.strictlykeptboy.ui.tasks.TaskItem
 import com.eight87.strictlykeptboy.ui.tasks.TaskQuickAddRequest
 import com.eight87.strictlykeptboy.ui.tasks.TasksFilter
 import com.eight87.strictlykeptboy.ui.tasks.TasksPane
@@ -215,6 +216,19 @@ fun SkbAppShell(
     nowNextFlow: kotlinx.coroutines.flow.StateFlow<
         com.eight87.strictlykeptboy.resolver.NowNextSnapshot
     >? = null,
+    /**
+     * Round 2.27 / Phase D.3 — keeper-prompt response submitter. The
+     * host translates `(task, body, attachment)` into a
+     * [com.eight87.strictlykeptboy.store.PromptResponseWriter.write]
+     * on the right repo root + calId + ruleId.
+     */
+    onPromptRespond: ((TaskItem, String, String?) -> Unit)? = null,
+    /**
+     * Round 2.27 / Phase C.3 — long-press handler for keeper-prompt
+     * rows: writes a synthetic "(marked answered offline)" response
+     * file so the row clears without opening the sheet.
+     */
+    onPromptMarkAnsweredOffline: ((TaskItem) -> Unit)? = null,
 ) {
     ProvideWindowSizeClass(modifier = modifier) { _ ->
         SkbAppShellContent(
@@ -249,6 +263,8 @@ fun SkbAppShell(
             onSingleDrop = onSingleDrop,
             onRecurringDrop = onRecurringDrop,
             nowNextFlow = nowNextFlow,
+            onPromptRespond = onPromptRespond,
+            onPromptMarkAnsweredOffline = onPromptMarkAnsweredOffline,
         )
     }
 }
@@ -293,6 +309,8 @@ private fun SkbAppShellContent(
     nowNextFlow: kotlinx.coroutines.flow.StateFlow<
         com.eight87.strictlykeptboy.resolver.NowNextSnapshot
     >? = null,
+    onPromptRespond: ((TaskItem, String, String?) -> Unit)? = null,
+    onPromptMarkAnsweredOffline: ((TaskItem) -> Unit)? = null,
 ) {
     var selected by rememberSaveable { mutableStateOf(TopDestination.Schedule) }
     // Phase 2.1.I.2 — observe wizard re-entry requests.
@@ -478,6 +496,8 @@ private fun SkbAppShellContent(
                         onSingleDrop = onSingleDrop,
                         onRecurringDrop = onRecurringDrop,
                         onOpenEventDetailFullScreen = { pendingEventDetail = it },
+                        onPromptRespond = onPromptRespond,
+                        onPromptMarkAnsweredOffline = onPromptMarkAnsweredOffline,
                     )
                     // Phase CCC — overlay the trip wizard above the active pane
                     // when open. Covers the full content area; back/cancel
@@ -599,6 +619,10 @@ private fun SkbAppDestinationContent(
     onRecurringDrop: ((com.eight87.strictlykeptboy.resolver.DayBand, java.time.OffsetDateTime, com.eight87.strictlykeptboy.ui.schedule.DragRescheduleController.RecurringChoice) -> Unit)? = null,
     /** Round 2.25 follow-up — host-owned full-screen event-detail opener. */
     onOpenEventDetailFullScreen: ((com.eight87.strictlykeptboy.resolver.DayBand) -> Unit)? = null,
+    /** Round 2.27 / Phase D.3 — keeper-prompt response submitter. */
+    onPromptRespond: ((TaskItem, String, String?) -> Unit)? = null,
+    /** Round 2.27 / Phase C.3 — keeper-prompt long-press → offline marker. */
+    onPromptMarkAnsweredOffline: ((TaskItem) -> Unit)? = null,
 ) {
     when (selected) {
         TopDestination.Schedule -> SchedulePane(
@@ -617,6 +641,8 @@ private fun SkbAppDestinationContent(
             filter = tasksFilter,
             tasksState = tasksState,
             scheduleFlow = scheduleState.rendered,
+            onPromptRespond = onPromptRespond,
+            onPromptMarkAnsweredOffline = onPromptMarkAnsweredOffline,
         )
         TopDestination.Together -> if (togetherViewModel != null) {
             TogetherPane(vm = togetherViewModel, neutralMode = neutralMode)
