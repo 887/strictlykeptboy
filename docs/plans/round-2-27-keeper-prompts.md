@@ -47,20 +47,20 @@
   `routines/recurrences/morning-cage-check.md` (medical tone) and
   `kinky-rituals/recurrences/cage-off-check.md` (replaced by photo prompt).
 
-## Phase A — Schema + codec extension
+## Phase A — Schema + codec extension — shipped in commit <pending>
 
-- [ ] **A.1** Add `requiresResponse: Boolean = false`,
+- [x] **A.1** Add `requiresResponse: Boolean = false`,
       `promptKind: PromptKind?`, `promptTarget: PromptTarget?` to the
       event model.
-- [ ] **A.2** Add enums `PromptKind { Photo, Text, CheckIn }` and
+- [x] **A.2** Add enums `PromptKind { Photo, Text, CheckIn }` and
       `PromptTarget { Keeper, Self }` with string `.label` for TOML.
-- [ ] **A.3** Extend `EventCodec` (encode + decode) to round-trip the
+- [x] **A.3** Extend `EventCodec` (encode + decode) to round-trip the
       three new fields. Optional on read; omit on write when default.
-- [ ] **A.4** Same in `RecurrenceCodec`.
-- [ ] **A.5** Propagate to `MaterializedInstance`; populate in
+- [x] **A.4** Same in `RecurrenceCodec`.
+- [x] **A.5** Propagate to `MaterializedInstance`; populate in
       `RecurrenceMaterializer.materialize()` from the rule, and in the
       one-off path from the event.
-- [ ] **A.6** Round-trip tests in codec tests: fields absent → defaults;
+- [x] **A.6** Round-trip tests in codec tests: fields absent → defaults;
       present → preserved; unknown enum → falls back gracefully.
 
 ## Phase B — Resolver + projector wiring

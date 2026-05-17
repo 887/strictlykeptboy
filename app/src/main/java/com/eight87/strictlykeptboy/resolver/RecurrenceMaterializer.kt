@@ -136,6 +136,9 @@ class RecurrenceMaterializer {
         author = event.author,
         external = event.external,
         group = event.group,
+        requiresResponse = event.requiresResponse,
+        promptKind = event.promptKind,
+        promptTarget = event.promptTarget,
     )
 
     private fun materializedFromRule(
@@ -162,6 +165,9 @@ class RecurrenceMaterializer {
         isBusy = rule.isBusy,
         author = rule.author,
         group = rule.group,
+        requiresResponse = rule.requiresResponse,
+        promptKind = rule.promptKind,
+        promptTarget = rule.promptTarget,
     )
 
     /**

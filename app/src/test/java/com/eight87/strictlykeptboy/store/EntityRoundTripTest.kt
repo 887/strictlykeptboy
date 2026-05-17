@@ -146,6 +146,115 @@ class EntityRoundTripTest {
         assertEquals(d, back)
     }
 
+    // --- Round 2.27.A.6 — keeper-prompt schema -------------------------------
+
+    @Test fun eventPromptFieldsAbsentDefaultToNonPrompt() {
+        // No prompt fields written; round-trip yields the documented defaults.
+        val e = Event(
+            header = header,
+            title = "Dentist",
+            start = "2026-05-12T14:00:00+02:00",
+            end = "2026-05-12T14:45:00+02:00",
+            calendarId = "0190a0aa-1c1d-7000-8a0a-000000000001",
+        )
+        val text = FrontmatterWriter.serialize(e.toDoc())
+        // Omit-on-default: the wire form must NOT contain the new keys.
+        assert(!text.contains("requires_response")) { "requires_response leaked into default-valued event: $text" }
+        assert(!text.contains("prompt_kind")) { "prompt_kind leaked into default-valued event: $text" }
+        assert(!text.contains("prompt_target")) { "prompt_target leaked into default-valued event: $text" }
+        val back = Event.fromDoc(FrontmatterReader.parse(text))
+        assertEquals(false, back.requiresResponse)
+        assertEquals(null, back.promptKind)
+        assertEquals(null, back.promptTarget)
+    }
+
+    @Test fun eventPromptFieldsPresentRoundTrip() {
+        val e = Event(
+            header = header,
+            title = "send proof you're still caged",
+            start = "2026-05-18T10:30:00+02:00",
+            end = "2026-05-18T10:35:00+02:00",
+            calendarId = "0190a0aa-1c1d-7000-8a0a-000000000001",
+            requiresResponse = true,
+            promptKind = PromptKind.Photo,
+            promptTarget = PromptTarget.Keeper,
+        )
+        val back = Event.fromDoc(FrontmatterReader.parse(FrontmatterWriter.serialize(e.toDoc())))
+        assertEquals(true, back.requiresResponse)
+        assertEquals(PromptKind.Photo, back.promptKind)
+        assertEquals(PromptTarget.Keeper, back.promptTarget)
+        assertEquals(e, back)
+    }
+
+    @Test fun recurrencePromptFieldsPresentRoundTrip() {
+        val r = RecurrenceRule(
+            header = header,
+            title = "send the keeper a cage photo",
+            dtstart = "2026-05-17T11:00:00",
+            duration = "PT5M",
+            tzId = "Europe/Berlin",
+            rrule = "FREQ=WEEKLY;BYDAY=SU",
+            calendarId = "0190a0aa-1c1d-7000-8a0a-000000000020",
+            requiresResponse = true,
+            promptKind = PromptKind.Photo,
+            promptTarget = PromptTarget.Keeper,
+        )
+        val back = RecurrenceRule.fromDoc(FrontmatterReader.parse(FrontmatterWriter.serialize(r.toDoc())))
+        assertEquals(true, back.requiresResponse)
+        assertEquals(PromptKind.Photo, back.promptKind)
+        assertEquals(PromptTarget.Keeper, back.promptTarget)
+        assertEquals(r, back)
+    }
+
+    @Test fun recurrencePromptFieldsAbsentDefaults() {
+        val r = RecurrenceRule(
+            header = header,
+            title = "Standup",
+            dtstart = "2026-01-05T09:30:00",
+            duration = "PT15M",
+            tzId = "Europe/Berlin",
+            rrule = "FREQ=WEEKLY;BYDAY=MO",
+            calendarId = "0190a0aa-1c1d-7000-8a0a-000000000010",
+        )
+        val text = FrontmatterWriter.serialize(r.toDoc())
+        assert(!text.contains("requires_response"))
+        assert(!text.contains("prompt_kind"))
+        assert(!text.contains("prompt_target"))
+        val back = RecurrenceRule.fromDoc(FrontmatterReader.parse(text))
+        assertEquals(false, back.requiresResponse)
+        assertEquals(null, back.promptKind)
+        assertEquals(null, back.promptTarget)
+    }
+
+    @Test fun promptEnumUnknownWireValuesFallBackGracefully() {
+        // Synthesize a frontmatter blob with garbage enum values — these
+        // are the kind of typos a user could leave in a hand-edited file.
+        // PromptKind.fromToml / PromptTarget.fromToml must NOT throw and
+        // must fall back to the most permissive defaults.
+        val raw = """
+            +++
+            schema_version = 1
+            id = "0190d4a0-7fab-7c50-9c1e-2b7a44f6f001"
+            kind = "event"
+            created_at = 2026-05-09T18:30:00+02:00
+            updated_at = 2026-05-09T18:30:00+02:00
+            author = "01900000-0000-7000-8000-aaaaaaaaaaaa"
+            title = "garbled prompt"
+            start = 2026-05-12T14:00:00+02:00
+            end = 2026-05-12T14:45:00+02:00
+            calendar_id = "0190a0aa-1c1d-7000-8a0a-000000000001"
+            requires_response = true
+            prompt_kind = "telegram"
+            prompt_target = "moon"
+            +++
+        """.trimIndent()
+        val parsed = FrontmatterReader.parse(raw)
+        val back = Event.fromDoc(parsed)
+        assertEquals(true, back.requiresResponse)
+        assertEquals(PromptKind.CheckIn, back.promptKind)
+        assertEquals(PromptTarget.Keeper, back.promptTarget)
+    }
+
     @Test fun identityRoundTrip() {
         val i = Identity(
             header = header.copy(author = header.id),

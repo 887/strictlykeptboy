@@ -107,6 +107,16 @@ data class Event(
      * name ("Morning routine", "Grooming"). `null` ⇒ ungrouped.
      */
     val group: String? = null,
+    /**
+     * Round 2.27 / D-2.27.a — when `true`, this event is a keeper-prompt
+     * and demands a response. Projected into the todolist via
+     * `FromEventsProjector` + `TaskSource.KeeperPrompt` (Phase B).
+     */
+    val requiresResponse: Boolean = false,
+    /** Round 2.27 / D-2.27.a — what response shape the prompt wants. `null` when [requiresResponse] is `false`. */
+    val promptKind: PromptKind? = null,
+    /** Round 2.27 / D-2.27.a — who the prompt is from. `null` when [requiresResponse] is `false`. */
+    val promptTarget: PromptTarget? = null,
     val body: String = "",
 ) : TypedEntity {
     override val schemaVersion: Int get() = header.schemaVersion
@@ -132,6 +142,12 @@ data class Event(
         t.putString("external_uid", externalUid)
         if (private) t.putBool("private", true)
         group?.takeIf { it.isNotBlank() }?.let { t.putString("group", it) }
+        // Round 2.27 / D-2.27.b — keeper-prompt schema. Omit on write
+        // when default-valued so re-saving a non-prompt event doesn't
+        // sprinkle empty fields into hand-authored files.
+        if (requiresResponse) t.putBool("requires_response", true)
+        promptKind?.let { t.putString("prompt_kind", it.tomlValue) }
+        promptTarget?.let { t.putString("prompt_target", it.tomlValue) }
         // Phase XX.8 / AT-H.3 — additive audit fields. Resolver ignores
         // them; they exist for `skb routine undo <materialized-at>` and
         // for surfacing "where did this event come from?" in the UI.
@@ -173,6 +189,9 @@ data class Event(
                 externalUid = t.getString("external_uid"),
                 private = t.getBool("private") ?: false,
                 group = t.getString("group")?.takeIf { it.isNotBlank() },
+                requiresResponse = t.getBool("requires_response") ?: false,
+                promptKind = PromptKind.fromToml(t.getString("prompt_kind")),
+                promptTarget = PromptTarget.fromToml(t.getString("prompt_target")),
                 materializedFrom = t.getString("materialized_from"),
                 materializedSourceEvent = t.getString("materialized_source_event"),
                 materializedAt = t.getString("materialized_at"),
@@ -222,6 +241,12 @@ data class RecurrenceRule(
     val inverted: Boolean = false,
     /** Round 2.21.A.3 — optional grouping label, see [Event.group]. */
     val group: String? = null,
+    /** Round 2.27 / D-2.27.a — recurring keeper-prompt; propagates to every materialized instance. */
+    val requiresResponse: Boolean = false,
+    /** Round 2.27 / D-2.27.a — see [Event.promptKind]. */
+    val promptKind: PromptKind? = null,
+    /** Round 2.27 / D-2.27.a — see [Event.promptTarget]. */
+    val promptTarget: PromptTarget? = null,
     val body: String = "",
 ) : TypedEntity {
     override val schemaVersion: Int get() = header.schemaVersion
@@ -248,6 +273,10 @@ data class RecurrenceRule(
         if (!active) t.putBool("active", false)
         if (inverted) t.putBool("inverted", true)
         group?.takeIf { it.isNotBlank() }?.let { t.putString("group", it) }
+        // Round 2.27 / D-2.27.b — keeper-prompt schema (same omit-on-default rule as Event).
+        if (requiresResponse) t.putBool("requires_response", true)
+        promptKind?.let { t.putString("prompt_kind", it.tomlValue) }
+        promptTarget?.let { t.putString("prompt_target", it.tomlValue) }
         return FrontmatterDoc(t, body)
     }
 
@@ -274,6 +303,9 @@ data class RecurrenceRule(
                 active = t.getBool("active") ?: true,
                 inverted = t.getBool("inverted") ?: false,
                 group = t.getString("group")?.takeIf { it.isNotBlank() },
+                requiresResponse = t.getBool("requires_response") ?: false,
+                promptKind = PromptKind.fromToml(t.getString("prompt_kind")),
+                promptTarget = PromptTarget.fromToml(t.getString("prompt_target")),
                 body = doc.body,
             )
         }

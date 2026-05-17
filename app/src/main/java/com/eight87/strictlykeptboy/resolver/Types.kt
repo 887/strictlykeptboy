@@ -219,6 +219,12 @@ data class EventInput(
     val external: ExternalSource? = null,
     /** Round 2.21.A.3 — see [com.eight87.strictlykeptboy.store.Event.group]. */
     val group: String? = null,
+    /** Round 2.27 / D-2.27.a — see [com.eight87.strictlykeptboy.store.Event.requiresResponse]. */
+    val requiresResponse: Boolean = false,
+    /** Round 2.27 / D-2.27.a — see [com.eight87.strictlykeptboy.store.Event.promptKind]. */
+    val promptKind: com.eight87.strictlykeptboy.store.PromptKind? = null,
+    /** Round 2.27 / D-2.27.a — see [com.eight87.strictlykeptboy.store.Event.promptTarget]. */
+    val promptTarget: com.eight87.strictlykeptboy.store.PromptTarget? = null,
 )
 
 /**
@@ -247,6 +253,12 @@ data class RecurrenceInput(
     val author: PersonRef? = null,
     /** Round 2.21.A.3 — see [com.eight87.strictlykeptboy.store.Event.group]. */
     val group: String? = null,
+    /** Round 2.27 / D-2.27.a — recurring keeper-prompt; propagates to every materialized instance. */
+    val requiresResponse: Boolean = false,
+    /** Round 2.27 / D-2.27.a — see [com.eight87.strictlykeptboy.store.Event.promptKind]. */
+    val promptKind: com.eight87.strictlykeptboy.store.PromptKind? = null,
+    /** Round 2.27 / D-2.27.a — see [com.eight87.strictlykeptboy.store.Event.promptTarget]. */
+    val promptTarget: com.eight87.strictlykeptboy.store.PromptTarget? = null,
 )
 
 /**
@@ -346,6 +358,12 @@ data class MaterializedInstance(
     val external: ExternalSource? = null,
     /** Round 2.21.A.3 — see [com.eight87.strictlykeptboy.store.Event.group]. */
     val group: String? = null,
+    /** Round 2.27 / D-2.27.a — see [com.eight87.strictlykeptboy.store.Event.requiresResponse]. */
+    val requiresResponse: Boolean = false,
+    /** Round 2.27 / D-2.27.a — see [com.eight87.strictlykeptboy.store.Event.promptKind]. */
+    val promptKind: com.eight87.strictlykeptboy.store.PromptKind? = null,
+    /** Round 2.27 / D-2.27.a — see [com.eight87.strictlykeptboy.store.Event.promptTarget]. */
+    val promptTarget: com.eight87.strictlykeptboy.store.PromptTarget? = null,
 ) {
     val effectiveInterval: ZonedInterval get() = ZonedInterval(effectiveStart, effectiveEnd)
     /** Stable per-render id usable as Compose key and as cache primary key. */
