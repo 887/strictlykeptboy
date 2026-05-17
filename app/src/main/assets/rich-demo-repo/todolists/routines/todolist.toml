@@ -1,0 +1,11 @@
+schema_version = 1
+id = "0190a0aa-2222-7000-8a0a-000000000007"
+kind = "todolist"
+name = "Routines"
+emoji = "🌀"
+color = "#bc6c25"
+priority = 200
+tz_id = "Europe/London"
+created_at = 2026-01-01T00:00:00+01:00
+updated_at = 2026-05-09T08:00:00+01:00
+author = "01900000-0000-7000-8000-0000000000b0"
