@@ -151,8 +151,16 @@ class CountdownWidgetProvider : AppWidgetProvider() {
     private fun subtitleFor(context: Context, c: Countdown): String = when (WidgetTimeFormat.bucket(c)) {
         WidgetTimeFormat.Bucket.Today -> context.getString(R.string.widget_countdown_today)
         WidgetTimeFormat.Bucket.Tomorrow -> context.getString(R.string.widget_countdown_tomorrow)
-        WidgetTimeFormat.Bucket.InDays -> context.getString(R.string.widget_countdown_in_days, c.days.toInt())
-        WidgetTimeFormat.Bucket.DaysAgo -> context.getString(R.string.widget_countdown_past_due, c.days.toInt())
+        WidgetTimeFormat.Bucket.InDays -> context.resources.getQuantityString(
+            R.plurals.widget_countdown_in_days,
+            c.days.toInt(),
+            c.days.toInt(),
+        )
+        WidgetTimeFormat.Bucket.DaysAgo -> context.resources.getQuantityString(
+            R.plurals.widget_countdown_past_due,
+            c.days.toInt(),
+            c.days.toInt(),
+        )
     }
 
     private fun progressOf(c: Countdown): Int {

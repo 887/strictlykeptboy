@@ -18,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.MainActivity
@@ -92,7 +93,7 @@ fun AdoptFolderSheet(
                 enabled = canConfirm,
                 modifier = Modifier.testTag(TestTagAdoptSheetConfirm),
             ) {
-                Text(stringResource(R.string.adopt_sheet_confirm, list.size))
+                Text(pluralStringResource(R.plurals.adopt_sheet_confirm, list.size, list.size))
             }
         },
         dismissButton = {

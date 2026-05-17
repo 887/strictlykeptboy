@@ -45,6 +45,7 @@ import com.eight87.strictlykeptboy.resolver.InstanceSource
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -373,8 +374,9 @@ fun EventDetailContent(
                 Column(modifier = Modifier.testTag(TestTagEventDetailReminders)) {
                     externalReminders.forEach { rem ->
                         Text(
-                            text = stringResource(
-                                R.string.event_detail_reminder_minutes_before,
+                            text = pluralStringResource(
+                                R.plurals.event_detail_reminder_minutes_before,
+                                rem.minutes,
                                 rem.minutes,
                             ),
                             style = MaterialTheme.typography.bodySmall,

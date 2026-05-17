@@ -6,6 +6,71 @@
 > `shutterboy` / `tonearmboy` / `whisperboy` pattern: every sister app uses
 > the same workflow so a translator coming from one is at home in the next.
 
+## Per-locale AVD-smoke ritual (TR-A.4)
+
+Every locale that ships — `en-rGB` today, future `de` / `fr` / `ja` /
+… — must pass this verbatim sequence on the headless `medium_phone`
+AVD before the row in the "Tested locales" table flips to `shipped`.
+The viewer locale is OS-level (T-10): no in-app picker, so we drive it
+through `adb`.
+
+```bash
+# 1. Boot the AVD (or attach to a running one — emulator-5554).
+scripts/start-avd.sh
+~/Android/Sdk/platform-tools/adb -s emulator-5554 wait-for-device
+
+# 2. Flip the system locale. Use BCP-47 (Android accepts e.g. en-US,
+#    en-GB, de-DE, fr-FR, ja-JP). The `persist.sys.locale` prop
+#    survives the restart triggered next.
+~/Android/Sdk/platform-tools/adb -s emulator-5554 shell setprop persist.sys.locale <bcp47>
+~/Android/Sdk/platform-tools/adb -s emulator-5554 shell stop
+~/Android/Sdk/platform-tools/adb -s emulator-5554 shell start
+
+# 3. Re-install the debug APK to pick up any changed string resources,
+#    relaunch, walk Schedule / Tasks / Settings / Wizard, screencap.
+JAVA_HOME=/usr/lib/jvm/java-26-openjdk ANDROID_HOME=$HOME/Android/Sdk \
+    ./gradlew :app:assembleDebug
+~/Android/Sdk/platform-tools/adb -s emulator-5554 install -r \
+    app/build/outputs/apk/debug/app-debug.apk
+~/Android/Sdk/platform-tools/adb -s emulator-5554 shell am start \
+    -n com.eight87.strictlykeptboy/.MainActivity
+~/Android/Sdk/platform-tools/adb -s emulator-5554 exec-out screencap -p | \
+    magick - -resize 50% /tmp/skb-<bcp47>.png
+
+# 4. Reset to en-US so the next session starts from a known baseline.
+~/Android/Sdk/platform-tools/adb -s emulator-5554 shell setprop persist.sys.locale en-US
+~/Android/Sdk/platform-tools/adb -s emulator-5554 shell stop
+~/Android/Sdk/platform-tools/adb -s emulator-5554 shell start
+```
+
+Pass criteria: the translated keys appear; the untranslated keys fall
+back to English silently (T-9 — no `???` markers, no logcat warnings).
+
+## Tooling guardrails (TR-A.1 / TR-A.2)
+
+- **`scripts/check-hardcoded-strings.sh`** — greps `app/.../ui/**.kt`
+  for `Text("...")` / `text = "..."` style literals outside the
+  allowlist (test tags / log strings / Compose previews / wire-format
+  `.label` references / strings already routed via `stringResource(...)`
+  or `R.string.*`). Exits non-zero on any finding. Run before opening
+  a translation PR; if your `release-preflight.sh` exists, wire it in
+  there. Invocation:
+
+  ```bash
+  scripts/check-hardcoded-strings.sh
+  ```
+
+- **`./gradlew :app:translationsAudit`** — diffs each
+  `values-<bcp47>/strings.xml` against canonical and reports missing
+  keys (fall back to English by design) + orphan keys (in the locale
+  but not in canonical → stale rename). Run before adding a row to the
+  "Tested locales" table:
+
+  ```bash
+  JAVA_HOME=/usr/lib/jvm/java-26-openjdk ANDROID_HOME=$HOME/Android/Sdk \
+      ./gradlew :app:translationsAudit
+  ```
+
 ## Canonical source of truth
 
 `app/src/main/res/values/strings.xml` is the **canonical English file**.
@@ -205,22 +270,34 @@ so subagents can ship without further user input.
   repo settings appearance section; confirm un-overridden keys fall
   back to English with no `???` markers.
 
-## Phase TR-A — translation tooling hygiene (open)
+## Phase TR-A — translation tooling hygiene (shipped Round 2.x)
 
-- [ ] **TR-A.1** Add a lint rule (or CI grep) that flags hardcoded
+- [x] **TR-A.1** Add a lint rule (or CI grep) that flags hardcoded
   user-facing literals in `app/src/main/java/**/*.kt` outside the
   whitelisted wire-format enum files. Rationale: prevents
-  regressions on the canonical-English invariant.
-- [ ] **TR-A.2** Add a `translations:audit` Gradle task that diffs
+  regressions on the canonical-English invariant. Shipped as
+  `scripts/check-hardcoded-strings.sh`; allowlist covers test tags
+  / Compose previews / log strings / wire-format `.label`
+  references / strings already routed via `stringResource` /
+  `R.string.*`. Documented invocation in "Tooling guardrails" above
+  (no `release-preflight.sh` to wire into today).
+- [x] **TR-A.2** Add a `translations:audit` Gradle task that diffs
   each `values-<bcp47>/strings.xml` against canonical and prints
   coverage % per locale. Rationale: makes the "30% is shippable"
-  call observable without manual key counting.
-- [ ] **TR-A.3** Convert every count-bearing English string to a
+  call observable without manual key counting. Shipped as
+  `:app:translationsAudit` (depends on `:app:preBuild`), reports
+  missing keys + orphan keys + coverage % per BCP-47 locale dir.
+- [x] **TR-A.3** Convert every count-bearing English string to a
   `<plurals>` resource (T-7). Audit `schedule_*`, `tasks_*`,
-  `wizard_*` namespaces.
-- [ ] **TR-A.4** Document the per-locale AVD-smoke ritual in
+  `wizard_*` namespaces. 25 keys converted (notif / sync / together
+  / import / tasks / widget / lifestyle / adopt / backuprestore /
+  trip / event-detail namespaces); call-sites moved to
+  `pluralStringResource(...)` or `resources.getQuantityString(...)`.
+- [x] **TR-A.4** Document the per-locale AVD-smoke ritual in
   `docs/plans/translations.md` (this file) as locales are added,
-  appending rows to the "Tested locales" table.
+  appending rows to the "Tested locales" table. See "Per-locale
+  AVD-smoke ritual" section above for the verbatim command
+  sequence.
 
 ## Phase TR-B — first non-English locale (deferred to user-pick session)
 
@@ -241,13 +318,19 @@ so subagents can ship without further user input.
 
 ## Phase TR-C — identity-driven copy boundary (locked)
 
-- [ ] **TR-C.1** Confirm via test that no key under
+- [x] **TR-C.1** Confirm via test that no key under
   `values/strings.xml` references praise terms, pronouns,
   honorifics, or dom persona register — those are user-supplied via
   `identity.toml` and must never appear as resource keys.
   Rationale: locks the boundary defined in "Out-of-scope copy" above
   so a future translator cannot accidentally translate a user's
-  personal vocabulary.
+  personal vocabulary. Shipped as
+  `app/src/test/java/.../EnumLabelStabilityTest.kt` — asserts every
+  wire-format enum `.label` (SpeciesChoice / Alignment / RoleId /
+  Honorific / ToneRegister / EmojiDensity) plus `Lifestyle.id`
+  stays English; if a future PR routes any of them through
+  `R.string.*`, this test fails before the on-disk repo schema
+  (D.3 / T-4) breaks for users worldwide.
 - [ ] **TR-C.2** Document the boundary inline at the top of
   `values/strings.xml` as a `<!-- comment -->` so the next
   translator sees it before touching the file.

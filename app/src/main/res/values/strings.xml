@@ -164,7 +164,10 @@
     <string name="settings_sync_conflict_manual">Manual only</string>
     <string name="settings_sync_backoff_header">Retry backoff</string>
     <string name="settings_sync_backoff_idle">No active backoff</string>
-    <string name="settings_sync_backoff_active">%1$d repos with retry pending</string>
+    <plurals name="settings_sync_backoff_active">
+        <item quantity="one">%1$d repo with retry pending</item>
+        <item quantity="other">%1$d repos with retry pending</item>
+    </plurals>
 
     <!-- S.4 Notifications -->
     <string name="settings_notif_briefings_master">Show daily briefings</string>
@@ -176,13 +179,19 @@
     <string name="settings_notif_lead_general">General</string>
     <!-- Phase 2.1.F.3 / F.4 — per-calendar mute UI -->
     <string name="settings_notif_calendars_section">Calendars</string>
-    <string name="settings_notif_mute_until_active">Muted (%1$d h left)</string>
+    <plurals name="settings_notif_mute_until_active">
+        <item quantity="one">Muted (%1$d h left)</item>
+        <item quantity="other">Muted (%1$d h left)</item>
+    </plurals>
     <string name="settings_notif_mute_until_inactive">Mute for 24 h</string>
     <!-- Phase 2.1.F.6 — briefings firing path -->
     <string name="notif_briefing_morning_title">Today\'s schedule</string>
     <string name="notif_briefing_evening_title">Tomorrow\'s schedule</string>
     <string name="notif_briefing_empty">Nothing scheduled.</string>
-    <string name="notif_event_collapsed_count">%1$d reminders</string>
+    <plurals name="notif_event_collapsed_count">
+        <item quantity="one">%1$d reminder</item>
+        <item quantity="other">%1$d reminders</item>
+    </plurals>
 
     <!-- S.5 / S.6 Calendars + Todolists -->
     <string name="settings_lists_visibility_title">Visibility</string>
@@ -605,9 +614,15 @@
     <string name="settings_notif_show_streak_desc">Tiny number badge on event tiles. Off hides every streak globally.</string>
 
     <!-- Phase M.4 — sync result notifications -->
-    <string name="notif_sync_success">Synced %1$d repos · %2$s</string>
+    <plurals name="notif_sync_success">
+        <item quantity="one">Synced %1$d repo · %2$s</item>
+        <item quantity="other">Synced %1$d repos · %2$s</item>
+    </plurals>
     <string name="notif_sync_conflict_title">Sync conflict</string>
-    <string name="notif_sync_conflict">%1$d conflict(s) need review</string>
+    <plurals name="notif_sync_conflict">
+        <item quantity="one">%1$d conflict needs review</item>
+        <item quantity="other">%1$d conflicts need review</item>
+    </plurals>
     <string name="notif_sync_auth_title">Sign in needed</string>
     <string name="notif_sync_auth_body">%1$s — session expired, tap to sign in again.</string>
 
@@ -630,12 +645,18 @@
     <string name="together_section_time">Time of day</string>
     <string name="together_field_start_date">Start</string>
     <string name="together_field_end_date">End</string>
-    <string name="together_field_duration_minutes">%1$d min</string>
+    <plurals name="together_field_duration_minutes">
+        <item quantity="one">%1$d min</item>
+        <item quantity="other">%1$d min</item>
+    </plurals>
     <string name="together_field_time_from">From</string>
     <string name="together_field_time_to">To</string>
     <string name="together_submit">Find slots</string>
     <string name="together_running">Finding common time…</string>
-    <string name="together_results_header">%1$d slot(s) found</string>
+    <plurals name="together_results_header">
+        <item quantity="one">%1$d slot found</item>
+        <item quantity="other">%1$d slots found</item>
+    </plurals>
     <string name="together_result_duration_hm">%1$dh %2$dm</string>
     <string name="together_result_duration_m">%1$dm</string>
     <string name="together_result_create_event">Create event</string>
@@ -694,10 +715,16 @@
     <string name="export_action">Export .ics</string>
     <string name="import_preview_title">Import preview</string>
     <string name="import_preview_counts">%1$d events, %2$d recurrence rules, %3$d exceptions</string>
-    <string name="import_preview_warnings">%1$d warnings (skipped malformed entries)</string>
+    <plurals name="import_preview_warnings">
+        <item quantity="one">%1$d warning (skipped malformed entries)</item>
+        <item quantity="other">%1$d warnings (skipped malformed entries)</item>
+    </plurals>
     <string name="import_preview_confirm">Import</string>
     <string name="import_preview_cancel">Cancel</string>
-    <string name="import_done">Imported %1$d entries</string>
+    <plurals name="import_done">
+        <item quantity="one">Imported %1$d entry</item>
+        <item quantity="other">Imported %1$d entries</item>
+    </plurals>
     <string name="export_done">Export saved</string>
 
     <!-- Phase Q — Android Auto (UI-S). All user-facing literals on the
@@ -710,8 +737,14 @@
     <string name="auto_pane_duration">Duration: %1$s</string>
     <string name="auto_pane_time_until">Starts %1$s</string>
     <string name="auto_time_until_now">now</string>
-    <string name="auto_time_until_minutes">in %1$d minutes</string>
-    <string name="auto_time_until_hours">in %1$d hours</string>
+    <plurals name="auto_time_until_minutes">
+        <item quantity="one">in %1$d minute</item>
+        <item quantity="other">in %1$d minutes</item>
+    </plurals>
+    <plurals name="auto_time_until_hours">
+        <item quantity="one">in %1$d hour</item>
+        <item quantity="other">in %1$d hours</item>
+    </plurals>
     <string name="auto_open_in_app">Open in app</string>
 
     <!-- Phase T — theming + personalization -->
@@ -780,11 +813,17 @@
     <string name="task_filter_done">Done</string>
 
     <!-- Unified-today section headers + Now/Next hint (Round 2.26.B/C.4). -->
-    <string name="tasks_unified_section_overdue">Overdue (%1$d)</string>
+    <plurals name="tasks_unified_section_overdue">
+        <item quantity="one">Overdue (%1$d)</item>
+        <item quantity="other">Overdue (%1$d)</item>
+    </plurals>
     <string name="tasks_unified_section_today">Today</string>
     <string name="tasks_unified_section_pinned_standing">Pinned standing</string>
     <string name="tasks_unified_next_now">next: now</string>
-    <string name="tasks_unified_next_in_minutes">next: in %1$d min</string>
+    <plurals name="tasks_unified_next_in_minutes">
+        <item quantity="one">next: in %1$d min</item>
+        <item quantity="other">next: in %1$d min</item>
+    </plurals>
     <string name="tasks_unified_next_in_hours">next: in %1$dh %2$dm</string>
 
     <!-- Wizard SpeciesChoice labels. -->
@@ -983,7 +1022,10 @@
     <string name="trip_wizard_confirm_destination">Destination: %1$s</string>
     <string name="trip_wizard_confirm_window">From %1$s to %2$s (%3$d days)</string>
     <string name="trip_wizard_confirm_transport">Transport: %1$s</string>
-    <string name="trip_wizard_confirm_travelers">Travelers: %1$d</string>
+    <plurals name="trip_wizard_confirm_travelers">
+        <item quantity="one">Travelers: %1$d</item>
+        <item quantity="other">Travelers: %1$d</item>
+    </plurals>
     <string name="trip_wizard_confirm_daily_anchors">Vacation-daily anchors: %1$s</string>
     <string name="trip_wizard_confirm_pack_kink_kit">Pack kink kit: %1$s</string>
     <string name="trip_wizard_confirm_reassurance">good boy stays good boy on vacation — your routines stay on track.</string>
@@ -1029,10 +1071,16 @@
     <string name="widget_config_title">Configure widget</string>
     <string name="widget_config_summary">Defaults will be used; pick an event later from Settings → Widgets.</string>
     <string name="widget_config_save">Save</string>
-    <string name="widget_countdown_in_days">in %1$d days</string>
+    <plurals name="widget_countdown_in_days">
+        <item quantity="one">in %1$d day</item>
+        <item quantity="other">in %1$d days</item>
+    </plurals>
     <string name="widget_countdown_tomorrow">tomorrow</string>
     <string name="widget_countdown_today">today</string>
-    <string name="widget_countdown_past_due">%1$d days ago</string>
+    <plurals name="widget_countdown_past_due">
+        <item quantity="one">%1$d day ago</item>
+        <item quantity="other">%1$d days ago</item>
+    </plurals>
 
     <!-- Phase 2.1.E — Settings restructure -->
     <!-- 2.1.E.4 — Neutral mode relocates to Lifestyle; Appearance keeps a deeplink chip. -->
@@ -1105,7 +1153,10 @@
     <string name="settings_lifestyle_trip_upcoming">Upcoming trip</string>
     <string name="settings_lifestyle_trip_last">Last trip</string>
     <string name="settings_lifestyle_trip_none">No trips yet — plan one below.</string>
-    <string name="settings_lifestyle_trip_in_days">in %1$d day(s)</string>
+    <plurals name="settings_lifestyle_trip_in_days">
+        <item quantity="one">in %1$d day</item>
+        <item quantity="other">in %1$d days</item>
+    </plurals>
     <string name="settings_lifestyle_trip_in_today">today</string>
 
     <!-- Round 2.7.B/D — backup location surfaces. -->
@@ -1117,9 +1168,15 @@
     <string name="settings_backup_remove_button">Remove backup</string>
     <string name="settings_backup_blurb">Pick a folder on your phone\'s internal storage. Each repo will be mirrored into a bare Git folder there so a fresh install can recover everything.</string>
     <string name="settings_backup_current_label">Backup folder: %1$s</string>
-    <string name="backup_applied_to_n_repos">Applied backup mirror to %1$d repo(s)</string>
+    <plurals name="backup_applied_to_n_repos">
+        <item quantity="one">Applied backup mirror to %1$d repo</item>
+        <item quantity="other">Applied backup mirror to %1$d repos</item>
+    </plurals>
     <string name="parent_picker_internal_only">Internal storage only — try a folder on this phone</string>
-    <string name="parent_adopted_n_repos">Adopted %1$d repo(s) from the parent folder</string>
+    <plurals name="parent_adopted_n_repos">
+        <item quantity="one">Adopted %1$d repo from the parent folder</item>
+        <item quantity="other">Adopted %1$d repos from the parent folder</item>
+    </plurals>
     <string name="repos_backup_reminder_text">Set up a backup folder so your repos survive app uninstall</string>
     <string name="repos_backup_reminder_pick">Pick now</string>
     <string name="repos_backup_reminder_dismiss">Dismiss</string>
@@ -1138,7 +1195,10 @@
 
     <!-- Storage folder screen -->
     <string name="storage_folder_screen_title">Storage folder</string>
-    <string name="storage_folder_repo_count">%1$d repo(s) in this folder</string>
+    <plurals name="storage_folder_repo_count">
+        <item quantity="one">%1$d repo in this folder</item>
+        <item quantity="other">%1$d repos in this folder</item>
+    </plurals>
     <string name="storage_folder_change_button">Change folder</string>
     <string name="storage_folder_switch_internal_button">Switch to internal</string>
     <string name="storage_folder_path_label">Path: %1$s</string>
@@ -1150,9 +1210,15 @@
     <string name="adopt_sheet_title">Adopt repos from this folder</string>
     <string name="adopt_sheet_empty">No strictlykeptboy repos found in the picked folder.</string>
     <string name="adopt_sheet_no_marker">This folder is missing the .skb-root marker. Pick a folder that was previously a strictlykeptboy parent.</string>
-    <string name="adopt_sheet_confirm">Adopt %1$d repo(s) and switch parent</string>
+    <plurals name="adopt_sheet_confirm">
+        <item quantity="one">Adopt %1$d repo and switch parent</item>
+        <item quantity="other">Adopt %1$d repos and switch parent</item>
+    </plurals>
     <string name="adopt_sheet_cancel">Cancel</string>
-    <string name="adopt_sheet_done">Adopted %1$d repo(s).</string>
+    <plurals name="adopt_sheet_done">
+        <item quantity="one">Adopted %1$d repo.</item>
+        <item quantity="other">Adopted %1$d repos.</item>
+    </plurals>
 
     <!-- Backup / Restore -->
     <string name="backuprestore_title">Backup / Restore</string>
@@ -1171,7 +1237,10 @@
     <string name="backuprestore_restore_archive_body">This will WIPE everything under the parent folder and extract the archive in its place. The current repo list will be replaced. This cannot be undone.</string>
     <string name="backuprestore_restore_confirm">Restore</string>
     <string name="backuprestore_restore_cancel">Cancel</string>
-    <string name="backuprestore_restore_done">Restore complete — %1$d repo(s)</string>
+    <plurals name="backuprestore_restore_done">
+        <item quantity="one">Restore complete — %1$d repo</item>
+        <item quantity="other">Restore complete — %1$d repos</item>
+    </plurals>
     <string name="backuprestore_restore_failed">Restore failed</string>
     <string name="backuprestore_restore_unsafe">Refusing to wipe: folder contains files not produced by strictlykeptboy</string>
 
@@ -1189,7 +1258,10 @@
     <!-- Round 2.18.B — External calendars (CalendarContract bridge) settings surface. -->
     <string name="settings_category_external_calendars">External calendars</string>
     <string name="settings_subtitle_external_calendars_off">Off</string>
-    <string name="settings_subtitle_external_calendars_on">%1$d visible</string>
+    <plurals name="settings_subtitle_external_calendars_on">
+        <item quantity="one">%1$d visible</item>
+        <item quantity="other">%1$d visible</item>
+    </plurals>
     <string name="settings_external_calendars_intro">Show calendars from your phone (Google, Exchange, DAVx5, etc.) alongside strictlykeptboy\'s own calendars. Data stays on your device — skb never uploads your events anywhere.</string>
     <string name="settings_external_calendars_show_label">Show system calendars in strictlykeptboy</string>
     <string name="settings_external_calendars_allow_edit_label">Allow editing system calendars</string>
@@ -1227,7 +1299,10 @@
     <string name="event_detail_attendee_status_none">No response</string>
     <!-- Round 2.18.C.9 — reminders. -->
     <string name="event_detail_reminders_header">Reminders</string>
-    <string name="event_detail_reminder_minutes_before">%1$d min before</string>
+    <plurals name="event_detail_reminder_minutes_before">
+        <item quantity="one">%1$d min before</item>
+        <item quantity="other">%1$d min before</item>
+    </plurals>
     <!-- Round 2.18.D.2 — read-only header for external events whose
          CAL_ACCESS_LEVEL is below CAL_ACCESS_CONTRIBUTOR (500). -->
     <string name="event_detail_external_read_only">Read-only — owned by %1$s</string>

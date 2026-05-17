@@ -26,7 +26,12 @@ object SyncResultNotifier {
         val prefs = NotificationPrefs.open(context)
         if (!prefs.isChannelEnabled(NotificationChannels.SYNC)) return
         val seconds = "%.1fs".format(durationMs / 1000.0)
-        val text = context.getString(R.string.notif_sync_success, reposSynced, seconds)
+        val text = context.resources.getQuantityString(
+            R.plurals.notif_sync_success,
+            reposSynced,
+            reposSynced,
+            seconds,
+        )
         val tap = PendingIntent.getActivity(
             context, 0, Intent(context, MainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
@@ -45,7 +50,11 @@ object SyncResultNotifier {
 
     fun postConflict(context: Context, repoId: String, conflictCount: Int) {
         if (!NotificationPrefs.open(context).isChannelEnabled(NotificationChannels.ERRORS)) return
-        val text = context.getString(R.string.notif_sync_conflict, conflictCount)
+        val text = context.resources.getQuantityString(
+            R.plurals.notif_sync_conflict,
+            conflictCount,
+            conflictCount,
+        )
         val tap = PendingIntent.getActivity(
             context, repoId.hashCode(), Intent(context, MainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,

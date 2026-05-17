@@ -17,6 +17,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
@@ -74,7 +75,7 @@ fun ImportPreviewContent(
             )
             if (preview.warnings.isNotEmpty()) {
                 Text(
-                    text = stringResource(R.string.import_preview_warnings, preview.warnings.size),
+                    text = pluralStringResource(R.plurals.import_preview_warnings, preview.warnings.size, preview.warnings.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )

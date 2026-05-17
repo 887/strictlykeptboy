@@ -11,6 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
@@ -58,7 +59,8 @@ fun TaskUnifiedTodayView(
     }
 
     val sections = items.bySection(today)
-    val labelOverdue = stringResource(R.string.tasks_unified_section_overdue, sections[UnifiedTodaySection.Overdue].orEmpty().size)
+    val overdueCount = sections[UnifiedTodaySection.Overdue].orEmpty().size
+    val labelOverdue = pluralStringResource(R.plurals.tasks_unified_section_overdue, overdueCount, overdueCount)
     val labelToday = stringResource(R.string.tasks_unified_section_today)
     val labelPinned = stringResource(R.string.tasks_unified_section_pinned_standing)
 
@@ -72,7 +74,7 @@ fun TaskUnifiedTodayView(
             val minutes = Duration.between(nowOff, it.sortKey).toMinutes()
             when {
                 minutes < 1 -> stringResource(R.string.tasks_unified_next_now)
-                minutes < 60 -> stringResource(R.string.tasks_unified_next_in_minutes, minutes)
+                minutes < 60 -> pluralStringResource(R.plurals.tasks_unified_next_in_minutes, minutes.toInt(), minutes.toInt())
                 else -> stringResource(R.string.tasks_unified_next_in_hours, minutes / 60, minutes % 60)
             }
         }

@@ -273,6 +273,66 @@ dependencies {
   androidTestImplementation(libs.androidx.test.espresso.core)
 }
 
+// TR-A.2 — `translations:audit` task. Diffs every
+// `values-<bcp47>/strings.xml` against canonical `values/strings.xml`
+// and prints (a) keys missing from the locale + (b) orphan keys in the
+// locale that are absent from canonical. Output goes to stdout via the
+// Gradle logger at lifecycle level. Depends on `:app:preBuild` so the
+// resource roots are resolved before the diff runs.
+tasks.register("translationsAudit") {
+    group = "verification"
+    description = "Audit values-<bcp47>/strings.xml against canonical values/strings.xml: missing + orphan keys."
+    dependsOn("preBuild")
+    val resDir = file("src/main/res")
+    doLast {
+        val canonical = File(resDir, "values/strings.xml")
+        require(canonical.isFile) { "canonical strings.xml not found at $canonical" }
+
+        // Parse `name` attributes for both <string ...> and <plurals ...> entries.
+        val keyRegex = Regex("""<(?:string|plurals)\s+[^>]*name="([^"]+)"""")
+        fun keysOf(file: File): Set<String> =
+            keyRegex.findAll(file.readText()).map { it.groupValues[1] }.toSortedSet()
+
+        val canonicalKeys = keysOf(canonical)
+        logger.lifecycle("translations:audit — canonical has ${canonicalKeys.size} keys (values/strings.xml)")
+
+        val localeDirs = resDir.listFiles { f -> f.isDirectory && f.name.startsWith("values-") }
+            ?.sortedBy { it.name }
+            ?: emptyList()
+        if (localeDirs.isEmpty()) {
+            logger.lifecycle("  (no locale variant directories found)")
+            return@doLast
+        }
+
+        for (dir in localeDirs) {
+            val bcp47 = dir.name.removePrefix("values-")
+            val localeFile = File(dir, "strings.xml")
+            if (!localeFile.isFile) {
+                logger.lifecycle("  $bcp47: no strings.xml (skipped)")
+                continue
+            }
+            val localeKeys = keysOf(localeFile)
+            val missing = (canonicalKeys - localeKeys).toSortedSet()
+            val orphan = (localeKeys - canonicalKeys).toSortedSet()
+            val translated = localeKeys.size - orphan.size
+            val pct = if (canonicalKeys.isEmpty()) 0
+                else (translated * 100 / canonicalKeys.size)
+            logger.lifecycle("  $bcp47: ${localeKeys.size} keys / $pct% coverage ($translated of ${canonicalKeys.size})")
+            if (missing.isNotEmpty()) {
+                logger.lifecycle("    missing (fall back to canonical English, ${missing.size}):")
+                missing.forEach { logger.lifecycle("      - $it") }
+            }
+            if (orphan.isNotEmpty()) {
+                logger.lifecycle("    orphan / stale (in locale but not canonical, ${orphan.size}):")
+                orphan.forEach { logger.lifecycle("      ! $it") }
+            }
+            if (missing.isEmpty() && orphan.isEmpty()) {
+                logger.lifecycle("    clean — 100% coverage, no orphans")
+            }
+        }
+    }
+}
+
 // Round 2.20 Phase B.5 — authoring helper that regenerates
 // `app/src/main/assets/rich-demo-repo/_manifest.txt`. NOT wired into
 // the build graph; invoke manually after editing rich-demo content:

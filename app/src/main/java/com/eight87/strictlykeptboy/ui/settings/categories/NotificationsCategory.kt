@@ -29,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
@@ -140,9 +141,11 @@ private fun CalendarMuteRow(
             Text(
                 if (muteActive) {
                     val left = Duration.ofMillis((until!! - now).coerceAtLeast(0L))
-                    stringResource(
-                        R.string.settings_notif_mute_until_active,
-                        left.toHours().coerceAtLeast(0L),
+                    val hours = left.toHours().coerceAtLeast(0L).toInt()
+                    pluralStringResource(
+                        R.plurals.settings_notif_mute_until_active,
+                        hours,
+                        hours,
                     )
                 } else {
                     stringResource(R.string.settings_notif_mute_until_inactive)

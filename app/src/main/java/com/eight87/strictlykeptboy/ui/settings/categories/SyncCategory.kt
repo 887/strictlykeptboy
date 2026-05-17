@@ -12,6 +12,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
@@ -69,7 +70,7 @@ fun SyncCategory(
             if (backoffActive == 0) {
                 stringResource(R.string.settings_sync_backoff_idle)
             } else {
-                stringResource(R.string.settings_sync_backoff_active, backoffActive)
+                pluralStringResource(R.plurals.settings_sync_backoff_active, backoffActive, backoffActive)
             },
             style = MaterialTheme.typography.bodyMedium,
         )

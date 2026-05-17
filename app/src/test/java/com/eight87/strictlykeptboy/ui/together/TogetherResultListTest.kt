@@ -37,7 +37,9 @@ class TogetherResultListTest {
 
         composeRule.onNodeWithTag(TestTagTogetherResultList).assertIsDisplayed()
         // Header reflects all five slots passed in (proves list received them all).
-        composeRule.onNodeWithText("5 slot(s) found").assertIsDisplayed()
+        // TR-A.3 — `together_results_header` is now a `<plurals>`; with
+        // count=5 we hit `quantity="other"`.
+        composeRule.onNodeWithText("5 slots found").assertIsDisplayed()
         // First card is visible; the LazyColumn may not have composed off-screen
         // cards in the Robolectric viewport — tap the first to verify the
         // onSlotTap callback contract.

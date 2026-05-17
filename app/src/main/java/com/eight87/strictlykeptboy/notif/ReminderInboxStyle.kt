@@ -36,12 +36,12 @@ object ReminderInboxStyle {
         if (anyPrivate) {
             // Privacy: collapse all lines into a single count summary so
             // no title leaks alongside the praise term.
-            style.addLine(context.getString(R.string.notif_event_collapsed_count, lines.size))
+            style.addLine(context.resources.getQuantityString(R.plurals.notif_event_collapsed_count, lines.size, lines.size))
         } else {
             lines.forEach { style.addLine(it.title) }
         }
         style.setSummaryText(
-            context.getString(R.string.notif_event_collapsed_count, lines.size),
+            context.resources.getQuantityString(R.plurals.notif_event_collapsed_count, lines.size, lines.size),
         )
         return builder.setStyle(style)
     }

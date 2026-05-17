@@ -231,7 +231,7 @@ class MainActivity : ComponentActivity() {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                 Toast.makeText(
                     this@MainActivity,
-                    getString(R.string.parent_adopted_n_repos, count),
+                    resources.getQuantityString(R.plurals.parent_adopted_n_repos, count, count),
                     Toast.LENGTH_SHORT,
                 ).show()
             }
@@ -405,7 +405,11 @@ class MainActivity : ComponentActivity() {
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                         Toast.makeText(
                             this@MainActivity,
-                            getString(R.string.import_done, report.totalEntities),
+                            resources.getQuantityString(
+                                R.plurals.import_done,
+                                report.totalEntities,
+                                report.totalEntities,
+                            ),
                             Toast.LENGTH_SHORT,
                         ).show()
                     }
@@ -1322,8 +1326,9 @@ class MainActivity : ComponentActivity() {
                                             onSuccess = { n ->
                                                 Toast.makeText(
                                                     this@MainActivity,
-                                                    getString(
-                                                        R.string.backuprestore_restore_done,
+                                                    resources.getQuantityString(
+                                                        R.plurals.backuprestore_restore_done,
+                                                        n,
                                                         n,
                                                     ),
                                                     Toast.LENGTH_LONG,
@@ -1382,8 +1387,9 @@ class MainActivity : ComponentActivity() {
                                                 onSuccess = { n ->
                                                     Toast.makeText(
                                                         this@MainActivity,
-                                                        getString(
-                                                            R.string.backuprestore_restore_done,
+                                                        resources.getQuantityString(
+                                                            R.plurals.backuprestore_restore_done,
+                                                            n,
                                                             n,
                                                         ),
                                                         Toast.LENGTH_LONG,
@@ -1657,7 +1663,7 @@ class MainActivity : ComponentActivity() {
                                     }
                                     Toast.makeText(
                                         this@MainActivity,
-                                        getString(R.string.adopt_sheet_done, adoptees.size),
+                                        resources.getQuantityString(R.plurals.adopt_sheet_done, adoptees.size, adoptees.size),
                                         Toast.LENGTH_SHORT,
                                     ).show()
                                     adoptSheetRequest.value = null

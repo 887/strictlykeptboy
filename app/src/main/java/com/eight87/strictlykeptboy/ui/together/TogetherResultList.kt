@@ -11,6 +11,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
@@ -41,7 +42,7 @@ fun TogetherResultList(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
-            text = stringResource(R.string.together_results_header, slots.size),
+            text = pluralStringResource(R.plurals.together_results_header, slots.size, slots.size),
             style = MaterialTheme.typography.titleMedium,
         )
         // Plain Column (not LazyColumn) because the parent pane is vertically

@@ -36,6 +36,7 @@ import androidx.compose.ui.Alignment as ComposeAlign
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
@@ -379,7 +380,7 @@ private fun ConfirmScreen(draft: TripDraft, status: MaterializeStatus) {
                 Text(stringResource(R.string.trip_wizard_confirm_window,
                     draft.startDate.toString(), draft.endDate.toString(), draft.durationDays))
                 Text(stringResource(R.string.trip_wizard_confirm_transport, draft.transport.id))
-                Text(stringResource(R.string.trip_wizard_confirm_travelers, draft.travelerCount))
+                Text(pluralStringResource(R.plurals.trip_wizard_confirm_travelers, draft.travelerCount, draft.travelerCount))
                 Text(stringResource(R.string.trip_wizard_confirm_daily_anchors,
                     if (draft.includeVacationDaily) "yes" else "no"))
                 Text(stringResource(R.string.trip_wizard_confirm_pack_kink_kit,

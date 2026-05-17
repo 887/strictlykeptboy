@@ -105,10 +105,18 @@ class NextUpScreen(
         val mins = Duration.between(now, start).toMinutes()
         return when {
             mins <= 0L -> carContext.getString(R.string.auto_time_until_now)
-            mins < 60L -> carContext.getString(R.string.auto_time_until_minutes, mins)
+            mins < 60L -> carContext.resources.getQuantityString(
+                R.plurals.auto_time_until_minutes,
+                mins.toInt(),
+                mins.toInt(),
+            )
             else -> {
-                val hours = mins / 60
-                carContext.getString(R.string.auto_time_until_hours, hours)
+                val hours = (mins / 60).toInt()
+                carContext.resources.getQuantityString(
+                    R.plurals.auto_time_until_hours,
+                    hours,
+                    hours,
+                )
             }
         }
     }

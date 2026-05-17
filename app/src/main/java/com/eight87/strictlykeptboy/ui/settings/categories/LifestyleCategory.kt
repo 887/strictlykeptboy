@@ -21,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.clickable
@@ -209,7 +210,7 @@ private fun TripRow(
                     Instant.ofEpochMilli(summary.startEpochMs).atZone(ZoneId.systemDefault()).toLocalDate(),
                 )
                 if (days <= 0L) stringResource(R.string.settings_lifestyle_trip_in_today)
-                else stringResource(R.string.settings_lifestyle_trip_in_days, days.toInt())
+                else pluralStringResource(R.plurals.settings_lifestyle_trip_in_days, days.toInt(), days.toInt())
             } else {
                 Instant.ofEpochMilli(summary.endEpochMs)
                     .atZone(ZoneId.systemDefault())

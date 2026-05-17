@@ -23,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
@@ -142,7 +143,7 @@ fun TogetherInputForm(
         // Duration
         Text(
             text = stringResource(R.string.together_section_duration) + " · " +
-                stringResource(R.string.together_field_duration_minutes, state.durationMinutes),
+                pluralStringResource(R.plurals.together_field_duration_minutes, state.durationMinutes, state.durationMinutes),
             style = MaterialTheme.typography.titleSmall,
         )
         Slider(
