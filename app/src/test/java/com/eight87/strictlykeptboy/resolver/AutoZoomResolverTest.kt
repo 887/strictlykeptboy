@@ -7,10 +7,11 @@ import java.time.ZonedDateTime
 
 /**
  * Round 2.25.x (D.127) — density-driven Auto zoom.
+ * Round 2.25.y (D.128) — grouped-aware effective-band variant.
+ * Round 2.25.z (D.129) — driver is 25th-percentile shortest, not min,
+ * so isolated short outliers no longer drag Auto to Spacious.
  *
- * Pure unit test — no Android dependencies. Covers the threshold
- * walk-up across the 4 zoom levels for 5-min / 15-min / 1h / mixed /
- * empty inputs.
+ * Pure unit test — no Android dependencies.
  */
 class AutoZoomResolverTest {
     private val cal = CalendarRef("cal-x")
@@ -35,10 +36,9 @@ class AutoZoomResolverTest {
         assertEquals(AutoZoomResolver.DEFAULT_ZOOM, AutoZoomResolver.derive(emptyList()))
     }
 
-    @Test fun five_minute_events_pick_level_4() {
-        // 5 * {40,80,160,320} / 60 = 3.3, 6.7, 13.3, 26.7 — only 4 clears 14.
-        val instances = (0..5).map { ev(it * 10, 5, "e$it") }
-        assertEquals(4, AutoZoomResolver.derive(instances))
+    @Test fun single_5min_band_is_its_own_p25_picks_level_4() {
+        // n=1 → p25 index = ceil(0.25)-1 = 0 → the single 5-min band drives.
+        assertEquals(4, AutoZoomResolver.deriveFromEffectiveBandMinutes(listOf(5L)))
     }
 
     @Test fun fifteen_minute_events_pick_level_2() {
@@ -48,45 +48,75 @@ class AutoZoomResolverTest {
     }
 
     @Test fun one_hour_events_pick_level_1() {
-        // 60 * 40 / 60 = 40 — level 1 already clears 14.
         val instances = listOf(ev(0, 60), ev(120, 60), ev(240, 60))
         assertEquals(1, AutoZoomResolver.derive(instances))
     }
 
     @Test fun thirty_minute_events_pick_level_1() {
-        // 30 * 40 / 60 = 20 — level 1 clears 14.
         val instances = listOf(ev(0, 30), ev(60, 30))
         assertEquals(1, AutoZoomResolver.derive(instances))
     }
 
-    @Test fun mixed_is_driven_by_shortest_event() {
-        // Mix 1h + 5min: shortest is 5 → level 4.
-        val instances = listOf(ev(0, 60), ev(120, 5), ev(180, 30))
-        assertEquals(4, AutoZoomResolver.derive(instances))
+    // ── D.129 (p25) behaviour ────────────────────────────────────────
+
+    @Test fun four_bands_one_outlier_p25_still_picks_the_outlier() {
+        // n=4 → p25 idx = ceil(1)-1 = 0 → 25% IS the outlier, it wins.
+        // sorted [5,60,60,60] → idx 0 = 5 → level 4.
+        assertEquals(4, AutoZoomResolver.deriveFromEffectiveBandMinutes(listOf(5L, 60L, 60L, 60L)))
     }
 
-    // Round 2.25.y (D.128) — grouped-aware Auto zoom.
-    @Test fun grouped_effective_band_picks_lower_zoom_than_raw_atoms() {
-        // Five 5-min atoms collapsed into one 25-min effective band.
-        // 25 * {40,80,...} / 60 = 16.7 — level 1 already clears 14.
+    @Test fun eight_bands_two_short_p25_picks_the_5min() {
+        // n=8 → p25 idx = ceil(2)-1 = 1. sorted [5,5,30,30,60,60,60,60]
+        // → idx 1 = 5 → level 4.
+        assertEquals(
+            4,
+            AutoZoomResolver.deriveFromEffectiveBandMinutes(
+                listOf(5L, 5L, 30L, 30L, 60L, 60L, 60L, 60L),
+            ),
+        )
+    }
+
+    @Test fun twelve_bands_three_short_p25_still_picks_5min() {
+        // n=12 → p25 idx = ceil(3)-1 = 2. sorted [5,5,5,30,30,60,...]
+        // → idx 2 = 5 → level 4.
+        assertEquals(
+            4,
+            AutoZoomResolver.deriveFromEffectiveBandMinutes(
+                listOf(5L, 5L, 5L, 30L, 30L, 60L, 60L, 60L, 60L, 60L, 60L, 60L),
+            ),
+        )
+    }
+
+    @Test fun twelve_bands_two_short_p25_skips_outliers_picks_30min() {
+        // n=12 → p25 idx = 2. sorted [5,5,30,30,30,60,...]
+        // → idx 2 = 30 → level 1 (30 * 40 / 60 = 20 dp ≥ 14).
+        assertEquals(
+            1,
+            AutoZoomResolver.deriveFromEffectiveBandMinutes(
+                listOf(5L, 5L, 30L, 30L, 30L, 60L, 60L, 60L, 60L, 60L, 60L, 60L),
+            ),
+        )
+    }
+
+    @Test fun rich_demo_shape_isolated_outliers_do_not_dominate() {
+        // ~12 visible effective bands typical of the rich demo:
+        // 1 morning group (~25 min), 1 evening group (~30 min),
+        // 4 work blocks (60-120 min), a couple medium chores (15-30 min),
+        // and 2 isolated 5-min text pings.
+        // sorted: [5,5,15,25,25,30,30,30,60,60,90,120] → n=12, idx=2 = 15 → level 2.
+        assertEquals(
+            2,
+            AutoZoomResolver.deriveFromEffectiveBandMinutes(
+                listOf(5L, 5L, 15L, 25L, 25L, 30L, 30L, 30L, 60L, 60L, 90L, 120L),
+            ),
+        )
+    }
+
+    // ── grouped-adapter passthrough (D.128) ──────────────────────────
+
+    @Test fun grouped_single_25min_band_picks_low_zoom() {
+        // Single 25-min effective band, n=1, p25 idx 0 → 25 → level 1.
         assertEquals(1, AutoZoomResolver.deriveFromEffectiveBandMinutes(listOf(25L)))
-    }
-
-    @Test fun ungrouped_5min_effective_band_still_picks_level_4() {
-        // No grouping: shortest "effective band" IS the 5-min atom.
-        assertEquals(4, AutoZoomResolver.deriveFromEffectiveBandMinutes(listOf(5L, 5L, 5L)))
-    }
-
-    @Test fun grouped_mixed_driven_by_shortest_effective() {
-        // One grouped morning bundle (25 min) + one ungrouped 5-min atom
-        // (no group on its own calendar) → shortest effective is 5 → 4.
-        assertEquals(4, AutoZoomResolver.deriveFromEffectiveBandMinutes(listOf(25L, 5L)))
-    }
-
-    @Test fun grouped_all_clusters_picks_low_zoom() {
-        // Morning 25 min + evening 35 min, both collapsed → shortest 25
-        // → level 1.
-        assertEquals(1, AutoZoomResolver.deriveFromEffectiveBandMinutes(listOf(25L, 35L)))
     }
 
     @Test fun empty_effective_bands_returns_default() {

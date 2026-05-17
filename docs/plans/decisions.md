@@ -2519,3 +2519,50 @@ with `meta_group_field = "phase"` and every sub-15-min event
 tagged `group = "morning" / "midday" / "evening"` so the demo
 exercises the grouped-aware path end-to-end on Day / 3-day /
 Week views.
+
+## D.129 — Auto zoom uses 25th-percentile shortest grouped band, not minimum; sub-readable bands get a tap-to-expand cue and route to full-screen EventDetailScreen (Round 2.25.z)
+
+D.128 still picked Auto = Spacious whenever a single 5-min
+outlier (dom-overlay text ping, social check-in) existed
+anywhere in the visible range — the *shortest* effective band
+drove the picker, so one isolated atom dragged the whole grid
+to level 4 and undid the readability win D.128 promised.
+
+Round 2.25.z replaces "shortest wins" with "25th-percentile
+shortest wins" in both `AutoZoomResolver.derive` and
+`AutoZoomResolver.deriveFromEffectiveBandMinutes`:
+
+- Sort the effective-band-minutes list ascending.
+- p25 index = `ceil(0.25 * n) - 1`, clamped to `0..n-1`.
+  n=1 → 0, n=4 → 0, n=8 → 1, n=12 → 2.
+- That band's duration drives `zoomForShortestMinutes`.
+
+The chosen p25-driver guarantees that *at most ~25%* of bands
+stay below `READABLE_BAND_DP = 14` at the chosen zoom — the
+remaining 75% of bands render readably. That is an **explicit
+trade-off**: rather than forcing maximum zoom to cover every
+last outlier (which makes the calendar feel sparse and useless
+for the typical case), Auto accepts that a minority of bands
+will be sub-readable and compensates in the UI.
+
+The UI compensation: in `ScheduleDayView.BandsLayer`, any real
+(non-group-folder) band whose raw duration would render below
+`READABLE_BAND_DP` at the current `effectiveZoom` paints a
+single `…` glyph at `CenterEnd` with `TestTag =
+TestTagSubReadableCue`. The Surface's existing `onClick`
+already routes the tap to `onBandTap → EventDetailScreen`
+(full-screen, shipped `b0cbf85`). No new tap path — the cue is
+purely visual signaling that "this band is here, tap to read
+it full-size."
+
+Pure helper `isSubReadableBand(durationMinutes, zoom)` lives at
+the top of `ScheduleDayView.kt`; `SubReadableBandTest` covers
+the threshold walk-up.
+
+Demo behaviour: a typical rich-demo day with ~12 effective
+bands sorts to e.g. `[5,5,15,25,25,30,30,30,60,60,90,120]` →
+p25 idx 2 → 15 min → level 2 (Normal). The two 5-min text pings
+render with `…` overflow cues; tap opens detail. Days that
+genuinely are mostly short-band (the Sun-17 demo case observed
+at the AVD smoke) still pick Spacious because even the p25
+band is short — that is correct behaviour.

@@ -4,14 +4,16 @@ import java.time.Duration
 
 /**
  * Round 2.25.x — density-driven "Auto" zoom for the Day / 3-day / Week
- * grids (D.127).
+ * grids (D.127, refined by D.128, refined by D.129).
  *
  * Replaces the legacy fallback (`max(zoomOf visible overlays) ?: 2`)
- * with a content-aware picker: choose the smallest zoom level where
- * the shortest visible event clears a readability threshold of
- * [READABLE_BAND_DP] tall. Demo schedules with atomic 5-minute events
- * land on zoom 4 (320 dp/h ⇒ ~27 dp band); 15-minute calendars land
- * on zoom 2; sparse hourly schedules stay on zoom 1.
+ * with a content-aware picker. As of D.129 (Round 2.25.z), the picker
+ * uses the *25th-percentile shortest* effective band as the driver,
+ * not the minimum: isolated 5-min outliers (dom-overlay text pings,
+ * social check-ins) no longer drag Auto to Spacious. The trade-off is
+ * explicit: up to 25% of bands may stay sub-readable at the chosen
+ * zoom — the UI compensates by giving sub-readable bands a tap-to-
+ * expand affordance that routes to the full-screen detail view.
  *
  * Pure — no Android dependencies. Callers pass the materialized
  * instances visible on the day (or across the visible range) and
@@ -28,18 +30,17 @@ object AutoZoomResolver {
     const val DEFAULT_ZOOM = 2
 
     /**
-     * Pick the smallest zoom level ∈ {1..4} where the shortest event in
-     * [instances] renders at least [READABLE_BAND_DP] tall. Returns
-     * [DEFAULT_ZOOM] when [instances] is empty; clamps to 4 when even
-     * the densest level can't satisfy the threshold (5-min events at
-     * level 4 yield ~26.7 dp, "readable enough").
+     * Pick the smallest zoom level ∈ {1..4} where the *25th-percentile*
+     * shortest event in [instances] renders at least [READABLE_BAND_DP]
+     * tall. Returns [DEFAULT_ZOOM] when [instances] is empty; clamps to
+     * 4 when even the densest level can't satisfy the threshold.
      */
     fun derive(instances: List<MaterializedInstance>): Int {
         if (instances.isEmpty()) return DEFAULT_ZOOM
-        val shortestMinutes = instances.minOf {
-            Duration.between(it.effectiveStart, it.effectiveEnd).toMinutes()
-        }.coerceAtLeast(1L)
-        return zoomForShortestMinutes(shortestMinutes)
+        val minutes = instances.map {
+            Duration.between(it.effectiveStart, it.effectiveEnd).toMinutes().coerceAtLeast(1L)
+        }
+        return zoomForShortestMinutes(p25Minutes(minutes))
     }
 
     /** Convenience: derive from already-flattened [DayBand]s. */
@@ -47,24 +48,34 @@ object AutoZoomResolver {
         derive(bands.map { it.instance })
 
     /**
-     * Round 2.25.y — grouped-aware Auto zoom (D.128).
+     * Round 2.25.y — grouped-aware Auto zoom (D.128); Round 2.25.z
+     * (D.129) replaces minimum-wins with p25-wins.
      *
      * Take the *effective* band durations (in minutes) the user will
      * actually see after group-collapse at zoom 2 — atoms in the same
-     * group fold into a single "Morning routine · N atoms" band, so a
-     * 5×5-min cluster reads as a single ~25 min band rather than five
-     * 5-min slivers. Then pick the smallest zoom level where the
-     * shortest *effective* band clears [READABLE_BAND_DP].
-     *
-     * Callers in `ui.schedule` build the minute list via the
-     * `effectiveBandMinutesForAutoZoom` adapter (which calls
-     * `groupDayBands` per day, then collects each group's effective
-     * span). The resolver stays UI-free.
+     * group fold into a single "Morning routine · N atoms" band. Then
+     * pick the smallest zoom level where the 25th-percentile shortest
+     * *effective* band clears [READABLE_BAND_DP]. Isolated short
+     * outliers (e.g. 5-min text pings) no longer dominate.
      */
     fun deriveFromEffectiveBandMinutes(effectiveBandMinutes: List<Long>): Int {
         if (effectiveBandMinutes.isEmpty()) return DEFAULT_ZOOM
-        val shortest = effectiveBandMinutes.min().coerceAtLeast(1L)
-        return zoomForShortestMinutes(shortest)
+        val clamped = effectiveBandMinutes.map { it.coerceAtLeast(1L) }
+        return zoomForShortestMinutes(p25Minutes(clamped))
+    }
+
+    /**
+     * 25th-percentile shortest minute value. Sort ascending; p25 index
+     * = `ceil(0.25 * n) - 1`, clamped to `0..n-1`. n=1→0, n=4→0, n=8→1,
+     * n=12→2. The result is the smallest value such that ≥25% of bands
+     * are ≤ it; using it as the readability driver means the algorithm
+     * tolerates up to ~25% sub-readable outliers.
+     */
+    private fun p25Minutes(minutes: List<Long>): Long {
+        val sorted = minutes.sorted()
+        val n = sorted.size
+        val idx = (Math.ceil(0.25 * n).toInt() - 1).coerceIn(0, n - 1)
+        return sorted[idx]
     }
 
     private fun zoomForShortestMinutes(shortestMinutes: Long): Int {

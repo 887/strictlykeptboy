@@ -178,3 +178,38 @@ sees a readable "Morning routine · N atoms" band at low zoom.
       shortest-band rule. That's correct per spec; the user can
       pick Compact/Normal explicitly and SEE the grouping take effect.
 - [x] **Y.6** Decision D.128 appended to `docs/plans/decisions.md`.
+
+### Round 2.25.z trailer — p25 Auto zoom + sub-readable tap cue (shipped {SHA_PLACEHOLDER})
+
+User feedback (2026-05-17): "isolated 5-min outliers (dom-overlay
+text pings, social check-ins) shouldn't drag Auto to Spacious.
+Use 25th-percentile shortest, not minimum. And: when a band
+renders below the readability threshold at the current zoom,
+give it a tap affordance so the user knows there's more there
+to read."
+
+- [x] **Z.1** `AutoZoomResolver.derive` + `deriveFromEffectiveBandMinutes`
+      switched from `.min()` to 25th-percentile via private
+      `p25Minutes(...)` helper. Pure resolver, no UI deps.
+- [x] **Z.2** `AutoZoomResolverTest` rewritten — covers
+      n=1/4/8/12 p25 boundaries, the rich-demo shape (12-band
+      mix → Normal), grouped-adapter passthrough, empty/default.
+- [x] **Z.3** Sub-readable cue in `ScheduleDayView.BandsLayer`:
+      `…` glyph at `CenterEnd` for any real band where
+      `isSubReadableBand(rawDurationMin, effectiveZoom)`.
+      Existing `Surface.onClick` routes to full-screen
+      `EventDetailScreen`. Helper + `TestTagSubReadableCue`
+      live at the top of `ScheduleDayView.kt`.
+- [x] **Z.4** `SubReadableBandTest` — 5 cases covering the dp
+      threshold walk-up across zoom levels.
+- [x] **Z.5** AVD smoke on `emulator-5558`: wizard → Kept Life
+      lands on agenda; Day SUN 17 shows visible 5-min text-ping
+      bands with `…` overflow glyphs; tap opens full-screen
+      EventDetailScreen ("Breakfast" detail). Auto picked
+      Spacious for SUN 17 specifically because even the p25
+      band is short on that day (weekend has fewer grouped
+      routines + many text pings), but the cue + tap affordance
+      now make the dense bands navigable. Evidence:
+      `docs/qa/2-25/auto-p25-day-view.png` +
+      `docs/qa/2-25/auto-p25-tap-detail.png`.
+- [x] **Z.6** Decision D.129 appended to `docs/plans/decisions.md`.

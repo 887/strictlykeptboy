@@ -55,6 +55,25 @@ const val TestTagDayEmpty = "DayEmpty"
 const val TestTagNowLine = "NowLine"
 
 /**
+ * Round 2.25.z (D.129) — sub-readable band tap-affordance test tag.
+ * Present iff the rendered band height is below
+ * [com.eight87.strictlykeptboy.resolver.AutoZoomResolver.READABLE_BAND_DP].
+ */
+const val TestTagSubReadableCue = "SubReadableCue"
+
+/**
+ * Pure helper for D.129 — at the given zoom level, would a band of
+ * [durationMinutes] minutes render below the readability threshold?
+ * Mirrors the per-zoom `LEVEL_DP_PER_HOUR` table so test code can
+ * assert without spinning up Compose.
+ */
+fun isSubReadableBand(durationMinutes: Long, zoom: Int): Boolean {
+    val dpPerHour = when (zoom) { 1 -> 40; 2 -> 80; 3 -> 160; 4 -> 320; else -> 80 }
+    val bandDp = durationMinutes.coerceAtLeast(1L) * dpPerHour / 60.0
+    return bandDp < com.eight87.strictlykeptboy.resolver.AutoZoomResolver.READABLE_BAND_DP
+}
+
+/**
  * Round 2.21 Phase D.3 — derive `HourHeight` from effective zoom
  * ∈ {1..4}. Zoom = 2 is the new default (≈ 80dp/h ≈ half a phone
  * screen per hour), replacing the legacy 60dp/h constant.
@@ -226,6 +245,7 @@ fun ScheduleDayView(
                 dragState = dragState,
                 hourHeightPx = hourHeightPx,
                 onDragReschedule = onDragReschedule,
+                effectiveZoom = effectiveZoom,
             )
             // Round 2.22 / Phase B UI follow-up — translucent ghost band
             // following the finger, snapped to the grid.
@@ -314,6 +334,7 @@ private fun BandsLayer(
     dragState: DragRescheduleUiState? = null,
     hourHeightPx: Float = 0f,
     onDragReschedule: ((DayBand, java.time.OffsetDateTime) -> Unit)? = null,
+    effectiveZoom: Int = 2,
 ) {
     // Flatten groups to (band, syntheticGroupKey?). Synthetic key
     // tracks "this band is the folder for group X — taps should
@@ -436,6 +457,22 @@ private fun BandsLayer(
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
                                     .padding(4.dp),
+                            )
+                        }
+                        // Round 2.25.z (D.129) — sub-readable cue. Only
+                        // real bands (not synthetic group folders); the
+                        // existing Surface.onClick already routes the tap
+                        // to onBandTap → full-screen EventDetailScreen.
+                        val rawDurationMin = durationMinutes(start, end).toLong()
+                        if (groupKey == null && isSubReadableBand(rawDurationMin, effectiveZoom)) {
+                            Text(
+                                text = "…",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier
+                                    .align(Alignment.CenterEnd)
+                                    .padding(end = 6.dp)
+                                    .testTag(TestTagSubReadableCue),
                             )
                         }
                     }
