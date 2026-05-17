@@ -39,6 +39,35 @@ object AutoZoomResolver {
         val shortestMinutes = instances.minOf {
             Duration.between(it.effectiveStart, it.effectiveEnd).toMinutes()
         }.coerceAtLeast(1L)
+        return zoomForShortestMinutes(shortestMinutes)
+    }
+
+    /** Convenience: derive from already-flattened [DayBand]s. */
+    fun deriveFromBands(bands: List<DayBand>): Int =
+        derive(bands.map { it.instance })
+
+    /**
+     * Round 2.25.y — grouped-aware Auto zoom (D.128).
+     *
+     * Take the *effective* band durations (in minutes) the user will
+     * actually see after group-collapse at zoom 2 — atoms in the same
+     * group fold into a single "Morning routine · N atoms" band, so a
+     * 5×5-min cluster reads as a single ~25 min band rather than five
+     * 5-min slivers. Then pick the smallest zoom level where the
+     * shortest *effective* band clears [READABLE_BAND_DP].
+     *
+     * Callers in `ui.schedule` build the minute list via the
+     * `effectiveBandMinutesForAutoZoom` adapter (which calls
+     * `groupDayBands` per day, then collects each group's effective
+     * span). The resolver stays UI-free.
+     */
+    fun deriveFromEffectiveBandMinutes(effectiveBandMinutes: List<Long>): Int {
+        if (effectiveBandMinutes.isEmpty()) return DEFAULT_ZOOM
+        val shortest = effectiveBandMinutes.min().coerceAtLeast(1L)
+        return zoomForShortestMinutes(shortest)
+    }
+
+    private fun zoomForShortestMinutes(shortestMinutes: Long): Int {
         for (level in 1..4) {
             val dpPerHour = LEVEL_DP_PER_HOUR.getValue(level)
             val bandDp = shortestMinutes * dpPerHour / 60.0
@@ -46,8 +75,4 @@ object AutoZoomResolver {
         }
         return 4
     }
-
-    /** Convenience: derive from already-flattened [DayBand]s. */
-    fun deriveFromBands(bands: List<DayBand>): Int =
-        derive(bands.map { it.instance })
 }

@@ -6,6 +6,7 @@ emoji = "🐈"
 color = "#e8a87c"
 color_seed = 16754470
 priority = 750
+meta_group_field = "phase"
 tz_id = "Europe/London"
 created_at = 2026-01-01T00:00:00+01:00
 updated_at = 2026-05-09T08:00:00+01:00

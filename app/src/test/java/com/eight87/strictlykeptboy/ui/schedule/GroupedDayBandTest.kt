@@ -121,4 +121,41 @@ class GroupedDayBandTest {
     @Test fun empty_input_returns_empty_list() {
         assertEquals(emptyList<GroupedDayBand>(), groupDayBands(emptyList(), emptyMap()))
     }
+
+    // Round 2.25.y (D.128) — adapter feeding AutoZoomResolver.
+    @Test fun effective_band_minutes_collapses_grouped_atoms_to_span() {
+        // 5 atoms × 5 min spaced 1-min apart, all "morning" → collapsed
+        // span from minute 400 → minute 429 = 29 minutes.
+        val bands = listOf(
+            band("a", 400, 405, "morning"),
+            band("b", 406, 411, "morning"),
+            band("c", 412, 417, "morning"),
+            band("d", 418, 423, "morning"),
+            band("e", 424, 429, "morning"),
+        )
+        val mins = effectiveBandMinutesForAutoZoom(listOf(bands), mapOf(cal to true))
+        assertEquals(listOf(29L), mins)
+    }
+
+    @Test fun effective_band_minutes_no_optin_emits_per_atom_durations() {
+        // No meta-group opt-in: each atom stands alone → five 5-min bands.
+        val bands = listOf(
+            band("a", 400, 405, "morning"),
+            band("b", 406, 411, "morning"),
+            band("c", 412, 417, "morning"),
+        )
+        val mins = effectiveBandMinutesForAutoZoom(listOf(bands), mapOf(cal to false))
+        assertEquals(listOf(5L, 5L, 5L), mins)
+    }
+
+    @Test fun effective_band_minutes_mixed_grouped_and_ungrouped() {
+        val bands = listOf(
+            band("a", 400, 405, "morning"),
+            band("b", 406, 411, "morning"),
+            band("c", 500, 530, null), // standalone 30-min ungrouped
+        )
+        val mins = effectiveBandMinutesForAutoZoom(listOf(bands), mapOf(cal to true))
+        // grouped span (400..411 = 11 min) + 30-min standalone
+        assertEquals(listOf(11L, 30L), mins)
+    }
 }

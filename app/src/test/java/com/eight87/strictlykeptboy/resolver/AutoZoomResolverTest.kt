@@ -65,6 +65,34 @@ class AutoZoomResolverTest {
         assertEquals(4, AutoZoomResolver.derive(instances))
     }
 
+    // Round 2.25.y (D.128) — grouped-aware Auto zoom.
+    @Test fun grouped_effective_band_picks_lower_zoom_than_raw_atoms() {
+        // Five 5-min atoms collapsed into one 25-min effective band.
+        // 25 * {40,80,...} / 60 = 16.7 — level 1 already clears 14.
+        assertEquals(1, AutoZoomResolver.deriveFromEffectiveBandMinutes(listOf(25L)))
+    }
+
+    @Test fun ungrouped_5min_effective_band_still_picks_level_4() {
+        // No grouping: shortest "effective band" IS the 5-min atom.
+        assertEquals(4, AutoZoomResolver.deriveFromEffectiveBandMinutes(listOf(5L, 5L, 5L)))
+    }
+
+    @Test fun grouped_mixed_driven_by_shortest_effective() {
+        // One grouped morning bundle (25 min) + one ungrouped 5-min atom
+        // (no group on its own calendar) → shortest effective is 5 → 4.
+        assertEquals(4, AutoZoomResolver.deriveFromEffectiveBandMinutes(listOf(25L, 5L)))
+    }
+
+    @Test fun grouped_all_clusters_picks_low_zoom() {
+        // Morning 25 min + evening 35 min, both collapsed → shortest 25
+        // → level 1.
+        assertEquals(1, AutoZoomResolver.deriveFromEffectiveBandMinutes(listOf(25L, 35L)))
+    }
+
+    @Test fun empty_effective_bands_returns_default() {
+        assertEquals(AutoZoomResolver.DEFAULT_ZOOM, AutoZoomResolver.deriveFromEffectiveBandMinutes(emptyList()))
+    }
+
     @Test fun derive_from_bands_matches_derive_from_instances() {
         val instances = listOf(ev(0, 15), ev(60, 15))
         val bands = instances.map { DayBand(it, priority = 500, laneIndex = 0, totalLanes = 1) }

@@ -144,3 +144,37 @@ shipped together:
 - [x] **X.3** AVD smoke on `emulator-5558`: agenda lands by default,
       Day view Auto = Spacious (level 4) for the dense demo. Evidence
       `docs/qa/2-25/agenda-default.png` + `day-auto-readable.png`.
+
+### Round 2.25.y trailer — grouped-aware Auto zoom
+
+User feedback (2026-05-17): "that's also why I wanted to group up
+chores like brushing your teeth and getting ready for bed.. so in
+calendar view with that zoom level you can draw a group around all
+those 'getting ready for bed chores' and just show those rather
+than the atomic tasks at that zoom level." 2.25.x picked Spacious
+on the 5-min atoms, hiding the Round 2.21 Phase F grouping. Y
+makes Auto consider effective grouped-band durations so the user
+sees a readable "Morning routine · N atoms" band at low zoom.
+
+- [x] **Y.1** `AutoZoomResolver.deriveFromEffectiveBandMinutes`
+      added; original `derive` kept intact. Pure resolver, no UI deps.
+      Tests: `AutoZoomResolverTest` (5 new cases).
+- [x] **Y.2** `effectiveBandMinutesForAutoZoom` adapter in
+      `ui/schedule/GroupedDayBand.kt` runs `groupDayBands` per day
+      and emits one minute-duration per resulting grouped band.
+      Tests: `GroupedDayBandTest` (3 new cases).
+- [x] **Y.3** `SchedulePane.effectiveZoom` now feeds the grouped
+      adapter into the resolver instead of raw instances.
+- [x] **Y.4** Demo grouping coverage extended: `kinky-rituals` +
+      `cat-care` got `meta_group_field = "phase"` (was already on
+      `routines`) and every sub-15-min recurrence got
+      `group = "morning" / "midday" / "evening"` per its dtstart.
+- [x] **Y.5** AVD smoke on `emulator-5558`: Day view at Compact
+      zoom renders "morning · 5 atoms" collapsed band; tap expands
+      it inline. Evidence `docs/qa/2-25/day-grouped-collapsed.png`
+      + `day-grouped-expanded.png`. Note: Auto still picks Spacious
+      because non-grouped 5-min atoms exist in `dom-overlay` /
+      `social` (text-pings) — those force level 4 to satisfy the
+      shortest-band rule. That's correct per spec; the user can
+      pick Compact/Normal explicitly and SEE the grouping take effect.
+- [x] **Y.6** Decision D.128 appended to `docs/plans/decisions.md`.

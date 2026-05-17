@@ -104,3 +104,41 @@ const val GROUP_AUTO_EXPAND_ZOOM: Int = 3
 
 /** True when zoom-driven auto-expand should apply to a group. */
 fun shouldAutoExpand(effectiveZoom: Int): Boolean = effectiveZoom >= GROUP_AUTO_EXPAND_ZOOM
+
+/**
+ * Round 2.25.y — feed for `AutoZoomResolver.deriveFromEffectiveBandMinutes`
+ * (D.128).
+ *
+ * For each day's pre-sorted [DayBand]s, run `groupDayBands` (at the
+ * implicit zoom-2 collapse semantics — collapse is independent of zoom
+ * here; auto-expand is a render-time choice) and emit one duration in
+ * minutes per resulting [GroupedDayBand]:
+ *
+ *  - Ungrouped band (`children.size == 1`) → its raw effective minute
+ *    duration.
+ *  - Collapsed group (`children.size > 1`) → the span from the first
+ *    child's `effectiveStart` to the last child's `effectiveEnd`. The
+ *    user sees ONE band that tall, so that's what should drive auto
+ *    zoom — not the 5-min atoms inside.
+ *
+ * The resulting list is what the resolver uses to find the shortest
+ * *effective* band and pick the smallest zoom level where it clears
+ * the readability threshold.
+ */
+fun effectiveBandMinutesForAutoZoom(
+    daysOfBands: List<List<DayBand>>,
+    hasMetaGroup: Map<CalendarRef, Boolean>,
+    gapSeconds: Long = DEFAULT_GROUP_GAP_SECONDS,
+): List<Long> {
+    val out = mutableListOf<Long>()
+    for (bands in daysOfBands) {
+        val groups = groupDayBands(bands, hasMetaGroup, gapSeconds)
+        for (g in groups) {
+            val startSec = g.first.instance.effectiveStart.toEpochSecond()
+            val endSec = g.last.instance.effectiveEnd.toEpochSecond()
+            val minutes = ((endSec - startSec) / 60L).coerceAtLeast(1L)
+            out.add(minutes)
+        }
+    }
+    return out
+}

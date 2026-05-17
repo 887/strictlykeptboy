@@ -6,6 +6,7 @@ created_at = 2026-05-09T08:00:00+01:00
 updated_at = 2026-05-09T08:00:00+01:00
 author = "01900000-0000-7000-8000-0000000000bb"
 title = "Cage stays on"
+group = "evening"
 dtstart = 2026-05-15T23:30:00
 duration = "PT5M"
 tz_id = "Europe/London"

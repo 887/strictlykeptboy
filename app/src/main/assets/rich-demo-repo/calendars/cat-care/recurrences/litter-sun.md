@@ -6,6 +6,7 @@ created_at = 2026-05-09T08:00:00+01:00
 updated_at = 2026-05-09T08:00:00+01:00
 author = "01900000-0000-7000-8000-0000000000b0"
 title = "Litter box deep-clean"
+group = "midday"
 dtstart = 2026-05-17T11:30:00
 duration = "PT30M"
 tz_id = "Europe/London"

@@ -291,15 +291,21 @@ private fun ScheduleMasterContent(
                 com.eight87.strictlykeptboy.ui.settings.ZOOM_MAX,
             )
         } else {
-            // Round 2.25.x (D.127) — density-driven Auto. Pick the
-            // smallest zoom level where the shortest visible event
-            // clears the readability threshold. Falls back to the
-            // historic default when nothing is visible.
-            val visibleInstances = rendered?.days
-                ?.flatMap { d -> d.bands.map { it.instance } }
-                .orEmpty()
+            // Round 2.25.y (D.128) — grouped-aware density-driven Auto.
+            // Collapse atoms in the same group into a single effective
+            // band (e.g. 5×5-min morning routine → one ~25-min band),
+            // then pick the smallest zoom level where the shortest
+            // *effective* band clears the readability threshold. Atom-
+            // dense calendars no longer force level 4; instead the user
+            // sees readable "Morning routine · N atoms" bands at lower
+            // zooms, with the caret to expand on demand.
+            val daysOfBands = rendered?.days?.map { it.bands }.orEmpty()
+            val effectiveMinutes = effectiveBandMinutesForAutoZoom(
+                daysOfBands = daysOfBands,
+                hasMetaGroup = metaGroupByCalendar,
+            )
             com.eight87.strictlykeptboy.resolver.AutoZoomResolver
-                .derive(visibleInstances)
+                .deriveFromEffectiveBandMinutes(effectiveMinutes)
                 .coerceIn(
                     com.eight87.strictlykeptboy.ui.settings.ZOOM_MIN,
                     com.eight87.strictlykeptboy.ui.settings.ZOOM_MAX,

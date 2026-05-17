@@ -2483,3 +2483,39 @@ and adapts to whatever overlays are visible there. The per-row
 segmented zoom control + pinch-to-zoom still set explicit
 per-calendar zoom (D-2.21.h / D-2.21.i); when the user picks an
 explicit level via the global override chip, that wins over Auto.
+
+## D.128 — Auto zoom derives from grouped-band durations, not raw event durations; grouping is the readability mechanism for atom-dense calendars
+
+Round 2.25.y refines D.127. The naive shortest-event picker
+defeats the Round 2.21 Phase F grouping affordance: an atom-dense
+calendar (5-min routine pings clustered into "morning routine")
+forced Auto to level 4 just to make each atom readable, hiding
+the very grouping that was supposed to make low-zoom views legible.
+
+New rule: Auto consumes the *effective* band-minute list
+produced by `effectiveBandMinutesForAutoZoom` (in `ui/schedule/
+GroupedDayBand.kt`), which runs `groupDayBands` per day with the
+calendar's `meta_group_field` opt-in map, then emits one duration
+per resulting `GroupedDayBand`:
+
+- Ungrouped band ⇒ raw effective duration.
+- Collapsed group ⇒ span from first child's `effectiveStart` to
+  last child's `effectiveEnd`. Five 5-min "morning" atoms with
+  1-min gaps fold into a single ~29-min effective band, which
+  picks level 1 instead of level 4.
+
+`AutoZoomResolver.deriveFromEffectiveBandMinutes` reuses the
+D.127 readability threshold (`READABLE_BAND_DP = 14`) — it just
+applies it to grouped-band durations instead of raw atoms. Mixed
+grouped + ungrouped is still driven by the shortest effective
+band, so a calendar with one isolated 5-min atom outside any
+group keeps Auto at level 4 (correct: that atom needs the height
+to read its label). Calendars that opt into grouping via
+`meta_group_field` get the benefit; calendars that don't keep
+legacy behavior.
+
+Demo coverage: `routines`, `kinky-rituals`, and `cat-care` ship
+with `meta_group_field = "phase"` and every sub-15-min event
+tagged `group = "morning" / "midday" / "evening"` so the demo
+exercises the grouped-aware path end-to-end on Day / 3-day /
+Week views.
