@@ -513,7 +513,7 @@ Overall posture is healthy. Consolidated findings, severity-sorted:
 16. `DeviationInput.kind` + `OverrideInput.kind` are stringly-typed (`"skipped"|"partial"|"completed-early"|"completed-late"` / `"force-show"|"force-show-for-range"`) — promote to sealed interfaces so the `when` chains in `OverlayResolver.kt:51-53` + `ActiveSetEvaluator.kt:45-50` become exhaustive.
 17. `AuthMethod` enum — strong sealed-type candidate; per-variant secret-storage would delete the soft `error("non-OAuth … reached forOAuth")` branch in `CredentialBindings`.
 18. `SyncButtonState` enum — sealed with `Error(reason: SyncError)` + `Success(duration: Long)` would let toasts show meaningful copy.
-19. Add a CI/lint guard forbidding `java.io.*`, `java.nio.*`, `okhttp3.*`, `org.eclipse.jgit.*`, `androidx.room.*`, `android.*`, and `\.now\(` inside `resolver/`. Prevents purity regressions.
+19. Add a CI/lint guard forbidding `java.io.*`, `java.nio.*`, `okhttp3.*`, `org.eclipse.jgit.*`, `androidx.room.*`, `android.*`, and `\.now\(` inside `resolver/`. Prevents purity regressions. _Fixed in commit `c3f0076`._ — `:app:resolverPurityCheck` Gradle task (hooked into `check`) walks `resolver/**/*.kt` and fails the build on forbidden imports (allowing only `android.util.Log`) or wall-clock `.now()` / `System.currentTimeMillis()` calls. Passes clean against current tree.
 
 **Explicit non-issues (audit confirmed clean)**
 
