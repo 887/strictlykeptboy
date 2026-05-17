@@ -1,9 +1,13 @@
 package com.eight87.strictlykeptboy.ui.schedule
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoMode
 import androidx.compose.material.icons.outlined.GridView
@@ -12,9 +16,7 @@ import androidx.compose.material.icons.outlined.UnfoldLess
 import androidx.compose.material.icons.outlined.UnfoldMore
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -35,15 +37,10 @@ const val TestTagZoomLevel320 = "ZoomLevel-320"
 /**
  * Round 2.23 Phase C (D-2.23.a) — top-of-Day-view zoom row.
  *
- * 5-segmented control: Auto | Compact (40) | Normal (80) | Detail
- * (160) | Spacious (320) — icon + short descriptive label. "Auto"
- * clears the global override; the rest force a specific dp/h.
- *
- * Why descriptive labels and not raw dp/h numbers (Round 2.23.2
- * follow-up): the numbers meant nothing to non-developer users. Icons
- * convey low-dp/h = compact / high-dp/h = spacious at a glance;
- * labels confirm in words; `contentDescription` carries the precise
- * dp/h for screen-reader users who care about the exact value.
+ * Five circular icon buttons: Auto · Compact (40) · Normal (80) ·
+ * Detail (160) · Spacious (320). Border-free circles match the
+ * schedule-tab affordance in the rail; selected button fills with
+ * primary container, unselected uses the bare surface.
  *
  * Pure UI — host wires [onSelect] to
  * `CalendarVisibilityPrefs.setGlobalZoomOverride(...)`.
@@ -62,10 +59,6 @@ fun ZoomLevelRow(
         val dpPerHour: Int?,
     )
 
-    // Stable display order — Auto first so the affordance reads as
-    // "let the picker decide" by default. Compact -> Spacious mirrors
-    // the dp/h ladder so the icon progression (UnfoldLess -> GridView
-    // -> UnfoldMore -> OpenInFull) tells the same story visually.
     val options = listOf(
         ZoomOption("Auto", null, Icons.Outlined.AutoMode, TestTagZoomLevelAuto, null),
         ZoomOption("Compact", 1, Icons.Outlined.UnfoldLess, TestTagZoomLevel40, 40),
@@ -73,44 +66,51 @@ fun ZoomLevelRow(
         ZoomOption("Detail", 3, Icons.Outlined.UnfoldMore, TestTagZoomLevel160, 160),
         ZoomOption("Spacious", 4, Icons.Outlined.OpenInFull, TestTagZoomLevel320, 320),
     )
-    SingleChoiceSegmentedButtonRow(
+    Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .padding(horizontal = 8.dp, vertical = 6.dp)
             .testTag(TestTagZoomLevelRow),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        options.forEachIndexed { idx, opt ->
+        options.forEach { opt ->
             val a11y = if (opt.dpPerHour == null) {
                 "Zoom: Auto (picker decides dp per hour)"
             } else {
                 "Zoom: ${opt.label} (${opt.dpPerHour} dp per hour)"
             }
-            SegmentedButton(
-                selected = opt.value == selectedOverride,
-                onClick = { onSelect(opt.value) },
-                shape = SegmentedButtonDefaults.itemShape(idx, options.size),
+            val selected = opt.value == selectedOverride
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(2.dp),
                 modifier = Modifier
                     .testTag(opt.testTag)
                     .semantics { contentDescription = a11y },
-                label = {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(2.dp),
-                    ) {
+            ) {
+                Surface(
+                    onClick = { onSelect(opt.value) },
+                    shape = CircleShape,
+                    color = if (selected) MaterialTheme.colorScheme.primaryContainer
+                    else MaterialTheme.colorScheme.surfaceContainerHighest,
+                    contentColor = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
+                    else MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(40.dp),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = opt.icon,
                             contentDescription = null,
-                            modifier = Modifier.padding(top = 2.dp),
-                        )
-                        Text(
-                            text = opt.label,
-                            style = MaterialTheme.typography.labelSmall,
-                            maxLines = 1,
-                            softWrap = false,
                         )
                     }
-                },
-            )
+                }
+                Text(
+                    text = opt.label,
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                    softWrap = false,
+                )
+            }
         }
     }
 }

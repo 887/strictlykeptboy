@@ -83,7 +83,7 @@ fun ScheduleThreeDayView(
         // Three side-by-side day columns. Each column reuses the same
         // ScheduleDayView; vertical scroll lives inside each column.
         Row(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
-            dates.forEach { d ->
+            dates.forEachIndexed { idx, d ->
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -98,6 +98,11 @@ fun ScheduleThreeDayView(
                         defaultWriteRepoId = defaultWriteRepoId,
                         effectiveZoom = effectiveZoom,
                         onDragReschedule = onDragReschedule,
+                        // 3-day shares one weekday header (above) and one
+                        // hour gutter (leftmost column only) to stop the
+                        // doubled-up look.
+                        showWeekdayHeader = false,
+                        showHourGutter = idx == 0,
                     )
                 }
             }

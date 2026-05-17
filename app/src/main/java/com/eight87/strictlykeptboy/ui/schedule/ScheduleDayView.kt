@@ -2,7 +2,10 @@ package com.eight87.strictlykeptboy.ui.schedule
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateCentroid
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -142,6 +145,10 @@ fun ScheduleDayView(
      * dispatches to `DragRescheduleController` for the actual write.
      */
     onDragReschedule: ((DayBand, java.time.OffsetDateTime) -> Unit)? = null,
+    /** When false, hides the weekday emoji header strip (3-day view supplies its own). */
+    showWeekdayHeader: Boolean = true,
+    /** When false, hides the left-hand hour gutter (3-day view shares one gutter). */
+    showHourGutter: Boolean = true,
 ) {
     val day = schedule?.days?.firstOrNull { it.date == date }
     val bands = day?.bands.orEmpty()
@@ -171,23 +178,25 @@ fun ScheduleDayView(
     var expandedKeys by remember { mutableStateOf(setOf<String>()) }
     val dragState = rememberDragRescheduleUiState()
     Column(modifier = modifier.fillMaxSize().testTag(TestTagDayView)) {
-        // Round 2.23 Phase B — weekday emoji strip.
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Spacer(modifier = Modifier.width(GutterWidth))
-            Text(
-                text = "${emojiFor(date.dayOfWeek)}  ${date.dayOfWeek.name.take(3)} ${date.dayOfMonth}",
-                style = MaterialTheme.typography.titleMedium,
-            )
+        if (showWeekdayHeader) {
+            // Round 2.23 Phase B — weekday emoji strip.
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Spacer(modifier = Modifier.width(GutterWidth))
+                Text(
+                    text = "${emojiFor(date.dayOfWeek)}  ${date.dayOfWeek.name.take(3)} ${date.dayOfMonth}",
+                    style = MaterialTheme.typography.titleMedium,
+                )
+            }
         }
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .verticalScroll(scroll),
     ) {
-        HourGutter(hourHeight = hourHeight)
+        if (showHourGutter) HourGutter(hourHeight = hourHeight)
         // Round 2.21 Phase D.5 — pinch-to-zoom on the day-grid Box.
         // detectTransformGestures fires on every pointer move; we
         // accumulate `pendingScale` and on the gesture-end (next
@@ -201,32 +210,44 @@ fun ScheduleDayView(
                 .height(hourHeight * 24)
                 .pointerInput(onPinchZoomBand, bands, hourHeightPx) {
                     if (onPinchZoomBand == null) return@pointerInput
-                    detectTransformGestures(panZoomLock = false) { centroid, pan, zoom, _ ->
-                        pendingScale *= zoom
-                        pendingCenterY = centroid.y
-                        pendingPanY += pan.y
-                        // Commit a snap when accumulated scale leaves a
-                        // half-step band. Threshold log2: 0.5 ≈ "down a
-                        // level"; 2.0 ≈ "up a level". We snap on every
-                        // gesture move past the threshold so the user
-                        // sees the band redraw mid-gesture.
-                        val band = pickBandAtY(
-                            bands = bands,
-                            centerYPx = pendingCenterY,
-                            hourHeightPx = hourHeightPx,
-                        ) ?: return@detectTransformGestures
-                        val current = zoomFor(band.instance.calendar, band.instance.repo)
-                        val target = snapZoomFromScale(current, pendingScale)
-                        if (target != current) {
-                            onPinchZoomBand(
-                                band.instance.calendar,
-                                band.instance.repo,
-                                target,
-                            )
-                            // Reset accumulator so each snap-step requires
-                            // a fresh pinch span.
-                            pendingScale = 1f
+                    // Only consume events when ≥2 pointers are down
+                    // (pinch). Single-finger pans pass through to the
+                    // outer verticalScroll so drag-to-scroll works.
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false)
+                        var pressing = true
+                        while (pressing) {
+                            val event = awaitPointerEvent()
+                            val pressedCount = event.changes.count { it.pressed }
+                            if (pressedCount >= 2) {
+                                val zoom = event.calculateZoom()
+                                val centroid = event.calculateCentroid()
+                                if (zoom != 1f) {
+                                    pendingScale *= zoom
+                                    pendingCenterY = centroid.y
+                                    val band = pickBandAtY(
+                                        bands = bands,
+                                        centerYPx = pendingCenterY,
+                                        hourHeightPx = hourHeightPx,
+                                    )
+                                    if (band != null) {
+                                        val current = zoomFor(band.instance.calendar, band.instance.repo)
+                                        val target = snapZoomFromScale(current, pendingScale)
+                                        if (target != current) {
+                                            onPinchZoomBand(
+                                                band.instance.calendar,
+                                                band.instance.repo,
+                                                target,
+                                            )
+                                            pendingScale = 1f
+                                        }
+                                    }
+                                    event.changes.forEach { it.consume() }
+                                }
+                            }
+                            pressing = event.changes.any { it.pressed }
                         }
+                        pendingScale = 1f
                     }
                 },
         ) {
@@ -306,18 +327,27 @@ private fun HourGutter(hourHeight: Dp) {
     }
 }
 
+/**
+ * Google-Calendar-style per-hour blocks: each hour is a rounded
+ * Surface with a small vertical gap between hours so the grid reads
+ * as discrete cells rather than one flat column.
+ */
 @Composable
 private fun HourLines(hourHeight: Dp, onTapHour: (Int) -> Unit) {
+    val gap = 2.dp
+    val blockHeight = hourHeight - gap
     Column(modifier = Modifier.fillMaxSize()) {
         for (hr in 0 until 24) {
-            Box(
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                shape = RoundedCornerShape(8.dp),
+                onClick = { onTapHour(hr) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(hourHeight)
-                    .clickable { onTapHour(hr) },
-            ) {
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            }
+                    .height(blockHeight)
+                    .padding(horizontal = 2.dp),
+            ) {}
+            Spacer(modifier = Modifier.height(gap))
         }
     }
 }
@@ -348,9 +378,14 @@ private fun BandsLayer(
     }
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val widthPx = maxWidth
+        // Cascade overlap: each successive lane is shifted right by
+        // [cascadeStep]; width shrinks by the same per-lane amount so
+        // earlier bands stay visible as a thin sliver under later ones.
+        val cascadeStep = 14.dp
         renderables.forEach { (band, groupKey) ->
-            val laneWidth = widthPx / band.totalLanes.coerceAtLeast(1)
-            val laneOffsetX = laneWidth * band.laneIndex
+            val laneIdx = band.laneIndex.coerceAtLeast(0)
+            val cascadeX = cascadeStep * laneIdx
+            val bandWidth = (widthPx - cascadeX - 4.dp).coerceAtLeast(48.dp)
 
             val start = band.instance.effectiveStart
             val end = band.instance.effectiveEnd
@@ -366,8 +401,8 @@ private fun BandsLayer(
 
             Box(
                 modifier = Modifier
-                    .offset(x = laneOffsetX, y = topDp)
-                    .width(laneWidth - 4.dp)
+                    .offset(x = cascadeX, y = topDp)
+                    .width(bandWidth)
                     .height(heightDp)
                     .padding(2.dp),
             ) {
@@ -406,6 +441,25 @@ private fun BandsLayer(
                         .testTag("$TestTagDayBand-${band.instance.instanceId}"),
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
+                        // 10-minute tick marks inside the band so the
+                        // user can read elapsed time visually without
+                        // needing a wider grid block per minute.
+                        val tickColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)
+                        val minutesInBand = durationMinutes(start, end).coerceAtLeast(1f)
+                        androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+                            val pxPerMin = size.height / minutesInBand
+                            var m = 10
+                            while (m < minutesInBand) {
+                                val y = m * pxPerMin
+                                drawLine(
+                                    color = tickColor,
+                                    start = androidx.compose.ui.geometry.Offset(8f, y),
+                                    end = androidx.compose.ui.geometry.Offset(size.width - 4f, y),
+                                    strokeWidth = 1f,
+                                )
+                                m += 10
+                            }
+                        }
                         // 4-dp left color stripe (2.2.C.1-paint).
                         // Round 2.18.C.4 — external events get a narrower
                         // 2-dp accent strip painted in the source-calendar
