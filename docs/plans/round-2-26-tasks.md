@@ -246,7 +246,7 @@ optional markdown body
 
 ## Phase F — Wire schedule-feed merge + verify on AVD
 
-shipped (F.1 + F.3) — see commit hash at HEAD after this lands
+shipped (F.1 + F.3) in commit 6a4b106
 
 - [x] **F.1** In `MainActivity` / `AppGraph` composition, pass the
       existing `renderedScheduleFlow` (or equivalent) into
