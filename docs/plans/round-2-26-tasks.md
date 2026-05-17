@@ -89,26 +89,28 @@ shipped in commit ad7e9a2
 
 ## Phase B — Unified day-of feed (Today merges timeboxes + tasks)
 
-- [ ] **B.1** Add `data class UnifiedTodayItem` in
+shipped in commit <pending-B>
+
+- [x] **B.1** Add `data class UnifiedTodayItem` in
       `app/src/main/java/com/eight87/strictlykeptboy/ui/tasks/UnifiedToday.kt`
       with a sealed hierarchy: `TaskEntry(TaskItem)` and
       `TimeboxEntry(DayBand /* with kind = Timebox */)`. A common
       `sortKey: java.time.OffsetDateTime?` drives ordering.
-- [ ] **B.2** Pure-function builder
+- [x] **B.2** Pure-function builder
       `fun buildUnifiedToday(tasks: List<TaskItem>, schedule:
       RenderedSchedule, now: ZonedDateTime): List<UnifiedTodayItem>`
       in the same file. Inputs: today's `forToday(today)` task subset +
       `schedule.bandsFor(today).filter { it.kind == CalendarKind.Timebox
       }`. Output ordering per D-2.26.c.
-- [ ] **B.3** Hoist a `StateFlow<RenderedSchedule>` (or the existing
+- [x] **B.3** Hoist a `StateFlow<RenderedSchedule>` (or the existing
       one) into `TasksDestinationBody` via constructor param. When the
       Tasks destination is opened, call `buildUnifiedToday` reactively
       via `combine(tasksState.state, scheduleFlow)`.
-- [ ] **B.4** Render `Today` filter via a new
+- [x] **B.4** Render `Today` filter via a new
       `TaskUnifiedTodayView.kt` composable: a LazyColumn that walks
       the unified list and dispatches `TaskRow` for `TaskEntry` and a
       `TimeboxRow` (Phase C) for `TimeboxEntry`.
-- [ ] **B.5** Unit tests in `ui/tasks/UnifiedTodayTest.kt`: empty
+- [x] **B.5** Unit tests in `ui/tasks/UnifiedTodayTest.kt`: empty
       schedule + 3 tasks; 2 timeboxes + 1 overdue + 1 due-today;
       ordering invariants.
 
@@ -126,7 +128,7 @@ shipped in commit ad7e9a2
 - [x] **C.3** Verify `TaskRow` priority-dot tiers still read at the
       new 64dp height; nudge the priority-dot from 10dp → 12dp for
       tap-target legibility.
-- [ ] **C.4** Section headers in `TaskUnifiedTodayView`: M3 `Text`
+- [x] **C.4** Section headers in `TaskUnifiedTodayView`: M3 `Text`
       `titleMedium` color `onSurfaceVariant`. Three sections:
       "Overdue (N)" (only if non-empty), "Today", "Pinned standing"
       (only if non-empty). The first non-empty section's first item is

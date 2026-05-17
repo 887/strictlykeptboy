@@ -765,6 +765,14 @@
     <string name="task_filter_per_list">Per-list</string>
     <string name="task_filter_done">Done</string>
 
+    <!-- Unified-today section headers + Now/Next hint (Round 2.26.B/C.4). -->
+    <string name="tasks_unified_section_overdue">Overdue (%1$d)</string>
+    <string name="tasks_unified_section_today">Today</string>
+    <string name="tasks_unified_section_pinned_standing">Pinned standing</string>
+    <string name="tasks_unified_next_now">next: now</string>
+    <string name="tasks_unified_next_in_minutes">next: in %1$d min</string>
+    <string name="tasks_unified_next_in_hours">next: in %1$dh %2$dm</string>
+
     <!-- Wizard SpeciesChoice labels. -->
     <string name="species_bat">Bat</string>
     <string name="species_bunny">Bunny</string>

@@ -616,6 +616,7 @@ private fun SkbAppDestinationContent(
         TopDestination.Tasks -> TasksPane(
             filter = tasksFilter,
             tasksState = tasksState,
+            scheduleFlow = scheduleState.rendered,
         )
         TopDestination.Together -> if (togetherViewModel != null) {
             TogetherPane(vm = togetherViewModel, neutralMode = neutralMode)
