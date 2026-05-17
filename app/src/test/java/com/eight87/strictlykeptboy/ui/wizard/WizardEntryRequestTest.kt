@@ -24,10 +24,10 @@ class WizardEntryRequestTest {
         val ctx = ApplicationProvider.getApplicationContext<android.content.Context>()
         val graph = AppGraph(ctx)
         assertEquals(null, graph.wizardEntryRequest.value)
-        graph.wizardEntryRequest.value = WizardScreen.Roles
+        graph.setWizardEntryRequest(WizardScreen.Roles)
         assertEquals(WizardScreen.Roles, graph.wizardEntryRequest.value)
         // Reset.
-        graph.wizardEntryRequest.value = null
+        graph.clearWizardEntryRequest()
         assertEquals(null, graph.wizardEntryRequest.value)
     }
 

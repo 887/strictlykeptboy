@@ -23,6 +23,13 @@ data class ShellCallbacks(
     val onSyncClick: () -> Unit = {},
     val onWizardScaffold: suspend (WizardDraft) -> Result<Unit> = { Result.success(Unit) },
     val onWizardFinish: () -> Unit = {},
+    /**
+     * [L]#11 (audit pass 2026-05-17) — clears `wizardEntryRequest`
+     * when the wizard host finishes or cancels. Routing through a
+     * callback (rather than a direct mutation of a hoisted
+     * `MutableStateFlow`) keeps the `AppGraph` setter private.
+     */
+    val onWizardFinished: () -> Unit = {},
     /** Phase CCC.8 — trip-wizard materializer (writes overlay calendar + commits). */
     val onTripMaterialize: suspend (TripDraft) -> Result<Unit> = { Result.success(Unit) },
     val onPickImportFile: (com.eight87.strictlykeptboy.git.RepoConfig) -> Unit = {},

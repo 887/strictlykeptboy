@@ -23,7 +23,12 @@ import com.eight87.strictlykeptboy.git.GitRepo
 import com.eight87.strictlykeptboy.git.GitRepoRegistry
 import com.eight87.strictlykeptboy.git.RepoConfig
 import com.eight87.strictlykeptboy.git.RepoStore
+import com.eight87.strictlykeptboy.backup.RestoreReindex
+import com.eight87.strictlykeptboy.backup.humanBytes
+import com.eight87.strictlykeptboy.port.ics.ExportContentBuilder
+import com.eight87.strictlykeptboy.store.RepoTomlScanner
 import com.eight87.strictlykeptboy.sync.SyncService
+import com.eight87.strictlykeptboy.ui.share.ShareActionHandler
 import java.io.File
 import com.eight87.strictlykeptboy.theme.StrictlyKeptBoyTheme
 import com.eight87.strictlykeptboy.ui.scaffold.ShellCallbacks
@@ -94,73 +99,62 @@ class MainActivity : ComponentActivity() {
         val newLocation: com.eight87.strictlykeptboy.prefs.ParentLocation,
     )
 
-    private val openIcsLauncher = registerForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri: Uri? ->
-        val repo = pendingImportRepo ?: return@registerForActivityResult
-        if (uri == null) return@registerForActivityResult
-        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            runCatching {
-                val text = contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
-                    ?: return@runCatching
-                val calendarId = repo.defaultCalendarId
-                    ?: com.eight87.strictlykeptboy.git.Uuid7.generate().toString()
-                val report = com.eight87.strictlykeptboy.port.ics.IcsParser.parse(
-                    text = text,
-                    calendarId = calendarId,
-                    author = repo.authorIdentity.email,
-                )
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    onParsed?.invoke(report)
+    /**
+     * Round 2.28 / SOLID #8b — every SAF / ActivityResult launcher
+     * lives in [MainActivityLaunchers]. Holder construction registers
+     * all six pickers in `init` — i.e. before `onCreate`'s STARTED
+     * phase, which is the contract `registerForActivityResult` demands.
+     * Result callbacks are wired below; the SAF-specific business logic
+     * stays here so it can touch [pendingAppGraph] /
+     * [parentPickerAsChangeFolder] / the various pending handler refs.
+     */
+    private val launchers = MainActivityLaunchers(this).also { l ->
+        l.onIcsPicked = onIcs@ { uri ->
+            val repo = pendingImportRepo ?: return@onIcs
+            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching {
+                    val text = contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
+                        ?: return@runCatching
+                    val calendarId = repo.defaultCalendarId
+                        ?: com.eight87.strictlykeptboy.git.Uuid7.generate().toString()
+                    val report = com.eight87.strictlykeptboy.port.ics.IcsParser.parse(
+                        text = text,
+                        calendarId = calendarId,
+                        author = repo.authorIdentity.email,
+                    )
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        onParsed?.invoke(report)
+                    }
                 }
             }
         }
+        l.onIcsCreated = onCreated@ { uri ->
+            val content = pendingExportContent ?: return@onCreated
+            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching {
+                    contentResolver.openOutputStream(uri)?.use { it.write(content.toByteArray(Charsets.UTF_8)) }
+                }
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    Toast.makeText(this@MainActivity, getString(R.string.export_done), Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+        l.onAdoptPicked = { uri -> pendingAdoptHandler?.invoke(uri) }
+        l.onRestoreArchivePicked = { uri -> pendingRestoreArchiveHandler?.invoke(uri) }
+        l.onExportArchiveCreated = { uri -> pendingExportArchiveHandler?.invoke(uri) }
+        l.onParentPicked = { uri -> handleParentPicked(uri) }
     }
 
     /**
-     * Round 2.17.B.1–B.4 — SAF tree picker for the strictlykeptboy parent
-     * folder. Replaces the Round 2.7 "backup mirror" launcher: there is no
-     * mirror any more, the parent IS the working tree.
-     *
-     * Registered eagerly because `registerForActivityResult` must be called
-     * before `onCreate`'s STARTED state. On grant:
-     *  1. Resolve the SAF tree URI to a real `/storage/emulated/0/…` path
-     *     via [com.eight87.strictlykeptboy.prefs.SafTreeUriResolver.resolveRealPath].
-     *     SD cards / cloud providers return null — Toast + bail, no prefs
-     *     written (B.1).
-     *  2. Take the persistable URI permission so we keep access across
-     *     reboots.
-     *  3. Compute `<picked>/strictlykeptboy/` (if the picked folder
-     *     already carries a marker, re-use it as-is per D-2.17.c).
-     *     `mkdirs` the parent, write `.skb-root` via
-     *     [com.eight87.strictlykeptboy.prefs.SkbRootMarker.write] if the
-     *     marker isn't already there (idempotent re-pick of an already-skb
-     *     folder leaves the marker untouched) (B.2).
-     *  4. Persist
-     *     [com.eight87.strictlykeptboy.prefs.ParentLocation.External]
-     *     with the resolved `cachedRealPath` so the
-     *     `ParentLocationGate` flips to `Confirmed` (B.2).
-     *  5. Run
-     *     [com.eight87.strictlykeptboy.sync.ParentReconciler.reconcile]
-     *     on IO and Toast the adoption count (B.4).
+     * Round 2.17.B.1–B.4 — SAF parent-picker result handler. Resolves
+     * the real path (SD card / cloud picks return null and bail), takes
+     * the persistable URI permission, computes / mkdirs the nested
+     * `strictlykeptboy/` subdir, writes `.skb-root`, and either routes
+     * through the RepoMover (change-folder path) or persists prefs +
+     * runs ParentReconciler.
      */
-    private var pendingAppGraph: com.eight87.strictlykeptboy.composition.AppGraph? = null
-
-    /**
-     * Round 2.17 Phase E.5 — when true, the next parent-picker grant
-     * routes through the RepoMover instead of overwriting prefs in
-     * place. Set by the Storage screen's "Change folder" CTA before
-     * firing `parentPickerHandle`; cleared after the picker returns.
-     */
-    private var parentPickerAsChangeFolder: Boolean = false
-
-    private val parentPickerLauncher = registerForActivityResult(
-        ActivityResultContracts.OpenDocumentTree()
-    ) { uri: Uri? ->
-        if (uri == null) return@registerForActivityResult
-        val graph = pendingAppGraph ?: return@registerForActivityResult
-        // B.1 — resolve the real path FIRST. SD card / cloud provider
-        // picks return null; Toast + bail before we write any prefs.
+    private fun handleParentPicked(uri: Uri) {
+        val graph = pendingAppGraph ?: return
         val pickedRealPath = com.eight87.strictlykeptboy.prefs.SafTreeUriResolver
             .resolveRealPath(uri)
         if (pickedRealPath == null) {
@@ -169,24 +163,15 @@ class MainActivity : ComponentActivity() {
                 getString(R.string.parent_picker_internal_only),
                 Toast.LENGTH_LONG,
             ).show()
-            return@registerForActivityResult
+            return
         }
-        // Persist the SAF permission grant. Required so we can re-open
-        // the tree URI across reboots even though the underlying File
-        // I/O goes through the resolved real path.
         runCatching {
             contentResolver.takePersistableUriPermission(
                 uri,
                 Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
             )
         }
-        // B.3 — label derivation moved into SafTreeUriResolver.deriveLabel.
         val label = com.eight87.strictlykeptboy.prefs.SafTreeUriResolver.deriveLabel(uri)
-        // B.2 — compute the strictlykeptboy parent directory inside the
-        // picked folder. If the picked folder ITSELF is already an skb
-        // root (`.skb-root` present), short-circuit to using it as-is
-        // (D-2.17.c happy path). Otherwise nest a `strictlykeptboy/`
-        // subdir and write the marker there if missing.
         val pickedFile = java.io.File(pickedRealPath)
         val parentFile = if (com.eight87.strictlykeptboy.prefs.SkbRootMarker.isSkbRoot(pickedFile)) {
             pickedFile
@@ -207,10 +192,6 @@ class MainActivity : ComponentActivity() {
             label = label,
             cachedRealPath = parentFile.absolutePath,
         )
-        // Round 2.17 Phase E.5 — when the picker was launched as a
-        // "Change folder" action (from Settings → Storage folder), route
-        // through the move-job so existing repos under the previous
-        // parent are physically moved instead of stranded.
         val asChangeFolder = parentPickerAsChangeFolder
         parentPickerAsChangeFolder = false
         if (asChangeFolder) {
@@ -223,12 +204,10 @@ class MainActivity : ComponentActivity() {
                     oldLocation = oldLoc,
                     newLocation = newLocation,
                 )
-                return@registerForActivityResult
+                return
             }
         }
         graph.repoStoragePrefs.set(newLocation)
-        // B.4 — reconcile against the new parent and Toast how many
-        // repos got adopted (instead of "applied backup mirror to N").
         kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             val count = runCatching { graph.parentReconciler.reconcile().size }.getOrDefault(0)
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
@@ -241,70 +220,23 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /** Round 2.17.B.5 — parked AppGraph for the parent-picker handler. */
+    private var pendingAppGraph: com.eight87.strictlykeptboy.composition.AppGraph? = null
+
     /**
-     * Round 2.17 Phase E.4 — "Adopt existing folder" picker. Differs
-     * from [parentPickerLauncher] in that we do NOT switch parents on
-     * grant — we only run [com.eight87.strictlykeptboy.sync.ParentReconciler.reconcileExternal]
-     * against the picked folder and surface its discoveries in a
-     * confirmation sheet. The handler attached by Compose decides
-     * whether to commit (switch parent + register adoptees) or cancel.
+     * Round 2.17 Phase E.5 — when true, the next parent-picker grant
+     * routes through RepoMover instead of overwriting prefs in place.
      */
+    private var parentPickerAsChangeFolder: Boolean = false
+
+    /** Round 2.17 Phase E.4 — "Adopt existing folder" parked handler. */
     private var pendingAdoptHandler: ((Uri) -> Unit)? = null
 
-    private val adoptPickerLauncher = registerForActivityResult(
-        ActivityResultContracts.OpenDocumentTree()
-    ) { uri: Uri? ->
-        if (uri == null) return@registerForActivityResult
-        pendingAdoptHandler?.invoke(uri)
-    }
-
-    /**
-     * Round 2.17.B.6 — SAF document picker for backup archives. The
-     * `.skb-backup.tar.gz` MIME type is `application/gzip`; consumed by
-     * Phase G's destructive Restore flow. The actual `pendingRestoreXxx`
-     * state + handler wiring lands in Phase G; for now the launcher is
-     * registered and parked under [pendingRestoreArchiveHandler] so the
-     * picker contract registration is in place (registration must happen
-     * before STARTED, but the consumer can attach later).
-     */
+    /** Round 2.17.B.6 / Phase G — parked restore-archive handler. */
     private var pendingRestoreArchiveHandler: ((Uri) -> Unit)? = null
 
-    private val restoreArchivePickerLauncher = registerForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri: Uri? ->
-        if (uri == null) return@registerForActivityResult
-        pendingRestoreArchiveHandler?.invoke(uri)
-    }
-
-    /**
-     * Round 2.17 Phase F.4 — parked handler for the "Export backup"
-     * SAF launcher. The Settings → Storage → Backup/Restore screen
-     * attaches a callback before launching, so the activity can write
-     * the tar.gz on `Dispatchers.IO` once the user names a destination.
-     */
+    /** Round 2.17 Phase F.4 — parked export-archive handler. */
     private var pendingExportArchiveHandler: ((Uri) -> Unit)? = null
-
-    private val exportArchivePickerLauncher = registerForActivityResult(
-        ActivityResultContracts.CreateDocument("application/gzip")
-    ) { uri: Uri? ->
-        if (uri == null) return@registerForActivityResult
-        pendingExportArchiveHandler?.invoke(uri)
-    }
-
-    private val createIcsLauncher = registerForActivityResult(
-        ActivityResultContracts.CreateDocument("text/calendar")
-    ) { uri: Uri? ->
-        val content = pendingExportContent ?: return@registerForActivityResult
-        if (uri == null) return@registerForActivityResult
-        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            runCatching {
-                contentResolver.openOutputStream(uri)?.use { it.write(content.toByteArray(Charsets.UTF_8)) }
-            }
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                Toast.makeText(this@MainActivity, getString(R.string.export_done), Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
@@ -340,7 +272,7 @@ class MainActivity : ComponentActivity() {
         // (Settings → Storage folder, Repos reminder banner) can launch
         // it without owning an ActivityResultLauncher.
         pendingAppGraph = graph
-        graph.setParentPickerHandle { parentPickerLauncher.launch(null) }
+        graph.setParentPickerHandle { launchers.parentPicker.launch(null) }
 
         // Round 2.17 Phase E.7 — probe persisted SAF permissions on
         // boot so the Repos pane red banner flips if the user revoked
@@ -1101,7 +1033,7 @@ class MainActivity : ComponentActivity() {
                                             .isSkbRoot(parentFile),
                                     )
                                 }
-                                adoptPickerLauncher.launch(null)
+                                launchers.adoptPicker.launch(null)
                             },
                             // Round 2.17 Phase F.3/F.4 — "Export backup"
                             // row: park a handler, fire the SAF
@@ -1169,7 +1101,7 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
                                 val today = java.time.LocalDate.now().toString()
-                                exportArchivePickerLauncher.launch(
+                                launchers.exportArchivePicker.launch(
                                     "strictlykeptboy-backup-$today.tar.gz",
                                 )
                             },
@@ -1298,7 +1230,7 @@ class MainActivity : ComponentActivity() {
                                 // also allow */* so devices that surface
                                 // the file as `application/x-gzip` /
                                 // `octet-stream` can be picked.
-                                restoreArchivePickerLauncher.launch(
+                                launchers.restoreArchivePicker.launch(
                                     arrayOf("application/gzip", "application/x-gzip", "*/*"),
                                 )
                             },
@@ -1456,17 +1388,24 @@ class MainActivity : ComponentActivity() {
                             },
                             onPickImportFile = { repo ->
                                 pendingImportRepo = repo
-                                openIcsLauncher.launch(arrayOf("text/calendar", "text/*", "*/*"))
+                                launchers.openIcs.launch(arrayOf("text/calendar", "text/*", "*/*"))
                             },
                             onPickExportFile = { repo ->
                                 pendingExportRepo = repo
                                 scope.launch {
                                     runCatching {
                                         pendingExportContent = buildExportContent(repo)
-                                        createIcsLauncher.launch("${repo.displayName.ifBlank { "calendar" }}.ics")
+                                        launchers.createIcs.launch("${repo.displayName.ifBlank { "calendar" }}.ics")
                                     }
                                 }
                             },
+                            // [L]#11 (audit pass 2026-05-17) — clear the
+                            // wizard re-entry request when the host
+                            // finishes/cancels. Replaces the previous
+                            // direct mutation inside SkbAppDestinationContent
+                            // and lets AppGraph keep `_wizardEntryRequest`
+                            // private.
+                            onWizardFinished = { graph.clearWizardEntryRequest() },
                             // Phase 2.1.I.4 — share-with-dom sheet host. Reuses
                             // the existing ShareSheet; the wizard CTA flips
                             // `pendingShareRepo` and we render here. The user

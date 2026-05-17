@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoMode
@@ -23,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -81,15 +83,24 @@ fun ZoomLevelRow(
                 "Zoom: ${opt.label} (${opt.dpPerHour} dp per hour)"
             }
             val selected = opt.value == selectedOverride
+            // Audit pass 2026-05-17 (Fix B) — wrap the whole option in
+            // `Modifier.selectable` so (a) `assertIsSelected()` sees the
+            // selection state on the testTag node and (b) a tap on the
+            // label Text bubbles to the same handler the icon circle
+            // would, matching what the schedule-rail circles do.
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(2.dp),
                 modifier = Modifier
                     .testTag(opt.testTag)
+                    .selectable(
+                        selected = selected,
+                        role = Role.RadioButton,
+                        onClick = { onSelect(opt.value) },
+                    )
                     .semantics { contentDescription = a11y },
             ) {
                 Surface(
-                    onClick = { onSelect(opt.value) },
                     shape = CircleShape,
                     color = if (selected) MaterialTheme.colorScheme.primaryContainer
                     else MaterialTheme.colorScheme.surfaceContainerHighest,

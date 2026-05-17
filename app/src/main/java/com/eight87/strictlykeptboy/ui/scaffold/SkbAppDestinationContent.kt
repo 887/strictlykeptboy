@@ -63,10 +63,8 @@ internal fun SkbAppDestinationContent(
     onPickInternalStorage: () -> Unit,
     onWizardScaffold: suspend (WizardDraft) -> Result<Unit>,
     onWizardFinish: () -> Unit,
+    onWizardFinished: () -> Unit,
     wizardEntry: com.eight87.strictlykeptboy.ui.wizard.WizardScreen?,
-    wizardEntryRequest: kotlinx.coroutines.flow.MutableStateFlow<
-        com.eight87.strictlykeptboy.ui.wizard.WizardScreen?
-    >?,
     onShareWithDom: () -> Unit,
     importExportState: ImportExportViewState?,
     onPickImportFile: (com.eight87.strictlykeptboy.git.RepoConfig) -> Unit,
@@ -135,11 +133,11 @@ internal fun SkbAppDestinationContent(
         TopDestination.Wizard -> WizardNavHost(
             onFinish = {
                 onWizardFinish()
-                wizardEntryRequest?.value = null
+                onWizardFinished()
                 onSelectDest(TopDestination.Schedule)
             },
             onCancel = {
-                wizardEntryRequest?.value = null
+                onWizardFinished()
                 onSelectDest(TopDestination.Schedule)
             },
             onScaffold = onWizardScaffold,

@@ -418,20 +418,26 @@ class AppGraph(private val appContext: Context) {
      * switch to the Wizard destination and pre-position the host at a
      * specific screen. Shell observes; resets back to null on finish.
      */
-    // [L]#11 — left as `MutableStateFlow` on the public surface because
-    // `SkbAppDestinationContent` still clears the request to null after
-    // the wizard finishes (`wizardEntryRequest?.value = null`). The
-    // `SkbAppShell` split (#9) shipped, but the clear path landed on
-    // `SkbAppDestinationContent` rather than moving into a callback.
-    // Tightening to `StateFlow` is gated on routing the clear through a
-    // `ShellCallbacks.onWizardFinished` lambda. `setWizardEntryRequest(...)`
-    // is the canonical write path from outside `composition/`.
-    val wizardEntryRequest: MutableStateFlow<com.eight87.strictlykeptboy.ui.wizard.WizardScreen?> =
+    // [L]#11 (audit pass 2026-05-17) — fully encapsulated. The clear
+    // path from `SkbAppDestinationContent`'s wizard-finish handler now
+    // routes through `ShellCallbacks.onWizardFinished` → MainActivity →
+    // `clearWizardEntryRequest()`, so the public surface is a read-only
+    // `StateFlow`. `setWizardEntryRequest(...)` is the canonical write
+    // path from outside `composition/`.
+    private val _wizardEntryRequest:
+        MutableStateFlow<com.eight87.strictlykeptboy.ui.wizard.WizardScreen?> =
         MutableStateFlow(null)
+    val wizardEntryRequest: StateFlow<com.eight87.strictlykeptboy.ui.wizard.WizardScreen?> =
+        _wizardEntryRequest.asStateFlow()
 
     /** [L]#11 — narrow setter for [wizardEntryRequest]. */
     fun setWizardEntryRequest(screen: com.eight87.strictlykeptboy.ui.wizard.WizardScreen?) {
-        wizardEntryRequest.value = screen
+        _wizardEntryRequest.value = screen
+    }
+
+    /** [L]#11 — narrow clear-to-null helper invoked on wizard finish/cancel. */
+    fun clearWizardEntryRequest() {
+        _wizardEntryRequest.value = null
     }
 
     /** Phase D — read-through cache. Owned here so publishers can share it. */
