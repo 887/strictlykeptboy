@@ -96,7 +96,12 @@ class TalkBackLabelTest {
                     snapshotFlow = snapshot,
                     sourcesFlow = sources,
                 )
-                SkbAppShell(activeRepoNameFlow = repoName, scheduleState = state)
+                SkbAppShell(
+                    context = com.eight87.strictlykeptboy.ui.scaffold.ShellContext(
+                        activeRepoNameFlow = repoName,
+                        scheduleState = state,
+                    ),
+                )
             }
         }
         ScheduleViewTab.entries.forEach {

@@ -26,6 +26,9 @@ import com.eight87.strictlykeptboy.git.RepoStore
 import com.eight87.strictlykeptboy.sync.SyncService
 import java.io.File
 import com.eight87.strictlykeptboy.theme.StrictlyKeptBoyTheme
+import com.eight87.strictlykeptboy.ui.scaffold.ShellCallbacks
+import com.eight87.strictlykeptboy.ui.scaffold.ShellContext
+import com.eight87.strictlykeptboy.ui.scaffold.ShellSelections
 import com.eight87.strictlykeptboy.ui.scaffold.SkbAppShell
 import com.eight87.strictlykeptboy.ui.schedule.ScheduleViewState
 import com.eight87.strictlykeptboy.ui.tasks.TasksViewState
@@ -980,136 +983,12 @@ class MainActivity : ComponentActivity() {
                     var pendingCalendarEdit by remember {
                         mutableStateOf<com.eight87.strictlykeptboy.resolver.CalendarMeta?>(null)
                     }
-                    SkbAppShell(
-                        tasksState = tasksViewState,
-                        // Round 2.16.B — wire the real projector + transport
-                        // adapter so MiniPlayer/NowPlayingScreen read live
-                        // active-task state. Temp Start affordance on
-                        // TaskRow → controller.start(taskId).
-                        taskPlaybackSource = graph.taskTransport,
-                        onStartTask = { taskId -> graph.activeTaskController.start(taskId) },
-                        // Round 2.27 / Phase D.3 — keeper-prompt response
-                        // submitter. Writes the response file via
-                        // PromptResponseWriter on the repo root resolved
-                        // from the task's repoId.
-                        onPromptRespond = { task, body, attachment ->
-                            scope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                                runCatching {
-                                    writePromptResponse(
-                                        task = task,
-                                        body = body,
-                                        attachment = attachment,
-                                    )
-                                }
-                            }
-                        },
-                        // Round 2.27 / Phase C.3 — long-press → synthetic
-                        // empty response so the row clears without the
-                        // sheet.
-                        onPromptMarkAnsweredOffline = { task ->
-                            scope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                                runCatching {
-                                    writePromptResponse(
-                                        task = task,
-                                        body = "(marked answered offline)",
-                                        attachment = null,
-                                    )
-                                }
-                            }
-                        },
-                        nowNextFlow = graph.nowNextFlow,
-                        activeRepoNameFlow = graph.defaultWriteRepoName,
-                        activeIconKindFlow = graph.activeRepoIconKind,
-                        wizardEntryRequest = graph.wizardEntryRequest,
-                        calendarVisibility = graph.calendarVisibility,
-                        onLongPressCalendar = { meta -> pendingCalendarEdit = meta },
-                        // Round 2.22 / Fix 3 — inline priority writer for the
-                        // OverlayPicker per-row OutlinedTextField. Drops +
-                        // rewrites the `priority` scalar in the calendar's
-                        // calendar.toml and commits via GitRepoRegistry.
-                        onOverlayPriorityChange = { meta, newPriority ->
-                            scope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                                com.eight87.strictlykeptboy.ui.calendars.CalendarSettingsWriter
-                                    .writePriority(
-                                        repoStore = graph.repoStore,
-                                        repoId = meta.repo.id,
-                                        calendarId = meta.ref.id,
-                                        calendarDisplayName = meta.displayName,
-                                        newPriority = newPriority,
-                                    )
-                            }
-                        },
-                        // Round 2.23.2 / D.119 — inline color writer for the
-                        // OverlayPicker per-card Color row. Rewrites the
-                        // `color_seed` scalar in calendar.toml and commits.
-                        onOverlayColorChange = { meta, rgb ->
-                            scope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                                com.eight87.strictlykeptboy.ui.calendars.CalendarSettingsWriter
-                                    .writeColorSeed(
-                                        repoStore = graph.repoStore,
-                                        repoId = meta.repo.id,
-                                        calendarId = meta.ref.id,
-                                        calendarDisplayName = meta.displayName,
-                                        colorSeed = rgb,
-                                    )
-                            }
-                        },
-                        onShareWithDom = {
-                            val name = graph.defaultWriteRepoName.value
-                            val cfg = graph.repoStore.list()
-                                .firstOrNull { it.displayName == name }
-                                ?: graph.repoStore.list().firstOrNull()
-                            pendingShareRepo = cfg
-                        },
-                        // Round 2.17.D — "Keep inside the app" wizard CTA.
-                        // Write Internal parent + create the .skb-root marker
-                        // so `ParentLocationGate` flips to Confirmed; the
-                        // wizard's LaunchedEffect on prefs.state advances
-                        // past the Storage step automatically.
-                        onPickInternalStorage = {
-                            val parentDir = filesDir.resolve("strictlykeptboy")
-                            runCatching {
-                                parentDir.mkdirs()
-                                if (!com.eight87.strictlykeptboy.prefs.SkbRootMarker.isSkbRoot(parentDir)) {
-                                    com.eight87.strictlykeptboy.prefs.SkbRootMarker.write(
-                                        parent = parentDir,
-                                        deviceName = android.os.Build.MODEL ?: "",
-                                    )
-                                }
-                            }
-                            graph.repoStoragePrefs.set(
-                                com.eight87.strictlykeptboy.prefs.ParentLocation.Internal(
-                                    absPath = parentDir.absolutePath,
-                                ),
-                            )
-                        },
-                        scheduleState = scheduleState,
-                        eventCreateController = eventCreateController,
-                        onPersistTab = graph.viewModePrefs::set,
-                        reposState = graph.reposState,
-                        secretsStore = graph.secretsStore,
-                        togetherViewModel = togetherVm,
-                        importExportState = importExportState,
-                        onPickImportFile = { repo ->
-                            pendingImportRepo = repo
-                            openIcsLauncher.launch(arrayOf("text/calendar", "text/*", "*/*"))
-                        },
-                        onPickExportFile = { repo ->
-                            pendingExportRepo = repo
-                            scope.launch {
-                                runCatching {
-                                    pendingExportContent = buildExportContent(repo)
-                                    createIcsLauncher.launch("${repo.displayName.ifBlank { "calendar" }}.ics")
-                                }
-                            }
-                        },
-                        onSyncClick = {
-                            if (graph.repoStore.list().any { it.remotes.isNotEmpty() }) {
-                                SyncService.startSyncAll(this@MainActivity)
-                            }
-                        },
-                        neutralMode = graph.neutralModePrefs.isEnabled(),
-                        settingsAccess = com.eight87.strictlykeptboy.ui.settings.SettingsAccess(
+                    // Round 2.28 / SOLID fix #9 — grouped signature. The
+                    // previous ~50-param flat call is now three data-class
+                    // bundles: services / providers in ShellContext, every
+                    // action lambda in ShellCallbacks, and parent-owned
+                    // mode / wizard-entry state in ShellSelections.
+                    val shellSettingsAccess = com.eight87.strictlykeptboy.ui.settings.SettingsAccess(
                             // Round 2.18.B.3 — External Calendars wiring.
                             systemCalendarPrefs = graph.systemCalendarPrefsStore,
                             systemCalendarsFlow = graph.systemCalendarsRawFlow,
@@ -1460,158 +1339,295 @@ class MainActivity : ComponentActivity() {
                             onOpenShareFor = { /* hook for ShareSheet wiring */ },
                             autoTabletPrefs = graph.autoTabletPrefs,
                             tripFeed = graph.tripFeed,
+                        )
+                    SkbAppShell(
+                        context = ShellContext(
+                            activeRepoNameFlow = graph.defaultWriteRepoName,
+                            scheduleState = scheduleState,
+                            tasksState = tasksViewState,
+                            reposState = graph.reposState,
+                            secretsStore = graph.secretsStore,
+                            togetherViewModel = togetherVm,
+                            importExportState = importExportState,
+                            settingsAccess = shellSettingsAccess,
+                            activeIconKindFlow = graph.activeRepoIconKind,
+                            eventCreateController = eventCreateController,
+                            calendarVisibility = graph.calendarVisibility,
+                            // Round 2.16.B — wire the real projector + transport
+                            // adapter so MiniPlayer/NowPlayingScreen read live
+                            // active-task state.
+                            taskPlaybackSource = graph.taskTransport,
+                            nowNextFlow = graph.nowNextFlow,
                         ),
-                        onWizardScaffold = { draft ->
-                            runCatching {
-                                // Round 2.17.C.2 — wizard scaffold now lands
-                                // under the configured parent (Internal:
-                                // filesDir/strictlykeptboy/, External: the
-                                // SAF cachedRealPath) instead of the legacy
-                                // filesDir/repos/. Falls back to the
-                                // canonical internal default if the user
-                                // hasn't confirmed a parent yet — Phase D
-                                // adds the wizard storage step that makes
-                                // this explicit; until then, the default
-                                // matches what the v1 fallback would have
-                                // produced anyway.
-                                val parentDir = graph.repoStoragePrefs.location?.workingDir(filesDir)
-                                    ?: com.eight87.strictlykeptboy.prefs.RepoStoragePrefs.defaultInternalDir(this@MainActivity)
-                                val outcome = WizardScaffolder.materialize(
-                                    parentDir = parentDir,
-                                    draft = draft,
-                                    author = AuthorIdentity("me", "me@example.com"),
-                                    assetPackLoader = graph.assetPackLoader,
-                                )
-                                val scaffoldedConfig = RepoConfig(
-                                    repoId = outcome.repoId,
-                                    displayName = draft.displayName.ifBlank { "my calendar" },
-                                    rootDir = outcome.rootDir.absolutePath,
-                                    remotes = emptyList(),
-                                    primaryRemote = null,
-                                    authorIdentity = outcome.authorIdentity,
-                                    defaultCalendarId = outcome.calendarIds.values.firstOrNull(),
-                                    defaultTodolistId = outcome.todolistId,
-                                    iconEmoji = when (draft.species) {
-                                        com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Bat -> "🦇"
-                                        com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Bunny -> "🐰"
-                                        com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Cat -> "🐱"
-                                        com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.CatChan -> "🐱"
-                                        com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Fox -> "🦊"
-                                        com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.FoxChan -> "🦊"
-                                        com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Lion -> "🦁"
-                                        com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Tiger -> "🐯"
-                                        com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Wolf -> "🐺"
-                                    },
-                                    // Per D.88 / F48 — the species drives the per-repo avatar.
-                                    // `Sticker(<species>)` falls back to about_bat for bat and
-                                    // to AutoInitials for others until Phase WW lands.
-                                    iconSpecies = draft.species.name,
-                                )
-                                // Round 2.17.C.4 — debug-only invariant.
-                                com.eight87.strictlykeptboy.git.warnIfRepoOutsideParent(
-                                    scaffoldedConfig,
-                                    parentDir.absolutePath,
-                                )
-                                graph.repoStore.add(scaffoldedConfig)
-                                graph.setDefaultWriteRepoName(draft.displayName.ifBlank { "my calendar" })
-                                Unit
-                            }
-                        },
-                        // Phase 2.1.I.4 — share-with-dom sheet host. Reuses
-                        // the existing ShareSheet; the wizard CTA flips
-                        // `pendingShareRepo` and we render here. The user
-                        // sets allowWriteBack themselves in the sheet (the
-                        // wizard advertises that's what we're doing).
-                        // Phase CCC.8 — trip-overlay materializer. Writes a
-                        // `cal-trip-<uuidv7>/` overlay into the active repo and
-                        // commits atomically. Falls back to no-op (Result.failure)
-                        // if no active repo exists yet.
-                        // Round 2.22 / Phase B UI follow-up — drag-to-reschedule.
-                        // Resolve the band's source entity from disk, then
-                        // route through DragRescheduleController.
-                        onSingleDrop = { band, newStart ->
-                            val eventId = (band.instance.source as? com.eight87.strictlykeptboy.resolver.InstanceSource.OneOff)
-                                ?.eventId?.id ?: return@SkbAppShell
-                            val repoId = band.instance.repo.id
-                            val cfg = graph.repoStore.list().firstOrNull { it.repoId == repoId }
-                                ?: return@SkbAppShell
-                            scope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                                runCatching {
-                                    val results = com.eight87.strictlykeptboy.store.RepoScanner
-                                        .scanAll(java.io.File(cfg.rootDir))
-                                    val event = results
-                                        .filterIsInstance<com.eight87.strictlykeptboy.store.ParseResult.Success>()
-                                        .mapNotNull { it.entity as? com.eight87.strictlykeptboy.store.Event }
-                                        .firstOrNull { it.id == eventId } ?: return@runCatching
-                                    com.eight87.strictlykeptboy.ui.schedule.DragRescheduleController
-                                        .handleSingleDrop(
-                                            rootDir = java.io.File(cfg.rootDir),
-                                            repoId = cfg.repoId,
-                                            event = event,
-                                            newStart = newStart,
-                                            nowIso = java.time.OffsetDateTime.now().toString(),
-                                        )
+                        callbacks = ShellCallbacks(
+                            onPersistTab = graph.viewModePrefs::set,
+                            onSyncClick = {
+                                if (graph.repoStore.list().any { it.remotes.isNotEmpty() }) {
+                                    SyncService.startSyncAll(this@MainActivity)
                                 }
-                            }
-                        },
-                        onRecurringDrop = { band, newStart, choice ->
-                            val src = band.instance.source as? com.eight87.strictlykeptboy.resolver.InstanceSource.RuleInstance
-                                ?: return@SkbAppShell
-                            val ruleId = src.ruleId.id
-                            val origDate = src.originalStart.toLocalDate()
-                            val repoId = band.instance.repo.id
-                            val cfg = graph.repoStore.list().firstOrNull { it.repoId == repoId }
-                                ?: return@SkbAppShell
-                            scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                            },
+                            onWizardScaffold = { draft ->
                                 runCatching {
-                                    val results = com.eight87.strictlykeptboy.store.RepoScanner
-                                        .scanAll(java.io.File(cfg.rootDir))
-                                    val rule = results
-                                        .filterIsInstance<com.eight87.strictlykeptboy.store.ParseResult.Success>()
-                                        .mapNotNull { it.entity as? com.eight87.strictlykeptboy.store.RecurrenceRule }
-                                        .firstOrNull { it.id == ruleId } ?: return@runCatching
-                                    com.eight87.strictlykeptboy.ui.schedule.DragRescheduleController
-                                        .handleRecurringDrop(
-                                            rootDir = java.io.File(cfg.rootDir),
-                                            repoId = cfg.repoId,
-                                            rule = rule,
-                                            originalDate = origDate,
-                                            newStart = newStart,
-                                            choice = choice,
-                                            author = cfg.authorIdentity.name,
-                                            nowIso = java.time.OffsetDateTime.now().toString(),
-                                        )
-                                }
-                            }
-                        },
-                        onTripMaterialize = { tripDraft ->
-                            runCatching {
-                                val activeName = graph.defaultWriteRepoName.value
-                                val cfg = graph.repoStore.list().firstOrNull { it.displayName == activeName }
-                                    ?: graph.repoStore.list().firstOrNull()
-                                if (cfg == null) {
-                                    // SOLID Liskov fix #6 — soft-fail
-                                    // instead of `error()`: route the
-                                    // user into the lifestyle wizard
-                                    // rather than crashing (or silently
-                                    // swallowing inside runCatching).
-                                    graph.setWizardEntryRequest(
-                                        com.eight87.strictlykeptboy.ui.wizard.WizardScreen.Welcome,
+                                    // Round 2.17.C.2 — wizard scaffold now lands
+                                    // under the configured parent (Internal:
+                                    // filesDir/strictlykeptboy/, External: the
+                                    // SAF cachedRealPath) instead of the legacy
+                                    // filesDir/repos/. Falls back to the
+                                    // canonical internal default if the user
+                                    // hasn't confirmed a parent yet — Phase D
+                                    // adds the wizard storage step that makes
+                                    // this explicit; until then, the default
+                                    // matches what the v1 fallback would have
+                                    // produced anyway.
+                                    val parentDir = graph.repoStoragePrefs.location?.workingDir(filesDir)
+                                        ?: com.eight87.strictlykeptboy.prefs.RepoStoragePrefs.defaultInternalDir(this@MainActivity)
+                                    val outcome = WizardScaffolder.materialize(
+                                        parentDir = parentDir,
+                                        draft = draft,
+                                        author = AuthorIdentity("me", "me@example.com"),
+                                        assetPackLoader = graph.assetPackLoader,
                                     )
-                                    return@runCatching
+                                    val scaffoldedConfig = RepoConfig(
+                                        repoId = outcome.repoId,
+                                        displayName = draft.displayName.ifBlank { "my calendar" },
+                                        rootDir = outcome.rootDir.absolutePath,
+                                        remotes = emptyList(),
+                                        primaryRemote = null,
+                                        authorIdentity = outcome.authorIdentity,
+                                        defaultCalendarId = outcome.calendarIds.values.firstOrNull(),
+                                        defaultTodolistId = outcome.todolistId,
+                                        iconEmoji = when (draft.species) {
+                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Bat -> "🦇"
+                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Bunny -> "🐰"
+                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Cat -> "🐱"
+                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.CatChan -> "🐱"
+                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Fox -> "🦊"
+                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.FoxChan -> "🦊"
+                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Lion -> "🦁"
+                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Tiger -> "🐯"
+                                            com.eight87.strictlykeptboy.ui.wizard.SpeciesChoice.Wolf -> "🐺"
+                                        },
+                                        // Per D.88 / F48 — the species drives the per-repo avatar.
+                                        // `Sticker(<species>)` falls back to about_bat for bat and
+                                        // to AutoInitials for others until Phase WW lands.
+                                        iconSpecies = draft.species.name,
+                                    )
+                                    // Round 2.17.C.4 — debug-only invariant.
+                                    com.eight87.strictlykeptboy.git.warnIfRepoOutsideParent(
+                                        scaffoldedConfig,
+                                        parentDir.absolutePath,
+                                    )
+                                    graph.repoStore.add(scaffoldedConfig)
+                                    graph.setDefaultWriteRepoName(draft.displayName.ifBlank { "my calendar" })
+                                    Unit
                                 }
-                                com.eight87.strictlykeptboy.ui.trip.TripScaffolder.materialize(
-                                    repoRoot = java.io.File(cfg.rootDir),
-                                    draft = tripDraft,
-                                    assets = com.eight87.strictlykeptboy.ui.trip.TripScaffolder.AssetReader { path ->
-                                        assets.open(path)
-                                    },
-                                    author = cfg.authorIdentity,
-                                    repoId = cfg.repoId,
+                            },
+                            // Phase CCC.8 — trip-overlay materializer. Writes a
+                            // `cal-trip-<uuidv7>/` overlay into the active repo and
+                            // commits atomically. Falls back to no-op (Result.failure)
+                            // if no active repo exists yet.
+                            onTripMaterialize = { tripDraft ->
+                                runCatching {
+                                    val activeName = graph.defaultWriteRepoName.value
+                                    val cfg = graph.repoStore.list().firstOrNull { it.displayName == activeName }
+                                        ?: graph.repoStore.list().firstOrNull()
+                                    if (cfg == null) {
+                                        // SOLID Liskov fix #6 — soft-fail
+                                        // instead of `error()`: route the
+                                        // user into the lifestyle wizard
+                                        // rather than crashing (or silently
+                                        // swallowing inside runCatching).
+                                        graph.setWizardEntryRequest(
+                                            com.eight87.strictlykeptboy.ui.wizard.WizardScreen.Welcome,
+                                        )
+                                        return@runCatching
+                                    }
+                                    com.eight87.strictlykeptboy.ui.trip.TripScaffolder.materialize(
+                                        repoRoot = java.io.File(cfg.rootDir),
+                                        draft = tripDraft,
+                                        assets = com.eight87.strictlykeptboy.ui.trip.TripScaffolder.AssetReader { path ->
+                                            assets.open(path)
+                                        },
+                                        author = cfg.authorIdentity,
+                                        repoId = cfg.repoId,
+                                    )
+                                    Unit
+                                }
+                            },
+                            onPickImportFile = { repo ->
+                                pendingImportRepo = repo
+                                openIcsLauncher.launch(arrayOf("text/calendar", "text/*", "*/*"))
+                            },
+                            onPickExportFile = { repo ->
+                                pendingExportRepo = repo
+                                scope.launch {
+                                    runCatching {
+                                        pendingExportContent = buildExportContent(repo)
+                                        createIcsLauncher.launch("${repo.displayName.ifBlank { "calendar" }}.ics")
+                                    }
+                                }
+                            },
+                            // Phase 2.1.I.4 — share-with-dom sheet host. Reuses
+                            // the existing ShareSheet; the wizard CTA flips
+                            // `pendingShareRepo` and we render here. The user
+                            // sets allowWriteBack themselves in the sheet (the
+                            // wizard advertises that's what we're doing).
+                            onShareWithDom = {
+                                val name = graph.defaultWriteRepoName.value
+                                val cfg = graph.repoStore.list()
+                                    .firstOrNull { it.displayName == name }
+                                    ?: graph.repoStore.list().firstOrNull()
+                                pendingShareRepo = cfg
+                            },
+                            onLongPressCalendar = { meta -> pendingCalendarEdit = meta },
+                            // Round 2.22 / Fix 3 — inline priority writer for the
+                            // OverlayPicker per-row OutlinedTextField. Drops +
+                            // rewrites the `priority` scalar in the calendar's
+                            // calendar.toml and commits via GitRepoRegistry.
+                            onOverlayPriorityChange = { meta, newPriority ->
+                                scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                    com.eight87.strictlykeptboy.ui.calendars.CalendarSettingsWriter
+                                        .writePriority(
+                                            repoStore = graph.repoStore,
+                                            repoId = meta.repo.id,
+                                            calendarId = meta.ref.id,
+                                            calendarDisplayName = meta.displayName,
+                                            newPriority = newPriority,
+                                        )
+                                }
+                            },
+                            // Round 2.23.2 / D.119 — inline color writer for the
+                            // OverlayPicker per-card Color row. Rewrites the
+                            // `color_seed` scalar in calendar.toml and commits.
+                            onOverlayColorChange = { meta, rgb ->
+                                scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                    com.eight87.strictlykeptboy.ui.calendars.CalendarSettingsWriter
+                                        .writeColorSeed(
+                                            repoStore = graph.repoStore,
+                                            repoId = meta.repo.id,
+                                            calendarId = meta.ref.id,
+                                            calendarDisplayName = meta.displayName,
+                                            colorSeed = rgb,
+                                        )
+                                }
+                            },
+                            // Round 2.16.B — Temp Start affordance on
+                            // TaskRow → controller.start(taskId).
+                            onStartTask = { taskId -> graph.activeTaskController.start(taskId) },
+                            // Round 2.17.D — "Keep inside the app" wizard CTA.
+                            // Write Internal parent + create the .skb-root marker
+                            // so `ParentLocationGate` flips to Confirmed; the
+                            // wizard's LaunchedEffect on prefs.state advances
+                            // past the Storage step automatically.
+                            onPickInternalStorage = {
+                                val parentDir = filesDir.resolve("strictlykeptboy")
+                                runCatching {
+                                    parentDir.mkdirs()
+                                    if (!com.eight87.strictlykeptboy.prefs.SkbRootMarker.isSkbRoot(parentDir)) {
+                                        com.eight87.strictlykeptboy.prefs.SkbRootMarker.write(
+                                            parent = parentDir,
+                                            deviceName = android.os.Build.MODEL ?: "",
+                                        )
+                                    }
+                                }
+                                graph.repoStoragePrefs.set(
+                                    com.eight87.strictlykeptboy.prefs.ParentLocation.Internal(
+                                        absPath = parentDir.absolutePath,
+                                    ),
                                 )
-                                Unit
-                            }
-                        },
+                            },
+                            // Round 2.22 / Phase B UI follow-up — drag-to-reschedule.
+                            // Resolve the band's source entity from disk, then
+                            // route through DragRescheduleController.
+                            onSingleDrop = single@{ band, newStart ->
+                                val eventId = (band.instance.source as? com.eight87.strictlykeptboy.resolver.InstanceSource.OneOff)
+                                    ?.eventId?.id ?: return@single
+                                val repoId = band.instance.repo.id
+                                val cfg = graph.repoStore.list().firstOrNull { it.repoId == repoId }
+                                    ?: return@single
+                                scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                    runCatching {
+                                        val results = com.eight87.strictlykeptboy.store.RepoScanner
+                                            .scanAll(java.io.File(cfg.rootDir))
+                                        val event = results
+                                            .filterIsInstance<com.eight87.strictlykeptboy.store.ParseResult.Success>()
+                                            .mapNotNull { it.entity as? com.eight87.strictlykeptboy.store.Event }
+                                            .firstOrNull { it.id == eventId } ?: return@runCatching
+                                        com.eight87.strictlykeptboy.ui.schedule.DragRescheduleController
+                                            .handleSingleDrop(
+                                                rootDir = java.io.File(cfg.rootDir),
+                                                repoId = cfg.repoId,
+                                                event = event,
+                                                newStart = newStart,
+                                                nowIso = java.time.OffsetDateTime.now().toString(),
+                                            )
+                                    }
+                                }
+                            },
+                            onRecurringDrop = recurring@{ band, newStart, choice ->
+                                val src = band.instance.source as? com.eight87.strictlykeptboy.resolver.InstanceSource.RuleInstance
+                                    ?: return@recurring
+                                val ruleId = src.ruleId.id
+                                val origDate = src.originalStart.toLocalDate()
+                                val repoId = band.instance.repo.id
+                                val cfg = graph.repoStore.list().firstOrNull { it.repoId == repoId }
+                                    ?: return@recurring
+                                scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                    runCatching {
+                                        val results = com.eight87.strictlykeptboy.store.RepoScanner
+                                            .scanAll(java.io.File(cfg.rootDir))
+                                        val rule = results
+                                            .filterIsInstance<com.eight87.strictlykeptboy.store.ParseResult.Success>()
+                                            .mapNotNull { it.entity as? com.eight87.strictlykeptboy.store.RecurrenceRule }
+                                            .firstOrNull { it.id == ruleId } ?: return@runCatching
+                                        com.eight87.strictlykeptboy.ui.schedule.DragRescheduleController
+                                            .handleRecurringDrop(
+                                                rootDir = java.io.File(cfg.rootDir),
+                                                repoId = cfg.repoId,
+                                                rule = rule,
+                                                originalDate = origDate,
+                                                newStart = newStart,
+                                                choice = choice,
+                                                author = cfg.authorIdentity.name,
+                                                nowIso = java.time.OffsetDateTime.now().toString(),
+                                            )
+                                    }
+                                }
+                            },
+                            // Round 2.27 / Phase D.3 — keeper-prompt response
+                            // submitter. Writes the response file via
+                            // PromptResponseWriter on the repo root resolved
+                            // from the task's repoId.
+                            onPromptRespond = { task, body, attachment ->
+                                scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                    runCatching {
+                                        writePromptResponse(
+                                            task = task,
+                                            body = body,
+                                            attachment = attachment,
+                                        )
+                                    }
+                                }
+                            },
+                            // Round 2.27 / Phase C.3 — long-press → synthetic
+                            // empty response so the row clears without the
+                            // sheet.
+                            onPromptMarkAnsweredOffline = { task ->
+                                scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                    runCatching {
+                                        writePromptResponse(
+                                            task = task,
+                                            body = "(marked answered offline)",
+                                            attachment = null,
+                                        )
+                                    }
+                                }
+                            },
+                        ),
+                        selections = ShellSelections(
+                            neutralMode = graph.neutralModePrefs.isEnabled(),
+                            wizardEntryRequest = graph.wizardEntryRequest,
+                        ),
                     )
                     // Round 2.1.B.4 — overlay CalendarSettingsSheet on
                     // long-press of a chip. Save writes calendar.toml on

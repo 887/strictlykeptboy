@@ -11,6 +11,8 @@ import com.eight87.strictlykeptboy.theme.StrictlyKeptBoyTheme
 import com.eight87.strictlykeptboy.ui.adaptive.LocalWindowWidthSizeClass
 import com.eight87.strictlykeptboy.ui.adaptive.WindowWidthSizeClass
 import com.eight87.strictlykeptboy.ui.scaffold.ScheduleViewTab
+import com.eight87.strictlykeptboy.ui.scaffold.ShellContext
+import com.eight87.strictlykeptboy.ui.scaffold.ShellSelections
 import com.eight87.strictlykeptboy.ui.scaffold.SkbAppShell
 import com.eight87.strictlykeptboy.ui.scaffold.TestTagAppShell
 import com.eight87.strictlykeptboy.ui.scaffold.TestTagShellDestPrefix
@@ -60,7 +62,12 @@ class AppShellNavigationSwapTest {
                         snapshotFlow = snapshot,
                         sourcesFlow = sources,
                     )
-                    SkbAppShell(activeRepoNameFlow = repoName, scheduleState = state)
+                    SkbAppShell(
+                        context = ShellContext(
+                            activeRepoNameFlow = repoName,
+                            scheduleState = state,
+                        ),
+                    )
                 }
             }
         }
@@ -141,9 +148,13 @@ class AppShellNavigationSwapTest {
                         sourcesFlow = sources,
                     )
                     SkbAppShell(
-                        activeRepoNameFlow = repoName,
-                        scheduleState = state,
-                        wizardEntryRequest = entryReq,
+                        context = ShellContext(
+                            activeRepoNameFlow = repoName,
+                            scheduleState = state,
+                        ),
+                        selections = ShellSelections(
+                            wizardEntryRequest = entryReq,
+                        ),
                     )
                 }
             }

@@ -24,33 +24,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
-import com.eight87.strictlykeptboy.R
-import com.eight87.strictlykeptboy.git.auth.SecretsStore
-import com.eight87.strictlykeptboy.task.StubTaskPlaybackSource
 import com.eight87.strictlykeptboy.ui.a11y.labelString
 import com.eight87.strictlykeptboy.ui.adaptive.LocalWindowWidthSizeClass
 import com.eight87.strictlykeptboy.ui.adaptive.ProvideWindowSizeClass
-import com.eight87.strictlykeptboy.ui.import_export.ImportExportViewState
-import com.eight87.strictlykeptboy.ui.repos.ReposPane
-import com.eight87.strictlykeptboy.ui.repos.ReposViewState
-import com.eight87.strictlykeptboy.ui.schedule.SchedulePane
-import com.eight87.strictlykeptboy.ui.schedule.ScheduleViewState
-import com.eight87.strictlykeptboy.ui.settings.SettingsAccess
-import com.eight87.strictlykeptboy.ui.settings.SettingsPane
-import com.eight87.strictlykeptboy.ui.tasks.TaskItem
-import com.eight87.strictlykeptboy.ui.tasks.TaskQuickAddRequest
 import com.eight87.strictlykeptboy.ui.tasks.TasksFilter
-import com.eight87.strictlykeptboy.ui.tasks.TasksPane
-import com.eight87.strictlykeptboy.ui.tasks.TasksViewState
-import com.eight87.strictlykeptboy.ui.together.TogetherPane
-import com.eight87.strictlykeptboy.ui.together.TogetherViewModel
-import com.eight87.strictlykeptboy.ui.trip.TripDraft
 import com.eight87.strictlykeptboy.ui.trip.TripWizardNavHost
-import com.eight87.strictlykeptboy.ui.wizard.WizardDraft
-import com.eight87.strictlykeptboy.ui.wizard.WizardNavHost
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Phase polish — navigation-layout swap (correction to UI-A / Phase F).
@@ -72,18 +51,25 @@ import kotlinx.coroutines.flow.StateFlow
  *   - **TOP rightmost** = sync button + identity avatar (unchanged).
  *
  * Round 2.21 SOLID split (post-1170-LOC threshold): this file now
- * owns ONLY the shell's composition root and destination dispatch.
- * Top-bar chrome lives in `SkbTopBar.kt`; the left rail lives in
- * `SkbScheduleRail.kt`; the bottom-anchored Now-Playing sheet host
- * lives in `NowPlayingSheetHost.kt`. The shell composes the three.
+ * owns the shell's composition root only. Top-bar chrome lives in
+ * `SkbTopBar.kt`; the left rail lives in `SkbScheduleRail.kt`; the
+ * bottom-anchored Now-Playing sheet host lives in
+ * `NowPlayingSheetHost.kt`. The destination-dispatch `when` lives
+ * in `SkbAppDestinationContent.kt` (Round 2.28 SOLID fix #8c).
+ *
+ * Round 2.28 SOLID fix #9: the previous ~50-param flat signature is
+ * grouped into [ShellContext] (services / providers), [ShellCallbacks]
+ * (actions), and [ShellSelections] (parent-owned mode / selection
+ * state). The shell now takes three grouped params instead of fifty
+ * individual ones. Behaviour is byte-identical at every call site.
  *
  * SOLID notes:
  *  - **S/I:** the shell owns *only* destination dispatch + the visual
  *    composition. Each pane still owns its own state. The rail is
  *    parameterised by a [RailItem] list; the shell does not know
  *    about Day/Week/etc. constants.
- *  - **O:** new destinations join [TopDestination]; the `when` here is
- *    exhaustive.
+ *  - **O:** new destinations join [TopDestination]; the `when` in
+ *    [SkbAppDestinationContent] is exhaustive.
  *  - **D:** ViewModels and stores are passed in as before; this shell
  *    is the same composition surface as the old [AppScaffold].
  */
@@ -117,217 +103,52 @@ enum class TopDestination(val label: String, val icon: ImageVector) {
     Settings("Settings", Icons.Filled.Settings),
 }
 
+/**
+ * Round 2.28 / SOLID fix #9 — grouped-signature entry point. See
+ * [ShellContext], [ShellCallbacks], [ShellSelections] for the three
+ * argument bundles. Tests / previews that only need the bare minimum
+ * pass `SkbAppShell(ShellContext(activeRepoNameFlow = …, scheduleState
+ * = …, tasksState = TasksViewState()))` and let all other defaults
+ * carry the rest.
+ */
 @Composable
 fun SkbAppShell(
-    activeRepoNameFlow: StateFlow<String>,
-    scheduleState: ScheduleViewState,
+    context: ShellContext,
+    callbacks: ShellCallbacks = ShellCallbacks(),
+    selections: ShellSelections = ShellSelections(),
     modifier: Modifier = Modifier,
-    onPersistTab: (ScheduleViewTab) -> Unit = {},
-    tasksState: TasksViewState = remember { TasksViewState() },
-    onWriteTask: (TaskQuickAddRequest) -> Unit = {},
-    reposState: ReposViewState? = null,
-    secretsStore: SecretsStore? = null,
-    togetherViewModel: TogetherViewModel? = null,
-    onSyncClick: () -> Unit = {},
-    neutralMode: Boolean = false,
-    onWizardScaffold: suspend (WizardDraft) -> Result<Unit> = { Result.success(Unit) },
-    onWizardFinish: () -> Unit = {},
-    /** Phase CCC.8 — trip-wizard materializer (writes overlay calendar + commits). */
-    onTripMaterialize: suspend (TripDraft) -> Result<Unit> = { Result.success(Unit) },
-    importExportState: ImportExportViewState? = null,
-    onPickImportFile: (com.eight87.strictlykeptboy.git.RepoConfig) -> Unit = {},
-    onPickExportFile: (com.eight87.strictlykeptboy.git.RepoConfig) -> Unit = {},
-    settingsAccess: SettingsAccess = SettingsAccess(),
-    activeIconKindFlow: StateFlow<com.eight87.strictlykeptboy.ui.theming.RepoIconKind>? = null,
-    eventCreateController: com.eight87.strictlykeptboy.ui.schedule.EventCreateController? = null,
-    /**
-     * Phase 2.1.I.2 — external request to switch to the Wizard destination
-     * and pre-position the host at a specific screen (e.g. Roles, from the
-     * Settings → Lifestyle entry-point). When non-null, the shell selects
-     * [TopDestination.Wizard], passes `initialScreen` down, then clears
-     * the request on wizard finish. Null → no auto-routing.
-     */
-    wizardEntryRequest: kotlinx.coroutines.flow.MutableStateFlow<
-        com.eight87.strictlykeptboy.ui.wizard.WizardScreen?
-    >? = null,
-    /**
-     * Phase 2.1.I.4 — share-with-dom CTA from the wizard's last screen.
-     * Caller wires this to ShareSheet with the just-scaffolded repo + the
-     * `allowWriteBack` checkbox pre-set.
-     */
-    onShareWithDom: () -> Unit = {},
-    /**
-     * Round 2.1.B.2 — phone-local calendar visibility powering the
-     * overlay-picker button + per-row segmented zoom control.
-     */
-    calendarVisibility: com.eight87.strictlykeptboy.ui.settings.CalendarVisibilityPrefs? = null,
-    /**
-     * Round 2.1.B.2 / B.4 — long-press handler for calendar chips.
-     * Host opens [com.eight87.strictlykeptboy.ui.calendars.CalendarSettingsSheet].
-     */
-    onLongPressCalendar: ((com.eight87.strictlykeptboy.resolver.CalendarMeta) -> Unit)? = null,
-    /**
-     * Round 2.22 / Fix 3 — inline priority writer fired from the
-     * overlay-picker per-row OutlinedTextField. Default no-op so
-     * tests / previews don't have to plumb the writer.
-     */
-    onOverlayPriorityChange:
-        ((com.eight87.strictlykeptboy.resolver.CalendarMeta, Int) -> Unit) = { _, _ -> },
-    /**
-     * Round 2.23.2 — inline color writer fired from the overlay-picker
-     * Color row. Default no-op so tests / previews don't have to
-     * plumb the writer.
-     */
-    onOverlayColorChange:
-        ((com.eight87.strictlykeptboy.resolver.CalendarMeta, Int) -> Unit) = { _, _ -> },
-    /**
-     * Round 2.16.B — task-playback source feeding MiniPlayer +
-     * NowPlayingScreen. Defaults to the Phase A stub for previews /
-     * tests; MainActivity wires `appGraph.taskTransport`.
-     */
-    taskPlaybackSource: Any = StubTaskPlaybackSource,
-    /**
-     * Round 2.16.B — temporary "Start" affordance handler exposed on
-     * task rows.
-     */
-    onStartTask: ((String) -> Unit)? = null,
-    /**
-     * Round 2.17.D — "Keep inside the app" CTA on the wizard's storage
-     * step. MainActivity wires this to write
-     * `ParentLocation.Internal(filesDir/strictlykeptboy)` + the `.skb-root`
-     * marker. Default is a no-op so previews / tests don't have to plumb
-     * it. The wizard auto-advances when prefs flip.
-     */
-    onPickInternalStorage: () -> Unit = {},
-    /**
-     * Round 2.22 / Phase B UI follow-up — single-instance drop handler
-     * for drag-to-reschedule. MainActivity wires to
-     * [com.eight87.strictlykeptboy.ui.schedule.DragRescheduleController].
-     */
-    onSingleDrop: ((com.eight87.strictlykeptboy.resolver.DayBand, java.time.OffsetDateTime) -> Unit)? = null,
-    /** Round 2.22 / Phase B UI follow-up — recurring-rule drop handler with branch choice. */
-    onRecurringDrop: ((com.eight87.strictlykeptboy.resolver.DayBand, java.time.OffsetDateTime, com.eight87.strictlykeptboy.ui.schedule.DragRescheduleController.RecurringChoice) -> Unit)? = null,
-    /**
-     * Round 2.25 Phase B — Now/Next snapshot stream surfaced on the
-     * bottom NowPlayingSheetHost peek row (D-2.25.c). Default null so
-     * previews / tests don't need to plumb it; MainActivity wires
-     * `graph.nowNextFlow`.
-     */
-    nowNextFlow: kotlinx.coroutines.flow.StateFlow<
-        com.eight87.strictlykeptboy.resolver.NowNextSnapshot
-    >? = null,
-    /**
-     * Round 2.27 / Phase D.3 — keeper-prompt response submitter. The
-     * host translates `(task, body, attachment)` into a
-     * [com.eight87.strictlykeptboy.store.PromptResponseWriter.write]
-     * on the right repo root + calId + ruleId.
-     */
-    onPromptRespond: ((TaskItem, String, String?) -> Unit)? = null,
-    /**
-     * Round 2.27 / Phase C.3 — long-press handler for keeper-prompt
-     * rows: writes a synthetic "(marked answered offline)" response
-     * file so the row clears without opening the sheet.
-     */
-    onPromptMarkAnsweredOffline: ((TaskItem) -> Unit)? = null,
 ) {
     ProvideWindowSizeClass(modifier = modifier) { _ ->
         SkbAppShellContent(
-            activeRepoNameFlow = activeRepoNameFlow,
-            scheduleState = scheduleState,
-            onPersistTab = onPersistTab,
-            tasksState = tasksState,
-            onWriteTask = onWriteTask,
-            reposState = reposState,
-            secretsStore = secretsStore,
-            togetherViewModel = togetherViewModel,
-            onSyncClick = onSyncClick,
-            neutralMode = neutralMode,
-            onWizardScaffold = onWizardScaffold,
-            onWizardFinish = onWizardFinish,
-            onTripMaterialize = onTripMaterialize,
-            importExportState = importExportState,
-            onPickImportFile = onPickImportFile,
-            onPickExportFile = onPickExportFile,
-            settingsAccess = settingsAccess,
-            activeIconKindFlow = activeIconKindFlow,
-            eventCreateController = eventCreateController,
-            wizardEntryRequest = wizardEntryRequest,
-            onShareWithDom = onShareWithDom,
-            calendarVisibility = calendarVisibility,
-            onLongPressCalendar = onLongPressCalendar,
-            onOverlayPriorityChange = onOverlayPriorityChange,
-            onOverlayColorChange = onOverlayColorChange,
-            taskPlaybackSource = taskPlaybackSource,
-            onStartTask = onStartTask,
-            onPickInternalStorage = onPickInternalStorage,
-            onSingleDrop = onSingleDrop,
-            onRecurringDrop = onRecurringDrop,
-            nowNextFlow = nowNextFlow,
-            onPromptRespond = onPromptRespond,
-            onPromptMarkAnsweredOffline = onPromptMarkAnsweredOffline,
+            context = context,
+            callbacks = callbacks,
+            selections = selections,
         )
     }
 }
 
 @Composable
 private fun SkbAppShellContent(
-    activeRepoNameFlow: StateFlow<String>,
-    scheduleState: ScheduleViewState,
-    onPersistTab: (ScheduleViewTab) -> Unit,
-    tasksState: TasksViewState,
-    onWriteTask: (TaskQuickAddRequest) -> Unit,
-    reposState: ReposViewState?,
-    secretsStore: SecretsStore?,
-    togetherViewModel: TogetherViewModel?,
-    onSyncClick: () -> Unit,
-    neutralMode: Boolean,
-    onWizardScaffold: suspend (WizardDraft) -> Result<Unit>,
-    onWizardFinish: () -> Unit,
-    onTripMaterialize: suspend (TripDraft) -> Result<Unit>,
-    importExportState: ImportExportViewState?,
-    onPickImportFile: (com.eight87.strictlykeptboy.git.RepoConfig) -> Unit,
-    onPickExportFile: (com.eight87.strictlykeptboy.git.RepoConfig) -> Unit,
-    settingsAccess: SettingsAccess,
-    activeIconKindFlow: StateFlow<com.eight87.strictlykeptboy.ui.theming.RepoIconKind>?,
-    eventCreateController: com.eight87.strictlykeptboy.ui.schedule.EventCreateController? = null,
-    wizardEntryRequest: kotlinx.coroutines.flow.MutableStateFlow<
-        com.eight87.strictlykeptboy.ui.wizard.WizardScreen?
-    >? = null,
-    onShareWithDom: () -> Unit = {},
-    calendarVisibility: com.eight87.strictlykeptboy.ui.settings.CalendarVisibilityPrefs? = null,
-    onLongPressCalendar: ((com.eight87.strictlykeptboy.resolver.CalendarMeta) -> Unit)? = null,
-    onOverlayPriorityChange:
-        ((com.eight87.strictlykeptboy.resolver.CalendarMeta, Int) -> Unit) = { _, _ -> },
-    onOverlayColorChange:
-        ((com.eight87.strictlykeptboy.resolver.CalendarMeta, Int) -> Unit) = { _, _ -> },
-    taskPlaybackSource: Any = StubTaskPlaybackSource,
-    onStartTask: ((String) -> Unit)? = null,
-    /** Round 2.17.D — see [SkbAppShell.onPickInternalStorage]. */
-    onPickInternalStorage: () -> Unit = {},
-    onSingleDrop: ((com.eight87.strictlykeptboy.resolver.DayBand, java.time.OffsetDateTime) -> Unit)? = null,
-    onRecurringDrop: ((com.eight87.strictlykeptboy.resolver.DayBand, java.time.OffsetDateTime, com.eight87.strictlykeptboy.ui.schedule.DragRescheduleController.RecurringChoice) -> Unit)? = null,
-    nowNextFlow: kotlinx.coroutines.flow.StateFlow<
-        com.eight87.strictlykeptboy.resolver.NowNextSnapshot
-    >? = null,
-    onPromptRespond: ((TaskItem, String, String?) -> Unit)? = null,
-    onPromptMarkAnsweredOffline: ((TaskItem) -> Unit)? = null,
+    context: ShellContext,
+    callbacks: ShellCallbacks,
+    selections: ShellSelections,
 ) {
     var selected by rememberSaveable { mutableStateOf(TopDestination.Schedule) }
     // Phase 2.1.I.2 — observe wizard re-entry requests.
-    val wizardEntry = wizardEntryRequest?.collectAsState()?.value
+    val wizardEntry = selections.wizardEntryRequest?.collectAsState()?.value
     androidx.compose.runtime.LaunchedEffect(wizardEntry) {
         if (wizardEntry != null) {
             selected = TopDestination.Wizard
         }
     }
-    val activeRepoName by activeRepoNameFlow.collectAsState()
+    val activeRepoName by context.activeRepoNameFlow.collectAsState()
     // D.88 / F48 — top-bar avatar reflects the active repo's iconKind. Defaults
     // to Sticker("bat") if the caller hasn't wired the flow (e.g. tests, previews).
-    val activeIconKind by (activeIconKindFlow
+    val activeIconKind by (context.activeIconKindFlow
         ?: MutableStateFlow(com.eight87.strictlykeptboy.ui.theming.RepoIconKind.Sticker("bat") as com.eight87.strictlykeptboy.ui.theming.RepoIconKind))
         .collectAsState()
 
-    val scheduleTab by scheduleState.selectedTab.collectAsState()
+    val scheduleTab by context.scheduleState.selectedTab.collectAsState()
 
     // Round 2.23.1 / D.118 — Reviews destination filter state, hoisted
     // here so the left rail (built below) and `ReviewsPane` (rendered
@@ -355,8 +176,8 @@ private fun SkbAppShellContent(
                 labelRes = scheduleTabLabelRes(tab),
                 selected = tab == scheduleTab,
                 onClick = {
-                    scheduleState.setSelectedTab(tab)
-                    onPersistTab(tab)
+                    context.scheduleState.setSelectedTab(tab)
+                    callbacks.onPersistTab(tab)
                 },
             )
         }
@@ -411,11 +232,11 @@ private fun SkbAppShellContent(
         mutableStateOf<com.eight87.strictlykeptboy.resolver.DayBand?>(null)
     }
     NowPlayingSheetHost(
-        source = taskPlaybackSource,
-        tasksState = tasksState,
-        onWriteTask = onWriteTask,
-        onStartTask = onStartTask,
-        nowNextFlow = nowNextFlow,
+        source = context.taskPlaybackSource,
+        tasksState = context.tasksState,
+        onWriteTask = callbacks.onWriteTask,
+        onStartTask = callbacks.onStartTask,
+        nowNextFlow = context.nowNextFlow,
     ) {
       Surface(
         color = MaterialTheme.colorScheme.background,
@@ -429,7 +250,7 @@ private fun SkbAppShellContent(
                 title = title,
                 selectedDest = selected,
                 onSelectDest = { selected = it },
-                onSyncClick = onSyncClick,
+                onSyncClick = callbacks.onSyncClick,
                 onIdentityClick = { /* UI-L — stubbed */ },
                 // D.88: bat avatar IS the repo affordance. Tap navigates to
                 // the Repos destination. The Repos `ShellDest-` button stays
@@ -437,7 +258,7 @@ private fun SkbAppShellContent(
                 // avatar is a parallel affordance per user direction.
                 onRepoSwitcherClick = { selected = TopDestination.Repos },
                 onSettingsTap = { selected = TopDestination.Settings },
-                modePrefs = settingsAccess.modePrefs,
+                modePrefs = context.settingsAccess.modePrefs,
             )
             Row(modifier = Modifier.fillMaxSize()) {
                 // Left rail only renders when the destination has view-mode
@@ -451,7 +272,7 @@ private fun SkbAppShellContent(
                     // picker wiring; other rail-bearing destinations pass
                     // nulls and the bottom slot collapses.
                     val pickerCalendars = if (selected == TopDestination.Schedule) {
-                        scheduleState.calendarsFlow
+                        context.scheduleState.calendarsFlow
                     } else null
                     RailColumn(
                         items = railItems,
@@ -459,7 +280,7 @@ private fun SkbAppShellContent(
                         onAccountTap = { selected = TopDestination.Repos },
                         onSettingsTap = { selected = TopDestination.Settings },
                         overlayPickerCalendars = pickerCalendars,
-                        overlayPickerPrefs = calendarVisibility,
+                        overlayPickerPrefs = context.calendarVisibility,
                         onOverlayPickerClick = { overlayPickerOpen = true },
                     )
                 }
@@ -469,35 +290,35 @@ private fun SkbAppShellContent(
                     SkbAppDestinationContent(
                         reviewsFilter = reviewsFilter,
                         tasksFilter = tasksFilter,
-                        tasksState = tasksState,
+                        tasksState = context.tasksState,
                         selected = selected,
                         activeRepoName = activeRepoName,
-                        scheduleState = scheduleState,
-                        onSyncClick = onSyncClick,
-                        eventCreateController = eventCreateController,
+                        scheduleState = context.scheduleState,
+                        onSyncClick = callbacks.onSyncClick,
+                        eventCreateController = context.eventCreateController,
                         onPlanTrip = { tripWizardOpen = true },
-                        calendarVisibility = calendarVisibility,
-                        onLongPressCalendar = onLongPressCalendar,
-                        togetherViewModel = togetherViewModel,
-                        neutralMode = neutralMode,
-                        reposState = reposState,
-                        secretsStore = secretsStore,
-                        settingsAccess = settingsAccess,
+                        calendarVisibility = context.calendarVisibility,
+                        onLongPressCalendar = callbacks.onLongPressCalendar,
+                        togetherViewModel = context.togetherViewModel,
+                        neutralMode = selections.neutralMode,
+                        reposState = context.reposState,
+                        secretsStore = context.secretsStore,
+                        settingsAccess = context.settingsAccess,
                         onSelectDest = { selected = it },
-                        onPickInternalStorage = onPickInternalStorage,
-                        onWizardScaffold = onWizardScaffold,
-                        onWizardFinish = onWizardFinish,
+                        onPickInternalStorage = callbacks.onPickInternalStorage,
+                        onWizardScaffold = callbacks.onWizardScaffold,
+                        onWizardFinish = callbacks.onWizardFinish,
                         wizardEntry = wizardEntry,
-                        wizardEntryRequest = wizardEntryRequest,
-                        onShareWithDom = onShareWithDom,
-                        importExportState = importExportState,
-                        onPickImportFile = onPickImportFile,
-                        onPickExportFile = onPickExportFile,
-                        onSingleDrop = onSingleDrop,
-                        onRecurringDrop = onRecurringDrop,
+                        wizardEntryRequest = selections.wizardEntryRequest,
+                        onShareWithDom = callbacks.onShareWithDom,
+                        importExportState = context.importExportState,
+                        onPickImportFile = callbacks.onPickImportFile,
+                        onPickExportFile = callbacks.onPickExportFile,
+                        onSingleDrop = callbacks.onSingleDrop,
+                        onRecurringDrop = callbacks.onRecurringDrop,
                         onOpenEventDetailFullScreen = { pendingEventDetail = it },
-                        onPromptRespond = onPromptRespond,
-                        onPromptMarkAnsweredOffline = onPromptMarkAnsweredOffline,
+                        onPromptRespond = callbacks.onPromptRespond,
+                        onPromptMarkAnsweredOffline = callbacks.onPromptMarkAnsweredOffline,
                     )
                     // Phase CCC — overlay the trip wizard above the active pane
                     // when open. Covers the full content area; back/cancel
@@ -510,7 +331,7 @@ private fun SkbAppShellContent(
                             TripWizardNavHost(
                                 onFinish = { tripWizardOpen = false },
                                 onCancel = { tripWizardOpen = false },
-                                onMaterialize = onTripMaterialize,
+                                onMaterialize = callbacks.onTripMaterialize,
                             )
                         }
                     }
@@ -521,12 +342,12 @@ private fun SkbAppShellContent(
         // at the Box root above the (top-bar + rail + content) Column
         // so its own Surface fully covers the chrome. Back navigates
         // to the pane underneath.
-        val calsFlow = scheduleState.calendarsFlow
-        if (overlayPickerOpen && calendarVisibility != null && calsFlow != null) {
+        val calsFlow = context.scheduleState.calendarsFlow
+        if (overlayPickerOpen && context.calendarVisibility != null && calsFlow != null) {
             // Round 2.23.5 / Fix 3 — resolve repo GUID → friendly
             // display name via the live RepoStore flow (already plumbed
             // through `reposState`). Recomputed on each repo-list change.
-            val reposList = reposState?.repos?.collectAsState()?.value.orEmpty()
+            val reposList = context.reposState?.repos?.collectAsState()?.value.orEmpty()
             val repoNameById = remember(reposList) {
                 reposList.associate { it.repoId to it.displayName }
             }
@@ -536,13 +357,13 @@ private fun SkbAppShellContent(
             ) {
                 com.eight87.strictlykeptboy.ui.calendars.OverlayPickerScreen(
                     calendarsFlow = calsFlow,
-                    visibilityPrefs = calendarVisibility,
+                    visibilityPrefs = context.calendarVisibility,
                     onBack = { overlayPickerOpen = false },
                     onEditCalendar = { meta ->
-                        onLongPressCalendar?.invoke(meta)
+                        callbacks.onLongPressCalendar?.invoke(meta)
                     },
-                    onPriorityChange = onOverlayPriorityChange,
-                    onColorChange = onOverlayColorChange,
+                    onPriorityChange = callbacks.onOverlayPriorityChange,
+                    onColorChange = callbacks.onOverlayColorChange,
                     repoDisplayNameFor = { repoId -> repoNameById[repoId] },
                 )
             }
@@ -575,152 +396,6 @@ private fun SkbAppShellContent(
       }  // end outer Box
     }
     }  // end NowPlayingSheetHost
-}
-
-/**
- * Round 2.21 SOLID split — destination dispatch. The shell composes
- * the active pane based on [selected]; this is the single
- * exhaustive-`when` site that knows which pane class to call. Kept
- * inside this file (not extracted) because each branch is a *single*
- * call-site and extracting would force a larger argument-bundle.
- */
-@Composable
-private fun SkbAppDestinationContent(
-    reviewsFilter: com.eight87.strictlykeptboy.ui.reviews.ReviewsFilter =
-        com.eight87.strictlykeptboy.ui.reviews.ReviewsFilter.All,
-    tasksFilter: TasksFilter = TasksFilter.Today,
-    tasksState: TasksViewState,
-    selected: TopDestination,
-    activeRepoName: String,
-    scheduleState: ScheduleViewState,
-    onSyncClick: () -> Unit,
-    eventCreateController: com.eight87.strictlykeptboy.ui.schedule.EventCreateController?,
-    onPlanTrip: () -> Unit,
-    calendarVisibility: com.eight87.strictlykeptboy.ui.settings.CalendarVisibilityPrefs?,
-    onLongPressCalendar: ((com.eight87.strictlykeptboy.resolver.CalendarMeta) -> Unit)?,
-    togetherViewModel: TogetherViewModel?,
-    neutralMode: Boolean,
-    reposState: ReposViewState?,
-    secretsStore: SecretsStore?,
-    settingsAccess: SettingsAccess,
-    onSelectDest: (TopDestination) -> Unit,
-    onPickInternalStorage: () -> Unit,
-    onWizardScaffold: suspend (WizardDraft) -> Result<Unit>,
-    onWizardFinish: () -> Unit,
-    wizardEntry: com.eight87.strictlykeptboy.ui.wizard.WizardScreen?,
-    wizardEntryRequest: kotlinx.coroutines.flow.MutableStateFlow<
-        com.eight87.strictlykeptboy.ui.wizard.WizardScreen?
-    >?,
-    onShareWithDom: () -> Unit,
-    importExportState: ImportExportViewState?,
-    onPickImportFile: (com.eight87.strictlykeptboy.git.RepoConfig) -> Unit,
-    onPickExportFile: (com.eight87.strictlykeptboy.git.RepoConfig) -> Unit,
-    onSingleDrop: ((com.eight87.strictlykeptboy.resolver.DayBand, java.time.OffsetDateTime) -> Unit)? = null,
-    onRecurringDrop: ((com.eight87.strictlykeptboy.resolver.DayBand, java.time.OffsetDateTime, com.eight87.strictlykeptboy.ui.schedule.DragRescheduleController.RecurringChoice) -> Unit)? = null,
-    /** Round 2.25 follow-up — host-owned full-screen event-detail opener. */
-    onOpenEventDetailFullScreen: ((com.eight87.strictlykeptboy.resolver.DayBand) -> Unit)? = null,
-    /** Round 2.27 / Phase D.3 — keeper-prompt response submitter. */
-    onPromptRespond: ((TaskItem, String, String?) -> Unit)? = null,
-    /** Round 2.27 / Phase C.3 — keeper-prompt long-press → offline marker. */
-    onPromptMarkAnsweredOffline: ((TaskItem) -> Unit)? = null,
-) {
-    when (selected) {
-        TopDestination.Schedule -> SchedulePane(
-            activeRepoName = activeRepoName,
-            state = scheduleState,
-            onSyncClick = onSyncClick,
-            eventCreateController = eventCreateController,
-            onPlanTrip = onPlanTrip,
-            calendarVisibility = calendarVisibility,
-            onLongPressCalendar = onLongPressCalendar,
-            onSingleDrop = onSingleDrop,
-            onRecurringDrop = onRecurringDrop,
-            onOpenEventDetailFullScreen = onOpenEventDetailFullScreen,
-        )
-        TopDestination.Tasks -> TasksPane(
-            filter = tasksFilter,
-            tasksState = tasksState,
-            scheduleFlow = scheduleState.rendered,
-            onPromptRespond = onPromptRespond,
-            onPromptMarkAnsweredOffline = onPromptMarkAnsweredOffline,
-        )
-        TopDestination.Together -> if (togetherViewModel != null) {
-            TogetherPane(vm = togetherViewModel, neutralMode = neutralMode)
-        } else {
-            PlaceholderScreen(stringResource(R.string.scaffold_dest_together))
-        }
-        TopDestination.Repos -> if (reposState != null) {
-            ReposPane(
-                state = reposState,
-                secretsStore = secretsStore,
-                onOpenTogether = { onSelectDest(TopDestination.Together) },
-                onOpenWizard = { onSelectDest(TopDestination.Wizard) },
-                onOpenAppSettings = { onSelectDest(TopDestination.Settings) },
-                // Round 2.7.D.2-UI — banner inputs forwarded via SettingsAccess
-                // because that's the only narrow surface that already carries
-                // RepoStoragePrefs + NotificationPrefs into the shell.
-                repoStoragePrefs = settingsAccess.repoStoragePrefs,
-                notificationPrefs = settingsAccess.notificationPrefs,
-                onPickBackupFolder = settingsAccess.onPickBackupFolder,
-                demoModePrefs = settingsAccess.demoModePrefs,
-                onPickInternalStorage = onPickInternalStorage,
-                safPermissionRevoked = settingsAccess.safPermissionRevokedFlow
-                    ?.collectAsState()?.value == true,
-            )
-        } else {
-            PlaceholderScreen(stringResource(R.string.scaffold_dest_repos))
-        }
-        TopDestination.Wizard -> WizardNavHost(
-            onFinish = {
-                onWizardFinish()
-                wizardEntryRequest?.value = null
-                onSelectDest(TopDestination.Schedule)
-            },
-            onCancel = {
-                wizardEntryRequest?.value = null
-                onSelectDest(TopDestination.Schedule)
-            },
-            onScaffold = onWizardScaffold,
-            neutralMode = neutralMode,
-            initialScreen = wizardEntry
-                ?: com.eight87.strictlykeptboy.ui.wizard.WizardScreen.Welcome,
-            onShareWithDom = onShareWithDom,
-            // Round 2.17.D — storage step wiring.
-            repoStoragePrefs = settingsAccess.repoStoragePrefs,
-            onPickExternalStorage = settingsAccess.onPickBackupFolder,
-            onPickInternalStorage = onPickInternalStorage,
-            // Round 2.18 Phase I — default-calendar-app
-            // onboarding card backing store.
-            systemCalendarPrefs = settingsAccess.systemCalendarPrefs,
-        )
-        TopDestination.Reviews -> {
-            // Round 2.23 Phase E (D-2.23.e) — Reviews destination now
-            // renders live items from `ReviewFeedReader` when the host
-            // wires `settingsAccess.reviewItemsFlow`. Falls back to the
-            // Phase DDD.13 empty-state card otherwise.
-            val identityState = settingsAccess.identityPrefs
-                ?.state?.collectAsState()?.value
-            val items = settingsAccess.reviewItemsFlow
-                ?.collectAsState()?.value
-                ?: emptyList()
-            com.eight87.strictlykeptboy.ui.reviews.ReviewsPane(
-                side = com.eight87.strictlykeptboy.ui.reviews.ReviewsSide.Boy,
-                items = items,
-                boyHonorific = identityState?.honorific?.ifBlank { "Sir" } ?: "Sir",
-                boyPraiseTerm = identityState?.praise?.ifBlank { "good boy" } ?: "good boy",
-                filter = reviewsFilter,
-            )
-        }
-        TopDestination.Settings -> SettingsPane(
-            importExportState = importExportState,
-            onPickImportFile = onPickImportFile,
-            onPickExportFile = onPickExportFile,
-            access = settingsAccess.copy(
-                // Phase CCC.10 — Settings → Lifestyle → Plan a trip.
-                onPlanTrip = onPlanTrip,
-            ),
-        )
-    }
 }
 
 // Wired ambient — read by deeper composables. Kept for parity with the
