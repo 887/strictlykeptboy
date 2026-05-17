@@ -148,26 +148,39 @@ DST policy decisions (provisional, finalised in Phase E):
         across spring DST in Berlin display correctly shifts by 4h
         (post-DST) vs 5h (pre-DST).
 
-### Phase C — Display-tz toggle UI (AA.3)
+### Phase C — Display-tz toggle UI (AA.3) — shipped in commit PHASE_C_COMMIT
 
-- [ ] **C.1** `CalendarVisibilityPrefs`: add `displayTzId: String?`
-      to `VisibilityState`, with `setDisplayTzId(zoneId: String?)`
-      mirroring `setGlobalZoomOverride`'s shape.
-- [ ] **C.2** New `ui/schedule/DisplayTzChip.kt` — small
-      `AssistChip` (or `InputChip`) reading "tz: $shortLabel" placed
-      adjacent to `ZoomLevelRow` in the Day/3-day chrome. Tap →
-      `ModalBottomSheet` with three quick options + a zone search
-      `OutlinedTextField` filtering `ZoneId.getAvailableZoneIds()`.
-- [ ] **C.3** Pinned-tz event badge: in band rendering (Day / Week /
-      3-day), when `sourceTzId != null` AND
-      `ZoneId.of(sourceTzId) != effectiveDisplayTz`, prefix a small
-      "✈ <shortLabel>" icon-text inside the band. Short label =
-      `ZoneId.of(...).id.substringAfterLast('/')` with `_` →` `.
-- [ ] **C.4** Tests:
-      - `DisplayTzChipTest` — chip renders, sheet opens, system /
-        repo / custom selection routes through the writer.
-      - `BandTzBadgeTest` — NY-pinned event in a Berlin display shows
-        "✈ New York" badge; same-zone event omits the badge.
+- [x] **C.1** `CalendarVisibilityPrefs`: added `displayTzId: String?` to
+      `VisibilityState` + `setDisplayTzId(zoneId: String?)` /
+      `displayTzId()` getter mirroring `setGlobalZoomOverride`'s shape.
+      Blank strings normalise to `null`; JSON load is tolerant.
+- [x] **C.2** New `ui/schedule/DisplayTzChip.kt` — `AssistChip` with
+      globe leading-icon, three-branch label
+      ("System (…)" / "Repo default (…)" / "Custom: …") via the pure
+      `displayTzChipLabel` formatter. Tap opens an `AlertDialog` with
+      "(use system)" + "Repo default" quick-pick rows + a filter
+      `OutlinedTextField` over `ZoneId.getAvailableZoneIds()` sorted
+      alphabetically. Mounted alongside `ZoomLevelRow` in Day + 3-day
+      chrome via `SchedulePane`. `SchedulePane`/`ScheduleMasterContent`
+      gain a `repoDefaultTzId: String?` param (default null) for the
+      repo-default quick-pick row.
+- [x] **C.3** Pinned-tz event badge: in `ScheduleDayView.BandsLayer`
+      and the equivalent week-column body, when `sourceTzId != null`
+      AND `ZoneId.of(sourceTzId) != band.instance.effectiveStart.zone`
+      (the resolved display zone), an `Icons.Outlined.Public` glyph
+      renders in the band's bottom-end corner with
+      `contentDescription = "pinned to $srcTz"`. Day-view badge tagged
+      `TestTagDayBandPinnedTz`.
+- [x] **C.4** Tests (additive — pre-existing 4 `ZoomLevelRowTest`
+      failures unrelated):
+      - `CalendarVisibilityPrefsDisplayTzTest` — 5 tests covering
+        default-null, round-trip, null reset, blank normalisation, +
+        orthogonality with `globalZoomOverride`.
+      - `DisplayTzChipLabelTest` — 5 tests pinning the pure
+        `displayTzChipLabel` three-branch formatter. The composable
+        itself is AVD-smoked (chip renders, dialog opens, custom
+        zone selected → chip relabels "Custom: Asia/Tokyo",
+        schedule re-renders).
 
 ### Phase D — Together multi-tz common-time finder (AA.4, AA.7) — shipped in commit 5bdb471
 

@@ -22,7 +22,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -54,6 +57,7 @@ import java.time.ZonedDateTime
 
 const val TestTagDayView = "ScheduleDayView"
 const val TestTagDayBand = "DayBand"
+const val TestTagDayBandPinnedTz = "DayBand-PinnedTz"
 const val TestTagDayEmpty = "DayEmpty"
 const val TestTagNowLine = "NowLine"
 
@@ -518,6 +522,29 @@ private fun BandsLayer(
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
                                     .padding(4.dp),
+                            )
+                        }
+                        // Round 2.24 Phase C.3 — pinned-tz badge. When the
+                        // event carries its own `sourceTzId` AND that zone
+                        // differs from the band's display zone (set via
+                        // `Renderer.render(displayTzId=...)`), render a
+                        // small globe glyph in the bottom-end corner so the
+                        // user can tell the band is in a foreign zone.
+                        val srcTz = band.instance.sourceTzId
+                        val displayZone = band.instance.effectiveStart.zone
+                        val pinnedDifferent = srcTz != null &&
+                            runCatching { java.time.ZoneId.of(srcTz) != displayZone }
+                                .getOrDefault(false)
+                        if (pinnedDifferent) {
+                            Icon(
+                                imageVector = Icons.Outlined.Public,
+                                contentDescription = "pinned to $srcTz",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(end = 4.dp, bottom = 4.dp)
+                                    .size(14.dp)
+                                    .testTag("$TestTagDayBandPinnedTz-${band.instance.instanceId}"),
                             )
                         }
                         // Round 2.25.z (D.129) — sub-readable cue. Only

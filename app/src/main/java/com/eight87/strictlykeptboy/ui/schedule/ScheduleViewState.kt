@@ -126,12 +126,19 @@ class ScheduleViewState(
                     applyRepoOverlay(enrichedSnap, q.d, q.f)
                 val (filteredSnap, filteredSrc) =
                     applyVisibility(repoFilteredSnap, repoFilteredSrc, q.e)
+                // Round 2.24 Phase C — caller can override the display tz
+                // via `VisibilityState.displayTzId`. Parse defensively:
+                // an unknown / malformed zone string falls back to the
+                // renderer's `renderTz` (system) rather than crashing.
+                val displayTz = q.e.displayTzId
+                    ?.let { runCatching { ZoneId.of(it) }.getOrNull() }
                 _rendered.value = renderer.render(
                     range = range,
                     viewMode = viewMode,
                     snapshot = filteredSnap,
                     sources = filteredSrc,
                     renderTz = tz,
+                    displayTzId = displayTz,
                 )
             }
         }

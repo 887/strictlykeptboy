@@ -69,6 +69,13 @@ data class VisibilityState(
      * of which overlays are visible. Wired by `ZoomLevelRow`.
      */
     val globalZoomOverride: Int? = null,
+    /**
+     * Round 2.24 Phase C (D-2.24.c) — display-tz override for the Schedule
+     * view. `null` ⇒ follow `ZoneId.systemDefault()`; any non-null value is
+     * a `ZoneId.of(...)`-parseable string (e.g. `"America/New_York"`,
+     * `"Europe/Berlin"`). Wired by `DisplayTzChip`.
+     */
+    val displayTzId: String? = null,
 )
 
 class CalendarVisibilityPrefs internal constructor(
@@ -100,6 +107,21 @@ class CalendarVisibilityPrefs internal constructor(
 
     /** Round 2.23 Phase C — current global zoom override, or null. */
     fun globalZoomOverride(): Int? = _state.value.globalZoomOverride
+
+    /**
+     * Round 2.24 Phase C (D-2.24.c) — set the display-tz override. Pass
+     * `null` to revert to `ZoneId.systemDefault()`. Blank strings are
+     * normalised to `null` so an empty `TextField` resets cleanly.
+     */
+    fun setDisplayTzId(zoneId: String?) {
+        val normalized = zoneId?.takeIf { it.isNotBlank() }
+        val v = _state.value.copy(displayTzId = normalized)
+        prefs.edit().putString(key, json.encodeToString(v)).apply()
+        _state.value = v
+    }
+
+    /** Round 2.24 Phase C — current display-tz override, or null. */
+    fun displayTzId(): String? = _state.value.displayTzId
 
     /**
      * Toggle visibility for an entry matched by (id, repoId). Legacy
@@ -202,7 +224,9 @@ class CalendarVisibilityPrefs internal constructor(
             }
             val overrideRaw = root["globalZoomOverride"]?.jsonPrimitive?.contentOrNull
             val override = overrideRaw?.toIntOrNull()?.coerceIn(ZOOM_MIN, ZOOM_MAX)
-            VisibilityState(ordered, override)
+            val displayTzRaw = root["displayTzId"]?.jsonPrimitive?.contentOrNull
+                ?.takeIf { it.isNotBlank() }
+            VisibilityState(ordered, override, displayTzRaw)
         }.getOrDefault(VisibilityState())
     }
 

@@ -12,11 +12,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -293,6 +297,23 @@ private fun DayColumn(
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
                                     .padding(2.dp),
+                            )
+                        }
+                        // Round 2.24 Phase C.3 — pinned-tz badge (week view).
+                        val srcTz = band.instance.sourceTzId
+                        val displayZone = band.instance.effectiveStart.zone
+                        val pinnedDifferent = srcTz != null &&
+                            runCatching { java.time.ZoneId.of(srcTz) != displayZone }
+                                .getOrDefault(false)
+                        if (pinnedDifferent) {
+                            Icon(
+                                imageVector = Icons.Outlined.Public,
+                                contentDescription = "pinned to $srcTz",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(end = 2.dp, bottom = 2.dp)
+                                    .size(10.dp),
                             )
                         }
                     }

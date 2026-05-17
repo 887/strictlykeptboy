@@ -89,6 +89,13 @@ fun SchedulePane(
      * the hoist).
      */
     onOpenEventDetailFullScreen: ((DayBand) -> Unit)? = null,
+    /**
+     * Round 2.24 Phase C — repo-default tz (from `repo.toml`
+     * `default_tz_id`) used as the "Repo default (…)" quick-pick in the
+     * [DisplayTzChip]. `null` ⇒ no quick-pick row shown, picker still
+     * lets the user search any zone.
+     */
+    repoDefaultTzId: String? = null,
 ) {
     androidx.compose.runtime.LaunchedEffect(state) {
         com.eight87.strictlykeptboy.perf.PerfTraceRecorder.begin(
@@ -144,6 +151,7 @@ fun SchedulePane(
                             onPlanTrip = onPlanTrip,
                             calendarVisibility = calendarVisibility,
                             onDragReschedule = onDragReschedule,
+                            repoDefaultTzId = repoDefaultTzId,
                         )
                     }
                 },
@@ -181,6 +189,7 @@ fun SchedulePane(
                     // mounts in compact (phone) mode too.
                     calendarVisibility = calendarVisibility,
                     onDragReschedule = onDragReschedule,
+                    repoDefaultTzId = repoDefaultTzId,
                 )
             }
             // Round 2.23 Phase D (D-2.23.d) — full-screen event detail
@@ -266,6 +275,7 @@ private fun ScheduleMasterContent(
     onPlanTrip: (() -> Unit)? = null,
     calendarVisibility: CalendarVisibilityPrefs? = null,
     onDragReschedule: ((DayBand, java.time.OffsetDateTime) -> Unit)? = null,
+    repoDefaultTzId: String? = null,
 ) {
     val selectedTab by state.selectedTab.collectAsState()
     val date by state.date.collectAsState()
@@ -332,6 +342,12 @@ private fun ScheduleMasterContent(
                         selectedOverride = visState.globalZoomOverride,
                         onSelect = { calendarVisibility.setGlobalZoomOverride(it) },
                     )
+                    DisplayTzChip(
+                        displayTzId = visState.displayTzId,
+                        repoDefaultTzId = repoDefaultTzId,
+                        onSelect = { calendarVisibility.setDisplayTzId(it) },
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    )
                 }
                 ScheduleThreeDayView(
                     anchor = date,
@@ -347,6 +363,12 @@ private fun ScheduleMasterContent(
                     ZoomLevelRow(
                         selectedOverride = visState.globalZoomOverride,
                         onSelect = { calendarVisibility.setGlobalZoomOverride(it) },
+                    )
+                    DisplayTzChip(
+                        displayTzId = visState.displayTzId,
+                        repoDefaultTzId = repoDefaultTzId,
+                        onSelect = { calendarVisibility.setDisplayTzId(it) },
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                     )
                 }
                 ScheduleDayView(
