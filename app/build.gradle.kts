@@ -333,6 +333,75 @@ tasks.register("translationsAudit") {
     }
 }
 
+// [L] #19 (refactor-solid.md, audit-pass-2026-05-17) — resolver purity guard.
+// Walks `resolver/` and fails the build if any .kt file imports impure
+// packages (java.io.*, java.nio.*, okhttp3.*, org.eclipse.jgit.*,
+// androidx.room.*, android.* except android.util.Log) or calls a wall-clock
+// .now() / System.currentTimeMillis(). The resolver layer must be pure:
+// clocks + I/O are injected from composition, never reached for in-line.
+// Hooked into `check` so `./gradlew check` (and CI) runs it automatically.
+tasks.register("resolverPurityCheck") {
+    group = "verification"
+    description = "Fail the build if resolver/ imports impure packages or calls wall-clock .now()."
+    val resolverDir = file("src/main/java/com/eight87/strictlykeptboy/resolver")
+    doLast {
+        if (!resolverDir.isDirectory) {
+            logger.lifecycle("resolverPurityCheck: $resolverDir not found — skipping.")
+            return@doLast
+        }
+
+        // Forbidden import prefixes. `android.util.Log` is the one allowed
+        // android.* import (logging is acceptable; see CLAUDE.md).
+        val forbiddenImportRegex = Regex(
+            """^\s*import\s+(java\.io\.|java\.nio\.|okhttp3\.|org\.eclipse\.jgit\.|androidx\.room\.|android\.)"""
+        )
+        val androidLogAllow = Regex("""^\s*import\s+android\.util\.Log(\s*$|\s*;)""")
+
+        // Wall-clock leaks — these MUST be injected, never called inline.
+        val clockLeakRegex = Regex(
+            """\b(LocalDate|LocalDateTime|ZonedDateTime|Instant)\.now\s*\(|\bSystem\.currentTimeMillis\s*\("""
+        )
+
+        data class Hit(val file: File, val line: Int, val text: String, val reason: String)
+        val hits = mutableListOf<Hit>()
+
+        resolverDir.walkTopDown().filter { it.isFile && it.extension == "kt" }.forEach { f ->
+            f.useLines { seq ->
+                seq.forEachIndexed { idx, raw ->
+                    val line = raw
+                    val lineNo = idx + 1
+                    if (forbiddenImportRegex.containsMatchIn(line) && !androidLogAllow.containsMatchIn(line)) {
+                        hits += Hit(f, lineNo, line.trim(), "forbidden import")
+                    }
+                    if (clockLeakRegex.containsMatchIn(line)) {
+                        hits += Hit(f, lineNo, line.trim(), "wall-clock leak (inject `now` instead)")
+                    }
+                }
+            }
+        }
+
+        if (hits.isNotEmpty()) {
+            val msg = buildString {
+                appendLine("resolverPurityCheck: found ${hits.size} purity violation(s) in resolver/:")
+                hits.forEach { h ->
+                    appendLine("  ${h.file.relativeTo(rootDir)}:${h.line}  [${h.reason}]  ${h.text}")
+                }
+                appendLine()
+                appendLine("The resolver layer must be pure: no java.io/nio, no JGit/OkHttp/Room,")
+                appendLine("no android.* (except android.util.Log), and no wall-clock .now() calls.")
+                appendLine("Inject Path/Clock/now from the composition root instead.")
+                appendLine("See docs/plans/refactor-solid.md audit pass 2026-05-17, finding #19.")
+            }
+            throw GradleException(msg)
+        }
+        logger.lifecycle("resolverPurityCheck: clean — resolver/ has no impure imports or wall-clock leaks.")
+    }
+}
+
+tasks.named("check") {
+    dependsOn("resolverPurityCheck")
+}
+
 // Round 2.20 Phase B.5 — authoring helper that regenerates
 // `app/src/main/assets/rich-demo-repo/_manifest.txt`. NOT wired into
 // the build graph; invoke manually after editing rich-demo content:
