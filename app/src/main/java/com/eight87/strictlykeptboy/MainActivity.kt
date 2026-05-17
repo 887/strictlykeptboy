@@ -434,11 +434,11 @@ class MainActivity : ComponentActivity() {
                 mutableStateOf(graph.repoStore.list().isNotEmpty())
             }
             androidx.compose.runtime.CompositionLocalProvider(
-                com.eight87.strictlykeptboy.avatar.LocalAvatarResolver provides graph.avatarResolver,
-                com.eight87.strictlykeptboy.ui.repos.LocalAvatarPackPrefs provides graph.avatarPackPrefs,
-                com.eight87.strictlykeptboy.ui.repos.LocalPackStore provides graph.packStore,
-                com.eight87.strictlykeptboy.ui.repos.LocalAssetPackLoader provides graph.assetPackLoader,
-                com.eight87.strictlykeptboy.ui.repos.LocalUserPackLoader provides graph.userPackLoader,
+                com.eight87.strictlykeptboy.avatar.LocalAvatarResolver provides graph.avatarGraph.avatarResolver,
+                com.eight87.strictlykeptboy.ui.repos.LocalAvatarPackPrefs provides graph.avatarGraph.avatarPackPrefs,
+                com.eight87.strictlykeptboy.ui.repos.LocalPackStore provides graph.avatarGraph.packStore,
+                com.eight87.strictlykeptboy.ui.repos.LocalAssetPackLoader provides graph.avatarGraph.assetPackLoader,
+                com.eight87.strictlykeptboy.ui.repos.LocalUserPackLoader provides graph.avatarGraph.userPackLoader,
             ) {
             StrictlyKeptBoyTheme(
                 themeMode = appearance.themeMode,
@@ -473,12 +473,12 @@ class MainActivity : ComponentActivity() {
                 // External Calendars settings screen. markShown() flips
                 // the flag back off so we don't pester on every account
                 // change.
-                val showNudge by graph.accountChangeNudge.shouldShowNudge.collectAsState()
+                val showNudge by graph.systemCalendarGraph.accountChangeNudge.shouldShowNudge.collectAsState()
                 if (showNudge) {
                     val nudgeText = stringResource(R.string.settings_external_calendars_nudge)
                     LaunchedEffect(showNudge) {
                         Toast.makeText(this@MainActivity, nudgeText, Toast.LENGTH_LONG).show()
-                        graph.accountChangeNudge.markShown()
+                        graph.systemCalendarGraph.accountChangeNudge.markShown()
                     }
                 }
                 if (!firstLaunchDone) {
@@ -507,7 +507,7 @@ class MainActivity : ComponentActivity() {
                                                 .resolve(com.eight87.strictlykeptboy.demo.DemoRepoSeeder.folderName(card)),
                                             perspective = card,
                                             author = AuthorIdentity("demo", "demo@strictlykeptboy.local"),
-                                            assetPackLoader = graph.assetPackLoader,
+                                            assetPackLoader = graph.avatarGraph.assetPackLoader,
                                         )
                                         graph.demoModePrefs.setPerspective(card)
                                         RepoConfig(
@@ -716,7 +716,7 @@ class MainActivity : ComponentActivity() {
                     // hoisted) so SkbAppShell can keep its remember-default.
                     // Round 2.16.B — hoisted onto AppGraph so the playback
                     // projector and the UI share one canonical instance.
-                    val tasksViewState = graph.tasksViewState
+                    val tasksViewState = graph.taskPlaybackGraph.tasksViewState
                     androidx.compose.runtime.LaunchedEffect(Unit) {
                         val evaluator = com.eight87.strictlykeptboy.resolver.ActiveSetEvaluator()
                         // Round 2.26.F.1 — lazy todolist.toml resolver,
@@ -990,12 +990,12 @@ class MainActivity : ComponentActivity() {
                     // mode / wizard-entry state in ShellSelections.
                     val shellSettingsAccess = com.eight87.strictlykeptboy.ui.settings.SettingsAccess(
                             // Round 2.18.B.3 — External Calendars wiring.
-                            systemCalendarPrefs = graph.systemCalendarPrefsStore,
-                            systemCalendarsFlow = graph.systemCalendarsRawFlow,
+                            systemCalendarPrefs = graph.systemCalendarGraph.systemCalendarPrefsStore,
+                            systemCalendarsFlow = graph.systemCalendarGraph.systemCalendarsRawFlow,
                             // Round 2.18.G.6 — publish-to-OS toggle.
                             onPublishToOsChanged = { on ->
-                                if (on) graph.skbAccountManager.enableForAllRepos()
-                                else graph.skbAccountManager.disableForAllRepos()
+                                if (on) graph.systemCalendarGraph.skbAccountManager.enableForAllRepos()
+                                else graph.systemCalendarGraph.skbAccountManager.disableForAllRepos()
                             },
                             syncPrefs = graph.syncSettingsPrefs,
                             statusStore = graph.statusStore,
@@ -1009,8 +1009,8 @@ class MainActivity : ComponentActivity() {
                             neutralPrefs = graph.neutralModePrefs,
                             modePrefs = graph.modePrefs,
                             // Phase WW.5 — sticker pack picker access.
-                            avatarPackPrefs = graph.avatarPackPrefs,
-                            packStore = graph.packStore,
+                            avatarPackPrefs = graph.avatarGraph.avatarPackPrefs,
+                            packStore = graph.avatarGraph.packStore,
                             templateIds = listOf(
                                 "atomic-medical",
                                 "atomic-flight",
@@ -1356,7 +1356,7 @@ class MainActivity : ComponentActivity() {
                             // Round 2.16.B — wire the real projector + transport
                             // adapter so MiniPlayer/NowPlayingScreen read live
                             // active-task state.
-                            taskPlaybackSource = graph.taskTransport,
+                            taskPlaybackSource = graph.taskPlaybackGraph.taskTransport,
                             nowNextFlow = graph.nowNextFlow,
                         ),
                         callbacks = ShellCallbacks(
@@ -1385,7 +1385,7 @@ class MainActivity : ComponentActivity() {
                                         parentDir = parentDir,
                                         draft = draft,
                                         author = AuthorIdentity("me", "me@example.com"),
-                                        assetPackLoader = graph.assetPackLoader,
+                                        assetPackLoader = graph.avatarGraph.assetPackLoader,
                                     )
                                     val scaffoldedConfig = RepoConfig(
                                         repoId = outcome.repoId,
@@ -1513,7 +1513,7 @@ class MainActivity : ComponentActivity() {
                             },
                             // Round 2.16.B — Temp Start affordance on
                             // TaskRow → controller.start(taskId).
-                            onStartTask = { taskId -> graph.activeTaskController.start(taskId) },
+                            onStartTask = { taskId -> graph.taskPlaybackGraph.activeTaskController.start(taskId) },
                             // Round 2.17.D — "Keep inside the app" wizard CTA.
                             // Write Internal parent + create the .skb-root marker
                             // so `ParentLocationGate` flips to Confirmed; the

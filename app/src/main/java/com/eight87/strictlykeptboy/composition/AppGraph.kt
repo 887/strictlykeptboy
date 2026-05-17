@@ -5,15 +5,6 @@ import com.eight87.strictlykeptboy.auto.AutoEvent
 import com.eight87.strictlykeptboy.auto.CarAppRuntime
 import com.eight87.strictlykeptboy.auto.TodayEventSource
 import com.eight87.strictlykeptboy.cache.CacheDatabase
-import com.eight87.strictlykeptboy.avatar.AssetPackLoader
-import com.eight87.strictlykeptboy.avatar.AvatarPackPrefs
-import com.eight87.strictlykeptboy.avatar.AvatarResolver
-import com.eight87.strictlykeptboy.avatar.CompositePackStore
-import com.eight87.strictlykeptboy.avatar.DefaultAvatarResolver
-import com.eight87.strictlykeptboy.avatar.DefaultStickerResolver
-import com.eight87.strictlykeptboy.avatar.StickerBitmapCache
-import com.eight87.strictlykeptboy.avatar.StickerResolver
-import com.eight87.strictlykeptboy.avatar.UserPackLoader
 import com.eight87.strictlykeptboy.git.GitRepo
 import com.eight87.strictlykeptboy.git.GitRepoRegistry
 import com.eight87.strictlykeptboy.git.RepoStore
@@ -39,12 +30,7 @@ import com.eight87.strictlykeptboy.prefs.ParentLocationMigrator
 import com.eight87.strictlykeptboy.prefs.RepoStoragePrefs
 import com.eight87.strictlykeptboy.sync.ParentReconciler
 import com.eight87.strictlykeptboy.theme.AppearancePrefs
-import com.eight87.strictlykeptboy.task.ActiveTaskController
-import com.eight87.strictlykeptboy.task.TaskPlaybackProjector
-import com.eight87.strictlykeptboy.task.TaskTransportAdapter
 import com.eight87.strictlykeptboy.ui.repos.ReposViewState
-import com.eight87.strictlykeptboy.ui.tasks.TaskItem
-import com.eight87.strictlykeptboy.ui.tasks.TasksViewState
 import com.eight87.strictlykeptboy.ui.schedule.ScheduleViewModePrefs
 import com.eight87.strictlykeptboy.ui.settings.CalendarVisibilityPrefs
 import com.eight87.strictlykeptboy.ui.settings.IdentityPrefs
@@ -66,7 +52,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
@@ -119,58 +104,12 @@ class AppGraph(private val appContext: Context) {
     /** Phase K.14 — neutral-mode toggle (D.58). */
     val neutralModePrefs: NeutralModePrefs by lazy { NeutralModePrefs.open(appContext) }
 
-    /** Phase WW.5 — per-species active pack + per-activity sticker overrides. */
-    val avatarPackPrefs: AvatarPackPrefs by lazy { AvatarPackPrefs.open(appContext) }
-
-    /** Phase WW.1 — bundled-pack registry loaded from APK assets. */
-    val assetPackLoader: AssetPackLoader by lazy { AssetPackLoader(appContext) }
-
-    /** Phase WW.4 — user-installed pack registry (`<filesDir>/avatar-packs/`). */
-    val userPackLoader: UserPackLoader by lazy { UserPackLoader.openFor(appContext) }
-
-    /** Phase WW.2 — composite store: user packs first, then bundled defaults. */
-    val packStore: CompositePackStore by lazy {
-        CompositePackStore(
-            sourceFactories = listOf(
-                { userPackLoader.loadAll() },
-                { assetPackLoader.loadAll() },
-            ),
-        )
-    }
-
-    /** Phase WW.2 — 6-rung D.66 resolver. */
-    val stickerResolver: StickerResolver by lazy {
-        DefaultStickerResolver(
-            packStore = packStore,
-            activePackProvider = { species -> avatarPackPrefs.activePackFor(species) },
-        )
-    }
-
-    /** Phase WW.6 (MVP) — shared LRU cache for decoded sticker bitmaps. */
-    val stickerBitmapCache: StickerBitmapCache by lazy { StickerBitmapCache() }
-
     /**
-     * Phase WW — top-level avatar facade for top-bar / Repos rows / NowCard.
-     *
-     * Dispatches bitmap loading to whichever loader owns the resolved pack
-     * (user vs bundled), falling back to `R.drawable.about_bat` when a pack
-     * references a file that hasn't shipped yet (the initial bundled-pack
-     * manifests are scaffolds — artwork lands in a follow-up).
+     * [M] #8d (audit pass 2026-05-17) — avatar pack loaders + resolvers
+     * + bitmap cache, extracted into a cohesive sub-graph. Consumers
+     * reach the underlying fields via `graph.avatarGraph.<field>`.
      */
-    val avatarResolver: AvatarResolver by lazy {
-        DefaultAvatarResolver(
-            stickerResolver = stickerResolver,
-            cache = stickerBitmapCache,
-            loader = { packId, file ->
-                val species = if (packId.startsWith("default-")) packId.removePrefix("default-") else null
-                if (species != null) {
-                    assetPackLoader.loadBitmap(species, file)
-                } else {
-                    userPackLoader.loadBitmap(packId, file)
-                }
-            },
-        )
-    }
+    val avatarGraph: AvatarGraph by lazy { AvatarGraph(appContext) }
 
     /** Phase J — sync status (Idle / Running / Error / Conflicted). */
     val statusStore: SyncStatusStore by lazy { SyncStatusStore.open(appContext) }
@@ -480,13 +419,13 @@ class AppGraph(private val appContext: Context) {
      * specific screen. Shell observes; resets back to null on finish.
      */
     // [L]#11 — left as `MutableStateFlow` on the public surface because
-    // `SkbAppShell` consumes it as such (it clears the request to null
-    // after the wizard finishes). Tightening to `StateFlow` here is a
-    // follow-on once `SkbAppShell` is split per `refactor-solid.md` #9
-    // (`ShellContext` / `ShellCallbacks` / `ShellSelections`); at that
-    // point the clear path moves into a callback and the field can be
-    // narrowed. `setWizardEntryRequest(...)` is the canonical write
-    // path from outside `composition/`.
+    // `SkbAppDestinationContent` still clears the request to null after
+    // the wizard finishes (`wizardEntryRequest?.value = null`). The
+    // `SkbAppShell` split (#9) shipped, but the clear path landed on
+    // `SkbAppDestinationContent` rather than moving into a callback.
+    // Tightening to `StateFlow` is gated on routing the clear through a
+    // `ShellCallbacks.onWizardFinished` lambda. `setWizardEntryRequest(...)`
+    // is the canonical write path from outside `composition/`.
     val wizardEntryRequest: MutableStateFlow<com.eight87.strictlykeptboy.ui.wizard.WizardScreen?> =
         MutableStateFlow(null)
 
@@ -517,77 +456,16 @@ class AppGraph(private val appContext: Context) {
     }
 
     /**
-     * Round 2.18.A.1 — CalendarContract.Calendars wrapper. Cold; reads
-     * are gated by `READ_CALENDAR` and return empty when ungranted.
+     * [M] #8d (audit pass 2026-05-17) — Round 2.18 CalendarContract
+     * bridges + system-calendar prefs + AccountManager facade extracted
+     * into a cohesive sub-graph. Consumers reach the underlying fields
+     * via `graph.systemCalendarGraph.<field>`.
      */
-    val calendarContractBridge: com.eight87.strictlykeptboy.system.CalendarContractBridge by lazy {
-        com.eight87.strictlykeptboy.system.CalendarContractBridge(appContext)
-    }
-
-    /** Round 2.18.A.6 — CalendarContract.Instances wrapper (windowed). */
-    val systemEventsBridge: com.eight87.strictlykeptboy.system.SystemEventsBridge by lazy {
-        com.eight87.strictlykeptboy.system.SystemEventsBridge(appContext)
-    }
-
-    /** Round 2.18.C.8 — CalendarContract.Attendees reader. */
-    val systemAttendeesReader: com.eight87.strictlykeptboy.system.SystemAttendeesReader by lazy {
-        com.eight87.strictlykeptboy.system.SystemAttendeesReader(appContext)
-    }
-
-    /** Round 2.18.C.9 — CalendarContract.Reminders reader. */
-    val systemRemindersReader: com.eight87.strictlykeptboy.system.SystemRemindersReader by lazy {
-        com.eight87.strictlykeptboy.system.SystemRemindersReader(appContext)
-    }
-
-    /** Round 2.18.A.14 — per-system-calendar user overrides. */
-    val systemCalendarPrefsStore: com.eight87.strictlykeptboy.system.SystemCalendarPrefsStore by lazy {
-        com.eight87.strictlykeptboy.system.SystemCalendarPrefsStore.open(appContext)
-    }
-
-    /** Round 2.18.B.6 — first-run nudge when OS-level accounts change. */
-    val accountChangeNudge: com.eight87.strictlykeptboy.system.AccountChangeNudge by lazy {
-        com.eight87.strictlykeptboy.system.AccountChangeNudge.open(appContext).also { it.start() }
-    }
-
-    /** Round 2.18.F.6 — external (CalendarContract) reminder scheduler. */
-    val externalReminderScheduler: com.eight87.strictlykeptboy.notif.ExternalReminderScheduler by lazy {
-        com.eight87.strictlykeptboy.notif.ExternalReminderScheduler(appContext)
-    }
-
-    /**
-     * Round 2.18.G.6 / G.7 — AccountManager facade for skb's local-only
-     * accounts. Creates / removes the `<repoId>@local` accounts when the
-     * Settings toggle flips and fires sync requests on every commit.
-     */
-    val skbAccountManager: com.eight87.strictlykeptboy.system.SkbAccountManager by lazy {
-        com.eight87.strictlykeptboy.system.SkbAccountManager(
-            context = appContext,
+    val systemCalendarGraph: SystemCalendarGraph by lazy {
+        SystemCalendarGraph(
+            appContext = appContext,
+            appScope = appScope,
             repoStore = repoStore,
-            systemCalendarPrefs = systemCalendarPrefsStore,
-        )
-    }
-
-    /** Round 2.18.A.5 / A.15 — synthesized [CalendarMeta] for system calendars. */
-    val systemCalendarsRepository: com.eight87.strictlykeptboy.system.SystemCalendarsRepository by lazy {
-        com.eight87.strictlykeptboy.system.SystemCalendarsRepository(
-            bridge = calendarContractBridge,
-            prefs = systemCalendarPrefsStore,
-            scope = appScope,
-        )
-    }
-
-    /**
-     * Round 2.18.B.5 — raw `SystemCalendar` list for the External
-     * Calendars settings screen (every CalendarContract row, regardless
-     * of the global show toggle or per-calendar visibility overrides;
-     * the screen needs every row so the user can flip visibility on
-     * hidden ones).
-     */
-    val systemCalendarsRawFlow: kotlinx.coroutines.flow.StateFlow<List<com.eight87.strictlykeptboy.system.SystemCalendar>> by lazy {
-        systemCalendarsRepository.systemCalendars().stateIn(
-            scope = appScope,
-            started = kotlinx.coroutines.flow.SharingStarted.Eagerly,
-            initialValue = emptyList(),
         )
     }
 
@@ -598,7 +476,7 @@ class AppGraph(private val appContext: Context) {
             repoStore = repoStore,
             scope = appScope,
             // Round 2.18.A.8 — fold external calendars into the snapshot.
-            externalCalendars = systemCalendarsRepository.state,
+            externalCalendars = systemCalendarGraph.systemCalendarsRepository.state,
         )
     }
 
@@ -617,42 +495,9 @@ class AppGraph(private val appContext: Context) {
             // calendar set changes.
             externalEventsProvider = { range ->
                 @Suppress("OPT_IN_USAGE")
-                buildExternalEventsFlow(range)
+                systemCalendarGraph.buildExternalEventsFlow(range)
             },
         )
-    }
-
-    /**
-     * Round 2.18.C.0 — build the windowed `Flow<List<EventInput>>` for
-     * the resolver's external-event source. Combines the visible meta
-     * set (so global-toggle-off + per-calendar-hidden are honored) with
-     * the raw system calendar list (needed to map id → accountType for
-     * the `external` sidecar), then drives the `SystemEventsBridge` for
-     * the given window. Re-checks `READ_CALENDAR` per query (the bridge
-     * itself returns empty on missing permission).
-     */
-    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    private fun buildExternalEventsFlow(
-        range: com.eight87.strictlykeptboy.resolver.DateRange,
-    ): kotlinx.coroutines.flow.Flow<List<com.eight87.strictlykeptboy.resolver.EventInput>> {
-        val zone = java.time.ZoneId.systemDefault()
-        val fromMs = range.start.atStartOfDay(zone).toInstant().toEpochMilli()
-        val toMs = (range.endInclusive ?: range.start)
-            .plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
-        return systemCalendarsRepository.state.flatMapLatest { metas ->
-            if (metas.isEmpty()) {
-                kotlinx.coroutines.flow.flowOf(emptyList())
-            } else {
-                val visibleIds = metas
-                    .mapNotNull { runCatching { it.ref.id.toLong() }.getOrNull() }
-                    .toSet()
-                systemCalendarsRawFlow
-                    .map { all -> all.filter { it.id in visibleIds } }
-                    .flatMapLatest { known ->
-                        systemEventsBridge.events(fromMs, toMs, known, zone)
-                    }
-            }
-        }
     }
 
     val snapshot: StateFlow<RepoSnapshot> get() = snapshotPublisher.state
@@ -871,13 +716,13 @@ class AppGraph(private val appContext: Context) {
         // The adapter runs in this process, so static lookup is safe.
         com.eight87.strictlykeptboy.system.SkbSyncRuntime.repoStore = repoStore
         com.eight87.strictlykeptboy.system.SkbSyncRuntime.cacheDatabase = cacheDatabase
-        com.eight87.strictlykeptboy.system.SkbSyncRuntime.systemCalendarPrefs = systemCalendarPrefsStore
+        com.eight87.strictlykeptboy.system.SkbSyncRuntime.systemCalendarPrefs = systemCalendarGraph.systemCalendarPrefsStore
 
         // Round 2.18.G.7 — every successful `GitRepo.commitAll` requests a
         // sync against the matching repo's account. No-op when the toggle
         // is off or no account exists for that repoId.
         com.eight87.strictlykeptboy.system.SkbCommitNotifier.hook = { repoId ->
-            skbAccountManager.requestSyncFor(repoId)
+            systemCalendarGraph.skbAccountManager.requestSyncFor(repoId)
         }
 
         // Round 2.18.F deferred — wire externalEventsFlow into the
@@ -888,7 +733,7 @@ class AppGraph(private val appContext: Context) {
         appScope.launch {
             sources.collect { src ->
                 val externals = src.events.filter { it.external != null }
-                runCatching { externalReminderScheduler.refresh(externals) }
+                runCatching { systemCalendarGraph.externalReminderScheduler.refresh(externals) }
             }
         }
 
@@ -959,40 +804,14 @@ class AppGraph(private val appContext: Context) {
     // ----------------------------------------------------------------
     // Round 2.16.B — active task playback (in-memory only).
     //
-    // [tasksViewState] is hoisted onto AppGraph so the projector can
-    // read the same task list the UI renders. MainActivity previously
-    // owned this as a `remember { TasksViewState() }`; the projector
-    // would diverge from the UI if we kept two instances, so we own
-    // the canonical instance here.
+    // [M] #8d (audit pass 2026-05-17) — extracted into a cohesive
+    // [TaskPlaybackGraph] sub-graph. The single canonical
+    // `tasksViewState` is owned by the sub-graph and shared between
+    // the schedule shell's task views and the playback projector
+    // (consumers in MainActivity read it as `graph.taskPlaybackGraph.tasksViewState`).
     // ----------------------------------------------------------------
 
-    /** Round 2.16.B — single canonical tasks UI state, shared between
-     *  the schedule shell's task views and the playback projector. */
-    val tasksViewState: TasksViewState by lazy { TasksViewState() }
-
-    /** Round 2.16.B — derived flow of just the tasks list (for the
-     *  projector — narrow ISP surface). */
-    @Suppress("OPT_IN_USAGE")
-    val tasksFlow: StateFlow<List<TaskItem>> by lazy {
-        tasksViewState.state
-            .map { it.tasks }
-            .stateIn(appScope, SharingStarted.Eagerly, tasksViewState.state.value.tasks)
-    }
-
-    /** Round 2.16.B — in-memory active-task controller. NOT persisted. */
-    val activeTaskController: ActiveTaskController by lazy {
-        ActiveTaskController(scope = appScope)
-    }
-
-    /** Round 2.16.B — read-only projection consumed by MiniPlayer /
-     *  NowPlayingScreen via [taskTransport]. */
-    val taskPlaybackProjector: TaskPlaybackProjector by lazy {
-        TaskPlaybackProjector(
-            controller = activeTaskController,
-            tasksFlow = tasksFlow,
-            scope = appScope,
-        )
-    }
+    val taskPlaybackGraph: TaskPlaybackGraph by lazy { TaskPlaybackGraph(appScope) }
 
     /**
      * Round 2.25 Phase A.2 — `Flow<NowNextSnapshot>` consumed by the
@@ -1029,13 +848,4 @@ class AppGraph(private val appContext: Context) {
         NowNextNotificationProvider(appContext)
     }
 
-    /** Round 2.16.B — facet adapter that the sheet host passes into
-     *  MiniPlayer / NowPlayingScreen / QueueSection. Replaces the
-     *  Phase A `StubTaskPlaybackSource`. */
-    val taskTransport: TaskTransportAdapter by lazy {
-        TaskTransportAdapter(
-            controller = activeTaskController,
-            projector = taskPlaybackProjector,
-        )
-    }
 }
