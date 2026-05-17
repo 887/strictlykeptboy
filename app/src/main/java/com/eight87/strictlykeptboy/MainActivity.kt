@@ -836,6 +836,7 @@ class MainActivity : ComponentActivity() {
                         // TaskRow → controller.start(taskId).
                         taskPlaybackSource = graph.taskTransport,
                         onStartTask = { taskId -> graph.activeTaskController.start(taskId) },
+                        nowNextFlow = graph.nowNextFlow,
                         activeRepoNameFlow = graph.defaultWriteRepoName,
                         activeIconKindFlow = graph.activeRepoIconKind,
                         wizardEntryRequest = graph.wizardEntryRequest,

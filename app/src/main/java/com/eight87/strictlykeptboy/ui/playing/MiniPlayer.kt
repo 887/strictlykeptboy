@@ -70,6 +70,23 @@ fun MiniPlayer(
   onSeekTo: (Long) -> Unit = {},
   onSheetDragDelta: (Float) -> Unit = {},
   onSheetDragSettle: () -> Unit = {},
+  /**
+   * Round 2.25 Phase B — when non-null, the empty-state row's title
+   * is replaced with `Now: <nowTitle>` (D-2.25.c). When null, the
+   * legacy "No active task / Tap to pick one" copy renders.
+   */
+  nowTitle: String? = null,
+  nowEmoji: String? = null,
+  /**
+   * Round 2.25 Phase B — when non-null, an inline `Next: …` block is
+   * rendered on the right side of the row. `nextRelative` is the
+   * already-formatted relative-time string (e.g. "in 2h 15m"); the
+   * caller owns the 60s re-render tick so the snapshot isn't re-
+   * queried just to advance copy (D-2.25.f).
+   */
+  nextTitle: String? = null,
+  nextEmoji: String? = null,
+  nextRelative: String? = null,
 ) {
   // Round 2.16 follow-up — wrap in Surface so LocalContentColor is set
   // to `onSurface` for child Text/Icon. Previously Column + .background
@@ -117,18 +134,33 @@ fun MiniPlayer(
           )
         }
         Column(modifier = Modifier.weight(1f)) {
+          val titleText = if (nowTitle != null) {
+            val prefix = if (nowEmoji != null) "$nowEmoji " else ""
+            "Now: ${prefix}${nowTitle}"
+          } else {
+            stringResource(R.string.playing_no_active_task_title)
+          }
           Text(
-            text = stringResource(R.string.playing_no_active_task_title),
+            text = titleText,
             style = MaterialTheme.typography.bodyLarge,
             maxLines = 1,
             modifier = Modifier.semantics { testTag = "mini_player_title" },
           )
-          Text(
-            text = stringResource(R.string.playing_no_active_task_hint),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            modifier = Modifier.semantics { testTag = "mini_player_subtitle" },
+          if (nowTitle == null) {
+            Text(
+              text = stringResource(R.string.playing_no_active_task_hint),
+              style = MaterialTheme.typography.bodySmall,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              maxLines = 1,
+              modifier = Modifier.semantics { testTag = "mini_player_subtitle" },
+            )
+          }
+        }
+        if (nextTitle != null) {
+          NowNextColumn(
+            title = nextTitle,
+            emoji = nextEmoji,
+            relative = nextRelative.orEmpty(),
           )
         }
       }
@@ -201,6 +233,14 @@ fun MiniPlayer(
         maxLines = 1,
         modifier = Modifier.semantics { testTag = "mini_player_countdown" },
       )
+      if (nextTitle != null) {
+        Spacer(modifier = Modifier.width(8.dp))
+        NowNextColumn(
+          title = nextTitle,
+          emoji = nextEmoji,
+          relative = nextRelative.orEmpty(),
+        )
+      }
       IconButton(
         onClick = onClose,
         modifier = Modifier.semantics { testTag = "mini_player_close" },
@@ -245,6 +285,40 @@ fun MiniPlayer(
         .semantics { testTag = "mini_player_task_progress" },
     )
   }
+  }
+}
+
+/**
+ * Round 2.25 Phase B — right-side `Next:` block rendered by both the
+ * empty-state peek row and the active-state peek row of [MiniPlayer].
+ * Caller passes pre-formatted relative copy (D-2.25.f).
+ */
+@Composable
+internal fun NowNextColumn(
+  title: String,
+  emoji: String?,
+  relative: String,
+) {
+  Column(
+    modifier = Modifier.semantics { testTag = "mini_player_next_column" },
+  ) {
+    val emojiPrefix = if (!emoji.isNullOrBlank()) "$emoji " else ""
+    Text(
+      text = "Next: ${emojiPrefix}$title",
+      style = MaterialTheme.typography.bodyMedium,
+      maxLines = 1,
+      color = MaterialTheme.colorScheme.onSurface,
+      modifier = Modifier.semantics { testTag = "mini_player_next_title" },
+    )
+    if (relative.isNotEmpty()) {
+      Text(
+        text = relative,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 1,
+        modifier = Modifier.semantics { testTag = "mini_player_next_relative" },
+      )
+    }
   }
 }
 

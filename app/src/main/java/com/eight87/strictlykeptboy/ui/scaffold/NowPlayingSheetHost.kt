@@ -32,10 +32,17 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import com.eight87.strictlykeptboy.resolver.NowNextResolver
+import com.eight87.strictlykeptboy.resolver.NowNextSnapshot
 import com.eight87.strictlykeptboy.task.StubTaskPlaybackSource
 import com.eight87.strictlykeptboy.task.TaskNowPlayingState
 import com.eight87.strictlykeptboy.task.TaskQueueCommands
 import com.eight87.strictlykeptboy.task.TaskTransportCommands
+import java.time.Duration
+import java.time.Instant
+import kotlinx.coroutines.flow.StateFlow
 import com.eight87.strictlykeptboy.ui.playing.ExpandedNowPlayingTaskBody
 import com.eight87.strictlykeptboy.ui.playing.MiniPlayer
 import com.eight87.strictlykeptboy.ui.playing.NowPlayingScreen
@@ -71,6 +78,12 @@ internal fun NowPlayingSheetHost(
     tasksState: TasksViewState = remember { TasksViewState() },
     onWriteTask: (TaskQuickAddRequest) -> Unit = {},
     onStartTask: ((String) -> Unit)? = null,
+    /**
+     * Round 2.25 Phase B — optional Now/Next snapshot stream. When
+     * non-null, MiniPlayer renders the right-column `Next: …` block
+     * and overrides the empty-state title with `Now: …` (D-2.25.c).
+     */
+    nowNextFlow: StateFlow<NowNextSnapshot>? = null,
     content: @Composable () -> Unit,
 ) {
     // Round 2.16.B — the source is one object satisfying the three
@@ -82,6 +95,23 @@ internal fun NowPlayingSheetHost(
     val transport = source as TaskTransportCommands
     val queue = source as TaskQueueCommands
     val playbackState by now.state.collectAsState()
+
+    // Round 2.25 Phase B — Now/Next snapshot + 60s local relative-time
+    // ticker (D-2.25.f). The `tickNow` state is only used to recompute
+    // the formatted relative copy; the snapshot itself comes from the
+    // flow and isn't re-queried on tick.
+    val nowNextSnap = nowNextFlow?.collectAsState()?.value
+    var tickNow by remember { mutableStateOf(Instant.now()) }
+    LaunchedEffect(nowNextFlow) {
+        if (nowNextFlow == null) return@LaunchedEffect
+        while (true) {
+            tickNow = Instant.now()
+            kotlinx.coroutines.delay(60_000L)
+        }
+    }
+    val nextRelative = nowNextSnap?.next?.let {
+        NowNextResolver.formatRelative(Duration.between(tickNow, it.start.toInstant()))
+    }
     // Round 2.16.D — task detail / quick-add overlays migrated here
     // from TasksPane so they layer above the sheet per tonearmboy's
     // overlay convention.
@@ -331,6 +361,11 @@ internal fun NowPlayingSheetHost(
                             onSeekTo = transport::seekTo,
                             onSheetDragDelta = onSheetDragDelta,
                             onSheetDragSettle = onSheetDragSettle,
+                            nowTitle = nowNextSnap?.now?.title,
+                            nowEmoji = nowNextSnap?.now?.emoji,
+                            nextTitle = nowNextSnap?.next?.title,
+                            nextEmoji = nowNextSnap?.next?.emoji,
+                            nextRelative = nextRelative,
                         )
                     }
                 }

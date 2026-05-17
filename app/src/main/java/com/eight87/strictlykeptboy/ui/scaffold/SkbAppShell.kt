@@ -202,6 +202,15 @@ fun SkbAppShell(
     onSingleDrop: ((com.eight87.strictlykeptboy.resolver.DayBand, java.time.OffsetDateTime) -> Unit)? = null,
     /** Round 2.22 / Phase B UI follow-up — recurring-rule drop handler with branch choice. */
     onRecurringDrop: ((com.eight87.strictlykeptboy.resolver.DayBand, java.time.OffsetDateTime, com.eight87.strictlykeptboy.ui.schedule.DragRescheduleController.RecurringChoice) -> Unit)? = null,
+    /**
+     * Round 2.25 Phase B — Now/Next snapshot stream surfaced on the
+     * bottom NowPlayingSheetHost peek row (D-2.25.c). Default null so
+     * previews / tests don't need to plumb it; MainActivity wires
+     * `graph.nowNextFlow`.
+     */
+    nowNextFlow: kotlinx.coroutines.flow.StateFlow<
+        com.eight87.strictlykeptboy.resolver.NowNextSnapshot
+    >? = null,
 ) {
     ProvideWindowSizeClass(modifier = modifier) { _ ->
         SkbAppShellContent(
@@ -235,6 +244,7 @@ fun SkbAppShell(
             onPickInternalStorage = onPickInternalStorage,
             onSingleDrop = onSingleDrop,
             onRecurringDrop = onRecurringDrop,
+            nowNextFlow = nowNextFlow,
         )
     }
 }
@@ -276,6 +286,9 @@ private fun SkbAppShellContent(
     onPickInternalStorage: () -> Unit = {},
     onSingleDrop: ((com.eight87.strictlykeptboy.resolver.DayBand, java.time.OffsetDateTime) -> Unit)? = null,
     onRecurringDrop: ((com.eight87.strictlykeptboy.resolver.DayBand, java.time.OffsetDateTime, com.eight87.strictlykeptboy.ui.schedule.DragRescheduleController.RecurringChoice) -> Unit)? = null,
+    nowNextFlow: kotlinx.coroutines.flow.StateFlow<
+        com.eight87.strictlykeptboy.resolver.NowNextSnapshot
+    >? = null,
 ) {
     var selected by rememberSaveable { mutableStateOf(TopDestination.Schedule) }
     // Phase 2.1.I.2 — observe wizard re-entry requests.
@@ -355,6 +368,7 @@ private fun SkbAppShellContent(
         tasksState = tasksState,
         onWriteTask = onWriteTask,
         onStartTask = onStartTask,
+        nowNextFlow = nowNextFlow,
     ) {
       Surface(
         color = MaterialTheme.colorScheme.background,

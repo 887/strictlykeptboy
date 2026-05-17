@@ -56,29 +56,29 @@ dumb consumer.
 
 ## Phases
 
-### Phase A — `NowNextResolver` + `AppGraph.nowNextFlow`
+### Phase A — `NowNextResolver` + `AppGraph.nowNextFlow` — shipped in commit `415b055`
 
-- [ ] **A.1** New `resolver/NowNextResolver.kt`: pure `derive(today:
+- [x] **A.1** New `resolver/NowNextResolver.kt`: pure `derive(today:
       List<MaterializedInstance>, at: Instant): NowNextSnapshot` +
       `formatRelative(d: Duration): String` helper.
-- [ ] **A.2** `AppGraph.nowNextFlow: StateFlow<NowNextSnapshot>`
+- [x] **A.2** `AppGraph.nowNextFlow: StateFlow<NowNextSnapshot>`
       combining `briefingSource` (today + tomorrow at the cusp) with
       a 60-second ticker. Scope = `appScope`.
-- [ ] **A.3** `NowNextResolverTest` — 8 cases: empty, all-past,
+- [x] **A.3** `NowNextResolverTest` — 8 cases: empty, all-past,
       mid-event, no-current-no-next-today, next-is-tomorrow,
       next-is-grouped-band-start, next-within-grouped-band,
       multi-calendar ordering.
 
-### Phase B — Bottom-bar `NowNextRow`
+### Phase B — Bottom-bar `NowNextRow` — shipped in commit `__pending__`
 
-- [ ] **B.1** Refactor the "No active task / Tap to pick one"
+- [x] **B.1** Refactor the "No active task / Tap to pick one"
       rendering in `NowPlayingSheetHost.kt`. Left column reads
       `nowNextFlow.now`; right column renders `Next: ...` +
       `in 2h 15m` when `nowNextFlow.next != null`, nothing
       otherwise.
-- [ ] **B.2** 60s local re-render of `formatRelative(next.start -
+- [x] **B.2** 60s local re-render of `formatRelative(next.start -
       now)` without re-querying the snapshot.
-- [ ] **B.3** `NowNextRowTest` — Compose test: snapshot with both
+- [x] **B.3** `NowNextRowTest` — Compose test: snapshot with both
       asserts both render; empty snapshot asserts legacy "No active
       task" copy.
 
