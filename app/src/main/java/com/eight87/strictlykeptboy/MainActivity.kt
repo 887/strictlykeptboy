@@ -337,7 +337,7 @@ class MainActivity : ComponentActivity() {
         // (Settings → Storage folder, Repos reminder banner) can launch
         // it without owning an ActivityResultLauncher.
         pendingAppGraph = graph
-        graph.parentPickerHandle = { parentPickerLauncher.launch(null) }
+        graph.setParentPickerHandle { parentPickerLauncher.launch(null) }
 
         // Round 2.17 Phase E.7 — probe persisted SAF permissions on
         // boot so the Repos pane red banner flips if the user revoked
@@ -590,7 +590,7 @@ class MainActivity : ComponentActivity() {
                                         }
                                     }
                                 }
-                                graph.activeRepoName.value = config.displayName
+                                graph.setDefaultWriteRepoName(config.displayName)
                                 firstLaunchDone = true
                             }
                         },
@@ -657,7 +657,7 @@ class MainActivity : ComponentActivity() {
                             }
                             is com.eight87.strictlykeptboy.system.RoutedIntent.ImportIcs -> {
                                 val repo = graph.repoStore.list()
-                                    .firstOrNull { it.displayName == graph.activeRepoName.value }
+                                    .firstOrNull { it.displayName == graph.defaultWriteRepoName.value }
                                     ?: graph.repoStore.list().firstOrNull()
                                 if (repo == null) {
                                     Toast.makeText(
@@ -1055,7 +1055,7 @@ class MainActivity : ComponentActivity() {
                             }
                         },
                         onShareWithDom = {
-                            val name = graph.activeRepoName.value
+                            val name = graph.defaultWriteRepoName.value
                             val cfg = graph.repoStore.list()
                                 .firstOrNull { it.displayName == name }
                                 ?: graph.repoStore.list().firstOrNull()
@@ -1153,8 +1153,9 @@ class MainActivity : ComponentActivity() {
                             // `initialScreen = Roles`. Reset to null on
                             // wizard finish (handled inside SkbAppShell).
                             onOpenWizardAtRoles = {
-                                graph.wizardEntryRequest.value =
-                                    com.eight87.strictlykeptboy.ui.wizard.WizardScreen.Roles
+                                graph.setWizardEntryRequest(
+                                    com.eight87.strictlykeptboy.ui.wizard.WizardScreen.Roles,
+                                )
                             },
                             onOpenPrivacyPolicy = {
                                 val url = "https://github.com/887/strictlykeptboy/blob/main/docs/privacy-policy.md"
@@ -1453,7 +1454,7 @@ class MainActivity : ComponentActivity() {
                             ),
                             onOpenRepo = { cfg ->
                                 // Surface per-repo settings via the existing Repos top-destination.
-                                graph.defaultWriteRepoName.value = cfg.displayName
+                                graph.setDefaultWriteRepoName(cfg.displayName)
                             },
                             accessAggregator = graph.accessAggregator,
                             onOpenShareFor = { /* hook for ShareSheet wiring */ },
@@ -1512,7 +1513,7 @@ class MainActivity : ComponentActivity() {
                                     parentDir.absolutePath,
                                 )
                                 graph.repoStore.add(scaffoldedConfig)
-                                graph.defaultWriteRepoName.value = draft.displayName.ifBlank { "my calendar" }
+                                graph.setDefaultWriteRepoName(draft.displayName.ifBlank { "my calendar" })
                                 Unit
                             }
                         },
@@ -1594,8 +1595,9 @@ class MainActivity : ComponentActivity() {
                                     // user into the lifestyle wizard
                                     // rather than crashing (or silently
                                     // swallowing inside runCatching).
-                                    graph.wizardEntryRequest.value =
-                                        com.eight87.strictlykeptboy.ui.wizard.WizardScreen.Welcome
+                                    graph.setWizardEntryRequest(
+                                        com.eight87.strictlykeptboy.ui.wizard.WizardScreen.Welcome,
+                                    )
                                     return@runCatching
                                 }
                                 com.eight87.strictlykeptboy.ui.trip.TripScaffolder.materialize(

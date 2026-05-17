@@ -27,10 +27,10 @@ class FirstLaunchRoutingTest {
         val graph = AppGraph(ctx)
         // Phase 2.1.I.7 — was "demo-repo" placeholder; now empty so the
         // top-bar renders blank instead of a stale label.
-        assertEquals("", graph.activeRepoName.value)
+        assertEquals("", graph.defaultWriteRepoName.value)
         assertFalse(
             "default must not be the legacy 'demo-repo' placeholder",
-            graph.activeRepoName.value == "demo-repo",
+            graph.defaultWriteRepoName.value == "demo-repo",
         )
     }
 

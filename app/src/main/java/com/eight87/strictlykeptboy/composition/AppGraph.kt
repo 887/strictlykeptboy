@@ -64,6 +64,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
@@ -220,24 +221,7 @@ class AppGraph(private val appContext: Context) {
      */
     fun bindIdentityToActiveRepo(repoId: String?) {
         val cfg = repoId?.let { repoStore.get(it) }
-        val root = cfg?.let { java.io.File(it.rootDir).toPath() }
-        // 2.1.K — ensure the registry has a live handle (the wizard
-        // doesn't register the repo it scaffolds; without this, the
-        // commit step in IdentityPrefs / ModePrefs is silently skipped).
-        if (cfg != null && GitRepoRegistry.get(cfg.repoId) == null) {
-            runCatching {
-                kotlinx.coroutines.runBlocking {
-                    GitRepo.open(
-                        rootDir = File(cfg.rootDir),
-                        repoId = cfg.repoId,
-                        remotes = cfg.remotes,
-                        primaryRemote = cfg.primaryRemote,
-                        authorIdentity = cfg.authorIdentity,
-                        defaultBranch = cfg.defaultBranch,
-                    ).also(GitRepoRegistry::put)
-                }
-            }
-        }
+        val root = ensureRegistered(cfg)
         identityPrefs.bindActiveRepo(
             rootDir = root,
             repoId = cfg?.repoId,
@@ -255,11 +239,27 @@ class AppGraph(private val appContext: Context) {
      */
     fun bindModeToActiveRepo(repoId: String?) {
         val cfg = repoId?.let { repoStore.get(it) }
-        val root = cfg?.let { java.io.File(it.rootDir).toPath() }
-        // Ensure GitRepoRegistry has a live handle so commits land. The
-        // wizard's WizardScaffolder doesn't register, so we open lazily
-        // here. Idempotent — `GitRepoRegistry.put` overwrites by repoId.
-        if (cfg != null && GitRepoRegistry.get(cfg.repoId) == null) {
+        val root = ensureRegistered(cfg)
+        modePrefs.bindActiveRepo(rootDir = root, repoId = cfg?.repoId)
+    }
+
+    /**
+     * [L]#12 — shared helper for [bindIdentityToActiveRepo] +
+     * [bindModeToActiveRepo]. Resolves the `rootDir` Path (or null when
+     * unbinding) and ensures [GitRepoRegistry] has a live handle for the
+     * supplied [cfg] so the commit step in IdentityPrefs / ModePrefs
+     * doesn't silently no-op. Idempotent — `GitRepoRegistry.put`
+     * overwrites by `repoId` and we only open when no handle exists.
+     *
+     * TODO(#12): ANR-risk `runBlocking` — `GitRepo.open` is suspend, and
+     * these binders are called from the UI thread on wizard finish /
+     * repo flip. Re-evaluate via `appScope.async { ... }.await()` once
+     * the call sites can tolerate the async signature.
+     */
+    private fun ensureRegistered(cfg: com.eight87.strictlykeptboy.git.RepoConfig?): java.nio.file.Path? {
+        if (cfg == null) return null
+        val root = java.io.File(cfg.rootDir).toPath()
+        if (GitRepoRegistry.get(cfg.repoId) == null) {
             runCatching {
                 kotlinx.coroutines.runBlocking {
                     GitRepo.open(
@@ -273,7 +273,7 @@ class AppGraph(private val appContext: Context) {
                 }
             }
         }
-        modePrefs.bindActiveRepo(rootDir = root, repoId = cfg?.repoId)
+        return root
     }
 
     /**
@@ -326,8 +326,13 @@ class AppGraph(private val appContext: Context) {
      * by the Repos pane to flip the red banner; observable so a future
      * settings-screen poll could refresh it without a process restart.
      */
-    val safPermissionRevoked: kotlinx.coroutines.flow.MutableStateFlow<Boolean> =
-        kotlinx.coroutines.flow.MutableStateFlow(false)
+    private val _safPermissionRevoked: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val safPermissionRevoked: StateFlow<Boolean> = _safPermissionRevoked.asStateFlow()
+
+    /** [L]#11 — narrow setter for [safPermissionRevoked]. */
+    fun setSafPermissionRevoked(value: Boolean) {
+        _safPermissionRevoked.value = value
+    }
 
     /**
      * Round 2.17 Phase E.7 — single-shot SAF permission probe. Called
@@ -339,18 +344,18 @@ class AppGraph(private val appContext: Context) {
     fun refreshSafPermissionState() {
         val loc = repoStoragePrefs.location
         if (loc !is ParentLocation.External) {
-            safPermissionRevoked.value = false
+            _safPermissionRevoked.value = false
             return
         }
         val target = runCatching { android.net.Uri.parse(loc.treeUri) }.getOrNull()
         if (target == null) {
-            safPermissionRevoked.value = true
+            _safPermissionRevoked.value = true
             return
         }
         val granted = appContext.contentResolver.persistedUriPermissions.any {
             it.uri == target && it.isReadPermission && it.isWritePermission
         }
-        safPermissionRevoked.value = !granted
+        _safPermissionRevoked.value = !granted
     }
 
     /**
@@ -397,7 +402,13 @@ class AppGraph(private val appContext: Context) {
      * landed in this phase.)
      */
     @Volatile
-    var parentPickerHandle: (() -> Unit)? = null
+    private var _parentPickerHandle: (() -> Unit)? = null
+    val parentPickerHandle: (() -> Unit)? get() = _parentPickerHandle
+
+    /** [L]#11 — narrow setter for [parentPickerHandle]. */
+    fun setParentPickerHandle(handle: (() -> Unit)?) {
+        _parentPickerHandle = handle
+    }
 
     /** Phase J — per-process sync scheduler. */
     val scheduler: SyncScheduler by lazy {
@@ -447,26 +458,19 @@ class AppGraph(private val appContext: Context) {
      * The wizard sets this to the first configured repo's `displayName`
      * after scaffolding completes (D-2.1.g).
      */
-    val defaultWriteRepoName: MutableStateFlow<String> by lazy {
+    private val _defaultWriteRepoName: MutableStateFlow<String> by lazy {
         // Lazy so AppGraph construction doesn't touch EncryptedSharedPreferences
         // (Robolectric can't init those — see `ColdStartBudgetTest`).
         MutableStateFlow(
             runCatching { repoStore.list().firstOrNull()?.displayName }.getOrNull().orEmpty(),
         )
     }
+    val defaultWriteRepoName: StateFlow<String> get() = _defaultWriteRepoName.asStateFlow()
 
-    /**
-     * Compatibility alias. The rename in 2.1.B.6 is gradual — UI surfaces
-     * still use the old name internally (parameter naming inside scaffold
-     * composables remains `activeRepoName` because that parameter encodes
-     * "the avatar's current label", which is still meaningful). Removing
-     * the alias is a 2.1.L follow-on.
-     */
-    @Deprecated(
-        message = "Use defaultWriteRepoName (2.1.B.6 rename).",
-        replaceWith = ReplaceWith("defaultWriteRepoName"),
-    )
-    val activeRepoName: MutableStateFlow<String> get() = defaultWriteRepoName
+    /** [L]#11 — narrow setter for [defaultWriteRepoName]. */
+    fun setDefaultWriteRepoName(name: String) {
+        _defaultWriteRepoName.value = name
+    }
 
     /**
      * Phase 2.1.I.2 — wizard re-entry request. Set to a non-null
@@ -475,8 +479,21 @@ class AppGraph(private val appContext: Context) {
      * switch to the Wizard destination and pre-position the host at a
      * specific screen. Shell observes; resets back to null on finish.
      */
+    // [L]#11 — left as `MutableStateFlow` on the public surface because
+    // `SkbAppShell` consumes it as such (it clears the request to null
+    // after the wizard finishes). Tightening to `StateFlow` here is a
+    // follow-on once `SkbAppShell` is split per `refactor-solid.md` #9
+    // (`ShellContext` / `ShellCallbacks` / `ShellSelections`); at that
+    // point the clear path moves into a callback and the field can be
+    // narrowed. `setWizardEntryRequest(...)` is the canonical write
+    // path from outside `composition/`.
     val wizardEntryRequest: MutableStateFlow<com.eight87.strictlykeptboy.ui.wizard.WizardScreen?> =
         MutableStateFlow(null)
+
+    /** [L]#11 — narrow setter for [wizardEntryRequest]. */
+    fun setWizardEntryRequest(screen: com.eight87.strictlykeptboy.ui.wizard.WizardScreen?) {
+        wizardEntryRequest.value = screen
+    }
 
     /** Phase D — read-through cache. Owned here so publishers can share it. */
     val cacheDatabase: CacheDatabase by lazy { CacheDatabase.open(appContext) }
@@ -486,12 +503,18 @@ class AppGraph(private val appContext: Context) {
      * centered on today by default; downstream view-models can write to
      * this flow when the user scrolls / changes pane mode.
      */
-    val visibleDateRange: MutableStateFlow<DateRange> = MutableStateFlow(
+    private val _visibleDateRange: MutableStateFlow<DateRange> = MutableStateFlow(
         run {
             val today = java.time.LocalDate.now()
             DateRange(start = today.minusDays(45), endInclusive = today.plusDays(45))
         },
     )
+    val visibleDateRange: StateFlow<DateRange> = _visibleDateRange.asStateFlow()
+
+    /** [L]#11 — narrow setter for [visibleDateRange]. */
+    fun setVisibleDateRange(range: DateRange) {
+        _visibleDateRange.value = range
+    }
 
     /**
      * Round 2.18.A.1 — CalendarContract.Calendars wrapper. Cold; reads
@@ -669,7 +692,7 @@ class AppGraph(private val appContext: Context) {
                     repoLabel = repoLabels[cal.repo.id] ?: cal.repo.id,
                 )
             }
-        }.stateIn(GlobalScope, SharingStarted.Eagerly, emptyList())
+        }.stateIn(appScope, SharingStarted.Eagerly, emptyList())
     }
 
     /** Phase N — Together repo options (id + label) derived from RepoStore. */
@@ -678,7 +701,7 @@ class AppGraph(private val appContext: Context) {
         repoStore.state
             .map { list -> list.map { TogetherRepoOption(it.repoId, it.displayName) } }
             .stateIn(
-                GlobalScope,
+                appScope,
                 SharingStarted.Eagerly,
                 repoStore.state.value.map { TogetherRepoOption(it.repoId, it.displayName) },
             )
@@ -701,7 +724,7 @@ class AppGraph(private val appContext: Context) {
             val cfg = list.firstOrNull { it.displayName == name } ?: list.firstOrNull()
             cfg?.toIconKind() ?: com.eight87.strictlykeptboy.ui.theming.RepoIconKind.Sticker("bat")
         }.stateIn(
-            GlobalScope,
+            appScope,
             SharingStarted.Eagerly,
             com.eight87.strictlykeptboy.ui.theming.RepoIconKind.Sticker("bat"),
         )
@@ -824,7 +847,7 @@ class AppGraph(private val appContext: Context) {
         // `withContext(Dispatchers.IO)` internally. After migrating we
         // also drop the dead `mirror` remote from every repo so the
         // post-2.17 push fan-out doesn't try to publish to it.
-        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+        appScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             runCatching {
                 val result = parentLocationMigrator.migrate()
                 if (result is ParentLocationMigrator.Result.Migrated) {
