@@ -3,10 +3,14 @@ package com.eight87.strictlykeptboy.ui.schedule
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -44,9 +48,13 @@ fun ScheduleThreeDayView(
     onDragReschedule: ((DayBand, java.time.OffsetDateTime) -> Unit)? = null,
 ) {
     val dates = (0..2).map { anchor.plusDays(it.toLong()) }
+    val sharedScroll = rememberScrollState()
+    val hourHeight = hourHeightForZoom(effectiveZoom)
     Column(modifier = modifier.fillMaxSize().testTag(TestTagThreeDayView)) {
-        // Header strip — day chips.
+        // Header strip — gutter spacer + 3 day chips so the day columns
+        // line up exactly with the body columns below.
         Row(modifier = Modifier.fillMaxWidth()) {
+            Spacer(modifier = Modifier.width(DayViewGutterWidth))
             dates.forEach { d ->
                 val isToday = d == today
                 Box(
@@ -83,7 +91,13 @@ fun ScheduleThreeDayView(
         // Three side-by-side day columns. Each column reuses the same
         // ScheduleDayView; vertical scroll lives inside each column.
         Row(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
-            dates.forEachIndexed { idx, d ->
+            // Shared hour gutter — outside the equal-weight column row
+            // and inside its own verticalScroll bound to [sharedScroll]
+            // so the hour labels track the body columns.
+            Column(modifier = Modifier.width(DayViewGutterWidth).verticalScroll(sharedScroll)) {
+                DayHourGutter(hourHeight = hourHeight)
+            }
+            dates.forEach { d ->
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -98,11 +112,11 @@ fun ScheduleThreeDayView(
                         defaultWriteRepoId = defaultWriteRepoId,
                         effectiveZoom = effectiveZoom,
                         onDragReschedule = onDragReschedule,
-                        // 3-day shares one weekday header (above) and one
-                        // hour gutter (leftmost column only) to stop the
-                        // doubled-up look.
                         showWeekdayHeader = false,
-                        showHourGutter = idx == 0,
+                        showHourGutter = false,
+                        // All three columns share one scroll state so a
+                        // drag on any of them moves all in sync.
+                        sharedScrollState = sharedScroll,
                     )
                 }
             }

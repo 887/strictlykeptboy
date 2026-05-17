@@ -94,6 +94,8 @@ internal fun hourHeightForZoom(zoom: Int): androidx.compose.ui.unit.Dp = when (z
 }
 
 private val GutterWidth = 56.dp
+/** Public mirror so sibling composables (3-day) can match the gutter width. */
+internal val DayViewGutterWidth = GutterWidth
 
 /** Phase F.4 — stateless day view consuming a [RenderedSchedule]. */
 @Composable
@@ -149,6 +151,11 @@ fun ScheduleDayView(
     showWeekdayHeader: Boolean = true,
     /** When false, hides the left-hand hour gutter (3-day view shares one gutter). */
     showHourGutter: Boolean = true,
+    /**
+     * When non-null, this scroll state replaces the locally remembered
+     * one — so multiple sibling DayViews (3-day, week) scroll in sync.
+     */
+    sharedScrollState: androidx.compose.foundation.ScrollState? = null,
 ) {
     val day = schedule?.days?.firstOrNull { it.date == date }
     val bands = day?.bands.orEmpty()
@@ -165,7 +172,7 @@ fun ScheduleDayView(
     // Round 2.23 Phase B (D-2.23.c) — weekday emoji strip above the
     // hour grid so the Day view picks up the same visual separator the
     // Week / 3-day headers use.
-    val scroll = rememberScrollState()
+    val scroll = sharedScrollState ?: rememberScrollState()
     val density = LocalDensity.current
     val hourHeightPx = with(density) { hourHeight.toPx() }
     // Round 2.21 Phase F.2 — per-group expansion state. Auto-expand
@@ -196,7 +203,7 @@ fun ScheduleDayView(
             .fillMaxWidth()
             .verticalScroll(scroll),
     ) {
-        if (showHourGutter) HourGutter(hourHeight = hourHeight)
+        if (showHourGutter) DayHourGutter(hourHeight = hourHeight)
         // Round 2.21 Phase D.5 — pinch-to-zoom on the day-grid Box.
         // detectTransformGestures fires on every pointer move; we
         // accumulate `pendingScale` and on the gesture-end (next
@@ -311,7 +318,7 @@ private fun makeCollapsedSyntheticBand(g: GroupedDayBand): DayBand {
 }
 
 @Composable
-private fun HourGutter(hourHeight: Dp) {
+internal fun DayHourGutter(hourHeight: Dp) {
     Column(modifier = Modifier.width(GutterWidth)) {
         for (hr in 0 until 24) {
             Box(
