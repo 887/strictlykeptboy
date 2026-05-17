@@ -129,7 +129,7 @@
       preceded by a "next: in N minutes" hint subtitle (D-2.26.e
       inline replacement for the bottom-bar Now/Next).
 
-## Phase D — Rich-demo-repo todolist scaffolding — shipped in commit <pending>
+## Phase D — Rich-demo-repo todolist scaffolding — shipped in commit 1a2820e
 
 - [x] **D.1** Verify existing `todolist.toml` files. Existing:
       `cat-care`, `daily-rituals`, `groceries`, `owner-activity-log`,
@@ -147,7 +147,7 @@
       (file system creates on first task write — the bucket dirs ARE
       the index, per `decisions.md` D.3).
 
-## Phase E — Demo task seed files (≥15 tasks across lists) — shipped in commit <pending>
+## Phase E — Demo task seed files (≥15 tasks across lists) — shipped in commit 1a2820e
 
 All files in `app/src/main/assets/rich-demo-repo/todolists/<list>/tasks/2026/05/<slug>.md`.
 Today = 2026-05-17 (per env). All `kind = "task"`, ULID/UUIDv7 ids,
