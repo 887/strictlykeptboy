@@ -103,7 +103,7 @@
 - [ ] **D.4** Unit test for the writer: round-trip through reader;
       idempotent on same-date overwrite.
 
-## Phase E — Refactor cage-check demo content — shipped in commit <pending>
+## Phase E — Refactor cage-check demo content — shipped in commit 1b5e68a
 
 - [x] **E.1** DELETE `rich-demo-repo/calendars/routines/recurrences/
       morning-cage-check.md` (bruise framing).
@@ -129,7 +129,7 @@
       `dom-overlay/.../2026-05-15-proof-photo.md` (one-off, no
       response file) — guarantees the "open 2d" pill renders.
 
-## Phase F — Persona realism seed (sleep + gaming + discord + exceptions) — shipped in commit <pending>
+## Phase F — Persona realism seed (sleep + gaming + discord + exceptions) — shipped in commit 1b5e68a
 
 - [x] **F.1** Sleep blocks: `timeboxes/recurrences/sleep-block.md` —
       daily `RRULE=FREQ=DAILY`, `dtstart = 2026-05-17T23:30:00`,
