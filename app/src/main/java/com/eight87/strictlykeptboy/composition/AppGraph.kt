@@ -24,6 +24,8 @@ import com.eight87.strictlykeptboy.notif.SyncEventNotificationBridge
 import com.eight87.strictlykeptboy.resolver.CommonTimeFinder
 import com.eight87.strictlykeptboy.resolver.DateRange
 import com.eight87.strictlykeptboy.resolver.MaterializedInstance
+import com.eight87.strictlykeptboy.resolver.NowNextResolver
+import com.eight87.strictlykeptboy.resolver.NowNextSnapshot
 import com.eight87.strictlykeptboy.resolver.Renderer
 import com.eight87.strictlykeptboy.resolver.RepoSnapshot
 import com.eight87.strictlykeptboy.sync.SyncRuntime
@@ -929,6 +931,36 @@ class AppGraph(private val appContext: Context) {
             tasksFlow = tasksFlow,
             scope = appScope,
         )
+    }
+
+    /**
+     * Round 2.25 Phase A.2 — `Flow<NowNextSnapshot>` consumed by the
+     * bottom NowPlayingSheetHost peek row (B), the ongoing notification
+     * (C), and the homescreen / lockscreen widget(s) (D). Driven by
+     * the same `briefingSource` the briefing worker uses + a 60-second
+     * ticker so relative copy ("in 2h 15m") stays fresh.
+     */
+    @Suppress("OPT_IN_USAGE")
+    val nowNextFlow: StateFlow<NowNextSnapshot> by lazy {
+        val zone = java.time.ZoneId.systemDefault()
+        val ticker = kotlinx.coroutines.flow.flow {
+            while (true) {
+                emit(java.time.Instant.now())
+                kotlinx.coroutines.delay(60_000L)
+            }
+        }
+        // Combine the briefing-source pulse (re-emits on indexer
+        // refresh because [sources] is the underlying driver) with the
+        // 60s ticker. We re-read briefingSource on every tick so
+        // tomorrow's first event becomes "next" at the day boundary
+        // without needing a separate scheduler.
+        kotlinx.coroutines.flow.combine(sources, ticker) { _, at ->
+            val today = java.time.LocalDate.now(zone)
+            val todays = runCatching { briefingSource.instancesForDate(today, zone) }.getOrElse { emptyList() }
+            val tomorrows = runCatching { briefingSource.instancesForDate(today.plusDays(1), zone) }
+                .getOrElse { emptyList() }
+            NowNextResolver.derive(todays, at = at, tomorrow = tomorrows)
+        }.stateIn(appScope, SharingStarted.Eagerly, NowNextSnapshot.Empty)
     }
 
     /** Round 2.16.B — facet adapter that the sheet host passes into
