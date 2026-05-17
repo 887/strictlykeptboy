@@ -146,6 +146,41 @@ class EntityRoundTripTest {
         assertEquals(d, back)
     }
 
+    // --- Round 2.28 / Audit-pass-2026-05-17 fix #16 ---------------------------
+    // Promotion of `DeviationInput.kind` + `OverrideInput.kind` to sealed types
+    // must NOT change the on-disk schema. The codec lives in
+    // composition/SourcesPublisher (and the RichDemo fixture) and maps between
+    // the wire strings and the sealed variants. The Deviation/Override entity
+    // round-trips remain byte-identical.
+
+    @Test fun overrideRoundTripForceShow() {
+        val o = Override(
+            header = header,
+            supersededCalendarId = "0190a0aa-1c1d-7000-8a0a-000000000099",
+            eventId = "weekly-daddy-meetup",
+            instanceDate = "2026-05-31",
+            overrideKind = "force-show",
+        )
+        val text = FrontmatterWriter.serialize(o.toDoc())
+        val back = Override.fromDoc(FrontmatterReader.parse(text))
+        assertEquals(o, back)
+    }
+
+    @Test fun overrideRoundTripForceShowForRange() {
+        val o = Override(
+            header = header,
+            supersededCalendarId = "0190a0aa-1c1d-7000-8a0a-0000000000aa",
+            eventId = "morning-cage-check",
+            instanceDate = "2026-05-27",
+            overrideKind = "force-show-for-range",
+            rangeFrom = "2026-05-27",
+            rangeTo = "2026-05-30",
+        )
+        val text = FrontmatterWriter.serialize(o.toDoc())
+        val back = Override.fromDoc(FrontmatterReader.parse(text))
+        assertEquals(o, back)
+    }
+
     // --- Round 2.27.A.6 — keeper-prompt schema -------------------------------
 
     @Test fun eventPromptFieldsAbsentDefaultToNonPrompt() {

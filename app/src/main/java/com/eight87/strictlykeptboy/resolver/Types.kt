@@ -288,25 +288,44 @@ data class ExceptionInput(
     val noteBody: String? = null,
 )
 
-/** Post-hoc reality report attached to a scheduled instance (per RV-N / AT-B). */
+sealed interface DeviationKind {
+    val wireValue: String
+    data object Skipped : DeviationKind { override val wireValue: String get() = "skipped" }
+    data object Partial : DeviationKind { override val wireValue: String get() = "partial" }
+    data object CompletedEarly : DeviationKind { override val wireValue: String get() = "completed-early" }
+    data object CompletedLate : DeviationKind { override val wireValue: String get() = "completed-late" }
+    companion object {
+        fun fromWire(s: String): DeviationKind? = when (s) {
+            "skipped" -> Skipped
+            "partial" -> Partial
+            "completed-early" -> CompletedEarly
+            "completed-late" -> CompletedLate
+            else -> null
+        }
+    }
+}
+
 data class DeviationInput(
     val targetId: String,
     val instanceDate: LocalDate,
-    /** `skipped` | `partial` | `completed-early` | `completed-late` */
-    val kind: String,
+    val kind: DeviationKind,
     val at: ZonedDateTime,
     val note: String? = null,
 )
 
-/** Force-show opt-out for supersedence (RV-O / HV-E). */
+sealed interface OverrideKind {
+    val wireValue: String
+    data object ForceShow : OverrideKind { override val wireValue: String get() = "force-show" }
+    data class ForceShowForRange(val from: LocalDate?, val to: LocalDate?) : OverrideKind {
+        override val wireValue: String get() = "force-show-for-range"
+    }
+}
+
 data class OverrideInput(
     val supersededCalendar: CalendarRef,
     val eventId: String,
     val instanceDate: LocalDate,
-    /** `force-show` | `force-show-for-range` */
-    val kind: String,
-    val rangeFrom: LocalDate? = null,
-    val rangeTo: LocalDate? = null,
+    val kind: OverrideKind,
 )
 
 // -----------------------------------------------------------------------------

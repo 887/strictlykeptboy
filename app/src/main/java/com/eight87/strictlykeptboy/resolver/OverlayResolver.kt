@@ -48,13 +48,12 @@ class OverlayResolver(
 
         // RV-O override re-include: an override pinned to a specific event/date forces show.
         val forcedShownByEventOnDate: Map<Pair<String, LocalDate>, Unit> = overrides
-            .filter { it.kind == "force-show" || it.kind == "force-show-for-range" }
             .flatMap { ov ->
-                when (ov.kind) {
-                    "force-show" -> listOf(ov.eventId to ov.instanceDate)
-                    else -> {
-                        val from = ov.rangeFrom ?: ov.instanceDate
-                        val to = ov.rangeTo ?: ov.instanceDate
+                when (val k = ov.kind) {
+                    is OverrideKind.ForceShow -> listOf(ov.eventId to ov.instanceDate)
+                    is OverrideKind.ForceShowForRange -> {
+                        val from = k.from ?: ov.instanceDate
+                        val to = k.to ?: ov.instanceDate
                         generateSequence(from) { d -> if (d.isBefore(to)) d.plusDays(1) else null }
                             .map { ov.eventId to it }
                             .toList()

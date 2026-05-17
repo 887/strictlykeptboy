@@ -84,7 +84,7 @@ class OverlayResolverTest {
         val dev = DeviationInput(
             targetId = "a",
             instanceDate = LocalDate.parse("2026-05-11"),
-            kind = "skipped",
+            kind = DeviationKind.Skipped,
             at = zdt("2026-05-11T10:30:00"),
         )
         val v = overlay.layer(
@@ -124,7 +124,7 @@ class OverlayResolverTest {
             supersededCalendar = CalendarRef("work"),
             eventId = "a",
             instanceDate = LocalDate.parse("2026-05-11"),
-            kind = "force-show",
+            kind = OverrideKind.ForceShow,
         )
         val v = overlay.layer(
             setOf(CalendarRef("work"), CalendarRef("vacation")), listOf(e), snap,

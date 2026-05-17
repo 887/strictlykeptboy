@@ -63,7 +63,7 @@ class TalkBackLabelTest {
     @Test fun sync_button_error_state_has_content_description() {
         composeRule.setContent {
             StrictlyKeptBoyTheme {
-                SyncButton(onClick = {}, state = SyncButtonState.Error)
+                SyncButton(onClick = {}, state = SyncButtonState.Error(reason = "test"))
             }
         }
         composeRule.onNodeWithContentDescription("Sync error").assertExists()

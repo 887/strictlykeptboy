@@ -42,12 +42,11 @@ class ActiveSetEvaluator {
         val date = at.toLocalDate()
         val forcedShownCalendars = overrides
             .filter { ov ->
-                when (ov.kind) {
-                    "force-show" -> ov.instanceDate == date
-                    "force-show-for-range" ->
-                        (ov.rangeFrom == null || !date.isBefore(ov.rangeFrom)) &&
-                            (ov.rangeTo == null || !date.isAfter(ov.rangeTo))
-                    else -> false
+                when (val k = ov.kind) {
+                    is OverrideKind.ForceShow -> ov.instanceDate == date
+                    is OverrideKind.ForceShowForRange ->
+                        (k.from == null || !date.isBefore(k.from)) &&
+                            (k.to == null || !date.isAfter(k.to))
                 }
             }
             .map { it.supersededCalendar }

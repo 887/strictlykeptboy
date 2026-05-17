@@ -170,7 +170,7 @@ data class RichDemoResolverFixture(
                         val key = RuleRef(e.ruleId)
                         exceptionsByRule.getOrPut(key) { mutableListOf() } += toExceptionInput(e)
                     }
-                    is Deviation -> deviations += toDeviationInput(e)
+                    is Deviation -> toDeviationInput(e)?.let { deviations += it }
                     else -> Unit
                 }
             }
@@ -255,14 +255,17 @@ data class RichDemoResolverFixture(
                 noteBody = e.body.ifEmpty { null },
             )
 
-        private fun toDeviationInput(d: Deviation): DeviationInput =
-            DeviationInput(
+        private fun toDeviationInput(d: Deviation): DeviationInput? {
+            val kind = com.eight87.strictlykeptboy.resolver.DeviationKind.fromWire(d.devKind)
+                ?: return null
+            return DeviationInput(
                 targetId = d.targetId,
                 instanceDate = LocalDate.parse(d.instanceDate),
-                kind = d.devKind,
+                kind = kind,
                 at = parseZdt(d.at),
                 note = d.note,
             )
+        }
 
         private fun parseZdt(s: String): ZonedDateTime = parseZdtWithTz(s, TZ_LONDON)
 
@@ -302,7 +305,7 @@ data class RichDemoResolverFixture(
                             }.getOrNull() ?: return@forEach
                             val doc = FrontmatterReader.parse(text)
                             val table: TomlTable = doc.frontmatter
-                            val kind = table.getString("override_kind") ?: return@forEach
+                            val kindWire = table.getString("override_kind") ?: return@forEach
                             val supId = table.getString("superseded_calendar_id")
                                 ?: return@forEach
                             val eventId = table.getString("event_id") ?: return@forEach
@@ -314,13 +317,19 @@ data class RichDemoResolverFixture(
                             val rangeTo = table.getDateLike("to")?.let {
                                 runCatching { LocalDate.parse(it) }.getOrNull()
                             }
+                            val kind = when (kindWire) {
+                                "force-show" ->
+                                    com.eight87.strictlykeptboy.resolver.OverrideKind.ForceShow
+                                "force-show-for-range" ->
+                                    com.eight87.strictlykeptboy.resolver.OverrideKind
+                                        .ForceShowForRange(rangeFrom, rangeTo)
+                                else -> return@forEach
+                            }
                             out += OverrideInput(
                                 supersededCalendar = CalendarRef(supId),
                                 eventId = eventId,
                                 instanceDate = LocalDate.parse(instance),
                                 kind = kind,
-                                rangeFrom = rangeFrom,
-                                rangeTo = rangeTo,
                             )
                         }
                 }

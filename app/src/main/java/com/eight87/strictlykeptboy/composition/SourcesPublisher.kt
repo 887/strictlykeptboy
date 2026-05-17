@@ -140,8 +140,8 @@ class SourcesPublisher(
                 val input = toExceptionInput(row)
                 exceptionsByRule.getOrPut(ruleRef) { mutableListOf() } += input
             }
-            rd.deviations.mapTo(deviations) { row -> toDeviationInput(row, zone) }
-            rd.overrides.mapTo(overrides) { row -> toOverrideInput(row) }
+            rd.deviations.forEach { row -> toDeviationInput(row, zone)?.let(deviations::add) }
+            rd.overrides.forEach { row -> toOverrideInput(row)?.let(overrides::add) }
         }
         return Renderer.Sources(
             events = events,
@@ -216,28 +216,36 @@ class SourcesPublisher(
         )
     }
 
-    private fun toDeviationInput(row: DeviationRow, zone: ZoneId): DeviationInput {
+    private fun toDeviationInput(row: DeviationRow, zone: ZoneId): DeviationInput? {
         val date = runCatching { LocalDate.parse(row.instanceDate) }
             .getOrDefault(LocalDate.EPOCH)
+        val kind = com.eight87.strictlykeptboy.resolver.DeviationKind.fromWire(row.devKind)
+            ?: return null
         return DeviationInput(
             targetId = row.targetId,
             instanceDate = date,
-            kind = row.devKind,
+            kind = kind,
             at = ZonedDateTime.ofInstant(Instant.ofEpochMilli(row.atEpochMs), zone),
             note = row.note,
         )
     }
 
-    private fun toOverrideInput(row: OverrideRow): OverrideInput {
+    private fun toOverrideInput(row: OverrideRow): OverrideInput? {
         val date = runCatching { LocalDate.parse(row.instanceDate) }
             .getOrDefault(LocalDate.EPOCH)
+        val rangeFrom = row.rangeFrom?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+        val rangeTo = row.rangeTo?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+        val kind = when (row.overrideKind) {
+            "force-show" -> com.eight87.strictlykeptboy.resolver.OverrideKind.ForceShow
+            "force-show-for-range" ->
+                com.eight87.strictlykeptboy.resolver.OverrideKind.ForceShowForRange(rangeFrom, rangeTo)
+            else -> return null
+        }
         return OverrideInput(
             supersededCalendar = CalendarRef(row.supersededCalendarId),
             eventId = row.eventId,
             instanceDate = date,
-            kind = row.overrideKind,
-            rangeFrom = row.rangeFrom?.let { runCatching { LocalDate.parse(it) }.getOrNull() },
-            rangeTo = row.rangeTo?.let { runCatching { LocalDate.parse(it) }.getOrNull() },
+            kind = kind,
         )
     }
 

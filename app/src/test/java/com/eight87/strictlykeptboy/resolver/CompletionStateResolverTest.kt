@@ -48,7 +48,7 @@ class CompletionStateResolverTest {
         val dev = DeviationInput(
             targetId = "ev1",
             instanceDate = LocalDate.parse("2026-05-12"),
-            kind = "skipped",
+            kind = DeviationKind.Skipped,
             at = zdt("2026-05-12T07:30:00"),
         )
         assertEquals(
@@ -61,7 +61,7 @@ class CompletionStateResolverTest {
         val dev = DeviationInput(
             targetId = "ev1",
             instanceDate = LocalDate.parse("2026-05-12"),
-            kind = "partial",
+            kind = DeviationKind.Partial,
             at = zdt("2026-05-12T07:30:00"),
         )
         val now = zdt("2026-05-12T08:00:00")
@@ -71,13 +71,12 @@ class CompletionStateResolverTest {
         )
     }
 
-    @Test fun unknownKindFallsBackToScheduled() {
-        // The mapper degrades gracefully; the validator rejects unknown
-        // kinds at write-time so the resolver never has to crash here.
-        assertEquals(
-            CompletionState.Scheduled,
-            CompletionStateResolver.mapDeviationKind("bogus"),
-        )
+    @Test fun unknownWireKindMapsToNull() {
+        // Round 2.28 / Audit-pass-2026-05-17 fix #16 — the wire→sealed
+        // codec returns null for unknown strings; the codec layer
+        // (SourcesPublisher) drops unparseable rows before they reach
+        // the resolver, so the resolver never has to crash on a typo.
+        assertEquals(null, DeviationKind.fromWire("bogus"))
     }
 
     @Test fun visualTreatmentNeverRedNeverBlinking() {

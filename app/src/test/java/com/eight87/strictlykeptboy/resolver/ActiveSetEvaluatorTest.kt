@@ -90,7 +90,7 @@ class ActiveSetEvaluatorTest {
             supersededCalendar = CalendarRef("work"),
             eventId = "evt-x",
             instanceDate = LocalDate.parse("2026-05-11"),
-            kind = "force-show",
+            kind = OverrideKind.ForceShow,
         )
         val active = eval.activeCalendarsAt(
             zdt("2026-05-11T12:00:00", TZ_BERLIN),

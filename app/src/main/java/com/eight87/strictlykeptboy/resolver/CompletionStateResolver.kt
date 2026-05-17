@@ -80,12 +80,11 @@ object CompletionStateResolver {
      * upstream rename / typo can't crash the resolver — the validator
      * (DeviationValidator) is the right place to reject those.
      */
-    fun mapDeviationKind(kind: String): CompletionState = when (kind) {
-        "skipped" -> CompletionState.Skipped
-        "partial" -> CompletionState.PartiallyDone
-        "completed-early" -> CompletionState.CompletedEarly
-        "completed-late" -> CompletionState.CompletedLate
-        else -> CompletionState.Scheduled
+    fun mapDeviationKind(kind: DeviationKind): CompletionState = when (kind) {
+        DeviationKind.Skipped -> CompletionState.Skipped
+        DeviationKind.Partial -> CompletionState.PartiallyDone
+        DeviationKind.CompletedEarly -> CompletionState.CompletedEarly
+        DeviationKind.CompletedLate -> CompletionState.CompletedLate
     }
 }
 

@@ -110,7 +110,7 @@ class RichDemoSupersedenceTest {
         // least carried through as a parsed OverrideInput so the
         // resolver could honor it had vacation extended.
         val override = fixture.sources.overrides.firstOrNull {
-            it.kind == "force-show" &&
+            it.kind is com.eight87.strictlykeptboy.resolver.OverrideKind.ForceShow &&
                 it.instanceDate == LocalDate.parse("2026-05-31")
         }
         assertNotNull(
