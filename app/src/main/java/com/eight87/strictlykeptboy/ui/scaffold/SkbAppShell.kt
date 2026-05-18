@@ -77,6 +77,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 const val TestTagAppShell = "SkbAppShell"
 const val TestTagShellTopBar = "ShellTopBar"
 const val TestTagShellRail = "ShellRail"
+const val TestTagEditScheduleRailButton = "EditScheduleRailButton"
+const val TestTagEditScheduleScreen = "EditScheduleScreen"
 const val TestTagShellContent = "ShellContent"
 const val TestTagShellDestPrefix = "ShellDest-"
 const val TestTagShellRailItemPrefix = "ShellRail-"
@@ -221,6 +223,9 @@ private fun SkbAppShellContent(
     // settings and it's dumb"). The picker now mirrors the same
     // Surface(fillMaxSize) idiom that the TripWizardNavHost uses.
     var overlayPickerOpen by rememberSaveable { mutableStateOf(false) }
+    // Full-screen Edit Schedule overlay — Monday-anchored agenda list.
+    // Pen icon in the rail bottom slot opens it.
+    var editScheduleOpen by rememberSaveable { mutableStateOf(false) }
     // Round 2.25 follow-up — full-screen event-detail overlay state.
     // Hoisted here (rather than nested in SchedulePane) so the detail
     // surface covers the rail + top-bar. Mirrors the same outer-Box
@@ -282,6 +287,9 @@ private fun SkbAppShellContent(
                         overlayPickerCalendars = pickerCalendars,
                         overlayPickerPrefs = context.calendarVisibility,
                         onOverlayPickerClick = { overlayPickerOpen = true },
+                        onEditScheduleClick = if (selected == TopDestination.Schedule) {
+                            { editScheduleOpen = true }
+                        } else null,
                     )
                 }
                 Box(
@@ -390,6 +398,18 @@ private fun SkbAppShellContent(
                             android.widget.Toast.LENGTH_SHORT,
                         ).show()
                     },
+                )
+            }
+        }
+        if (editScheduleOpen) {
+            Surface(
+                color = MaterialTheme.colorScheme.background,
+                modifier = Modifier.fillMaxSize().testTag(TestTagEditScheduleScreen),
+            ) {
+                com.eight87.strictlykeptboy.ui.schedule.EditScheduleScreen(
+                    scheduleState = context.scheduleState,
+                    onBack = { editScheduleOpen = false },
+                    onBandTap = { band -> pendingEventDetail = band },
                 )
             }
         }

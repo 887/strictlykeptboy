@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -93,6 +95,12 @@ internal fun RailColumn(
     overlayPickerCalendars: StateFlow<List<CalendarMeta>>? = null,
     overlayPickerPrefs: CalendarVisibilityPrefs? = null,
     onOverlayPickerClick: () -> Unit = {},
+    /**
+     * Schedule destination — opens the full-screen Edit Schedule view
+     * (Monday-anchored agenda list). `null` ⇒ pen hidden (e.g. on
+     * Tasks / Reviews / other destinations).
+     */
+    onEditScheduleClick: (() -> Unit)? = null,
 ) {
     // Match tonearmboy's LibraryRail: 52dp wide, 108dp per item.
     // Bottom of the rail now carries the overlay-picker filter icon
@@ -125,6 +133,24 @@ internal fun RailColumn(
                 Spacer(Modifier.height(8.dp))
                 items.forEach { item ->
                     RailTabItem(item = item)
+                }
+            }
+            // BOTTOM (above the overlay-picker): Edit Schedule pen,
+            // always-visible on the Schedule destination. Opens the
+            // full-screen Edit Schedule overlay (Monday-anchored agenda).
+            if (onEditScheduleClick != null) {
+                androidx.compose.material3.IconButton(
+                    onClick = onEditScheduleClick,
+                    modifier = Modifier
+                        .padding(bottom = 4.dp)
+                        .testTag(TestTagEditScheduleRailButton),
+                ) {
+                    androidx.compose.material3.Icon(
+                        imageVector = Icons.Outlined.Edit,
+                        contentDescription = stringResource(R.string.cd_edit_schedule),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(22.dp),
+                    )
                 }
             }
             // BOTTOM: overlay-picker filter icon (when wired).
