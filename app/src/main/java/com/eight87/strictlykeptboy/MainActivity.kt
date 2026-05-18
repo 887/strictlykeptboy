@@ -375,7 +375,9 @@ class MainActivity : ComponentActivity() {
             StrictlyKeptBoyTheme(
                 themeMode = appearance.themeMode,
                 densityScale = appearance.densityScale,
-                dynamicColor = appearance.dynamicColor,
+                baseTheme = appearance.baseTheme,
+                tintByRepoAvatar = appearance.tintByRepoAvatar,
+                customChromeTint = appearance.customChromeTint,
             ) {
                 val scope = rememberCoroutineScope()
                 // Phase 2.1.J.1 / 2.1.K.1 — keep IdentityPrefs + ModePrefs bound

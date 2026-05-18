@@ -1,5 +1,6 @@
 package com.eight87.strictlykeptboy.ui.scaffold
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -352,6 +353,7 @@ private fun SkbAppShellContent(
         // to the pane underneath.
         val calsFlow = context.scheduleState.calendarsFlow
         if (overlayPickerOpen && context.calendarVisibility != null && calsFlow != null) {
+            BackHandler { overlayPickerOpen = false }
             // Round 2.23.5 / Fix 3 — resolve repo GUID → friendly
             // display name via the live RepoStore flow (already plumbed
             // through `reposState`). Recomputed on each repo-list change.
@@ -383,6 +385,7 @@ private fun SkbAppShellContent(
         // back arrow on EventDetailScreen clears `pendingEventDetail`,
         // restoring the underlying pane with scroll state intact.
         pendingEventDetail?.let { band ->
+            BackHandler { pendingEventDetail = null }
             val detailCtx = androidx.compose.ui.platform.LocalContext.current
             Surface(
                 color = MaterialTheme.colorScheme.background,
@@ -402,6 +405,7 @@ private fun SkbAppShellContent(
             }
         }
         if (editScheduleOpen) {
+            BackHandler { editScheduleOpen = false }
             Surface(
                 color = MaterialTheme.colorScheme.background,
                 modifier = Modifier.fillMaxSize().testTag(TestTagEditScheduleScreen),
@@ -420,6 +424,7 @@ private fun SkbAppShellContent(
         context.eventCreateController?.let { controller ->
             val sheetOpen by controller.sheetOpen.collectAsState()
             if (sheetOpen) {
+                BackHandler { controller.closeSheet() }
                 val sheetState by controller.state.collectAsState()
                 Surface(
                     color = MaterialTheme.colorScheme.background,

@@ -263,6 +263,25 @@
     <string name="settings_appearance_font_scale_subtitle">Inherits the system font scale by default.</string>
     <string name="settings_appearance_no_results">No settings match "%1$s".</string>
 
+    <!-- Look-and-feel parity port (tonearmboy shape): theme dialog, base
+         theme picker, repo-avatar tint toggle, custom chrome tint picker. -->
+    <string name="settings_appearance_theme_dialog_title">Theme</string>
+    <string name="settings_appearance_base_theme">Base theme</string>
+    <string name="settings_appearance_base_theme_dialog_title">Base theme</string>
+    <string name="settings_appearance_base_theme_default_colors">Default colors</string>
+    <string name="settings_appearance_base_theme_material_you">Material You</string>
+    <string name="settings_appearance_base_theme_pure_black">Pure black</string>
+    <string name="settings_appearance_base_theme_custom">Custom color</string>
+    <string name="settings_appearance_tint_by_repo_avatar">Tint chrome by repo avatar</string>
+    <string name="settings_appearance_tint_by_repo_avatar_subtitle">Bias surfaces toward the active repo\'s avatar.</string>
+    <string name="settings_appearance_custom_chrome_tint">Custom tint color</string>
+    <string name="settings_appearance_custom_chrome_tint_unset">Repo avatar</string>
+    <string name="settings_appearance_dialog_close">Close</string>
+    <!-- Color picker dialog (ported from tonearmboy). -->
+    <string name="settings_color_picker_title">Pick a color</string>
+    <string name="settings_color_picker_confirm">Confirm</string>
+    <string name="settings_color_picker_cancel">Cancel</string>
+
     <!-- S.10 About -->
     <string name="settings_about_build_sha">Build commit: %1$s</string>
     <string name="settings_about_build_date">Built: %1$s</string>

@@ -23,6 +23,8 @@ import androidx.compose.material.icons.outlined.FormatSize
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.SpaceBar
 import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -30,9 +32,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -52,8 +56,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.theme.AppearancePrefs
+import com.eight87.strictlykeptboy.theme.BaseTheme
 import com.eight87.strictlykeptboy.theme.DensityScale
 import com.eight87.strictlykeptboy.theme.ThemeMode
+import com.eight87.strictlykeptboy.theme.baseThemeMatch
+import com.eight87.strictlykeptboy.theme.baseThemePickerOptions
+import com.eight87.strictlykeptboy.ui.components.ColorPickerDialog
 import com.eight87.strictlykeptboy.ui.wizard.NeutralModePrefs
 import com.eight87.strictlykeptboy.avatar.AvatarPackPrefs
 import com.eight87.strictlykeptboy.avatar.CompositePackStore
@@ -97,6 +105,7 @@ fun AppearanceCategory(
     val showTheme = matches(
         "theme", "dark", "light", "auto", "system", "appearance",
         "dynamic", "material you", "color", "colour", "palette", "wallpaper",
+        "base", "tint", "pure black", "custom color", "swatch", "repo", "avatar",
     )
     val showDensity = matches(
         "density", "compact", "comfortable", "spacious", "spacing", "dense", "padding",
@@ -152,39 +161,103 @@ fun AppearanceCategory(
 
         if (showTheme) {
             SectionHeader(stringResource(R.string.settings_appearance_section_theme))
+            // Look-and-feel parity port — 4-row Theme section (tonearmboy
+            // shape, with album-art → repo-avatar substitution).
+            var showThemeDialog by remember { mutableStateOf(false) }
+            var showBaseThemeDialog by remember { mutableStateOf(false) }
+            var showBaseThemeColorPicker by remember { mutableStateOf(false) }
+            var showChromeTintPicker by remember { mutableStateOf(false) }
             CategoryCard {
-                // Theme mode picker — chips inline under a labelled row.
-                PickerRow(
+                ThemeListItem(
                     icon = Icons.Outlined.Brightness6,
                     tint = MaterialTheme.colorScheme.primary,
                     label = stringResource(R.string.settings_appearance_theme),
-                    subtitle = stringResource(R.string.settings_appearance_theme_subtitle),
-                ) {
-                    val items = listOf(
-                        ThemeMode.Auto to R.string.settings_appearance_theme_auto,
-                        ThemeMode.Light to R.string.settings_appearance_theme_light,
-                        ThemeMode.Dark to R.string.settings_appearance_theme_dark,
-                    )
-                    items.forEach { (mode, label) ->
-                        FilterChip(
-                            selected = state.themeMode == mode,
-                            onClick = { prefs.setThemeMode(mode) },
-                            label = { Text(stringResource(label)) },
-                            modifier = Modifier
-                                .padding(end = 6.dp)
-                                .testTag("$TestTagCatAppearance-Theme-${mode.name}"),
-                        )
-                    }
-                }
+                    supporting = themeModeLabel(state.themeMode),
+                    onClick = { showThemeDialog = true },
+                    testTag = "$TestTagCatAppearance-Theme",
+                )
+                RowDivider()
+                ThemeListItem(
+                    icon = Icons.Outlined.Palette,
+                    tint = MaterialTheme.colorScheme.secondary,
+                    label = stringResource(R.string.settings_appearance_base_theme),
+                    supporting = baseThemeLabel(state.baseTheme),
+                    onClick = { showBaseThemeDialog = true },
+                    testTag = "$TestTagCatAppearance-BaseTheme",
+                    trailing = (state.baseTheme as? BaseTheme.Custom)?.let { custom ->
+                        { SwatchDot(rgb = custom.seedRgb, tag = "$TestTagCatAppearance-BaseThemeSwatch") }
+                    },
+                )
                 RowDivider()
                 ToggleRowM3(
                     icon = Icons.Outlined.ColorLens,
-                    tint = MaterialTheme.colorScheme.secondary,
-                    label = stringResource(R.string.settings_appearance_dynamic),
-                    subtitle = stringResource(R.string.settings_appearance_dynamic_subtitle),
-                    checked = state.dynamicColor,
-                    onCheckedChange = { prefs.setDynamicColor(it) },
-                    testTag = "$TestTagCatAppearance-Dynamic",
+                    tint = MaterialTheme.colorScheme.tertiary,
+                    label = stringResource(R.string.settings_appearance_tint_by_repo_avatar),
+                    subtitle = stringResource(R.string.settings_appearance_tint_by_repo_avatar_subtitle),
+                    checked = state.tintByRepoAvatar,
+                    onCheckedChange = { prefs.setTintByRepoAvatar(it) },
+                    testTag = "$TestTagCatAppearance-TintByRepoAvatar",
+                )
+                RowDivider()
+                ThemeListItem(
+                    icon = Icons.Outlined.ColorLens,
+                    tint = MaterialTheme.colorScheme.primary,
+                    label = stringResource(R.string.settings_appearance_custom_chrome_tint),
+                    supporting = if (state.customChromeTint == 0L) {
+                        stringResource(R.string.settings_appearance_custom_chrome_tint_unset)
+                    } else "#%06X".format(state.customChromeTint),
+                    onClick = { showChromeTintPicker = true },
+                    testTag = "$TestTagCatAppearance-CustomChromeTint",
+                    trailing = if (state.customChromeTint != 0L) {
+                        { SwatchDot(rgb = state.customChromeTint, tag = "$TestTagCatAppearance-CustomChromeTintSwatch") }
+                    } else null,
+                )
+            }
+
+            if (showThemeDialog) {
+                ThemeModeDialog(
+                    current = state.themeMode,
+                    onPick = {
+                        prefs.setThemeMode(it)
+                        showThemeDialog = false
+                    },
+                    onDismiss = { showThemeDialog = false },
+                )
+            }
+            if (showBaseThemeDialog) {
+                BaseThemeDialog(
+                    current = state.baseTheme,
+                    onPick = { picked ->
+                        showBaseThemeDialog = false
+                        if (picked is BaseTheme.Custom) {
+                            showBaseThemeColorPicker = true
+                        } else {
+                            prefs.setBaseTheme(picked)
+                        }
+                    },
+                    onDismiss = { showBaseThemeDialog = false },
+                )
+            }
+            if (showBaseThemeColorPicker) {
+                val seed = (state.baseTheme as? BaseTheme.Custom)?.seedRgb ?: 0x6750A4L
+                ColorPickerDialog(
+                    initialRgb = seed,
+                    onConfirm = { rgb ->
+                        prefs.setBaseTheme(BaseTheme.Custom(rgb))
+                        showBaseThemeColorPicker = false
+                    },
+                    onDismiss = { showBaseThemeColorPicker = false },
+                )
+            }
+            if (showChromeTintPicker) {
+                val seed = if (state.customChromeTint == 0L) 0x6464C8L else state.customChromeTint
+                ColorPickerDialog(
+                    initialRgb = seed,
+                    onConfirm = { rgb ->
+                        prefs.setCustomChromeTint(rgb)
+                        showChromeTintPicker = false
+                    },
+                    onDismiss = { showChromeTintPicker = false },
                 )
             }
         }
@@ -452,5 +525,147 @@ private fun RowDivider() {
     androidx.compose.material3.HorizontalDivider(
         modifier = Modifier.padding(start = 72.dp),
         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+    )
+}
+
+@Composable
+private fun ThemeListItem(
+    icon: ImageVector,
+    tint: Color,
+    label: String,
+    supporting: String,
+    onClick: () -> Unit,
+    testTag: String,
+    trailing: (@Composable () -> Unit)? = null,
+) {
+    ListItem(
+        headlineContent = { Text(label) },
+        supportingContent = {
+            Text(
+                supporting,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        },
+        leadingContent = { LeadingBadge(icon, tint) },
+        trailingContent = trailing,
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        modifier = Modifier
+            .clickable(onClick = onClick)
+            .testTag(testTag),
+    )
+}
+
+@Composable
+private fun SwatchDot(rgb: Long, tag: String) {
+    Box(
+        modifier = Modifier
+            .size(24.dp)
+            .background(
+                color = Color(0xFF000000L or (rgb and 0xFFFFFFL)),
+                shape = CircleShape,
+            )
+            .testTag(tag),
+    )
+}
+
+@Composable
+private fun themeModeLabel(mode: ThemeMode): String = stringResource(
+    when (mode) {
+        ThemeMode.Auto -> R.string.settings_appearance_theme_auto
+        ThemeMode.Light -> R.string.settings_appearance_theme_light
+        ThemeMode.Dark -> R.string.settings_appearance_theme_dark
+    },
+)
+
+@Composable
+private fun baseThemeLabel(b: BaseTheme): String = stringResource(
+    when (b) {
+        BaseTheme.DefaultColors -> R.string.settings_appearance_base_theme_default_colors
+        BaseTheme.MaterialYou -> R.string.settings_appearance_base_theme_material_you
+        BaseTheme.PureBlack -> R.string.settings_appearance_base_theme_pure_black
+        is BaseTheme.Custom -> R.string.settings_appearance_base_theme_custom
+    },
+)
+
+@Composable
+private fun ThemeModeDialog(
+    current: ThemeMode,
+    onPick: (ThemeMode) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val options = listOf(
+        ThemeMode.Auto to R.string.settings_appearance_theme_auto,
+        ThemeMode.Light to R.string.settings_appearance_theme_light,
+        ThemeMode.Dark to R.string.settings_appearance_theme_dark,
+    )
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_appearance_theme_dialog_title)) },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth().testTag("$TestTagCatAppearance-ThemeDialog")) {
+                options.forEach { (mode, labelRes) ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onPick(mode) }
+                            .padding(vertical = 8.dp)
+                            .testTag("$TestTagCatAppearance-ThemeDialog-${mode.name}"),
+                    ) {
+                        RadioButton(selected = current == mode, onClick = { onPick(mode) })
+                        Spacer(Modifier.size(8.dp))
+                        Text(stringResource(labelRes))
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.settings_appearance_dialog_close))
+            }
+        },
+    )
+}
+
+@Composable
+private fun BaseThemeDialog(
+    current: BaseTheme,
+    onPick: (BaseTheme) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val matched = baseThemeMatch(current)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_appearance_base_theme_dialog_title)) },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth().testTag("$TestTagCatAppearance-BaseThemeDialog")) {
+                baseThemePickerOptions.forEach { option ->
+                    val tag = when (option) {
+                        BaseTheme.DefaultColors -> "DefaultColors"
+                        BaseTheme.MaterialYou -> "MaterialYou"
+                        BaseTheme.PureBlack -> "PureBlack"
+                        is BaseTheme.Custom -> "Custom"
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onPick(option) }
+                            .padding(vertical = 8.dp)
+                            .testTag("$TestTagCatAppearance-BaseThemeDialog-$tag"),
+                    ) {
+                        RadioButton(selected = matched == option, onClick = { onPick(option) })
+                        Spacer(Modifier.size(8.dp))
+                        Text(baseThemeLabel(option))
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.settings_appearance_dialog_close))
+            }
+        },
     )
 }
