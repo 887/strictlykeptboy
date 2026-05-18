@@ -60,11 +60,24 @@ fun ScheduleAgendaView(
     onBandTap: (DayBand) -> Unit = {},
     /**
      * Hoistable scroll state — host (e.g. EditScheduleScreen) can
-     * supply its own so a sibling day-jumper rail can call
+     * supply its own so a sibling FastScrollbar can call
      * [LazyListState.scrollToItem]. Defaults to a private remembered
      * state for the existing in-pane call sites.
      */
     listState: LazyListState = rememberLazyListState(),
+    /**
+     * Per-date header label override. Defaults to `EEE, MMM d`
+     * (Google-Calendar-style). EditScheduleScreen overrides with the
+     * generic weekday name (`Monday`, `Tuesday`, …) since it presents
+     * a "generic week" template view, not a dated week view.
+     */
+    headerLabelFor: ((LocalDate) -> String)? = null,
+    /**
+     * When true, render a header for every date in [dates] even when
+     * that day has no bands — gives the user a complete Mon-Sun
+     * structure in the generic-week presentation.
+     */
+    includeEmptyDays: Boolean = false,
 ) {
     // Round 2026-05-17 [M] #10 — Agenda needs *which dates* to iterate;
     // host derives this from the rendered range. Per-day bands come
@@ -73,7 +86,7 @@ fun ScheduleAgendaView(
         dates.map { it to dayBands.bandsFor(it) }
     val totalBands = daysWithBands.sumOf { it.second.size }
 
-    if (totalBands == 0) {
+    if (totalBands == 0 && !includeEmptyDays) {
         Box(
             modifier = modifier.fillMaxSize().testTag(TestTagAgendaEmpty).padding(24.dp),
             contentAlignment = Alignment.Center,
@@ -94,12 +107,13 @@ fun ScheduleAgendaView(
         modifier = modifier.fillMaxSize().testTag(TestTagAgendaView),
     ) {
         daysWithBands.forEach { (date, bands) ->
-            if (bands.isEmpty()) return@forEach
+            if (bands.isEmpty() && !includeEmptyDays) return@forEach
+            val headerLabel = headerLabelFor?.invoke(date) ?: dateFormatter.format(date)
             // Sticky day headers — stay pinned to the top as the user
             // scrolls into that day's events so they always know which
             // day they're looking at.
             stickyHeader(key = "agenda-header-$date") {
-                AgendaDayHeader(date = date, formatter = dateFormatter)
+                AgendaDayHeader(label = headerLabel, date = date)
             }
             // Key must include the bucket date — a multi-day event or a
             // calendar shared across repos can otherwise re-emit the same
@@ -111,12 +125,22 @@ fun ScheduleAgendaView(
             ) { _, band ->
                 AgendaRow(band = band, onBandTap = onBandTap)
             }
+            if (bands.isEmpty() && includeEmptyDays) {
+                item(key = "agenda-empty-row-$date") {
+                    Text(
+                        text = "No events.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun AgendaDayHeader(date: LocalDate, formatter: DateTimeFormatter) {
+private fun AgendaDayHeader(label: String, date: LocalDate) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -125,7 +149,7 @@ private fun AgendaDayHeader(date: LocalDate, formatter: DateTimeFormatter) {
             .testTag("$TestTagAgendaDayHeader-$date"),
     ) {
         Text(
-            text = "${emojiFor(date.dayOfWeek)}  ${formatter.format(date)}",
+            text = "${emojiFor(date.dayOfWeek)}  $label",
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.SemiBold,

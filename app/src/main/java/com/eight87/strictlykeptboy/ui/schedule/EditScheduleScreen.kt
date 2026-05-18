@@ -1,18 +1,9 @@
 package com.eight87.strictlykeptboy.ui.schedule
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -27,37 +18,40 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.resolver.DayBand
 import com.eight87.strictlykeptboy.resolver.DayBandSource
 import com.eight87.strictlykeptboy.resolver.asDayBandSource
+import com.eight87.strictlykeptboy.ui.common.FastScrollbar
 import com.eight87.strictlykeptboy.ui.scaffold.ScheduleViewTab
-import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.format.TextStyle
 import java.time.temporal.TemporalAdjusters
+import java.util.Locale
 
 const val TestTagEditScheduleAgenda = "EditScheduleAgenda"
-const val TestTagEditScheduleDayJumperRail = "EditScheduleDayJumperRail"
-const val TestTagEditScheduleDayJumperItemPrefix = "EditScheduleDayJumper-"
 
 /**
- * Full-screen Edit Schedule overlay — agenda-list renderer anchored at
- * this week's Monday. Snapshots the user's prior schedule date + tab on
- * mount and restores them on dispose.
+ * Full-screen Edit Schedule overlay — a "generic week" template view.
  *
- * Layout: TopAppBar · agenda body · right-side day-jumper rail (tap a
- * day-of-month to scroll the agenda to that day's sticky header) ·
- * bottom-end EventCreate FAB (when wired).
+ * Always shows Monday → Sunday with seven sticky day headers (one per
+ * weekday, weekday name only — no dates), regardless of whether each
+ * day has events. Underlying data comes from this week's
+ * materialization so recurring routines/timeboxes show up on the
+ * weekdays they fire on.
+ *
+ * Right side: tonearmboy-style `FastScrollbar` with a single-letter
+ * weekday chip per day (M/T/W/T/F/S/S) that fades in while the user
+ * scrolls or drags — the "floaties" lifted from tonearmboy's library.
+ *
+ * Snapshots the user's prior date + tab on mount and restores them on
+ * dispose so closing returns to the original Schedule pane state.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,28 +80,28 @@ fun EditScheduleScreen(
     val dayBandSource: DayBandSource = remember(rendered) {
         rendered?.asDayBandSource() ?: DayBandSource.Empty
     }
-    val renderedDates = remember(rendered) {
-        rendered?.days?.map { it.date }.orEmpty()
+    // Always Monday → Sunday — generic-week framing, decoupled from
+    // whatever date range the resolver happens to have rendered.
+    val weekDates: List<LocalDate> = remember(monday) {
+        (0..6).map { monday.plusDays(it.toLong()) }
     }
-
-    // Precompute non-empty days + their item index in the LazyColumn so
-    // the side rail can scroll-to-day. Index counts the sticky header
-    // (1) plus that day's bands.
-    val daysWithIndex: List<Pair<LocalDate, Int>> = remember(rendered, renderedDates) {
-        val out = mutableListOf<Pair<LocalDate, Int>>()
+    // Section-start indices for the FastScrollbar — counts sticky
+    // header + (bands.size OR 1 empty-row). Mirrors the structure
+    // ScheduleAgendaView builds when includeEmptyDays = true.
+    val sectionStarts: List<Pair<Int, String>> = remember(weekDates, rendered) {
+        val out = mutableListOf<Pair<Int, String>>()
         var idx = 0
-        renderedDates.forEach { d ->
+        weekDates.forEach { d ->
             val bands = dayBandSource.bandsFor(d)
-            if (bands.isNotEmpty()) {
-                out += d to idx
-                idx += 1 + bands.size
-            }
+            val letter = d.dayOfWeek
+                .getDisplayName(TextStyle.NARROW, Locale.getDefault())
+            out += idx to letter
+            idx += 1 + (if (bands.isEmpty()) 1 else bands.size)
         }
         out
     }
 
     val listState = rememberLazyListState()
-    val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -126,50 +120,28 @@ fun EditScheduleScreen(
         },
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            Row(modifier = Modifier.fillMaxSize()) {
-                Box(modifier = Modifier.weight(1f).fillMaxHeight().testTag(TestTagEditScheduleAgenda)) {
-                    if (renderedDates.isEmpty()) {
-                        Text(
-                            text = stringResource(R.string.schedule_detail_empty),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(24.dp),
-                        )
-                    } else {
-                        ScheduleAgendaView(
-                            dates = renderedDates,
-                            dayBands = dayBandSource,
-                            modifier = Modifier.fillMaxSize(),
-                            onBandTap = onBandTap,
-                            listState = listState,
-                        )
-                    }
-                }
-                // Right-side day-jumper rail — one cell per non-empty day,
-                // tap to scroll the agenda to that day's sticky header.
-                if (daysWithIndex.isNotEmpty()) {
-                    Column(
-                        modifier = Modifier
-                            .width(40.dp)
-                            .fillMaxHeight()
-                            .background(MaterialTheme.colorScheme.surfaceContainer)
-                            .testTag(TestTagEditScheduleDayJumperRail),
-                        verticalArrangement = Arrangement.spacedBy(2.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        daysWithIndex.forEach { (date, headerIndex) ->
-                            DayJumperCell(
-                                date = date,
-                                isToday = date == LocalDate.now(),
-                                onClick = {
-                                    coroutineScope.launch { listState.scrollToItem(headerIndex) }
-                                },
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
-                    }
-                }
-            }
+            // Agenda body — uses ScheduleAgendaView with includeEmptyDays
+            // so every Mon-Sun gets a sticky header even on empty days,
+            // and headerLabelFor renders the generic weekday name.
+            ScheduleAgendaView(
+                dates = weekDates,
+                dayBands = dayBandSource,
+                modifier = Modifier.fillMaxSize().testTag(TestTagEditScheduleAgenda),
+                onBandTap = onBandTap,
+                listState = listState,
+                headerLabelFor = { date ->
+                    date.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.getDefault())
+                },
+                includeEmptyDays = true,
+            )
+            // tonearmboy-style FastScrollbar — draggable thumb + fading
+            // section chips at each weekday boundary. Aligned to the
+            // right edge.
+            FastScrollbar(
+                state = listState,
+                modifier = Modifier.align(Alignment.CenterEnd),
+                sectionStarts = sectionStarts,
+            )
             // Bottom-end EventCreate FAB — same control the regular
             // SchedulePane offers, plumbed through from the shell.
             if (eventCreateController != null) {
@@ -186,48 +158,6 @@ fun EditScheduleScreen(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(16.dp),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun DayJumperCell(
-    date: LocalDate,
-    isToday: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val container = if (isToday) MaterialTheme.colorScheme.primary
-        else MaterialTheme.colorScheme.surfaceContainer
-    val content = if (isToday) MaterialTheme.colorScheme.onPrimary
-        else MaterialTheme.colorScheme.onSurface
-    Box(
-        modifier = modifier
-            .clickable(onClick = onClick)
-            .testTag("$TestTagEditScheduleDayJumperItemPrefix$date"),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = date.dayOfWeek.name.take(1),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-            Box(
-                modifier = Modifier
-                    .size(28.dp)
-                    .clip(CircleShape)
-                    .background(container),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = date.dayOfMonth.toString(),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-                    color = content,
                 )
             }
         }
