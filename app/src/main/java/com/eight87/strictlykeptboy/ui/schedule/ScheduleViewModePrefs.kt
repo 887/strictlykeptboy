@@ -39,8 +39,16 @@ class ScheduleViewModePrefs internal constructor(private val prefs: SharedPrefer
 
     private fun load(): ScheduleViewTab =
         prefs.getString(KEY_TAB, null)
-            ?.let { runCatching { ScheduleViewTab.valueOf(it) }.getOrNull() }
-            ?: ScheduleViewTab.Schedule
+            ?.let { raw ->
+                // Migrate retired tab names: old `Schedule` (agenda list)
+                // and old `Agenda` (timebox) both collapse onto `Now`.
+                val mapped = when (raw) {
+                    "Schedule", "Agenda" -> "Now"
+                    else -> raw
+                }
+                runCatching { ScheduleViewTab.valueOf(mapped) }.getOrNull()
+            }
+            ?: ScheduleViewTab.Now
 
     private fun loadGroupByRepo(): Boolean =
         prefs.getBoolean(KEY_GROUP_BY_REPO, false)

@@ -10,19 +10,15 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * Round 2.25.x (D.126) — fresh prefs default to Schedule (agenda).
- *
- * The Day grid renders 5-minute demo events as unreadable slivers at
- * default zoom; the Schedule list is the readable representation for
- * first-launch users. Anyone who already picked a tab keeps their pick
- * (load() returns the stored value unchanged); only empty prefs flip
- * to the new default.
+ * Fresh prefs default to `Now` (agenda-list, today+forward). Persisted
+ * legacy values (`Schedule` from the old tab, `Agenda` from the prior
+ * timebox tab) both migrate to `Now`.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class ScheduleViewModeDefaultTest {
     @Test
-    fun fresh_prefs_default_to_schedule_view() {
+    fun fresh_prefs_default_to_now_view() {
         val ctx = ApplicationProvider.getApplicationContext<Context>()
         val raw = ctx.getSharedPreferences(
             "skb_view_mode_test_fresh_${System.nanoTime()}",
@@ -30,7 +26,7 @@ class ScheduleViewModeDefaultTest {
         )
         raw.edit().clear().apply()
         val prefs = ScheduleViewModePrefs.openForTest(raw)
-        assertEquals(ScheduleViewTab.Schedule, prefs.selected.value)
+        assertEquals(ScheduleViewTab.Now, prefs.selected.value)
     }
 
     @Test
@@ -43,5 +39,29 @@ class ScheduleViewModeDefaultTest {
         raw.edit().clear().putString("selectedTab", "Day").apply()
         val prefs = ScheduleViewModePrefs.openForTest(raw)
         assertEquals(ScheduleViewTab.Day, prefs.selected.value)
+    }
+
+    @Test
+    fun legacy_schedule_value_migrates_to_now() {
+        val ctx = ApplicationProvider.getApplicationContext<Context>()
+        val raw = ctx.getSharedPreferences(
+            "skb_view_mode_test_legacy_schedule_${System.nanoTime()}",
+            Context.MODE_PRIVATE,
+        )
+        raw.edit().clear().putString("selectedTab", "Schedule").apply()
+        val prefs = ScheduleViewModePrefs.openForTest(raw)
+        assertEquals(ScheduleViewTab.Now, prefs.selected.value)
+    }
+
+    @Test
+    fun legacy_agenda_value_migrates_to_now() {
+        val ctx = ApplicationProvider.getApplicationContext<Context>()
+        val raw = ctx.getSharedPreferences(
+            "skb_view_mode_test_legacy_agenda_${System.nanoTime()}",
+            Context.MODE_PRIVATE,
+        )
+        raw.edit().clear().putString("selectedTab", "Agenda").apply()
+        val prefs = ScheduleViewModePrefs.openForTest(raw)
+        assertEquals(ScheduleViewTab.Now, prefs.selected.value)
     }
 }

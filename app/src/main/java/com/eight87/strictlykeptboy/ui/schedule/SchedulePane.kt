@@ -3,7 +3,10 @@ package com.eight87.strictlykeptboy.ui.schedule
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -109,6 +112,10 @@ fun SchedulePane(
     val rendered by state.rendered.collectAsState()
 
     var detailBand by remember { mutableStateOf<DayBand?>(null) }
+    // Floating pen overlay (bottom-start) toggles "Edit schedule" mode —
+    // jumps the rail to `Now` (the agenda list, where rows tap-through to
+    // the editor sheet) and renders an in-pane "Edit schedule" banner.
+    var editMode by remember { mutableStateOf(false) }
     // Round 2.22 / Phase B UI follow-up — pending recurring drop awaits
     // the user's branch choice in the prompt dialog.
     var pendingRecurringDrop by remember {
@@ -144,6 +151,9 @@ fun SchedulePane(
                         // via the new top-bar button.
                         @Suppress("UNUSED_EXPRESSION") calendarVisibility
                         @Suppress("UNUSED_EXPRESSION") onLongPressCalendar
+                        if (editMode) {
+                            EditScheduleBanner(onClose = { editMode = false })
+                        }
                         ScheduleMasterContent(
                             activeRepoName = activeRepoName,
                             state = state,
@@ -169,6 +179,9 @@ fun SchedulePane(
             Column(modifier = Modifier.fillMaxSize().testTag(TestTagScheduleMasterPane)) {
                 // Round 2.21 Phase C.3 — chip strip removed (D-2.21.d).
                 @Suppress("UNUSED_EXPRESSION") onLongPressCalendar
+                if (editMode) {
+                    EditScheduleBanner(onClose = { editMode = false })
+                }
                 ScheduleMasterContent(
                     activeRepoName = activeRepoName,
                     state = state,
@@ -230,6 +243,24 @@ fun SchedulePane(
                 onDismiss = { pendingRecurringDrop = null },
             )
         }
+
+        // Floating "Edit schedule" pen — always visible on the Schedule
+        // pane (bottom-start). Tapping it toggles edit-mode and jumps the
+        // rail to `Now` so the agenda list is what's visible while editing.
+        EditScheduleFab(
+            editMode = editMode,
+            onClick = {
+                val next = !editMode
+                editMode = next
+                if (next) {
+                    state.setSelectedTab(ScheduleViewTab.Now)
+                    onPersistTab(ScheduleViewTab.Now)
+                }
+            },
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(16.dp),
+        )
 
         if (eventCreateController != null) {
             EventCreateFab(
@@ -337,10 +368,10 @@ private fun ScheduleMasterContent(
         @Suppress("UNUSED_VARIABLE") val _repo = activeRepoName
         @Suppress("UNUSED_VARIABLE") val _sync = onSyncClick
         when (selectedTab) {
-            // Round 2.21 Phase E.2 — Schedule (agenda list) mirrors
-            // Google Calendar's Schedule view; resolver range is the
-            // week containing `date` per ScheduleViewState.
-            ScheduleViewTab.Schedule -> ScheduleAgendaView(
+            // `Now` (renamed from Agenda, replaces old Schedule tab) —
+            // today + 6 forward days rendered as an agenda list, reusing
+            // the same colored-time row layout the prior Schedule tab used.
+            ScheduleViewTab.Now -> ScheduleAgendaView(
                 dates = renderedDates,
                 dayBands = dayBandSource,
                 modifier = Modifier.fillMaxSize(),
@@ -417,13 +448,6 @@ private fun ScheduleMasterContent(
                 },
                 onBandTap = onBandTap,
             )
-            ScheduleViewTab.Agenda -> ScheduleTimeboxView(
-                date = date,
-                dayBands = dayBandSource,
-                modifier = Modifier.fillMaxSize(),
-                onBandTap = onBandTap,
-                onPlanTrip = onPlanTrip,
-            )
             ScheduleViewTab.Year -> ScheduleYearView(
                 year = date.year,
                 dayBands = dayBandSource,
@@ -461,3 +485,65 @@ internal fun findActiveBand(bands: List<DayBand>, now: Instant = Instant.now()):
         val end = b.instance.effectiveEnd.toInstant()
         !now.isBefore(start) && now.isBefore(end)
     }
+
+const val TestTagEditScheduleFab = "EditScheduleFab"
+const val TestTagEditScheduleBanner = "EditScheduleBanner"
+
+@Composable
+private fun EditScheduleFab(
+    editMode: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val container = if (editMode) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceContainerHighest
+    }
+    val content = if (editMode) {
+        MaterialTheme.colorScheme.onPrimaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
+    androidx.compose.material3.SmallFloatingActionButton(
+        onClick = onClick,
+        containerColor = container,
+        contentColor = content,
+        modifier = modifier.testTag(TestTagEditScheduleFab),
+    ) {
+        androidx.compose.material3.Icon(
+            imageVector = androidx.compose.material.icons.Icons.Outlined.Edit,
+            contentDescription = stringResource(R.string.cd_edit_schedule),
+        )
+    }
+}
+
+@Composable
+private fun EditScheduleBanner(onClose: () -> Unit) {
+    androidx.compose.material3.Surface(
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(TestTagEditScheduleBanner),
+    ) {
+        androidx.compose.foundation.layout.Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            androidx.compose.material3.Icon(
+                imageVector = androidx.compose.material.icons.Icons.Outlined.Edit,
+                contentDescription = null,
+                modifier = Modifier.padding(end = 12.dp),
+            )
+            Text(
+                text = stringResource(R.string.schedule_edit_title),
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.weight(1f),
+            )
+            androidx.compose.material3.TextButton(onClick = onClose) {
+                Text(stringResource(android.R.string.cancel))
+            }
+        }
+    }
+}

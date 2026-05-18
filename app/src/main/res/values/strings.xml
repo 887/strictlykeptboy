@@ -785,13 +785,14 @@
     <string name="cd_dest_settings">Settings</string>
 
     <!-- ScheduleViewTab labels. -->
-    <string name="schedule_view_tab_schedule">Schedule</string>
+    <string name="schedule_view_tab_now">Now</string>
     <string name="schedule_view_tab_day">Day</string>
     <string name="schedule_view_tab_3day">3-day</string>
     <string name="schedule_view_tab_week">Week</string>
     <string name="schedule_view_tab_month">Month</string>
-    <string name="schedule_view_tab_agenda">Agenda</string>
     <string name="schedule_view_tab_year">Year</string>
+    <string name="cd_edit_schedule">Edit schedule</string>
+    <string name="schedule_edit_title">Edit schedule</string>
 
     <!-- ReviewsFilter labels (D.118 — vertical rail across destinations). -->
     <string name="reviews_filter_all">All</string>

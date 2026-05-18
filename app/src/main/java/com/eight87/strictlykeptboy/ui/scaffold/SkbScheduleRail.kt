@@ -218,12 +218,11 @@ internal fun PlaceholderScreen(name: String) {
 
 @StringRes
 internal fun scheduleTabLabelRes(tab: ScheduleViewTab): Int = when (tab) {
-    ScheduleViewTab.Schedule -> R.string.schedule_view_tab_schedule
+    ScheduleViewTab.Now -> R.string.schedule_view_tab_now
     ScheduleViewTab.Day -> R.string.schedule_view_tab_day
     ScheduleViewTab.ThreeDay -> R.string.schedule_view_tab_3day
     ScheduleViewTab.Week -> R.string.schedule_view_tab_week
     ScheduleViewTab.Month -> R.string.schedule_view_tab_month
-    ScheduleViewTab.Agenda -> R.string.schedule_view_tab_agenda
     ScheduleViewTab.Year -> R.string.schedule_view_tab_year
 }
 

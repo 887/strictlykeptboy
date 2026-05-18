@@ -211,13 +211,10 @@ class ScheduleViewState(
 
     private fun rangeAndModeFor(d: LocalDate, t: ScheduleViewTab): Pair<DateRange, ViewMode> =
         when (t) {
-            // Round 2.21 Phase E.1 — Schedule (agenda list) renders the
-            // current week's worth of bands sorted by start; resolver-side
-            // it's a 7-day range with Agenda view-mode for sort + grouping.
-            ScheduleViewTab.Schedule -> {
-                val start = d.with(TemporalAdjusters.previousOrSame(weekStart))
-                DateRange(start, start.plusDays(6)) to ViewMode.Agenda
-            }
+            // `Now` (replacing the prior Schedule + Agenda tabs) — today +
+            // 6 forward days as an agenda-list, Agenda view-mode for the
+            // sort-by-start + grouping the renderer expects.
+            ScheduleViewTab.Now -> DateRange(d, d.plusDays(6)) to ViewMode.Agenda
             ScheduleViewTab.Day -> DateRange(d, d) to ViewMode.Day
             ScheduleViewTab.ThreeDay -> DateRange(d, d.plusDays(2)) to ViewMode.Week
             ScheduleViewTab.Week -> {
@@ -229,10 +226,6 @@ class ScheduleViewState(
                 val last = d.with(TemporalAdjusters.lastDayOfMonth())
                 DateRange(first, last) to ViewMode.Month
             }
-            // Agenda tab maps to the "Timebox" view per Phase G.4 — today's
-            // planned focus blocks edge-to-edge. Resolver-side, that's just
-            // a single-day range with Agenda view-mode for sort-by-start.
-            ScheduleViewTab.Agenda -> DateRange(d, d) to ViewMode.Agenda
             ScheduleViewTab.Year -> {
                 val first = d.withDayOfYear(1)
                 val last = d.withMonth(12).withDayOfMonth(31)

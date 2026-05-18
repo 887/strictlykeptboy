@@ -71,12 +71,11 @@ fun TopDestination.labelString(context: Context): String = context.getString(lab
 @get:StringRes
 val ScheduleViewTab.labelRes: Int
     get() = when (this) {
-        ScheduleViewTab.Schedule -> R.string.schedule_view_tab_schedule
+        ScheduleViewTab.Now -> R.string.schedule_view_tab_now
         ScheduleViewTab.Day -> R.string.schedule_view_tab_day
         ScheduleViewTab.ThreeDay -> R.string.schedule_view_tab_3day
         ScheduleViewTab.Week -> R.string.schedule_view_tab_week
         ScheduleViewTab.Month -> R.string.schedule_view_tab_month
-        ScheduleViewTab.Agenda -> R.string.schedule_view_tab_agenda
         ScheduleViewTab.Year -> R.string.schedule_view_tab_year
     }
 

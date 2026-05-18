@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -84,7 +84,14 @@ fun ScheduleAgendaView(
             item(key = "agenda-header-$date") {
                 AgendaDayHeader(date = date, formatter = dateFormatter)
             }
-            items(bands, key = { b -> "agenda-row-${b.instance.instanceId}" }) { band ->
+            // Key must include the bucket date — a multi-day event or a
+            // calendar shared across repos can otherwise re-emit the same
+            // instanceId across multiple day buckets, crashing LazyColumn
+            // with "Key was already used".
+            itemsIndexed(
+                items = bands,
+                key = { idx, b -> "agenda-row-$date-$idx-${b.instance.instanceId}" },
+            ) { _, band ->
                 AgendaRow(band = band, onBandTap = onBandTap)
             }
         }
