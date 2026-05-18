@@ -12,8 +12,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -48,12 +51,20 @@ const val TestTagAgendaEmpty = "AgendaEmpty"
  * Resolver-level range: 7 days starting at the locale week-start
  * (see [ScheduleViewState.rangeAndModeFor]).
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ScheduleAgendaView(
     dates: List<LocalDate>,
     dayBands: DayBandSource,
     modifier: Modifier = Modifier,
     onBandTap: (DayBand) -> Unit = {},
+    /**
+     * Hoistable scroll state — host (e.g. EditScheduleScreen) can
+     * supply its own so a sibling day-jumper rail can call
+     * [LazyListState.scrollToItem]. Defaults to a private remembered
+     * state for the existing in-pane call sites.
+     */
+    listState: LazyListState = rememberLazyListState(),
 ) {
     // Round 2026-05-17 [M] #10 — Agenda needs *which dates* to iterate;
     // host derives this from the rendered range. Per-day bands come
@@ -78,10 +89,16 @@ fun ScheduleAgendaView(
 
     val dateFormatter = remember { DateTimeFormatter.ofPattern("EEE, MMM d") }
 
-    LazyColumn(modifier = modifier.fillMaxSize().testTag(TestTagAgendaView)) {
+    LazyColumn(
+        state = listState,
+        modifier = modifier.fillMaxSize().testTag(TestTagAgendaView),
+    ) {
         daysWithBands.forEach { (date, bands) ->
             if (bands.isEmpty()) return@forEach
-            item(key = "agenda-header-$date") {
+            // Sticky day headers — stay pinned to the top as the user
+            // scrolls into that day's events so they always know which
+            // day they're looking at.
+            stickyHeader(key = "agenda-header-$date") {
                 AgendaDayHeader(date = date, formatter = dateFormatter)
             }
             // Key must include the bucket date — a multi-day event or a

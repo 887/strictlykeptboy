@@ -410,6 +410,7 @@ private fun SkbAppShellContent(
                     scheduleState = context.scheduleState,
                     onBack = { editScheduleOpen = false },
                     onBandTap = { band -> pendingEventDetail = band },
+                    eventCreateController = context.eventCreateController,
                 )
             }
         }
