@@ -353,12 +353,6 @@ private fun ScheduleMasterContent(
                         selectedOverride = visState.globalZoomOverride,
                         onSelect = { calendarVisibility.setGlobalZoomOverride(it) },
                     )
-                    DisplayTzChip(
-                        displayTzId = visState.displayTzId,
-                        repoDefaultTzId = repoDefaultTzId,
-                        onSelect = { calendarVisibility.setDisplayTzId(it) },
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    )
                 }
                 ScheduleThreeDayView(
                     anchor = date,
@@ -374,12 +368,6 @@ private fun ScheduleMasterContent(
                     ZoomLevelRow(
                         selectedOverride = visState.globalZoomOverride,
                         onSelect = { calendarVisibility.setGlobalZoomOverride(it) },
-                    )
-                    DisplayTzChip(
-                        displayTzId = visState.displayTzId,
-                        repoDefaultTzId = repoDefaultTzId,
-                        onSelect = { calendarVisibility.setDisplayTzId(it) },
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                     )
                 }
                 ScheduleDayView(

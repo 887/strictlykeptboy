@@ -84,7 +84,7 @@ fun TimeboxRow(
                     .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
             ) {
                 Text(
-                    text = band.instance.title,
+                    text = (band.instance.emoji?.let { "$it  " } ?: "") + band.instance.title,
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,

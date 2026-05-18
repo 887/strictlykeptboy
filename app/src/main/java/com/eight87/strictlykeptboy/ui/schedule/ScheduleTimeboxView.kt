@@ -201,7 +201,7 @@ private fun RegularSecondaryCard(
                         }
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            text = band.instance.title,
+                            text = (band.instance.emoji?.let { "$it  " } ?: "") + band.instance.title,
                             style = MaterialTheme.typography.titleSmall,
                             textDecoration = if (isSuperseded) TextDecoration.LineThrough else null,
                             maxLines = 1,

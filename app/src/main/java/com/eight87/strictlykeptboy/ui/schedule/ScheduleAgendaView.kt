@@ -137,7 +137,7 @@ private fun AgendaRow(band: DayBand, onBandTap: (DayBand) -> Unit) {
         )
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = band.instance.title,
+                text = (band.instance.emoji?.let { "$it  " } ?: "") + band.instance.title,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,

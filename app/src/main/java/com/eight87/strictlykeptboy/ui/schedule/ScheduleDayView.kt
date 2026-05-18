@@ -497,7 +497,7 @@ private fun BandsLayer(
                                     Spacer(modifier = Modifier.width(4.dp))
                                 }
                                 Text(
-                                    text = band.instance.title,
+                                    text = (band.instance.emoji?.let { "$it  " } ?: "") + band.instance.title,
                                     style = MaterialTheme.typography.titleSmall,
                                     textDecoration = if (isSuperseded) TextDecoration.LineThrough else null,
                                     maxLines = 1,
@@ -603,7 +603,7 @@ private fun DragGhostBand(
                     style = MaterialTheme.typography.labelMedium,
                 )
                 Text(
-                    text = band.instance.title,
+                    text = (band.instance.emoji?.let { "$it  " } ?: "") + band.instance.title,
                     style = MaterialTheme.typography.labelSmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

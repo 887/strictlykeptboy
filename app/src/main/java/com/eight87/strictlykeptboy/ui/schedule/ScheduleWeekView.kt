@@ -283,7 +283,7 @@ private fun DayColumn(
                             }
                             androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(3.dp))
                             Text(
-                                text = band.instance.title,
+                                text = (band.instance.emoji?.let { "$it " } ?: "") + band.instance.title,
                                 style = MaterialTheme.typography.labelSmall,
                                 textDecoration = if (isSuperseded) TextDecoration.LineThrough else null,
                                 maxLines = 1,

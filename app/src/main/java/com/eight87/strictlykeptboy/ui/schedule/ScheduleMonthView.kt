@@ -165,7 +165,7 @@ private fun MonthCell(
                         .testTag("$TestTagMonthChip-${band.instance.instanceId}"),
                 ) {
                     Text(
-                        text = band.instance.title,
+                        text = (band.instance.emoji?.let { "$it " } ?: "") + band.instance.title,
                         style = MaterialTheme.typography.labelSmall,
                         textDecoration = if (isSuperseded) TextDecoration.LineThrough else null,
                         maxLines = 1,
