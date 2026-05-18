@@ -1,20 +1,24 @@
 package com.eight87.strictlykeptboy.ui.playing
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyItemScope
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.ui.draw.rotate
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -70,42 +74,70 @@ fun LazyItemScope.ExpandedNowPlayingTaskBody(
   var selectedFilter by rememberSaveable { mutableStateOf(TasksFilter.Today) }
   var selectedListId by rememberSaveable { mutableStateOf<String?>(null) }
 
-  Column(
+  Row(
     modifier = Modifier
       .fillMaxWidth()
+      .height(bodyHeight)
       .testTag(TestTagExpandedTaskBody),
   ) {
-    // Chip strip — horizontal scroll for the 5 filter options.
-    Row(
+    // Vertical left rail matches the Schedule rail style: rotated text
+    // labels, primary accent on the right edge for selection. Width
+    // matches SkbScheduleRail's 52dp item width.
+    Column(
       modifier = Modifier
-        .fillMaxWidth()
-        .horizontalScroll(rememberScrollState())
-        .padding(vertical = 4.dp)
+        .width(52.dp)
+        .fillMaxHeight()
+        .background(MaterialTheme.colorScheme.surfaceContainer)
         .testTag(TestTagExpandedTaskChipStrip),
-      horizontalArrangement = Arrangement.spacedBy(8.dp),
-      verticalAlignment = Alignment.CenterVertically,
+      horizontalAlignment = Alignment.CenterHorizontally,
     ) {
       TasksFilter.entries.forEach { f ->
         val labelRes = when (f) {
           TasksFilter.Today -> R.string.task_filter_today
           TasksFilter.Upcoming -> R.string.task_filter_upcoming
           TasksFilter.All -> R.string.task_filter_all
-          TasksFilter.PerList -> R.string.task_filter_per_list
+          TasksFilter.ByRepo -> R.string.task_filter_by_repo
           TasksFilter.Done -> R.string.task_filter_done
         }
-        FilterChip(
-          selected = f == selectedFilter,
-          onClick = { selectedFilter = f },
-          label = { Text(stringResource(labelRes)) },
-          modifier = Modifier.testTag("$TestTagExpandedTaskChipPrefix${f.name}"),
-        )
+        val selected = f == selectedFilter
+        val labelColor = if (selected) MaterialTheme.colorScheme.onSurface
+          else MaterialTheme.colorScheme.onSurfaceVariant
+        Box(
+          modifier = Modifier
+            .size(width = 52.dp, height = 108.dp)
+            .clickable { selectedFilter = f }
+            .testTag("$TestTagExpandedTaskChipPrefix${f.name}"),
+          contentAlignment = Alignment.Center,
+        ) {
+          Text(
+            text = stringResource(labelRes),
+            style = MaterialTheme.typography.labelLarge,
+            color = labelColor,
+            fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.Bold
+              else androidx.compose.ui.text.font.FontWeight.Normal,
+            maxLines = 1,
+            modifier = Modifier
+              .wrapContentSize(unbounded = true)
+              .rotate(-90f),
+          )
+          if (selected) {
+            Box(
+              modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .fillMaxHeight()
+                .width(2.dp)
+                .background(MaterialTheme.colorScheme.primary)
+                .clip(RoundedCornerShape(1.dp)),
+            )
+          }
+        }
       }
     }
 
     Box(
       modifier = Modifier
-        .fillMaxWidth()
-        .height(bodyHeight)
+        .fillMaxHeight()
+        .weight(1f)
         .clip(RoundedCornerShape(8.dp))
         .background(MaterialTheme.colorScheme.surface),
     ) {
@@ -131,23 +163,11 @@ fun LazyItemScope.ExpandedNowPlayingTaskBody(
           activeRepoOwner = uiState.activeRepoOwner,
           onStartTask = onStartTask,
         )
-        TasksFilter.All -> TaskCombinedView(
-          tasks = visibleTasks,
-          onToggleDone = { tasksState.toggleDone(it.id) },
-          onOpen = onOpenTask,
-          onLongPress = onLongPressTask,
-          multiRepo = uiState.multiRepo,
-          activeRepoOwner = uiState.activeRepoOwner,
-          onStartTask = onStartTask,
-        )
-        TasksFilter.PerList -> {
-          val selectedList = uiState.todolists.firstOrNull { it.id == selectedListId }
-          if (selectedList?.mode == TodolistMode.Shopping) {
-            TaskShoppingView(
-              tasks = uiState.tasks.filter { it.todolist.id == selectedListId },
-              onToggleDone = { tasksState.toggleDone(it.id) },
-            )
-          } else {
+        TasksFilter.All -> {
+          // Per-list secondary filter chips above the combined view —
+          // previously its own `PerList` category, now a sub-filter on
+          // `All` (D-2.29: rail stays lean, list slicer lives inline).
+          Column {
             TaskPerListView(
               tasks = visibleTasks,
               todolists = uiState.todolists,
@@ -160,6 +180,43 @@ fun LazyItemScope.ExpandedNowPlayingTaskBody(
               activeRepoOwner = uiState.activeRepoOwner,
               onStartTask = onStartTask,
             )
+          }
+        }
+        TasksFilter.ByRepo -> {
+          // Group tasks by source repo (via todolist.repoId), one
+          // section per repo with a sticky-ish header above each.
+          val byRepo: Map<String, List<TaskItem>> =
+            visibleTasks.groupBy { it.todolist.repoId }
+          androidx.compose.foundation.lazy.LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+          ) {
+            byRepo.forEach { (repoId, tasks) ->
+              item(key = "by-repo-header-$repoId") {
+                Text(
+                  text = repoId,
+                  style = MaterialTheme.typography.titleSmall,
+                  color = MaterialTheme.colorScheme.primary,
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceContainer)
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+              }
+              items(
+                items = tasks,
+                key = { task: TaskItem -> "by-repo-row-$repoId-${task.id}" },
+              ) { task ->
+                com.eight87.strictlykeptboy.ui.tasks.TaskRow(
+                  item = task,
+                  onToggleDone = { tasksState.toggleDone(task.id) },
+                  onClick = { onOpenTask(task) },
+                  onLongClick = { onLongPressTask(task) },
+                  multiRepo = uiState.multiRepo,
+                  activeRepoOwner = uiState.activeRepoOwner,
+                  onStartTask = onStartTask,
+                )
+              }
+            }
           }
         }
         TasksFilter.Done -> TaskStandingView(

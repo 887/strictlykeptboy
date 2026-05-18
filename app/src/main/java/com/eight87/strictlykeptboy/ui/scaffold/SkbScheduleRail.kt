@@ -237,6 +237,6 @@ internal fun tasksFilterLabelRes(filter: TasksFilter): Int = when (filter) {
     TasksFilter.Today -> R.string.task_filter_today
     TasksFilter.Upcoming -> R.string.task_filter_upcoming
     TasksFilter.All -> R.string.task_filter_all
-    TasksFilter.PerList -> R.string.task_filter_per_list
+    TasksFilter.ByRepo -> R.string.task_filter_by_repo
     TasksFilter.Done -> R.string.task_filter_done
 }

@@ -811,7 +811,11 @@
     <string name="task_filter_today">Today</string>
     <string name="task_filter_upcoming">Upcoming</string>
     <string name="task_filter_all">All</string>
-    <string name="task_filter_per_list">Per-list</string>
+    <string name="task_filter_by_repo">By repo</string>
+    <string name="task_confirm_done_title">Mark done?</string>
+    <string name="task_confirm_done_body">Marking this task done now skips the playback timer — you won\'t be able to un-finish it from history.</string>
+    <string name="task_confirm_done_yes">Yes, mark done</string>
+    <string name="task_confirm_done_no">No, keep open</string>
     <string name="task_filter_done">Done</string>
 
     <!-- Unified-today section headers + Now/Next hint (Round 2.26.B/C.4). -->

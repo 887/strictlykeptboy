@@ -28,6 +28,10 @@ import androidx.compose.ui.res.stringResource
 import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.store.PromptKind
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -146,13 +150,70 @@ fun TaskRow(
                     .background(accent),
             )
             if (!isPrompt) {
+                // Manual check-off confirmation — tapping the box to mark
+                // a task done bypasses the playback timer, and there's no
+                // undo from history, so the user explicitly asked for a
+                // yes/no gate. Unchecking is unguarded (cheap to redo).
+                var confirmDone by remember(item.id) { mutableStateOf(false) }
                 Checkbox(
                     checked = item.done,
-                    onCheckedChange = { onToggleDone() },
+                    onCheckedChange = { checked ->
+                        if (checked && !item.done) {
+                            confirmDone = true
+                        } else {
+                            onToggleDone()
+                        }
+                    },
                     modifier = Modifier
                         .padding(start = 8.dp)
                         .testTag("$TestTagTaskCheckbox-${item.id}"),
                 )
+                if (confirmDone) {
+                    androidx.compose.material3.AlertDialog(
+                        onDismissRequest = { confirmDone = false },
+                        title = {
+                            androidx.compose.material3.Text(
+                                androidx.compose.ui.res.stringResource(
+                                    com.eight87.strictlykeptboy.R.string.task_confirm_done_title,
+                                ),
+                            )
+                        },
+                        text = {
+                            androidx.compose.material3.Text(
+                                androidx.compose.ui.res.stringResource(
+                                    com.eight87.strictlykeptboy.R.string.task_confirm_done_body,
+                                ),
+                            )
+                        },
+                        confirmButton = {
+                            androidx.compose.material3.TextButton(
+                                onClick = {
+                                    confirmDone = false
+                                    onToggleDone()
+                                },
+                                modifier = Modifier.testTag("$TestTagTaskCheckbox-confirm-${item.id}"),
+                            ) {
+                                androidx.compose.material3.Text(
+                                    androidx.compose.ui.res.stringResource(
+                                        com.eight87.strictlykeptboy.R.string.task_confirm_done_yes,
+                                    ),
+                                )
+                            }
+                        },
+                        dismissButton = {
+                            androidx.compose.material3.TextButton(
+                                onClick = { confirmDone = false },
+                                modifier = Modifier.testTag("$TestTagTaskCheckbox-cancel-${item.id}"),
+                            ) {
+                                androidx.compose.material3.Text(
+                                    androidx.compose.ui.res.stringResource(
+                                        com.eight87.strictlykeptboy.R.string.task_confirm_done_no,
+                                    ),
+                                )
+                            }
+                        },
+                    )
+                }
             } else {
                 Spacer(Modifier.width(12.dp))
             }

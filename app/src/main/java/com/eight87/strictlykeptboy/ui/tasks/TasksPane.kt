@@ -122,7 +122,9 @@ fun TasksDestinationBody(
             .fillMaxSize()
             .testTag(TestTagTasksDestinationBody),
     ) {
-        if (filter == TasksFilter.PerList) {
+        if (filter == TasksFilter.All) {
+            // Per-list secondary chip strip — previously its own `PerList`
+            // category, now a sub-filter on `All` so the rail stays lean.
             TaskSourceRail(
                 todolists = ui.todolists,
                 hiddenTodolistIds = ui.hiddenTodolistIds,

@@ -10,8 +10,9 @@ package com.eight87.strictlykeptboy.ui.tasks
  *                 (D-2.26.c). Owned by the unified-feed subagent.
  *  - [Upcoming] — tasks with `due` strictly after end-of-today.
  *  - [All]      — every visible task across every list.
- *  - [PerList]  — exposes the existing [TaskSourceRail] chips inline
- *                 (A.5).
+ *  - [ByRepo]   — group tasks per-repo. Replaced the prior `PerList`
+ *                 category — per-todolist filter chips moved to a
+ *                 secondary row on [All].
  *  - [Done]     — completed tasks (`done = true`).
  */
-enum class TasksFilter { Today, Upcoming, All, PerList, Done }
+enum class TasksFilter { Today, Upcoming, All, ByRepo, Done }
