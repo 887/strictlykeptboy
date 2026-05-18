@@ -241,6 +241,8 @@ fun SchedulePane(
                         defaultStart = state.date.value.atTime(12, 0)
                             .atZone(java.time.ZoneId.systemDefault())
                             .toOffsetDateTime(),
+                        defaultDurationMinutes = 5,
+                        defaultRecurrence = RecurrencePreset.Once,
                     )
                 },
                 onLongPressPlanTrip = onPlanTrip,
@@ -249,23 +251,10 @@ fun SchedulePane(
                     .align(Alignment.BottomEnd)
                     .padding(16.dp),
             )
-            val sheetOpen by eventCreateController.sheetOpen.collectAsState()
-            val sheetState by eventCreateController.state.collectAsState()
-            if (sheetOpen) {
-                EventCreateSheet(
-                    state = sheetState,
-                    onDismiss = { eventCreateController.closeSheet() },
-                    onTabChange = eventCreateController::setTab,
-                    onDraftChange = eventCreateController::setDraft,
-                    onConfirmFreeForm = eventCreateController::confirmFreeForm,
-                    onPickTemplate = eventCreateController::pickTemplate,
-                    onConfirmTemplate = eventCreateController::confirmTemplate,
-                    onCancelTemplate = eventCreateController::cancelTemplate,
-                    onOverlapScheduleAnyway = eventCreateController::overlapScheduleAnyway,
-                    onOverlapPickDifferent = eventCreateController::overlapPickDifferent,
-                    onOverlapCancel = eventCreateController::overlapCancel,
-                )
-            }
+            // EventCreateSheet rendering is hoisted to SkbAppShell so
+            // the full-screen surface covers the rail + top-bar
+            // (previously it mounted inside the pane area, leaving the
+            // shell chrome visible).
         }
     }
 }

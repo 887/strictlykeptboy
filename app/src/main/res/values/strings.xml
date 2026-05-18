@@ -949,6 +949,7 @@
     <string name="event_create_menu_paste_ics">Paste an .ics URL</string>
     <string name="event_create_tab_free_form">Free-form</string>
     <string name="event_create_tab_template">From template</string>
+    <string name="event_create_title">New event</string>
     <string name="event_create_title_label">Title</string>
     <string name="event_create_title_required">Title cannot be empty.</string>
     <string name="event_create_start_label">Start</string>

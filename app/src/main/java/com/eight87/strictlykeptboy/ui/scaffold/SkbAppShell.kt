@@ -414,6 +414,33 @@ private fun SkbAppShellContent(
                 )
             }
         }
+        // Full-screen event-create surface — hoisted from SchedulePane
+        // so it covers the rail + top-bar. Same outer-Box mount pattern
+        // as OverlayPickerScreen / pendingEventDetail above.
+        context.eventCreateController?.let { controller ->
+            val sheetOpen by controller.sheetOpen.collectAsState()
+            if (sheetOpen) {
+                val sheetState by controller.state.collectAsState()
+                Surface(
+                    color = MaterialTheme.colorScheme.background,
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    com.eight87.strictlykeptboy.ui.schedule.EventCreateSheet(
+                        state = sheetState,
+                        onDismiss = { controller.closeSheet() },
+                        onTabChange = controller::setTab,
+                        onDraftChange = controller::setDraft,
+                        onConfirmFreeForm = controller::confirmFreeForm,
+                        onPickTemplate = controller::pickTemplate,
+                        onConfirmTemplate = controller::confirmTemplate,
+                        onCancelTemplate = controller::cancelTemplate,
+                        onOverlapScheduleAnyway = controller::overlapScheduleAnyway,
+                        onOverlapPickDifferent = controller::overlapPickDifferent,
+                        onOverlapCancel = controller::overlapCancel,
+                    )
+                }
+            }
+        }
       }  // end outer Box
     }
     }  // end NowPlayingSheetHost

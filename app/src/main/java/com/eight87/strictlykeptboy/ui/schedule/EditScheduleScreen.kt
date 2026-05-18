@@ -151,6 +151,8 @@ fun EditScheduleScreen(
                             defaultStart = monday.atTime(12, 0)
                                 .atZone(java.time.ZoneId.systemDefault())
                                 .toOffsetDateTime(),
+                            defaultDurationMinutes = 5,
+                            defaultRecurrence = RecurrencePreset.Weekly,
                         )
                     },
                     onLongPressPlanTrip = {},

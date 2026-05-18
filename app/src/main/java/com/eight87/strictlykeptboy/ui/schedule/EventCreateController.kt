@@ -98,7 +98,11 @@ class EventCreateController(
         _sheetOpen.value = true
     }
 
-    fun openSheet(defaultStart: OffsetDateTime = OffsetDateTime.now().plusMinutes(15)) {
+    fun openSheet(
+        defaultStart: OffsetDateTime = OffsetDateTime.now().plusMinutes(15),
+        defaultDurationMinutes: Long = 30,
+        defaultRecurrence: RecurrencePreset = RecurrencePreset.Once,
+    ) {
         val cals = calendarOptionsProvider()
         // Round 2.1.B.10 — prefer last-used calendar for the active repo
         // over the legacy `RepoConfig.defaultCalendarId` hard binding.
@@ -110,8 +114,9 @@ class EventCreateController(
             ?: ""
         val draft = EventDraft(
             start = defaultStart,
-            end = defaultStart.plusMinutes(30),
+            end = defaultStart.plusMinutes(defaultDurationMinutes),
             calendarId = initialCalendarId,
+            recurrence = defaultRecurrence,
         )
         if (shippedTemplates.isEmpty()) loadShippedTemplates()
         _state.value = EventCreateSheetState(
