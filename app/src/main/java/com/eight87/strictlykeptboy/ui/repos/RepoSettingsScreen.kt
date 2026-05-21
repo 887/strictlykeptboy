@@ -441,17 +441,22 @@ fun RepoSettingsScreen(
             }
         }
 
-        HorizontalDivider()
-        Button(
-            onClick = { showRemoveDialog = true },
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.errorContainer,
-                contentColor = MaterialTheme.colorScheme.onErrorContainer,
-            ),
-            modifier = Modifier.testTag(TestTagRepoSettingsRemoveRepo),
-        ) {
-            Icon(Icons.Filled.Delete, contentDescription = null)
-            Text(stringResource(R.string.repo_settings_remove_repo), modifier = Modifier.padding(start = 8.dp))
+        // Demo repos are managed via the Demo-mode toggle on the Repos list;
+        // hide the destructive delete affordance for them so the toggle stays
+        // the single entry-point for un-mounting demo data.
+        if (!draft.isDemo) {
+            HorizontalDivider()
+            Button(
+                onClick = { showRemoveDialog = true },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                ),
+                modifier = Modifier.testTag(TestTagRepoSettingsRemoveRepo),
+            ) {
+                Icon(Icons.Filled.Delete, contentDescription = null)
+                Text(stringResource(R.string.repo_settings_remove_repo), modifier = Modifier.padding(start = 8.dp))
+            }
         }
     }
 

@@ -391,6 +391,63 @@ class MainActivity : ComponentActivity() {
                     graph.bindIdentityToActiveRepo(cfg?.repoId)
                     graph.bindModeToActiveRepo(cfg?.repoId)
                 }
+                // Reactive demo-mode toggle: flipping off un-mounts every
+                // demo repo from RepoStore (files stay on disk so the next
+                // flip-on is a fast re-register, not a re-extract); flipping
+                // on re-seeds the rich-demo if no demo repo is currently
+                // mounted. No app reinstall needed.
+                val demoState by graph.demoModePrefs.state.collectAsState()
+                LaunchedEffect(demoState.isActive, firstLaunchDone) {
+                    // The intro-wizard owns the very first demo-seed path —
+                    // skip the reactive seeder until first-launch is complete
+                    // to avoid a duplicate seed/add race with that flow.
+                    if (!firstLaunchDone) return@LaunchedEffect
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        if (!demoState.isActive) {
+                            graph.repoStore.list().filter { it.isDemo }.forEach { cfg ->
+                                runCatching { graph.repoStore.remove(cfg.repoId) }
+                            }
+                        } else if (graph.repoStore.list().none { it.isDemo }) {
+                            runCatching {
+                                val parent = filesDir.resolve("demo-repos")
+                                // Force re-extraction so manifest additions
+                                // (new base-layer recurrences, etc.) land
+                                // without requiring an app reinstall.
+                                graph.richDemoSeeder.resetSeededFlag()
+                                val repoRoot = graph.richDemoSeeder
+                                    .seedIfNeeded(parent)
+                                    .getOrThrow()
+                                val config = com.eight87.strictlykeptboy.demo
+                                    .RichDemoRegistrar.buildConfig(repoRoot)
+                                graph.repoStore.add(config)
+                                val gitRepo = GitRepoRegistry.get(config.repoId) ?: run {
+                                    val gd = File(config.rootDir, ".git")
+                                    if (gd.isDirectory) {
+                                        GitRepo.open(
+                                            rootDir = File(config.rootDir),
+                                            repoId = config.repoId,
+                                            remotes = config.remotes,
+                                            primaryRemote = config.primaryRemote,
+                                            authorIdentity = config.authorIdentity,
+                                            defaultBranch = config.defaultBranch,
+                                        )
+                                    } else {
+                                        GitRepo.initLocalOnly(
+                                            rootDir = File(config.rootDir),
+                                            repoId = config.repoId,
+                                            authorIdentity = config.authorIdentity,
+                                        ).also { fresh ->
+                                            runCatching { fresh.commitAll("rich-demo: initial extraction") }
+                                        }
+                                    }
+                                }.also(GitRepoRegistry::put)
+                                com.eight87.strictlykeptboy.cache.Indexer(
+                                    graph.cacheDatabase,
+                                ).fullScan(config.repoId, gitRepo)
+                            }
+                        }
+                    }
+                }
                 // Round 2.9 — age gate dropped per user direction ("don't even
                 // ask if the app is 18+, immediately go to setup"). Age
                 // confirmation is silently auto-marked so the existing prefs

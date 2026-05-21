@@ -79,6 +79,7 @@ calendars/routines/recurrences/morning-dressing.md
 calendars/routines/recurrences/no-coffee-after-14.md
 calendars/routines/recurrences/no-phone-after-22.md
 calendars/routines/recurrences/no-skipping-breakfast.md
+calendars/routines/recurrences/sleep-block.md
 calendars/routines/recurrences/wind-down-2300.md
 calendars/social/calendar.toml
 calendars/social/events/2026/05/2026-05-15-friday-drinks-roses.md
@@ -117,6 +118,7 @@ calendars/work/recurrences/lunch-break.md
 calendars/work/recurrences/sprint-demo.md
 calendars/work/recurrences/sprint-planning.md
 calendars/work/recurrences/sprint-retro.md
+calendars/work/recurrences/work-block.md
 claudemd-is-symlink.marker
 identities/ai-dom.md
 identities/demo-boy.md
