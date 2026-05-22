@@ -191,6 +191,13 @@ private fun RegularSecondaryCard(
                 Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         BandKindGlyph(kind = band.kind)
+                        if (band.instance.passive) {
+                            Spacer(Modifier.width(4.dp))
+                            BandPassiveHabitGlyph()
+                        } else if (band.instance.requiresResponse || band.instance.promptKind != null) {
+                            Spacer(Modifier.width(4.dp))
+                            BandActiveHabitGlyph()
+                        }
                         if (isSuperseded) {
                             Spacer(Modifier.width(4.dp))
                             BandSupersededGlyph()
@@ -281,6 +288,13 @@ private fun TimeboxCard(
                 Column(modifier = Modifier.padding(start = 20.dp, end = 16.dp, top = 12.dp, bottom = 12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         BandKindGlyph(kind = band.kind)
+                        if (band.instance.passive) {
+                            Spacer(Modifier.width(4.dp))
+                            BandPassiveHabitGlyph()
+                        } else if (band.instance.requiresResponse || band.instance.promptKind != null) {
+                            Spacer(Modifier.width(4.dp))
+                            BandActiveHabitGlyph()
+                        }
                         if (isSuperseded) {
                             Spacer(Modifier.width(4.dp))
                             BandSupersededGlyph()

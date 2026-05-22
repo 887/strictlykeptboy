@@ -17,4 +17,4 @@ emoji = "🥣"
 +++
 Oats + banana + coffee on weekdays. Eggs + toast at weekends.
 Boy Keeper says: no skipping. The "no-skipping-breakfast" habit is
-inverted — see `no-skipping-breakfast.md`.
+a passive habit — see `no-skipping-breakfast.md`.

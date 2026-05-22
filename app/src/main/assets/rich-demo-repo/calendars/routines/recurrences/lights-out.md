@@ -15,5 +15,5 @@ calendar_id = "0190a0aa-1c1d-7000-8a0a-000000000003"
 tags = ["routine", "sleep"]
 emoji = "🌙"
 +++
-Lights out by 23:30. This rule is observed via the inverted
+Lights out by 23:30. This rule is observed via the passive habit
 `bedtime-by-2330` habit — see that file for the deviation protocol.

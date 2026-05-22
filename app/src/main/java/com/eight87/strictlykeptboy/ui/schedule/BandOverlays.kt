@@ -122,12 +122,40 @@ fun BandKindGlyph(
         // render with the same glyph as a regular calendar; the
         // source-icon overlay is handled separately in Phase C.
         CalendarKind.External -> Icons.Outlined.CalendarToday
+        // Base-layer scaffolding paints behind everything as a wide
+        // subdued slab; no per-band glyph needed — the slab IS the cue.
+        CalendarKind.Base -> Icons.Outlined.CalendarToday
     }
     Icon(
         imageVector = icon,
         contentDescription = null,
         tint = tint,
         modifier = modifier.size(12.dp).testTag("$TestTagBandKindGlyph-${kind.name}"),
+    )
+}
+
+/**
+ * Habit-kind glyph — distinguishes passive habits (📏 ruler, default-done)
+ * from active habits (⚡ lightning, user must act). Passive vs active is
+ * the user-facing axis the app surfaces; plain events / meetings show no
+ * glyph here and rely on the calendar-kind glyph instead. Caller decides
+ * whether a band is passive/active and which (if any) glyph to render.
+ */
+@Composable
+fun BandPassiveHabitGlyph(modifier: Modifier = Modifier) {
+    Text(
+        text = "📏",
+        style = MaterialTheme.typography.labelSmall,
+        modifier = modifier.testTag("BandPassiveHabitGlyph"),
+    )
+}
+
+@Composable
+fun BandActiveHabitGlyph(modifier: Modifier = Modifier) {
+    Text(
+        text = "⚡",
+        style = MaterialTheme.typography.labelSmall,
+        modifier = modifier.testTag("BandActiveHabitGlyph"),
     )
 }
 

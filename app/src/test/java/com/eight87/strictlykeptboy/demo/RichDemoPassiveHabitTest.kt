@@ -21,9 +21,9 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 
 /**
- * Round 2.20 Phase D.6 — inverted habits regression.
+ * Round 2.20 Phase D.6 — passive habits regression.
  *
- * The rich demo authors five inverted-default habits (D.54):
+ * The rich demo authors five passive habits (D.54):
  *
  *   - `no-phone-after-22`   (routines, daily 22:00)
  *   - `no-coffee-after-14`  (routines, daily 14:00)
@@ -38,7 +38,7 @@ import java.time.ZoneId
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [26])
-class RichDemoInvertedHabitTest {
+class RichDemoPassiveHabitTest {
 
     @get:Rule val tmp = TemporaryFolder()
 
@@ -49,12 +49,12 @@ class RichDemoInvertedHabitTest {
     @Before fun setUp() = runTest {
         val ctx = ApplicationProvider.getApplicationContext<android.content.Context>()
         val prefs = ctx.getSharedPreferences(
-            "rd_inverted_${System.nanoTime()}",
+            "rd_passive_${System.nanoTime()}",
             android.content.Context.MODE_PRIVATE,
         )
         prefs.edit().clear().commit()
         val seeder = RichDemoSeeder(ctx, prefs)
-        val parent = tmp.newFolder("rd-inverted")
+        val parent = tmp.newFolder("rd-passive")
         fixture = RichDemoResolverFixture.load(seeder.seedIfNeeded(parent).getOrThrow())
     }
 
@@ -87,7 +87,7 @@ class RichDemoInvertedHabitTest {
 
     /**
      * `no-phone-after-22` on 2026-05-17 has no seeded deviation. With
-     * `now` after the rule's fire time the resolver's inverted-default
+     * `now` after the rule's fire time the resolver's passive habit
      * semantics surface `CompletedBySchedule`.
      */
     @Test fun `no_seeded_deviation_falls_back_to_completed_by_schedule`() = runTest {

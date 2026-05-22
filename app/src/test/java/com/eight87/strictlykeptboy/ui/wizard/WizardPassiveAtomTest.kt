@@ -16,32 +16,32 @@ import org.robolectric.annotation.Config
 import java.nio.file.Files
 
 /**
- * Phase 2.1.I.6 — inverted-default atoms (brush-teeth, meds-am, shower,
- * feed-am, etc.) get tagged with `inverted = true` in the emitted
+ * Phase 2.1.I.6 — passive habit atoms (brush-teeth, meds-am, shower,
+ * feed-am, etc.) get tagged with `passive = true` in the emitted
  * RecurrenceRule.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [26])
-class WizardInvertedAtomTest {
+class WizardPassiveAtomTest {
 
     @get:Rule val tmp = TemporaryFolder()
 
-    @Test fun `brush-teeth is inverted, deep-work-am is not`() {
-        assertTrue(TemplateRegistry.isInvertedAtom("brush-teeth"))
-        assertTrue(TemplateRegistry.isInvertedAtom("meds-am"))
-        assertTrue(TemplateRegistry.isInvertedAtom("meds-pm"))
-        assertTrue(TemplateRegistry.isInvertedAtom("shower"))
-        assertTrue(TemplateRegistry.isInvertedAtom("feed-am"))
-        assertFalse(TemplateRegistry.isInvertedAtom("deep-work-am"))
-        assertFalse(TemplateRegistry.isInvertedAtom("cardio-30min"))
+    @Test fun `brush-teeth is passive, deep-work-am is not`() {
+        assertTrue(TemplateRegistry.isPassiveAtom("brush-teeth"))
+        assertTrue(TemplateRegistry.isPassiveAtom("meds-am"))
+        assertTrue(TemplateRegistry.isPassiveAtom("meds-pm"))
+        assertTrue(TemplateRegistry.isPassiveAtom("shower"))
+        assertTrue(TemplateRegistry.isPassiveAtom("feed-am"))
+        assertFalse(TemplateRegistry.isPassiveAtom("deep-work-am"))
+        assertFalse(TemplateRegistry.isPassiveAtom("cardio-30min"))
     }
 
-    @Test fun `emitted RecurrenceRule for brush-teeth carries inverted=true`() = runTest {
+    @Test fun `emitted RecurrenceRule for brush-teeth carries passive=true`() = runTest {
         val draft = WizardDraft(
             alignment = Alignment.Submissive,
             lifestyle = Lifestyle.SingleStrict,
             roles = setOf(RoleId.SelfCare),
-            displayName = "inverted test",
+            displayName = "passive test",
         ).normalize()
         val outcome = WizardScaffolder.materialize(
             parentDir = tmp.newFolder("parent"),
@@ -61,7 +61,7 @@ class WizardInvertedAtomTest {
                 val rule = RecurrenceRule.fromDoc(doc)
                 if (rule.title.equals("Brush teeth", ignoreCase = true)) {
                     foundBrushTeeth = true
-                    assertTrue("brush-teeth should have inverted=true", rule.inverted)
+                    assertTrue("brush-teeth should have passive=true", rule.passive)
                 }
             }
         }

@@ -241,12 +241,16 @@ private fun DayColumn(
 
             val isSuperseded = band.supersededByCalendar != null
             val isOffSchedule = band.offSchedule
+            val isBase = band.kind == com.eight87.strictlykeptboy.resolver.CalendarKind.Base
             val seedColor = colorForSeed(band.accentColorSeed)
-            // Week view uses chroma-reduced full fill per spec.
+            // Week view: base layers paint subdued so on-top events stay
+            // readable; non-base events bump to higher alpha than the
+            // 2.23 default.
+            val seedAlpha = if (isBase) 0.18f else 0.8f
             val fillColor = if (seedColor == Color.Unspecified) {
                 MaterialTheme.colorScheme.surfaceContainer
             } else {
-                seedColor.copy(alpha = 0.6f)
+                seedColor.copy(alpha = seedAlpha)
             }
             val effectiveFill = if (isSuperseded) fillColor.copy(alpha = fillColor.alpha * 0.35f) else fillColor
             val authorId = band.instance.author?.id
@@ -283,6 +287,13 @@ private fun DayColumn(
                             modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
                         ) {
                             BandKindGlyph(kind = band.kind)
+                            if (band.instance.passive) {
+                                androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(2.dp))
+                                BandPassiveHabitGlyph()
+                            } else if (band.instance.requiresResponse || band.instance.promptKind != null) {
+                                androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(2.dp))
+                                BandActiveHabitGlyph()
+                            }
                             if (isSuperseded) {
                                 androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(2.dp))
                                 BandSupersededGlyph()

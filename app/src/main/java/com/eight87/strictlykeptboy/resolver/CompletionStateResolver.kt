@@ -6,7 +6,7 @@ import java.time.ZonedDateTime
 /**
  * Phase XX.2 / AT-B / RV-R.1-2 — pure completion-state resolver.
  *
- * Extracts the inverted-default algorithm out of [OverlayResolver] so the
+ * Extracts the passive habit algorithm out of [OverlayResolver] so the
  * UI, ViewModels, and tests can call it without owning the whole overlay
  * machine. The overlay layer still tags each [DayBand]; this module is
  * the single source of truth for *how* the tag is computed.

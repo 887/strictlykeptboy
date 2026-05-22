@@ -14,7 +14,16 @@ import java.time.ZoneId
  *   priority, supersedence, and inversion semantics — the distinction
  *   only matters for the writeback layer + UI badges.
  */
-enum class CalendarKind { Regular, Timebox, External }
+/**
+ * - [Regular]: file-backed event calendar.
+ * - [Timebox]: file-backed timebox calendar (focus / work blocks).
+ * - [External]: synthetic OS-backed calendar (CalendarContract).
+ * - [Base]: file-backed "base layer" calendar — sleep, work hours,
+ *   commute, leisure, grooming — the kept-by-default scaffold of the
+ *   user's day. Bands paint as full-width subdued slabs behind every
+ *   other band, so on-top events stay readable.
+ */
+enum class CalendarKind { Regular, Timebox, External, Base }
 
 /**
  * Resolver-facing calendar metadata. Caller (UI / view-model layer)

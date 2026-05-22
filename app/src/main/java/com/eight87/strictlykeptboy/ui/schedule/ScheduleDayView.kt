@@ -382,11 +382,17 @@ private fun BandsLayer(
     // tracks "this band is the folder for group X — taps should
     // expand, not open detail".
     data class Renderable(val band: DayBand, val groupKey: String?)
-    val renderables: List<Renderable> = groups.flatMap { g ->
+    val unsorted: List<Renderable> = groups.flatMap { g ->
         val key = "grp-${g.first.instance.instanceId}"
         if (!g.isCollapsedGroup) g.children.map { Renderable(it, null) }
         else if (autoExpand || key in expandedKeys) g.children.map { Renderable(it, null) }
         else listOf(Renderable(makeCollapsedSyntheticBand(g), key))
+    }
+    // Base-layer calendars (sleep / work / commute / leisure / chores)
+    // paint first so they sit behind every event placed on top of them.
+    // Compose paints in iteration order, so base-first = base-behind.
+    val renderables: List<Renderable> = unsorted.sortedBy {
+        if (it.band.kind == com.eight87.strictlykeptboy.resolver.CalendarKind.Base) 0 else 1
     }
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val widthPx = maxWidth
@@ -395,7 +401,10 @@ private fun BandsLayer(
         // earlier bands stay visible as a thin sliver under later ones.
         val cascadeStep = 14.dp
         renderables.forEach { (band, groupKey) ->
-            val laneIdx = band.laneIndex.coerceAtLeast(0)
+            val isBase = band.kind == com.eight87.strictlykeptboy.resolver.CalendarKind.Base
+            // Base layers ignore lane cascade: they always paint full-width
+            // as the day's scaffolding so on-top events read cleanly.
+            val laneIdx = if (isBase) 0 else band.laneIndex.coerceAtLeast(0)
             val cascadeX = cascadeStep * laneIdx
             val bandWidth = (widthPx - cascadeX - 4.dp).coerceAtLeast(48.dp)
 
@@ -443,14 +452,18 @@ private fun BandsLayer(
                     )
                 } else Modifier
                 // Round 2.23 Phase A — per-calendar colorSeed wins on the
-                // band background (D-2.23.b). When seed != 0, paint a tinted
-                // fill at alpha 0.4 over the tonal scheme; foreground text
-                // colour falls back to onSurface for legibility on the tint.
+                // band background (D-2.23.b). Base-layer calendars paint as
+                // a subdued scaffold (alpha ~0.18) so events on top read
+                // cleanly at ~0.75 alpha. Foreground text colour falls back
+                // to onSurface for legibility on the tint.
                 val seedColor = colorForSeed(band.accentColorSeed)
+                val seedAlpha = if (isBase) 0.18f else 0.75f
                 val baseFill = if (seedColor == Color.Unspecified) {
-                    MaterialTheme.colorScheme.surfaceContainer
+                    MaterialTheme.colorScheme.surfaceContainer.copy(
+                        alpha = if (isBase) 0.35f else 1f,
+                    )
                 } else {
-                    seedColor.copy(alpha = 0.4f)
+                    seedColor.copy(alpha = seedAlpha)
                 }
                 val effectiveFill = baseFill.copy(alpha = baseFill.alpha * bandAlpha)
                 Surface(
@@ -502,6 +515,16 @@ private fun BandsLayer(
                                 // Kind glyph (2.2.C.3-paint)
                                 BandKindGlyph(kind = band.kind)
                                 Spacer(modifier = Modifier.width(4.dp))
+                                // Passive / active habit glyph: 📏 if the
+                                // rule ticks by default, ⚡ if the user
+                                // has to respond (keeper prompt etc.).
+                                if (band.instance.passive) {
+                                    BandPassiveHabitGlyph()
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                } else if (band.instance.requiresResponse || band.instance.promptKind != null) {
+                                    BandActiveHabitGlyph()
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                }
                                 // Superseded leaf glyph (2.2.C.4-paint)
                                 if (isSuperseded) {
                                     BandSupersededGlyph()

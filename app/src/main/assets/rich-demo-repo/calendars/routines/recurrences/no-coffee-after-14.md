@@ -12,10 +12,10 @@ duration = "PT5M"
 tz_id = "Europe/London"
 rrule = "FREQ=DAILY"
 calendar_id = "0190a0aa-1c1d-7000-8a0a-000000000003"
-tags = ["routine", "sleep", "inverted"]
+tags = ["routine", "sleep", "passive"]
 emoji = "☕"
-inverted = true
+passive = true
 +++
-Inverted habit — last coffee before 14:00. Sleep-quality hack.
+Passive habit — last coffee before 14:00. Sleep-quality hack.
 Deviation: write a file under
 `routines/deviations/no-coffee-after-14/<date>.md`.

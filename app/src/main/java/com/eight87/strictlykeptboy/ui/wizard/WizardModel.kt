@@ -313,12 +313,13 @@ object TemplateRegistry {
     fun dtstartHmFor(atomId: String): String = DTSTART_BUCKETS[atomId] ?: DefaultDtstart
 
     /**
-     * Phase 2.1.I.6 — inverted-default atom registry. These atoms exist
+     * Phase 2.1.I.6 — passive habit atom registry. These atoms exist
      * primarily as "did you do your habit?" prompts whose default truth
      * value is YES (completed-by-schedule). Daily hygiene, meds, feeding,
-     * shower, and similar baseline routines.
+     * shower, and similar baseline routines — the user does not act on
+     * them; they tick by default.
      */
-    private val INVERTED_ATOMS: Set<String> = setOf(
+    private val PASSIVE_ATOMS: Set<String> = setOf(
         "brush-teeth", "shower", "skincare", "hydration-check",
         "bedtime-wind-down", "sunlight-10min",
         "meds-am", "meds-pm", "vitamins",
@@ -328,7 +329,7 @@ object TemplateRegistry {
         "meditation-10min",
     )
 
-    fun isInvertedAtom(atomId: String): Boolean = atomId in INVERTED_ATOMS
+    fun isPassiveAtom(atomId: String): Boolean = atomId in PASSIVE_ATOMS
 }
 
 /** Praise chips per K.5a / LW Screen 3.5. */

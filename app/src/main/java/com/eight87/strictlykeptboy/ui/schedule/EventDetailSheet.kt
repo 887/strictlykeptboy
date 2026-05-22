@@ -216,6 +216,7 @@ fun EventDetailContent(
                         com.eight87.strictlykeptboy.resolver.CalendarKind.Regular -> "Regular"
                         // Round 2.18.A.3 — external (CalendarContract) calendars.
                         com.eight87.strictlykeptboy.resolver.CalendarKind.External -> "External"
+                        com.eight87.strictlykeptboy.resolver.CalendarKind.Base -> "Base layer"
                     },
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

@@ -14,10 +14,10 @@ rrule = "FREQ=DAILY"
 calendar_id = "0190a0aa-1c1d-7000-8a0a-000000000005"
 tags = ["kink", "ritual"]
 emoji = "🔒"
-inverted = true
+passive = true
 +++
 Cage on by 06:35 every morning. This is non-negotiable — Boy Keeper's
-expectation. Inverted habit: default state is "completed-by-schedule",
+expectation. Passive habit: default state is "completed-by-schedule",
 deviation = explicit `deviations/cage-stays-on/<date>.md` writeup with
 reason + duration off.
 

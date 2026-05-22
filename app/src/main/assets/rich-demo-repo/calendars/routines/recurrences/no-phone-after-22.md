@@ -12,11 +12,11 @@ duration = "PT5M"
 tz_id = "Europe/London"
 rrule = "FREQ=DAILY"
 calendar_id = "0190a0aa-1c1d-7000-8a0a-000000000003"
-tags = ["routine", "sleep", "inverted"]
+tags = ["routine", "sleep", "passive"]
 emoji = "📵"
-inverted = true
+passive = true
 +++
-Inverted habit — phone goes in the kitchen at 22:00 every night.
+Passive habit — phone goes in the kitchen at 22:00 every night.
 Default state: completed-by-schedule. Deviation requires an explicit
 file at `routines/deviations/no-phone-after-22/<yyyy-mm-dd>.md` with a
 reason and the time the phone went down.

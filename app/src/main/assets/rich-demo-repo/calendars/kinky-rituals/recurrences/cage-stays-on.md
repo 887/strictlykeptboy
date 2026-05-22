@@ -12,11 +12,11 @@ duration = "PT5M"
 tz_id = "Europe/London"
 rrule = "FREQ=DAILY"
 calendar_id = "0190a0aa-1c1d-7000-8a0a-000000000005"
-tags = ["kink", "inverted"]
+tags = ["kink", "passive"]
 emoji = "🔒"
-inverted = true
+passive = true
 +++
-Inverted habit — cage stays on 24/7. The ritual `cage-on` (06:35)
+Passive habit — cage stays on 24/7. The ritual `cage-on` (06:35)
 puts it on; this habit asserts it doesn't come off for the rest of the
 day. Deviation: file under
 `kinky-rituals/deviations/cage-stays-on/<date>.md` with off-time and

@@ -12,9 +12,9 @@ duration = "PT5M"
 tz_id = "Europe/London"
 rrule = "FREQ=DAILY"
 calendar_id = "0190a0aa-1c1d-7000-8a0a-000000000003"
-tags = ["routine", "food", "inverted"]
+tags = ["routine", "food", "passive"]
 emoji = "🥣"
-inverted = true
+passive = true
 +++
-Inverted habit — breakfast is mandatory, even if rushed. Boy Keeper
+Passive habit — breakfast is mandatory, even if rushed. Boy Keeper
 specifically named this one ("you're a sub, not a saint, eat").

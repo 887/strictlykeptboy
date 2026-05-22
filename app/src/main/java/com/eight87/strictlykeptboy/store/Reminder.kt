@@ -172,7 +172,7 @@ object DefaultCadences {
             Reminder("0", ReminderKind.AtStart),
             Reminder("PT30M", ReminderKind.PostEventCheckin),
         ),
-        // Medication: at-start + 15m post-checkin (D.82 opt-in inverted habit)
+        // Medication: at-start + 15m post-checkin (D.82 opt-in passive habit)
         "medication" to listOf(
             Reminder("0", ReminderKind.AtStart),
             Reminder("PT15M", ReminderKind.PostEventCheckin),

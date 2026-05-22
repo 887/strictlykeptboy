@@ -18,7 +18,7 @@ Evening kept-routine checklist. Tick before lights-out.
 - [ ] activity-log entry written for today (`owner-activity-log`)
 - [ ] kink-journal line if a scene/edge happened today
 - [ ] tomorrow's clothes laid out
-- [ ] lights out by 23:30 (inverted habit — deviation if not)
+- [ ] lights out by 23:30 (passive habit — deviation if not)
 
 Boy Keeper's blockquote reply will appear under tonight's
 activity-log entry by morning.

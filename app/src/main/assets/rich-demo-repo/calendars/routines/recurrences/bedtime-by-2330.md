@@ -12,11 +12,11 @@ duration = "PT5M"
 tz_id = "Europe/London"
 rrule = "FREQ=DAILY"
 calendar_id = "0190a0aa-1c1d-7000-8a0a-000000000003"
-tags = ["routine", "sleep", "inverted"]
+tags = ["routine", "sleep", "passive"]
 emoji = "🛏️"
-inverted = true
+passive = true
 +++
-Inverted habit — in bed, lights off by 23:30. Deviation file under
+Passive habit — in bed, lights off by 23:30. Deviation file under
 `routines/deviations/bedtime-by-2330/<date>.md`.
 
 Boy Keeper's "two clean nights in a row" rule applies after any

@@ -138,6 +138,11 @@ class CalendarRegistry(
         return runCatching {
             val text = String(Files.readAllBytes(path), StandardCharsets.UTF_8)
             val table = TomlReader.parse(text)
+            val kind = when (table.getString("kind")?.lowercase()) {
+                "timebox" -> com.eight87.strictlykeptboy.resolver.CalendarKind.Timebox
+                "base" -> com.eight87.strictlykeptboy.resolver.CalendarKind.Base
+                else -> com.eight87.strictlykeptboy.resolver.CalendarKind.Regular
+            }
             ParsedCalendarToml(
                 canonicalId = table.getString("id")?.takeIf { it.isNotBlank() },
                 displayName = table.getString("name")
@@ -151,6 +156,7 @@ class CalendarRegistry(
                 tzId = table.getString("tz_id")?.let {
                     runCatching { java.time.ZoneId.of(it) }.getOrNull()
                 },
+                kind = kind,
             )
         }.getOrNull()
     }
@@ -185,6 +191,7 @@ class CalendarRegistry(
             colorSeed = parsed.activity.colorSeed ?: base.colorSeed ?: repoColorFallback,
             metaGroupField = parsed.activity.metaGroupField ?: base.metaGroupField,
             emoji = parsed.emoji ?: base.emoji,
+            kind = parsed.kind,
         )
     }
 
@@ -205,6 +212,8 @@ class CalendarRegistry(
         val activity: CalendarActivityConfig,
         val emoji: String?,
         val tzId: java.time.ZoneId?,
+        val kind: com.eight87.strictlykeptboy.resolver.CalendarKind =
+            com.eight87.strictlykeptboy.resolver.CalendarKind.Regular,
     )
 
     companion object {

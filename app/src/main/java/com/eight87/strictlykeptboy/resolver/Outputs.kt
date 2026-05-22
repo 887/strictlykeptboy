@@ -22,7 +22,7 @@ sealed interface InstanceSource {
 enum class CompletionState {
     Scheduled,          // future
     InProgress,         // now in window, no deviation
-    CompletedBySchedule,// past, no deviation (inverted default per AT)
+    CompletedBySchedule,// past, no deviation (passive habit default per AT)
     Skipped,
     PartiallyDone,
     CompletedEarly,
@@ -76,6 +76,13 @@ data class MaterializedInstance(
      * source→display conversion (Phase B.3).
      */
     val sourceTzId: String? = null,
+    /**
+     * Passive habit marker — propagated from the source rule (for
+     * rule instances) or always `false` for one-offs. Drives the
+     * 📏 glyph on bands and (downstream) the passive/active visual
+     * differentiation in copy and notifications.
+     */
+    val passive: Boolean = false,
 ) {
     val effectiveInterval: ZonedInterval get() = ZonedInterval(effectiveStart, effectiveEnd)
     /** Stable per-render id usable as Compose key and as cache primary key. */

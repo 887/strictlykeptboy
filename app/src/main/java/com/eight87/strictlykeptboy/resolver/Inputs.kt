@@ -83,6 +83,13 @@ data class RecurrenceInput(
     val promptKind: com.eight87.strictlykeptboy.store.PromptKind? = null,
     /** Round 2.27 / D-2.27.a — see [com.eight87.strictlykeptboy.store.Event.promptTarget]. */
     val promptTarget: com.eight87.strictlykeptboy.store.PromptTarget? = null,
+    /**
+     * Passive habit marker — when `true`, this rule's occurrences are
+     * "done-by-schedule" until a deviation file says otherwise. Surfaces
+     * to the UI so the band can render a 📏 glyph and skip user-action
+     * affordances. See [com.eight87.strictlykeptboy.store.RecurrenceRule.passive].
+     */
+    val passive: Boolean = false,
 )
 
 /**

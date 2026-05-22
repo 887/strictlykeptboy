@@ -197,8 +197,8 @@ object WizardScaffolder {
                         if (role == RoleId.Kink) add("kink")
                     },
                     emoji = role.emoji,
-                    // Phase 2.1.I.6 — flag inverted-default habit atoms.
-                    inverted = TemplateRegistry.isInvertedAtom(atomId),
+                    // Phase 2.1.I.6 — flag passive habit atoms.
+                    passive = TemplateRegistry.isPassiveAtom(atomId),
                 )
                 EntityWriter.write(rootDir, rule)
                 recurCount += 1

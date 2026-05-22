@@ -11,11 +11,18 @@ calendars/cat-care/recurrences/feed-morning.md
 calendars/cat-care/recurrences/flea-treatment.md
 calendars/cat-care/recurrences/litter-sun.md
 calendars/cat-care/recurrences/litter-wed.md
+calendars/base/calendar.toml
+calendars/base/recurrences/collar-on-home.md
+calendars/base/recurrences/commute-in.md
+calendars/base/recurrences/commute-out.md
+calendars/base/recurrences/grooming-block.md
+calendars/base/recurrences/leisure-evening.md
+calendars/base/recurrences/leisure-weekend.md
+calendars/base/recurrences/sleep-block.md
+calendars/base/recurrences/work-block.md
 calendars/commute/calendar.toml
 calendars/commute/events/2026/05/2026-05-18-delayed-train.md
 calendars/commute/events/2026/05/2026-05-20-biked-in.md
-calendars/commute/recurrences/commute-in.md
-calendars/commute/recurrences/commute-out.md
 calendars/dom-overlay/calendar.toml
 calendars/dom-overlay/events/2026/05/2026-05-15-friday-socialization-mandate.md
 calendars/dom-overlay/events/2026/05/2026-05-15-proof-photo.md
@@ -70,7 +77,6 @@ calendars/routines/recurrences/evening-dinner.md
 calendars/routines/recurrences/evening-skincare.md
 calendars/routines/recurrences/evening-winddown.md
 calendars/routines/recurrences/laundry.md
-calendars/routines/recurrences/lights-out.md
 calendars/routines/recurrences/meal-prep.md
 calendars/routines/recurrences/morning-alarm.md
 calendars/routines/recurrences/morning-breakfast.md
@@ -79,7 +85,6 @@ calendars/routines/recurrences/morning-dressing.md
 calendars/routines/recurrences/no-coffee-after-14.md
 calendars/routines/recurrences/no-phone-after-22.md
 calendars/routines/recurrences/no-skipping-breakfast.md
-calendars/routines/recurrences/sleep-block.md
 calendars/social/calendar.toml
 calendars/social/events/2026/05/2026-05-15-friday-drinks-roses.md
 calendars/social/events/2026/05/2026-05-18-coffee-lukas.md
@@ -116,7 +121,6 @@ calendars/work/recurrences/lunch-break.md
 calendars/work/recurrences/sprint-demo.md
 calendars/work/recurrences/sprint-planning.md
 calendars/work/recurrences/sprint-retro.md
-calendars/work/recurrences/work-block.md
 claudemd-is-symlink.marker
 identities/ai-dom.md
 identities/demo-boy.md

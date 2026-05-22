@@ -60,7 +60,7 @@ object DeviationValidator {
         if (deviation.devKind !in VALID_KINDS) {
             return Result.Error.InvalidKind(
                 "kind must be one of $VALID_KINDS; got '${deviation.devKind}'. " +
-                    "'completed' is forbidden — that's the inverted default state.",
+                    "'completed' is forbidden — that's the passive habit default state.",
             )
         }
         val atParsed = runCatching { OffsetDateTime.parse(deviation.at) }.getOrNull()

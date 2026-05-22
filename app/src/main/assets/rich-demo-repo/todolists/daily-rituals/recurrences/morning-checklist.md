@@ -18,7 +18,7 @@ flat.
 - [ ] cage on, comfortable, logged
 - [ ] teeth brushed
 - [ ] vitamins (D3 + magnesium)
-- [ ] breakfast eaten (not skipped — inverted habit)
+- [ ] breakfast eaten (not skipped — passive habit)
 - [ ] Beans fed + water topped
 - [ ] dressed, shoes by the door
 

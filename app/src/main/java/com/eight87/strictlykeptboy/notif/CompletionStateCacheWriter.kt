@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
  * end-alarm fires.
  *
  * The flip is unconditional: by the time the end-alarm fires, the
- * inverted-default model says the event is `completed-by-schedule`
+ * passive habit model says the event is `completed-by-schedule`
  * unless a deviation file has been written. The indexer will erase this
  * cache row if a deviation appears later (per [com.eight87.strictlykeptboy.cache.dao.EventInstanceStateDao.invalidate]),
  * so we don't need to re-check here.

@@ -175,6 +175,7 @@ class RecurrenceMaterializer {
         // it through every materialized instance so the renderer can
         // convert to a caller-supplied display zone.
         sourceTzId = rule.tzId.id,
+        passive = rule.passive,
     )
 
     /**

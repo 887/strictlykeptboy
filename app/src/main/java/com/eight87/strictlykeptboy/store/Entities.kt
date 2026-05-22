@@ -242,17 +242,18 @@ data class RecurrenceRule(
     val busy: Boolean = true,
     val active: Boolean = true,
     /**
-     * Phase 2.1.I.6 — inverted-default habit marker (per Phase XX inversion
+     * Phase 2.1.I.6 — passive habit marker (per Phase XX passive-default
      * model, draft-atomic-activities.md AT-B.2). When `true`, this rule's
      * occurrences should be treated as "completed-by-schedule" until a
-     * deviation file is written for that day. The resolver applies the
-     * same algorithm universally today; this field is the explicit
-     * signal on disk so readers / future per-rule visualization can
-     * distinguish "this is a habit" from "this is a meeting".
+     * deviation file is written for that day — the user does not have to
+     * act on them; they tick by default. The resolver applies the same
+     * algorithm universally today; this field is the explicit signal on
+     * disk so readers / future per-rule visualization can distinguish
+     * "this is a passive habit" from "this is a meeting".
      *
      * Default `false` keeps existing rule files round-tripping unchanged.
      */
-    val inverted: Boolean = false,
+    val passive: Boolean = false,
     /** Round 2.21.A.3 — optional grouping label, see [Event.group]. */
     val group: String? = null,
     /** Round 2.27 / D-2.27.a — recurring keeper-prompt; propagates to every materialized instance. */
@@ -285,7 +286,7 @@ data class RecurrenceRule(
         t.putString("emoji", emoji)
         if (!busy) t.putBool("busy", false)
         if (!active) t.putBool("active", false)
-        if (inverted) t.putBool("inverted", true)
+        if (passive) t.putBool("passive", true)
         group?.takeIf { it.isNotBlank() }?.let { t.putString("group", it) }
         // Round 2.27 / D-2.27.b — keeper-prompt schema (same omit-on-default rule as Event).
         if (requiresResponse) t.putBool("requires_response", true)
@@ -315,7 +316,7 @@ data class RecurrenceRule(
                 emoji = t.getString("emoji"),
                 busy = t.getBool("busy") ?: true,
                 active = t.getBool("active") ?: true,
-                inverted = t.getBool("inverted") ?: false,
+                passive = t.getBool("passive") ?: t.getBool("inverted") ?: false,
                 group = t.getString("group")?.takeIf { it.isNotBlank() },
                 requiresResponse = t.getBool("requires_response") ?: false,
                 promptKind = PromptKind.fromToml(t.getString("prompt_kind")),

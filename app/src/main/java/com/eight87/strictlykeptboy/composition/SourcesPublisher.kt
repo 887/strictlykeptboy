@@ -182,6 +182,14 @@ class SourcesPublisher(
         val tz = runCatching { ZoneId.of(row.tzId) }.getOrDefault(ZoneId.systemDefault())
         val dtstart = parseZdt(row.dtstart, tz)
         val duration = runCatching { Duration.parse(row.duration) }.getOrDefault(Duration.ZERO)
+        // Passive flag is not (yet) a column on RecurrenceRuleRow — derive
+        // from the tag set so the on-disk `passive = true` field surfaces
+        // without a Room migration. Demo + wizard authors both include
+        // "passive" in the rule's tags when `passive = true`.
+        // tagsJson shape is a JSON array of strings, e.g. ["routine","passive"];
+        // substring check is sufficient since tag names cannot contain quotes.
+        val isPassive = row.tagsJson.contains("\"passive\"") ||
+            row.tagsJson.contains("\"inverted\"")
         return RecurrenceInput(
             rule = RuleRef(row.id),
             calendar = CalendarRef(row.calendarId),
@@ -198,6 +206,7 @@ class SourcesPublisher(
             requiresResponse = row.requiresResponse,
             promptKind = com.eight87.strictlykeptboy.store.PromptKind.fromToml(row.promptKindRaw),
             promptTarget = com.eight87.strictlykeptboy.store.PromptTarget.fromToml(row.promptTargetRaw),
+            passive = isPassive,
         )
     }
 

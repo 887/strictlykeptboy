@@ -225,6 +225,7 @@ private fun scanCalendars(
                 val kindStr = t.getString("kind")
                 val kind = when (kindStr?.lowercase()) {
                     "timebox" -> CalendarKind.Timebox
+                    "base" -> CalendarKind.Base
                     else -> CalendarKind.Regular
                 }
                 out += CalendarMeta(

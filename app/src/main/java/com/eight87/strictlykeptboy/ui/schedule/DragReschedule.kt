@@ -181,7 +181,7 @@ object DragReschedule {
             emoji = rule.emoji,
             busy = rule.busy,
             active = rule.active,
-            inverted = rule.inverted,
+            passive = rule.passive,
             group = rule.group,
             body = rule.body,
         )
