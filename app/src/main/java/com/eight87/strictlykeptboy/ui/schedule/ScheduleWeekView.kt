@@ -224,10 +224,20 @@ private fun DayColumn(
         bands.forEach { band ->
             val laneWidth = widthPx / band.totalLanes.coerceAtLeast(1)
             val laneOffsetX = laneWidth * band.laneIndex
-            val start = band.instance.effectiveStart
-            val end = band.instance.effectiveEnd
-            val topDp = HourHeight * minutesFromMidnight(start) / 60f
-            val heightDp = HourHeight * durationMinutes(start, end).coerceAtLeast(15f) / 60f
+            val rawStart = band.instance.effectiveStart
+            val rawEnd = band.instance.effectiveEnd
+            // Clip cross-midnight bands to this column's day so a
+            // 23:30→06:30 sleep block paints as two solid slabs (one
+            // per day) instead of vanishing into a 15-min sliver.
+            val zone = rawStart.zone
+            val dayStart = date.atStartOfDay(zone)
+            val dayEnd = date.plusDays(1).atStartOfDay(zone)
+            val start = if (rawStart.isBefore(dayStart)) dayStart else rawStart
+            val end = if (rawEnd.isAfter(dayEnd)) dayEnd else rawEnd
+            val endMin = if (end == dayEnd) 1440f else minutesFromMidnight(end)
+            val startMin = minutesFromMidnight(start)
+            val topDp = HourHeight * startMin / 60f
+            val heightDp = HourHeight * (endMin - startMin).coerceAtLeast(15f) / 60f
 
             val isSuperseded = band.supersededByCalendar != null
             val isOffSchedule = band.offSchedule

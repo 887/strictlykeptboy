@@ -263,6 +263,7 @@ fun ScheduleDayView(
         ) {
             HourLines(hourHeight = hourHeight, onTapHour = { hr -> onAddAt(LocalTime.of(hr, 0)) })
             BandsLayer(
+                date = date,
                 groups = groups,
                 autoExpand = autoExpand,
                 expandedKeys = expandedKeys,
@@ -364,6 +365,7 @@ private fun HourLines(hourHeight: Dp, onTapHour: (Int) -> Unit) {
 
 @Composable
 private fun BandsLayer(
+    date: LocalDate,
     groups: List<GroupedDayBand>,
     autoExpand: Boolean,
     expandedKeys: Set<String>,
@@ -397,10 +399,24 @@ private fun BandsLayer(
             val cascadeX = cascadeStep * laneIdx
             val bandWidth = (widthPx - cascadeX - 4.dp).coerceAtLeast(48.dp)
 
-            val start = band.instance.effectiveStart
-            val end = band.instance.effectiveEnd
+            val rawStart = band.instance.effectiveStart
+            val rawEnd = band.instance.effectiveEnd
+            // Clip cross-midnight bands to the rendered day's window so a
+            // 23:30→06:30 sleep block paints as two solid slabs (one on
+            // each day) rather than vanishing into a 15-min sliver.
+            val zone = rawStart.zone
+            val dayStart = date.atStartOfDay(zone)
+            val dayEnd = date.plusDays(1).atStartOfDay(zone)
+            val start = if (rawStart.isBefore(dayStart)) dayStart else rawStart
+            val end = if (rawEnd.isAfter(dayEnd)) dayEnd else rawEnd
             val topDp = hourHeight * minutesFromMidnight(start) / 60f
-            val heightDp = hourHeight * durationMinutes(start, end).coerceAtLeast(15f) / 60f
+            // 24:00 (= midnight next day) shows as minutesFromMidnight=0;
+            // treat it as 1440 when end was clipped to dayEnd so the band
+            // reaches the bottom of the grid.
+            val endMinutes = if (end == dayEnd) 1440f else minutesFromMidnight(end)
+            val startMinutes = minutesFromMidnight(start)
+            val clippedDurationMin = (endMinutes - startMinutes).coerceAtLeast(0f)
+            val heightDp = hourHeight * clippedDurationMin.coerceAtLeast(15f) / 60f
 
             val isSuperseded = band.supersededByCalendar != null
             val isOffSchedule = band.offSchedule
@@ -455,7 +471,7 @@ private fun BandsLayer(
                         // user can read elapsed time visually without
                         // needing a wider grid block per minute.
                         val tickColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)
-                        val minutesInBand = durationMinutes(start, end).coerceAtLeast(1f)
+                        val minutesInBand = clippedDurationMin.coerceAtLeast(1f)
                         androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
                             val pxPerMin = size.height / minutesInBand
                             var m = 10
@@ -550,7 +566,7 @@ private fun BandsLayer(
                         // real bands (not synthetic group folders); the
                         // existing Surface.onClick already routes the tap
                         // to onBandTap → full-screen EventDetailScreen.
-                        val rawDurationMin = durationMinutes(start, end).toLong()
+                        val rawDurationMin = clippedDurationMin.toLong()
                         if (groupKey == null && isSubReadableBand(rawDurationMin, effectiveZoom)) {
                             Text(
                                 text = "…",
