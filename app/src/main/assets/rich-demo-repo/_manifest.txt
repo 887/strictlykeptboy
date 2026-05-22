@@ -80,7 +80,6 @@ calendars/routines/recurrences/no-coffee-after-14.md
 calendars/routines/recurrences/no-phone-after-22.md
 calendars/routines/recurrences/no-skipping-breakfast.md
 calendars/routines/recurrences/sleep-block.md
-calendars/routines/recurrences/wind-down-2300.md
 calendars/social/calendar.toml
 calendars/social/events/2026/05/2026-05-15-friday-drinks-roses.md
 calendars/social/events/2026/05/2026-05-18-coffee-lukas.md
@@ -93,7 +92,6 @@ calendars/timeboxes/calendar.toml
 calendars/timeboxes/events/2026/05/2026-05-17-deep-work-block.md
 calendars/timeboxes/events/2026/05/2026-05-17-lunch-walk.md
 calendars/timeboxes/events/2026/05/2026-05-17-team-standup.md
-calendars/timeboxes/recurrences/sleep-block.md
 calendars/vacation/calendar.toml
 calendars/vacation/events/2026/05/2026-05-23-brighton-weekend.md
 calendars/vacation/events/2026/05/2026-05-23-software-eng-conf.md
