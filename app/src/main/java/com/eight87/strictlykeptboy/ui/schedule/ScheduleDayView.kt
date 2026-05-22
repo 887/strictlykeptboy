@@ -1,7 +1,10 @@
 package com.eight87.strictlykeptboy.ui.schedule
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculateCentroid
@@ -186,6 +189,12 @@ fun ScheduleDayView(
     }
     val autoExpand = shouldAutoExpand(effectiveZoom)
     var expandedKeys by remember { mutableStateOf(setOf<String>()) }
+    // Long-press to select a band brings it to the front (paints last,
+    // gets elevation). Tap-elsewhere (hour grid) or system-back clears.
+    var selectedBandId by remember(date) { mutableStateOf<String?>(null) }
+    if (selectedBandId != null) {
+        androidx.activity.compose.BackHandler { selectedBandId = null }
+    }
     val dragState = rememberDragRescheduleUiState()
     Column(modifier = modifier.fillMaxSize().testTag(TestTagDayView)) {
         if (showWeekdayHeader) {
@@ -261,7 +270,15 @@ fun ScheduleDayView(
                     }
                 },
         ) {
-            HourLines(hourHeight = hourHeight, onTapHour = { hr -> onAddAt(LocalTime.of(hr, 0)) })
+            HourLines(
+                hourHeight = hourHeight,
+                onTapHour = { hr ->
+                    // Tap on empty grid clears any band selection;
+                    // otherwise falls through to the add-at-hour action.
+                    if (selectedBandId != null) selectedBandId = null
+                    else onAddAt(LocalTime.of(hr, 0))
+                },
+            )
             BandsLayer(
                 date = date,
                 groups = groups,
@@ -274,9 +291,8 @@ fun ScheduleDayView(
                 hourHeight = hourHeight,
                 onBandTap = onBandTap,
                 defaultWriteRepoId = defaultWriteRepoId,
-                dragState = dragState,
-                hourHeightPx = hourHeightPx,
-                onDragReschedule = onDragReschedule,
+                selectedBandId = selectedBandId,
+                onSelectBand = { id -> selectedBandId = id },
                 effectiveZoom = effectiveZoom,
             )
             // Round 2.22 / Phase B UI follow-up — translucent ghost band
@@ -373,9 +389,10 @@ private fun BandsLayer(
     hourHeight: Dp,
     onBandTap: (DayBand) -> Unit,
     defaultWriteRepoId: String,
-    dragState: DragRescheduleUiState? = null,
-    hourHeightPx: Float = 0f,
-    onDragReschedule: ((DayBand, java.time.OffsetDateTime) -> Unit)? = null,
+    /** Instance-id of the currently long-pressed-to-front band, or null. */
+    selectedBandId: String? = null,
+    /** Long-press handler — caller stores the id and bumps it to front. */
+    onSelectBand: (String?) -> Unit = {},
     effectiveZoom: Int = 2,
 ) {
     // Flatten groups to (band, syntheticGroupKey?). Synthetic key
@@ -388,23 +405,48 @@ private fun BandsLayer(
         else if (autoExpand || key in expandedKeys) g.children.map { Renderable(it, null) }
         else listOf(Renderable(makeCollapsedSyntheticBand(g), key))
     }
-    // Base-layer calendars (sleep / work / commute / leisure / chores)
-    // paint first so they sit behind every event placed on top of them.
-    // Compose paints in iteration order, so base-first = base-behind.
-    val renderables: List<Renderable> = unsorted.sortedBy {
-        if (it.band.kind == com.eight87.strictlykeptboy.resolver.CalendarKind.Base) 0 else 1
+    // Priority-ordered cascade — base layers (priority 0, "work /
+    // sleep / commute / leisure / chores") paint first at lane 0 with
+    // full width; higher-priority calendars get successively higher
+    // lane indices (shifted right + on top). This replaces the
+    // resolver's collision-based laneIndex per user direction:
+    // the screen reads as "scaffold on the left, higher-priority
+    // overlays cascading to the right and on top".
+    //
+    // Z-order: Compose paints in iteration order, so sorting by
+    // priority asc means highest priority paints last = on top.
+    val byPriority: List<Renderable> = unsorted.sortedBy { r ->
+        if (r.band.kind == com.eight87.strictlykeptboy.resolver.CalendarKind.Base) {
+            Int.MIN_VALUE
+        } else r.band.priority
     }
+    // Selected-band brought to front: paint it dead last (= top of
+    // the z-stack) with a halo + elevation per the visual treatment
+    // below. Its lane-index keeps its priority-derived offset, so the
+    // user's mental map of "which one is which" stays put.
+    val selectedRenderable = selectedBandId?.let { id ->
+        byPriority.firstOrNull { it.band.instance.instanceId == id }
+    }
+    val renderables: List<Renderable> = if (selectedRenderable == null) byPriority
+    else byPriority.filter { it !== selectedRenderable } + selectedRenderable
+    // Lane index per band is its position in priority order — base
+    // is 0, then 1, 2, 3, … by ascending calendar priority.
+    val laneIndexById: Map<String, Int> = byPriority
+        .mapIndexed { idx, r -> r.band.instance.instanceId to idx }
+        .toMap()
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val widthPx = maxWidth
-        // Cascade overlap: each successive lane is shifted right by
-        // [cascadeStep]; width shrinks by the same per-lane amount so
-        // earlier bands stay visible as a thin sliver under later ones.
+        // Cascade overlap: each successive priority-lane is shifted
+        // right by [cascadeStep]; width shrinks by the same per-lane
+        // amount so the lower-priority scaffold stays visible as a
+        // thin sliver under higher-priority overlays.
         val cascadeStep = 14.dp
         renderables.forEach { (band, groupKey) ->
             val isBase = band.kind == com.eight87.strictlykeptboy.resolver.CalendarKind.Base
             // Base layers ignore lane cascade: they always paint full-width
             // as the day's scaffolding so on-top events read cleanly.
-            val laneIdx = if (isBase) 0 else band.laneIndex.coerceAtLeast(0)
+            val laneIdx = if (isBase) 0
+            else laneIndexById[band.instance.instanceId] ?: 0
             val cascadeX = cascadeStep * laneIdx
             val bandWidth = (widthPx - cascadeX - 4.dp).coerceAtLeast(48.dp)
 
@@ -434,6 +476,7 @@ private fun BandsLayer(
             val showAuthorChip = authorId != null &&
                 isForeignBand(band.instance.repo.id, defaultWriteRepoId)
 
+            val isSelected = band.instance.instanceId == selectedBandId
             Box(
                 modifier = Modifier
                     .offset(x = cascadeX, y = topDp)
@@ -441,21 +484,10 @@ private fun BandsLayer(
                     .height(heightDp)
                     .padding(2.dp),
             ) {
-                val dragModifier = if (
-                    dragState != null && onDragReschedule != null && groupKey == null
-                ) {
-                    Modifier.dragRescheduleBand(
-                        state = dragState,
-                        band = band,
-                        hourHeightPx = hourHeightPx,
-                        onDrop = onDragReschedule,
-                    )
-                } else Modifier
                 // Round 2.23 Phase A — per-calendar colorSeed wins on the
                 // band background (D-2.23.b). Base-layer calendars paint as
                 // a subdued scaffold (alpha ~0.18) so events on top read
-                // cleanly at ~0.75 alpha. Foreground text colour falls back
-                // to onSurface for legibility on the tint.
+                // cleanly at ~0.75 alpha.
                 val seedColor = colorForSeed(band.accentColorSeed)
                 val seedAlpha = if (isBase) 0.18f else 0.75f
                 val baseFill = if (seedColor == Color.Unspecified) {
@@ -466,17 +498,45 @@ private fun BandsLayer(
                     seedColor.copy(alpha = seedAlpha)
                 }
                 val effectiveFill = baseFill.copy(alpha = baseFill.alpha * bandAlpha)
+                // Tap = open detail (or expand group). Long-press =
+                // bring-to-front: caller stores the id and we move
+                // this band to the end of the iteration list above,
+                // which is what paints it last (= on top). Tap on the
+                // empty hour grid (or system back) clears the
+                // selection. Drag-to-reschedule was removed per user
+                // direction — dragging entries for time was bullshit.
+                val selectionShape = RoundedCornerShape(12.dp)
+                val haloModifier = if (isSelected) {
+                    Modifier
+                        .shadow(
+                            elevation = 12.dp,
+                            shape = selectionShape,
+                            clip = false,
+                        )
+                        .border(
+                            width = 2.dp,
+                            color = MaterialTheme.colorScheme.primary,
+                            shape = selectionShape,
+                        )
+                } else Modifier
                 Surface(
-                    onClick = {
-                        // Round 2.21 Phase F.2 — synthetic group folder taps
-                        // toggle expansion; real bands open detail.
-                        if (groupKey != null) onToggleGroup(groupKey) else onBandTap(band)
-                    },
                     color = effectiveFill,
-                    shape = RoundedCornerShape(12.dp),
+                    shape = selectionShape,
                     modifier = Modifier
                         .fillMaxSize()
-                        .then(dragModifier)
+                        .then(haloModifier)
+                        .combinedClickable(
+                            onClick = {
+                                if (groupKey != null) onToggleGroup(groupKey)
+                                else onBandTap(band)
+                            },
+                            onLongClick = {
+                                onSelectBand(
+                                    if (isSelected) null
+                                    else band.instance.instanceId,
+                                )
+                            },
+                        )
                         .testTag("$TestTagDayBand-${band.instance.instanceId}"),
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
