@@ -66,6 +66,14 @@ internal fun SkbAppDestinationContent(
      * overlay state hoisted there.
      */
     onOpenSettings: () -> Unit = {},
+    /**
+     * Opens Repos as a full-shell overlay (Settings parity). Routed
+     * by `SkbAppShellContent` to the `reposOpen` overlay state hoisted
+     * there. The `TopDestination.Repos` branch in the `when` below is
+     * retained for exhaustive matching / test references but is no
+     * longer reachable via the UI.
+     */
+    onOpenRepos: () -> Unit = {},
     onPickInternalStorage: () -> Unit,
     onWizardScaffold: suspend (WizardDraft) -> Result<Unit>,
     onWizardFinish: () -> Unit,

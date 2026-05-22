@@ -215,6 +215,12 @@ private fun SkbAppShellContent(
     // The `TopDestination.Settings` enum value is retained for tests +
     // exhaustive `when` arms but is no longer reachable via the UI.
     var settingsOpen by rememberSaveable { mutableStateOf(false) }
+    // Repos opens as a full-shell-cover overlay (Settings parity)
+    // rather than swapping the active destination. The
+    // `TopDestination.Repos` enum value is retained for tests +
+    // exhaustive `when` arms but is no longer reachable via UI taps;
+    // the bat-avatar + top-bar repo-switcher chip both flip this flag.
+    var reposOpen by rememberSaveable { mutableStateOf(false) }
 
     // Big top-left title = destination name ("Schedule" / "Tasks" / etc.).
     // The rail already shows the current view-mode (rotated "Day" / "Week"
@@ -267,7 +273,7 @@ private fun SkbAppShellContent(
                 // the Repos destination. The Repos `ShellDest-` button stays
                 // in the row to satisfy `AppShellNavigationSwapTest`; the
                 // avatar is a parallel affordance per user direction.
-                onRepoSwitcherClick = { selected = TopDestination.Repos },
+                onRepoSwitcherClick = { reposOpen = true },
                 onSettingsTap = { settingsOpen = true },
                 modePrefs = context.settingsAccess.modePrefs,
             )
@@ -283,7 +289,7 @@ private fun SkbAppShellContent(
                 RailColumn(
                     items = railItems,
                     activeIconKind = activeIconKind,
-                    onAccountTap = { selected = TopDestination.Repos },
+                    onAccountTap = { reposOpen = true },
                     onSettingsTap = { settingsOpen = true },
                     overlayPickerCalendars = pickerCalendars,
                     overlayPickerPrefs = context.calendarVisibility,
@@ -314,6 +320,7 @@ private fun SkbAppShellContent(
                         settingsAccess = context.settingsAccess,
                         onSelectDest = { selected = it },
                         onOpenSettings = { settingsOpen = true },
+                        onOpenRepos = { reposOpen = true },
                         onPickInternalStorage = callbacks.onPickInternalStorage,
                         onWizardScaffold = callbacks.onWizardScaffold,
                         onWizardFinish = callbacks.onWizardFinish,
@@ -410,6 +417,37 @@ private fun SkbAppShellContent(
         // Back navigates to the pane underneath without changing
         // `selected`, so the user returns to whatever destination they
         // were on when they tapped the cog.
+        // Repos full-shell overlay (Settings parity). Mounted at the
+        // outer Box root above the (top-bar + rail + content) Column so
+        // its own Surface fully covers the chrome. Back navigates to
+        // the underlying pane without changing `selected`.
+        if (reposOpen && context.reposState != null) {
+            BackHandler { reposOpen = false }
+            Surface(
+                color = MaterialTheme.colorScheme.background,
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                com.eight87.strictlykeptboy.ui.repos.ReposOverlayScreen(
+                    state = context.reposState,
+                    secretsStore = context.secretsStore,
+                    onBack = { reposOpen = false },
+                    onOpenTogether = {
+                        reposOpen = false
+                        selected = TopDestination.Together
+                    },
+                    onOpenWizard = {
+                        reposOpen = false
+                        selected = TopDestination.Wizard
+                    },
+                    onOpenAppSettings = {
+                        reposOpen = false
+                        settingsOpen = true
+                    },
+                    onPickInternalStorage = callbacks.onPickInternalStorage,
+                    settingsAccess = context.settingsAccess,
+                )
+            }
+        }
         if (settingsOpen) {
             BackHandler { settingsOpen = false }
             Surface(
