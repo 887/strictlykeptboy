@@ -59,12 +59,11 @@ calendars/holidays/events/2026/05/early-may-bank-holiday.md
 calendars/holidays/events/2026/05/spring-bank-holiday.md
 calendars/kinky-rituals/cage-check-responses/0190d0a0-7fab-7c50-9c1e-c100000000a1/2026-05-10.md
 calendars/kinky-rituals/calendar.toml
-calendars/kinky-rituals/deviations/0190d4ab-2b7a-7c50-9c1e-h00000000003/2026-05-16.md
 calendars/kinky-rituals/events/2026/05/2026-05-23-saturday-scene.md
 calendars/kinky-rituals/recurrences/cage-feels-midweek.md
+calendars/kinky-rituals/recurrences/cage-off-bedtime.md
 calendars/kinky-rituals/recurrences/cage-on.md
 calendars/kinky-rituals/recurrences/cage-photo-sunday.md
-calendars/kinky-rituals/recurrences/cage-stays-on.md
 calendars/kinky-rituals/recurrences/edging-session.md
 calendars/kinky-rituals/recurrences/kink-journal.md
 calendars/kinky-rituals/recurrences/plug-evening.md

@@ -16,9 +16,9 @@ tags = ["kink", "ritual"]
 emoji = "🔒"
 passive = true
 +++
-Cage on by 06:35 every morning. This is non-negotiable — Boy Keeper's
-expectation. Passive habit: default state is "completed-by-schedule",
-deviation = explicit `deviations/cage-stays-on/<date>.md` writeup with
-reason + duration off.
+Cage on by 06:35 every morning, after the night-off for proper rest.
+Pair: `cage-off-bedtime` (23:20) — the boy needs sleep uncaged for
+circulation + clean skin. Passive habit: default state is
+"completed-by-schedule".
 
 Quick check: comfortable, no chafing, no skin colour change.

@@ -526,8 +526,12 @@ private fun BandsLayer(
         // Cascade overlap: each successive priority-lane is shifted
         // right by [cascadeStep]; width shrinks by the same per-lane
         // amount so the lower-priority scaffold stays visible as a
-        // thin sliver under higher-priority overlays.
-        val cascadeStep = 14.dp
+        // clear vertical slab under higher-priority overlays.
+        // 36dp is the minimum step where the lane-0 base layer reads
+        // as a distinct visible band on phones — anything smaller
+        // and the cascade collapses into a thin sliver that the eye
+        // misses against the higher-priority overlay on top.
+        val cascadeStep = 36.dp
         renderables.forEach { (band, groupKey) ->
             val laneIdx = laneIndexById[band.instance.instanceId] ?: 0
             // Lane 0 = the day's scaffolding (lowest priority value)
