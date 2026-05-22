@@ -18,12 +18,16 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.Article
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Launch
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Numbers
 import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -87,9 +91,36 @@ fun AboutCategory(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(vertical = 8.dp),
+                .padding(vertical = 8.dp)
+                // `navigationBarsPadding` so the scroll terminus clears the system
+                // nav bar / gesture inset — without it the last card row sat under
+                // the bar on devices using gesture nav. The Compose Box host above
+                // this composable doesn't consume insets, so we apply them here.
+                .navigationBarsPadding(),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            // App-icon header. Matches whisperboy / tonearmboy About — `ic_launcher_foreground`
+            // at 96dp, app name in headlineSmall, sitting above the section headers as the
+            // visual identity anchor of the page. The full-resolution bat reveal lives
+            // behind the easter egg (triple-tap the version row); this is just the
+            // launcher cutout. Spec drawable: `R.drawable.ic_launcher_foreground`.
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                    contentDescription = null,
+                    modifier = Modifier.size(96.dp),
+                )
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = stringResource(R.string.app_name),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+
             AboutSectionHeader(stringResource(R.string.settings_about_card_build))
             AboutCard {
                 AboutRow(
@@ -157,6 +188,34 @@ fun AboutCategory(
                     tint = MaterialTheme.colorScheme.tertiary,
                     testTag = "$TestTagCatAbout-Privacy",
                     onClick = onOpenPrivacyPolicy,
+                )
+            }
+
+            // ---- Credits card ----
+            // Clean-room note + sibling-apps reference + stack credits. Mirrors the
+            // tonearmboy / whisperboy About-page Credits card so all four apps share
+            // a recognisable shape.
+            AboutSectionHeader(stringResource(R.string.settings_about_card_credits))
+            AboutCard {
+                AboutRow(
+                    icon = Icons.Outlined.Info,
+                    label = stringResource(R.string.settings_about_credits_cleanroom_label),
+                    subtitle = stringResource(R.string.settings_about_credits_cleanroom_subtitle),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                AboutDivider()
+                AboutRow(
+                    icon = Icons.Filled.Favorite,
+                    label = stringResource(R.string.settings_about_credits_siblings_label),
+                    subtitle = stringResource(R.string.settings_about_credits_siblings_subtitle),
+                    tint = MaterialTheme.colorScheme.secondary,
+                )
+                AboutDivider()
+                AboutRow(
+                    icon = Icons.Filled.Code,
+                    label = stringResource(R.string.settings_about_credits_stack_label),
+                    subtitle = stringResource(R.string.settings_about_credits_stack_subtitle),
+                    tint = MaterialTheme.colorScheme.tertiary,
                 )
             }
             Spacer(Modifier.height(24.dp))

@@ -293,6 +293,13 @@
     <!-- About page: grouped-card layout (tonearmboy parity) -->
     <string name="settings_about_card_build">Build</string>
     <string name="settings_about_card_source">Source</string>
+    <string name="settings_about_card_credits">Credits</string>
+    <string name="settings_about_credits_cleanroom_label">Clean-room implementation</string>
+    <string name="settings_about_credits_cleanroom_subtitle">Every line is original. Inspiration from screenshots only; no code copied from any other calendar app. MIT-licensed throughout.</string>
+    <string name="settings_about_credits_siblings_label">Sibling apps</string>
+    <string name="settings_about_credits_siblings_subtitle">Same toolchain + AVD-loop + release pipeline as tonearmboy (music), whisperboy (audiobooks), shutterboy (photos).</string>
+    <string name="settings_about_credits_stack_label">Compose · Room · JGit · dmfs lib-recur</string>
+    <string name="settings_about_credits_stack_subtitle">Jetpack Compose UI, Room cache, JGit + apache-sshd-osgi for git transport, dmfs lib-recur for RFC5545 RRULE expansion.</string>
     <string name="settings_about_app_label">App</string>
     <string name="settings_about_app_subtitle">strictlykeptboy — git-backed calendar.</string>
     <string name="settings_about_version_label">Version</string>
