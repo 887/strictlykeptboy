@@ -181,6 +181,18 @@ fun ScheduleDayView(
     val scroll = sharedScrollState ?: rememberScrollState()
     val density = LocalDensity.current
     val hourHeightPx = with(density) { hourHeight.toPx() }
+    // Auto-scroll to current time on today's view so the red NowLine
+    // is visible by default with ~3h of past + the rest of the day
+    // below. Only runs on first composition of `today + zoom` —
+    // tab changes that re-enter the view get a fresh anchor.
+    LaunchedEffect(isToday, hourHeightPx) {
+        if (isToday && hourHeightPx > 0f) {
+            val now = java.time.LocalTime.now()
+            val minutes = now.hour * 60 + now.minute
+            val targetPx = (minutes / 60f * hourHeightPx) - (hourHeightPx * 3f)
+            scroll.scrollTo(targetPx.toInt().coerceAtLeast(0))
+        }
+    }
     // Round 2.21 Phase F.2 — per-group expansion state. Auto-expand
     // when zoom ≥ GROUP_AUTO_EXPAND_ZOOM (= 3); below that, collapsed
     // groups can still be expanded on caret-tap.
@@ -405,35 +417,38 @@ private fun BandsLayer(
         else if (autoExpand || key in expandedKeys) g.children.map { Renderable(it, null) }
         else listOf(Renderable(makeCollapsedSyntheticBand(g), key))
     }
-    // Priority-ordered cascade — base layers (priority 0, "work /
-    // sleep / commute / leisure / chores") paint first at lane 0 with
-    // full width; higher-priority calendars get successively higher
-    // lane indices (shifted right + on top). This replaces the
-    // resolver's collision-based laneIndex per user direction:
-    // the screen reads as "scaffold on the left, higher-priority
-    // overlays cascading to the right and on top".
+    // Priority-ordered cascade — base layers paint first at lane 0
+    // full-width (the day's scaffold: work / sleep / commute / leisure
+    // / chores). Non-base bands cascade right by lane index 1, 2, 3, …
+    // in *ascending priority* order, so the lowest-priority overlay
+    // sits one notch right of the base and the highest-priority
+    // overlay sits furthest right and paints on top. Z-order = paint
+    // order, so highest priority paints last = on top.
     //
-    // Z-order: Compose paints in iteration order, so sorting by
-    // priority asc means highest priority paints last = on top.
-    val byPriority: List<Renderable> = unsorted.sortedBy { r ->
-        if (r.band.kind == com.eight87.strictlykeptboy.resolver.CalendarKind.Base) {
-            Int.MIN_VALUE
-        } else r.band.priority
+    // Splitting the lane enumeration in two passes (base first, then
+    // non-base) ensures non-base bands start at lane 1 rather than
+    // lane N+1 (where N = number of base bands on this day) — the
+    // previous single-list enumeration pushed every overlay way out
+    // to the right when the demo had several base recurrences.
+    val baseRenderables = unsorted.filter {
+        it.band.kind == com.eight87.strictlykeptboy.resolver.CalendarKind.Base
     }
+    val nonBaseRenderables = unsorted
+        .filterNot { it.band.kind == com.eight87.strictlykeptboy.resolver.CalendarKind.Base }
+        .sortedBy { it.band.priority }
+    val laneIndexById: Map<String, Int> = nonBaseRenderables
+        .mapIndexed { idx, r -> r.band.instance.instanceId to (idx + 1) }
+        .toMap()
+    val byPaintOrder: List<Renderable> = baseRenderables + nonBaseRenderables
     // Selected-band brought to front: paint it dead last (= top of
     // the z-stack) with a halo + elevation per the visual treatment
     // below. Its lane-index keeps its priority-derived offset, so the
     // user's mental map of "which one is which" stays put.
     val selectedRenderable = selectedBandId?.let { id ->
-        byPriority.firstOrNull { it.band.instance.instanceId == id }
+        byPaintOrder.firstOrNull { it.band.instance.instanceId == id }
     }
-    val renderables: List<Renderable> = if (selectedRenderable == null) byPriority
-    else byPriority.filter { it !== selectedRenderable } + selectedRenderable
-    // Lane index per band is its position in priority order — base
-    // is 0, then 1, 2, 3, … by ascending calendar priority.
-    val laneIndexById: Map<String, Int> = byPriority
-        .mapIndexed { idx, r -> r.band.instance.instanceId to idx }
-        .toMap()
+    val renderables: List<Renderable> = if (selectedRenderable == null) byPaintOrder
+    else byPaintOrder.filter { it !== selectedRenderable } + selectedRenderable
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val widthPx = maxWidth
         // Cascade overlap: each successive priority-lane is shifted
