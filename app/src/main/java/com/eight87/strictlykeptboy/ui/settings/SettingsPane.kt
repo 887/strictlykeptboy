@@ -63,6 +63,8 @@ import com.eight87.strictlykeptboy.theme.AppearancePrefs
 import com.eight87.strictlykeptboy.ui.adaptive.LocalWindowWidthSizeClass
 import com.eight87.strictlykeptboy.ui.adaptive.MasterDetailLayout
 import com.eight87.strictlykeptboy.ui.adaptive.isTwoPane
+import com.eight87.strictlykeptboy.ui.components.CategoryAccentName
+import com.eight87.strictlykeptboy.ui.components.CategoryIconCircle
 import com.eight87.strictlykeptboy.ui.import_export.ImportExportViewState
 import com.eight87.strictlykeptboy.ui.settings.categories.AboutCategory
 import com.eight87.strictlykeptboy.ui.settings.categories.AppearanceCategory
@@ -376,6 +378,7 @@ private data class CategoryMeta(
     val icon: ImageVector,
     val subtitleRes: Int,
     val iconTint: androidx.compose.ui.graphics.Color,
+    val accent: CategoryAccentName,
 )
 
 /**
@@ -407,37 +410,37 @@ private fun metaFor(cat: SettingsCategory): CategoryMeta {
     val cs = MaterialTheme.colorScheme
     return when (cat) {
         SettingsCategory.Appearance ->
-            CategoryMeta(Icons.Filled.Palette, R.string.settings_subtitle_appearance, cs.tertiary)
+            CategoryMeta(Icons.Filled.Palette, R.string.settings_subtitle_appearance, cs.tertiary, CategoryAccentName.Magenta)
         SettingsCategory.Repos ->
-            CategoryMeta(Icons.Filled.FolderShared, R.string.settings_subtitle_repos, cs.primary)
+            CategoryMeta(Icons.Filled.FolderShared, R.string.settings_subtitle_repos, cs.primary, CategoryAccentName.SkyBlue)
         SettingsCategory.CalDav ->
-            CategoryMeta(Icons.Filled.Sync, R.string.settings_subtitle_caldav, cs.tertiary)
+            CategoryMeta(Icons.Filled.Sync, R.string.settings_subtitle_caldav, cs.tertiary, CategoryAccentName.SkyBlue)
         SettingsCategory.Calendars ->
-            CategoryMeta(Icons.Filled.CalendarMonth, R.string.settings_subtitle_calendars, cs.primary)
+            CategoryMeta(Icons.Filled.CalendarMonth, R.string.settings_subtitle_calendars, cs.primary, CategoryAccentName.Teal)
         SettingsCategory.Todolists ->
-            CategoryMeta(Icons.Filled.Checklist, R.string.settings_subtitle_todolists, cs.secondary)
+            CategoryMeta(Icons.Filled.Checklist, R.string.settings_subtitle_todolists, cs.secondary, CategoryAccentName.Green)
         SettingsCategory.Templates ->
-            CategoryMeta(Icons.Filled.Description, R.string.settings_subtitle_templates, cs.tertiary)
+            CategoryMeta(Icons.Filled.Description, R.string.settings_subtitle_templates, cs.tertiary, CategoryAccentName.Orange)
         SettingsCategory.Sync ->
-            CategoryMeta(Icons.Filled.Sync, R.string.settings_subtitle_sync, cs.primary)
+            CategoryMeta(Icons.Filled.Sync, R.string.settings_subtitle_sync, cs.primary, CategoryAccentName.SkyBlue)
         SettingsCategory.Notifications ->
-            CategoryMeta(Icons.Filled.Notifications, R.string.settings_subtitle_notifications, cs.secondary)
+            CategoryMeta(Icons.Filled.Notifications, R.string.settings_subtitle_notifications, cs.secondary, CategoryAccentName.Red)
         SettingsCategory.Mode ->
-            CategoryMeta(Icons.Filled.Tune, R.string.settings_subtitle_mode, cs.tertiary)
+            CategoryMeta(Icons.Filled.Tune, R.string.settings_subtitle_mode, cs.tertiary, CategoryAccentName.Indigo)
         SettingsCategory.Lifestyle ->
-            CategoryMeta(Icons.Filled.Favorite, R.string.settings_subtitle_lifestyle, cs.primary)
+            CategoryMeta(Icons.Filled.Favorite, R.string.settings_subtitle_lifestyle, cs.primary, CategoryAccentName.Purple)
         SettingsCategory.Identity ->
-            CategoryMeta(Icons.Filled.Person, R.string.settings_subtitle_identity, cs.secondary)
+            CategoryMeta(Icons.Filled.Person, R.string.settings_subtitle_identity, cs.secondary, CategoryAccentName.Pink)
         SettingsCategory.About ->
-            CategoryMeta(Icons.Filled.Info, R.string.settings_subtitle_about, cs.tertiary)
+            CategoryMeta(Icons.Filled.Info, R.string.settings_subtitle_about, cs.tertiary, CategoryAccentName.Orange)
         SettingsCategory.Access ->
-            CategoryMeta(Icons.Filled.FolderShared, R.string.settings_subtitle_access, cs.secondary)
+            CategoryMeta(Icons.Filled.FolderShared, R.string.settings_subtitle_access, cs.secondary, CategoryAccentName.Amber)
         SettingsCategory.AutoTablet ->
-            CategoryMeta(Icons.Filled.Tune, R.string.settings_subtitle_autotablet, cs.tertiary)
+            CategoryMeta(Icons.Filled.Tune, R.string.settings_subtitle_autotablet, cs.tertiary, CategoryAccentName.Cyan)
         SettingsCategory.Storage ->
-            CategoryMeta(Icons.Filled.FolderShared, R.string.settings_subtitle_storage, cs.primary)
+            CategoryMeta(Icons.Filled.FolderShared, R.string.settings_subtitle_storage, cs.primary, CategoryAccentName.Brown)
         SettingsCategory.ExternalCalendars ->
-            CategoryMeta(Icons.Filled.CalendarMonth, R.string.settings_subtitle_external_calendars_off, cs.tertiary)
+            CategoryMeta(Icons.Filled.CalendarMonth, R.string.settings_subtitle_external_calendars_off, cs.tertiary, CategoryAccentName.SkyBlue)
     }
 }
 
@@ -578,21 +581,11 @@ private fun SettingsCategoryList(
                             )
                         },
                         leadingContent = {
-                            LayoutBox(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .background(
-                                        color = meta.iconTint.copy(alpha = 0.18f),
-                                        shape = CircleShape,
-                                    ),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(
-                                    imageVector = meta.icon,
-                                    contentDescription = null,
-                                    tint = meta.iconTint,
-                                )
-                            }
+                            CategoryIconCircle(
+                                icon = meta.icon,
+                                accentName = meta.accent,
+                                contentDescription = null,
+                            )
                         },
                         colors = if (selectedNow) {
                             ListItemDefaults.colors(

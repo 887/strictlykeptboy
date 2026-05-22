@@ -55,6 +55,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.BuildConfig
 import com.eight87.strictlykeptboy.R
+import com.eight87.strictlykeptboy.ui.components.CategoryAccentName
+import com.eight87.strictlykeptboy.ui.components.CategoryIconCircle
 import kotlinx.coroutines.launch
 
 const val TestTagCatAbout = "Cat-About"
@@ -128,6 +130,7 @@ fun AboutCategory(
                     label = stringResource(R.string.settings_about_app_label),
                     subtitle = stringResource(R.string.settings_about_app_subtitle),
                     tint = MaterialTheme.colorScheme.primary,
+                    accent = CategoryAccentName.Orange,
                 )
                 AboutDivider()
                 AboutRow(
@@ -139,6 +142,7 @@ fun AboutCategory(
                         BuildConfig.GIT_SHA,
                     ),
                     tint = MaterialTheme.colorScheme.secondary,
+                    accent = CategoryAccentName.Orange,
                     testTag = "$TestTagCatAbout-Version",
                     onClick = {
                         when (easterEgg.tap(nowMs())) {
@@ -158,6 +162,7 @@ fun AboutCategory(
                     label = stringResource(R.string.settings_about_build_date_label),
                     subtitle = BuildConfig.BUILD_DATE,
                     tint = MaterialTheme.colorScheme.tertiary,
+                    accent = CategoryAccentName.SkyBlue,
                 )
             }
 
@@ -168,6 +173,7 @@ fun AboutCategory(
                     label = stringResource(R.string.settings_about_github_label),
                     subtitle = stringResource(R.string.settings_about_github_subtitle),
                     tint = MaterialTheme.colorScheme.primary,
+                    accent = CategoryAccentName.Green,
                     testTag = "$TestTagCatAbout-Repo",
                     onClick = onOpenRepo,
                 )
@@ -177,6 +183,7 @@ fun AboutCategory(
                     label = stringResource(R.string.settings_about_licenses_label),
                     subtitle = stringResource(R.string.settings_about_licenses_subtitle),
                     tint = MaterialTheme.colorScheme.secondary,
+                    accent = CategoryAccentName.Brown,
                     testTag = "$TestTagCatAbout-Licenses",
                     onClick = onOpenLicenses,
                 )
@@ -186,6 +193,7 @@ fun AboutCategory(
                     label = stringResource(R.string.settings_about_privacy_label),
                     subtitle = stringResource(R.string.settings_about_privacy_subtitle),
                     tint = MaterialTheme.colorScheme.tertiary,
+                    accent = CategoryAccentName.SkyBlue,
                     testTag = "$TestTagCatAbout-Privacy",
                     onClick = onOpenPrivacyPolicy,
                 )
@@ -202,6 +210,7 @@ fun AboutCategory(
                     label = stringResource(R.string.settings_about_credits_cleanroom_label),
                     subtitle = stringResource(R.string.settings_about_credits_cleanroom_subtitle),
                     tint = MaterialTheme.colorScheme.primary,
+                    accent = CategoryAccentName.Orange,
                 )
                 AboutDivider()
                 AboutRow(
@@ -209,6 +218,7 @@ fun AboutCategory(
                     label = stringResource(R.string.settings_about_credits_siblings_label),
                     subtitle = stringResource(R.string.settings_about_credits_siblings_subtitle),
                     tint = MaterialTheme.colorScheme.secondary,
+                    accent = CategoryAccentName.Pink,
                 )
                 AboutDivider()
                 AboutRow(
@@ -216,6 +226,7 @@ fun AboutCategory(
                     label = stringResource(R.string.settings_about_credits_stack_label),
                     subtitle = stringResource(R.string.settings_about_credits_stack_subtitle),
                     tint = MaterialTheme.colorScheme.tertiary,
+                    accent = CategoryAccentName.Green,
                 )
             }
             Spacer(Modifier.height(24.dp))
@@ -284,6 +295,7 @@ private fun AboutRow(
     label: String,
     subtitle: String,
     tint: Color,
+    accent: CategoryAccentName,
     testTag: String? = null,
     onClick: (() -> Unit)? = null,
 ) {
@@ -299,14 +311,11 @@ private fun AboutRow(
             )
         },
         leadingContent = {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(color = tint.copy(alpha = 0.18f), shape = CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(imageVector = icon, contentDescription = null, tint = tint)
-            }
+            CategoryIconCircle(
+                icon = icon,
+                accentName = accent,
+                contentDescription = null,
+            )
         },
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
         modifier = rowMod,
