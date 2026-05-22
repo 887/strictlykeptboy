@@ -164,7 +164,45 @@ fun ScheduleDayView(
      */
     sharedScrollState: androidx.compose.foundation.ScrollState? = null,
 ) {
-    val bands = dayBands.bandsFor(date)
+    // Sliding 24-hour window per user direction:
+    //   - on today: anchor at `now - 12h` (snapped to the hour) so the
+    //     red NowLine sits roughly mid-grid and the view spans 12h
+    //     past + 12h future, crossing midnight when the user's "now"
+    //     is in the morning or evening.
+    //   - other days: anchor at the date's local-midnight, 24h.
+    // The Y axis is "hours since windowStart" everywhere downstream;
+    // local-midnight assumptions are gone from BandsLayer / HourLines.
+    val zone = java.time.ZoneId.systemDefault()
+    val windowStart: java.time.ZonedDateTime = remember(date, isToday) {
+        if (isToday) {
+            java.time.ZonedDateTime.now(zone)
+                .minusHours(12)
+                .truncatedTo(java.time.temporal.ChronoUnit.HOURS)
+        } else {
+            date.atStartOfDay(zone)
+        }
+    }
+    val windowEnd = remember(windowStart) { windowStart.plusHours(24) }
+    // Union the rendered bands across the date(s) the window touches.
+    // For non-today this is just [date]; for today's sliding window
+    // it's [windowStart.toLocalDate(), windowEnd.toLocalDate()] which
+    // are different when "now" puts the window across midnight.
+    val bands: List<DayBand> = remember(dayBands, windowStart, windowEnd) {
+        val d1 = windowStart.toLocalDate()
+        val d2 = windowEnd.toLocalDate()
+        val raw = if (d1 == d2) dayBands.bandsFor(d1)
+        else dayBands.bandsFor(d1) + dayBands.bandsFor(d2)
+        // Dedupe in case a band materializes against both dates (a
+        // band that crosses midnight may be enumerated under either
+        // calendar date depending on the resolver pass).
+        raw.distinctBy { it.instance.instanceId }
+            // Keep only bands that overlap the [windowStart, windowEnd)
+            // interval — anything fully outside paints nothing.
+            .filter { b ->
+                b.instance.effectiveEnd.isAfter(windowStart) &&
+                    b.instance.effectiveStart.isBefore(windowEnd)
+            }
+    }
 
     if (bands.isEmpty()) {
         EmptyScheduleState(
@@ -181,16 +219,17 @@ fun ScheduleDayView(
     val scroll = sharedScrollState ?: rememberScrollState()
     val density = LocalDensity.current
     val hourHeightPx = with(density) { hourHeight.toPx() }
-    // Auto-scroll to current time on today's view so the red NowLine
-    // is visible by default with ~3h of past + the rest of the day
-    // below. Only runs on first composition of `today + zoom` —
-    // tab changes that re-enter the view get a fresh anchor.
+    // Auto-scroll: on today's sliding-window view, "now" is always
+    // 12h from windowStart, so center it on the visible region (now
+    // lands roughly half-way down). Non-today views scroll to a
+    // reasonable morning anchor.
     LaunchedEffect(isToday, hourHeightPx) {
-        if (isToday && hourHeightPx > 0f) {
-            val now = java.time.LocalTime.now()
-            val minutes = now.hour * 60 + now.minute
-            val targetPx = (minutes / 60f * hourHeightPx) - (hourHeightPx * 3f)
+        if (hourHeightPx <= 0f) return@LaunchedEffect
+        if (isToday) {
+            val targetPx = (12f * hourHeightPx) - (hourHeightPx * 6f)
             scroll.scrollTo(targetPx.toInt().coerceAtLeast(0))
+        } else {
+            scroll.scrollTo((7f * hourHeightPx).toInt().coerceAtLeast(0))
         }
     }
     // Round 2.21 Phase F.2 — per-group expansion state. Auto-expand
@@ -227,7 +266,7 @@ fun ScheduleDayView(
             .fillMaxWidth()
             .verticalScroll(scroll),
     ) {
-        if (showHourGutter) DayHourGutter(hourHeight = hourHeight)
+        if (showHourGutter) DayHourGutter(hourHeight = hourHeight, windowStart = windowStart)
         // Round 2.21 Phase D.5 — pinch-to-zoom on the day-grid Box.
         // detectTransformGestures fires on every pointer move; we
         // accumulate `pendingScale` and on the gesture-end (next
@@ -284,15 +323,20 @@ fun ScheduleDayView(
         ) {
             HourLines(
                 hourHeight = hourHeight,
+                windowStart = windowStart,
                 onTapHour = { hr ->
                     // Tap on empty grid clears any band selection;
-                    // otherwise falls through to the add-at-hour action.
+                    // otherwise falls through to the add-at-hour
+                    // action — `hr` is the absolute hour the user
+                    // tapped (computed in HourLines against
+                    // windowStart).
                     if (selectedBandId != null) selectedBandId = null
                     else onAddAt(LocalTime.of(hr, 0))
                 },
             )
             BandsLayer(
-                date = date,
+                windowStart = windowStart,
+                windowEnd = windowEnd,
                 groups = groups,
                 autoExpand = autoExpand,
                 expandedKeys = expandedKeys,
@@ -321,7 +365,7 @@ fun ScheduleDayView(
                     )
                 }
             }
-            if (isToday) NowLine(hourHeight = hourHeight)
+            if (isToday) NowLine(hourHeight = hourHeight, windowStart = windowStart)
         }
     }
     }
@@ -350,14 +394,24 @@ private fun makeCollapsedSyntheticBand(g: GroupedDayBand): DayBand {
 }
 
 @Composable
-internal fun DayHourGutter(hourHeight: Dp) {
+internal fun DayHourGutter(
+    hourHeight: Dp,
+    windowStart: java.time.ZonedDateTime = java.time.LocalDate.now()
+        .atStartOfDay(java.time.ZoneId.systemDefault()),
+) {
     Column(modifier = Modifier.width(GutterWidth)) {
-        for (hr in 0 until 24) {
+        for (i in 0 until 24) {
+            val cellTime = windowStart.plusHours(i.toLong())
+            val hr = cellTime.hour
+            // Mark the midnight crossing visually so the user sees
+            // where today rolls over into tomorrow (or yesterday into
+            // today) — the hour label becomes "00 +1d" / "00".
+            val label = if (hr == 0 && i != 0) "00⤴" else "%02d".format(hr)
             Box(
                 modifier = Modifier.fillMaxWidth().height(hourHeight).padding(start = 8.dp, top = 2.dp),
             ) {
                 Text(
-                    text = "%02d".format(hr),
+                    text = label,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -372,15 +426,20 @@ internal fun DayHourGutter(hourHeight: Dp) {
  * as discrete cells rather than one flat column.
  */
 @Composable
-private fun HourLines(hourHeight: Dp, onTapHour: (Int) -> Unit) {
+private fun HourLines(
+    hourHeight: Dp,
+    windowStart: java.time.ZonedDateTime,
+    onTapHour: (Int) -> Unit,
+) {
     val gap = 2.dp
     val blockHeight = hourHeight - gap
     Column(modifier = Modifier.fillMaxSize()) {
-        for (hr in 0 until 24) {
+        for (i in 0 until 24) {
+            val cellHour = windowStart.plusHours(i.toLong()).hour
             Surface(
                 color = MaterialTheme.colorScheme.surfaceContainerLow,
                 shape = RoundedCornerShape(8.dp),
-                onClick = { onTapHour(hr) },
+                onClick = { onTapHour(cellHour) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(blockHeight)
@@ -393,7 +452,8 @@ private fun HourLines(hourHeight: Dp, onTapHour: (Int) -> Unit) {
 
 @Composable
 private fun BandsLayer(
-    date: LocalDate,
+    windowStart: java.time.ZonedDateTime,
+    windowEnd: java.time.ZonedDateTime,
     groups: List<GroupedDayBand>,
     autoExpand: Boolean,
     expandedKeys: Set<String>,
@@ -467,21 +527,20 @@ private fun BandsLayer(
 
             val rawStart = band.instance.effectiveStart
             val rawEnd = band.instance.effectiveEnd
-            // Clip cross-midnight bands to the rendered day's window so a
-            // 23:30→06:30 sleep block paints as two solid slabs (one on
-            // each day) rather than vanishing into a 15-min sliver.
-            val zone = rawStart.zone
-            val dayStart = date.atStartOfDay(zone)
-            val dayEnd = date.plusDays(1).atStartOfDay(zone)
-            val start = if (rawStart.isBefore(dayStart)) dayStart else rawStart
-            val end = if (rawEnd.isAfter(dayEnd)) dayEnd else rawEnd
-            val topDp = hourHeight * minutesFromMidnight(start) / 60f
-            // 24:00 (= midnight next day) shows as minutesFromMidnight=0;
-            // treat it as 1440 when end was clipped to dayEnd so the band
-            // reaches the bottom of the grid.
-            val endMinutes = if (end == dayEnd) 1440f else minutesFromMidnight(end)
-            val startMinutes = minutesFromMidnight(start)
+            // Clip the band to the visible 24h window. Math is now
+            // "minutes since windowStart" everywhere — the local-
+            // midnight assumption is gone, so a 23:30→06:30 sleep
+            // block paints as a single slab on the sliding-window
+            // view (instead of two halves on adjacent days).
+            val start = if (rawStart.isBefore(windowStart)) windowStart else rawStart
+            val end = if (rawEnd.isAfter(windowEnd)) windowEnd else rawEnd
+            val startMinutes = java.time.Duration.between(windowStart, start)
+                .toMinutes().toFloat().coerceAtLeast(0f)
+            val endMinutes = java.time.Duration.between(windowStart, end)
+                .toMinutes().toFloat()
+                .coerceAtMost(24f * 60f)
             val clippedDurationMin = (endMinutes - startMinutes).coerceAtLeast(0f)
+            val topDp = hourHeight * startMinutes / 60f
             val heightDp = hourHeight * clippedDurationMin.coerceAtLeast(15f) / 60f
 
             val isSuperseded = band.supersededByCalendar != null
@@ -728,15 +787,20 @@ private fun DragGhostBand(
 }
 
 @Composable
-private fun NowLine(hourHeight: Dp) {
-    var now by remember { mutableStateOf(java.time.LocalTime.now()) }
+private fun NowLine(hourHeight: Dp, windowStart: java.time.ZonedDateTime) {
+    var now by remember { mutableStateOf(java.time.ZonedDateTime.now(windowStart.zone)) }
     LaunchedEffect(Unit) {
         while (true) {
-            now = java.time.LocalTime.now()
+            now = java.time.ZonedDateTime.now(windowStart.zone)
             delay(30_000L)
         }
     }
-    val topDp = hourHeight * (now.hour * 60 + now.minute) / 60f
+    val minutesIntoWindow =
+        java.time.Duration.between(windowStart, now).toMinutes().toFloat()
+    // Hide if now is outside the visible 24h window — e.g. the user
+    // navigated to a non-today date and the line would land off-grid.
+    if (minutesIntoWindow < 0f || minutesIntoWindow > 24f * 60f) return
+    val topDp = hourHeight * minutesIntoWindow / 60f
     Box(
         modifier = Modifier
             .fillMaxWidth()
