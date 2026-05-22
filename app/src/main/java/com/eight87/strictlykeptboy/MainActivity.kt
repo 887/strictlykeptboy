@@ -365,12 +365,24 @@ class MainActivity : ComponentActivity() {
             var firstLaunchDone by remember {
                 mutableStateOf(graph.repoStore.list().isNotEmpty())
             }
+            // Derive the active repo's avatar tint (its `colorSeed` from
+            // repo.toml). Pulled out of the StateFlow + defaultWriteRepoName
+            // collect so the theme can blend it into chrome surfaces when the
+            // user has tint-by-repo-avatar on. 0L = no tint published.
+            val repoConfigs by graph.repoStore.state.collectAsState()
+            val activeRepoNameForTint by graph.defaultWriteRepoName.collectAsState()
+            val activeRepoTint: Long = remember(repoConfigs, activeRepoNameForTint) {
+                val cfg = repoConfigs.firstOrNull { it.displayName == activeRepoNameForTint }
+                    ?: repoConfigs.firstOrNull()
+                cfg?.colorSeed?.toLong()?.and(0xFFFFFFL) ?: 0L
+            }
             androidx.compose.runtime.CompositionLocalProvider(
                 com.eight87.strictlykeptboy.avatar.LocalAvatarResolver provides graph.avatarGraph.avatarResolver,
                 com.eight87.strictlykeptboy.ui.repos.LocalAvatarPackPrefs provides graph.avatarGraph.avatarPackPrefs,
                 com.eight87.strictlykeptboy.ui.repos.LocalPackStore provides graph.avatarGraph.packStore,
                 com.eight87.strictlykeptboy.ui.repos.LocalAssetPackLoader provides graph.avatarGraph.assetPackLoader,
                 com.eight87.strictlykeptboy.ui.repos.LocalUserPackLoader provides graph.avatarGraph.userPackLoader,
+                com.eight87.strictlykeptboy.theme.LocalRepoAvatarTint provides activeRepoTint,
             ) {
             StrictlyKeptBoyTheme(
                 themeMode = appearance.themeMode,

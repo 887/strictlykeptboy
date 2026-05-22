@@ -11,23 +11,20 @@ import androidx.compose.material3.expressiveLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 // Phase F.3 — bat-themed dark fallback. Charcoal background, dim purple accent.
 // When the device is API 31+ AND dynamicColor is on, we still prefer the
 // system-wallpaper-derived scheme; this is the offline fallback.
-//
-// Round 2.16 follow-up — fill in surface-container + content tokens so the
-// peek MiniPlayer (which renders on `surfaceContainerHigh`) stays in the
-// dark palette instead of falling back to Material's light defaults.
 private val BatDark: ColorScheme = darkColorScheme(
-    primary = Color(0xFF9E7BD8),       // dim purple
+    primary = Color(0xFF9E7BD8),
     onPrimary = Color(0xFF1A1024),
     primaryContainer = Color(0xFF3A2A5C),
     onPrimaryContainer = Color(0xFFE7DDFB),
     secondary = Color(0xFF8A7BAE),
-    background = Color(0xFF121017),    // charcoal
+    background = Color(0xFF121017),
     onBackground = Color(0xFFE7E0F4),
     surface = Color(0xFF121017),
     onSurface = Color(0xFFE7E0F4),
@@ -36,8 +33,8 @@ private val BatDark: ColorScheme = darkColorScheme(
     surfaceContainerLowest = Color(0xFF0E0C13),
     surfaceContainerLow = Color(0xFF161420),
     surfaceContainer = Color(0xFF1C1A26),
-    surfaceContainerHigh = Color(0xFF22202D),     // peek bar background
-    surfaceContainerHighest = Color(0xFF2A2737),  // active queue row / pill
+    surfaceContainerHigh = Color(0xFF22202D),
+    surfaceContainerHighest = Color(0xFF2A2737),
     tertiary = Color(0xFFC4A0FF),
     onTertiary = Color(0xFF1F0A3A),
     outline = Color(0xFF665E7A),
@@ -46,6 +43,13 @@ private val BatDark: ColorScheme = darkColorScheme(
 )
 
 private val BatLight: ColorScheme = expressiveLightColorScheme()
+
+/**
+ * Avatar-derived tint for the *active* repo, published by MainActivity so the
+ * theme can blend it into chrome surfaces when `tintByRepoAvatar` is on. Stored
+ * as a 24-bit RGB long; 0L = unset.
+ */
+val LocalRepoAvatarTint = compositionLocalOf<Long> { 0L }
 
 @Composable
 fun StrictlyKeptBoyTheme(
@@ -59,9 +63,6 @@ fun StrictlyKeptBoyTheme(
         themeMode = themeMode,
         densityScale = densityScale,
         baseTheme = if (dynamicColor) BaseTheme.MaterialYou else BaseTheme.DefaultColors,
-        // No-op pass-through — tintByRepoAvatar + customChromeTint are
-        // surfaced for round-trip persistence today; actual chrome
-        // overlay wiring is deferred (see comments below).
         tintByRepoAvatar = true,
         customChromeTint = 0L,
         content = content,
@@ -75,29 +76,27 @@ fun StrictlyKeptBoyTheme(
  *  - [BaseTheme.MaterialYou]   → wallpaper-derived dynamic palette on API 31+;
  *    falls back to BatDark/BatLight on older devices.
  *  - [BaseTheme.PureBlack]     → force background + surface to black on the
- *    dark scheme. Light scheme is unaffected (pure-black is an AMOLED dark
- *    affordance, not a light theme).
- *  - [BaseTheme.Custom]        → seed a deterministic light/dark scheme from
- *    the user-picked RGB.
+ *    dark scheme. Light scheme is unaffected.
+ *  - [BaseTheme.Custom]        → seed a coherent HSL-derived light/dark scheme
+ *    from the user-picked RGB.
  *
- * NO-OP follow-ups (round-trip via prefs, behaviour parked):
- *  - [tintByRepoAvatar] is read for API parity with tonearmboy's
- *    `albumArtTintEnabled`. The repo-avatar-dominant-color extractor isn't
- *    wired here yet; flipping this toggle persists but doesn't paint
- *    anything different until a follow-up phase wires it.
- *  - [customChromeTint] is read for the same reason. The chrome-overlay
- *    pipeline (top bar / FAB / rail accent override) ships in a later
- *    phase; today the seed colour participates as the Custom scheme's
- *    seed when [baseTheme] is [BaseTheme.Custom], but does NOT separately
- *    overlay chrome when the base theme is something else.
+ * Tint precedence (highest wins):
+ *  1. [customChromeTint] when non-zero — explicit "I want this colour".
+ *  2. The active repo's avatar tint (published via [LocalRepoAvatarTint])
+ *     when [tintByRepoAvatar] is true.
+ *  3. No tint — chrome paints with the base scheme.
+ *
+ * The chosen tint is blended into the surface tier ladder via [blendSurface]
+ * (40 % toward the tint), so chrome reads as *tinted by* the source, not as
+ * the source.
  */
 @Composable
 fun StrictlyKeptBoyTheme(
     themeMode: ThemeMode,
     densityScale: DensityScale,
     baseTheme: BaseTheme,
-    @Suppress("UNUSED_PARAMETER") tintByRepoAvatar: Boolean,
-    @Suppress("UNUSED_PARAMETER") customChromeTint: Long,
+    tintByRepoAvatar: Boolean,
+    customChromeTint: Long,
     content: @Composable () -> Unit,
 ) {
     val darkTheme = when (themeMode) {
@@ -106,7 +105,7 @@ fun StrictlyKeptBoyTheme(
         ThemeMode.Auto -> isSystemInDarkTheme()
     }
 
-    val colorScheme: ColorScheme = when (baseTheme) {
+    val baseScheme: ColorScheme = when (baseTheme) {
         BaseTheme.MaterialYou -> {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 val context = LocalContext.current
@@ -133,43 +132,120 @@ fun StrictlyKeptBoyTheme(
         is BaseTheme.Custom -> deriveCustomScheme(baseTheme.seedRgb, darkTheme)
     }
 
+    val avatarTint = LocalRepoAvatarTint.current
+    val tintRgb: Long? = when {
+        customChromeTint != 0L -> customChromeTint
+        tintByRepoAvatar && avatarTint != 0L -> avatarTint
+        else -> null
+    }
+    val tint: Color? = tintRgb?.let { Color(0xFF000000L or (it and 0xFFFFFFL)) }
+
+    val tintedScheme = if (tint == null) baseScheme else baseScheme.copy(
+        surface = blendSurface(baseScheme.surface, tint),
+        surfaceVariant = blendSurface(baseScheme.surfaceVariant, tint),
+        background = blendSurface(baseScheme.background, tint),
+        surfaceContainerLowest = blendSurface(baseScheme.surfaceContainerLowest, tint),
+        surfaceContainerLow = blendSurface(baseScheme.surfaceContainerLow, tint),
+        surfaceContainer = blendSurface(baseScheme.surfaceContainer, tint),
+        surfaceContainerHigh = blendSurface(baseScheme.surfaceContainerHigh, tint),
+        surfaceContainerHighest = blendSurface(baseScheme.surfaceContainerHighest, tint),
+        secondaryContainer = blendSurface(baseScheme.secondaryContainer, tint),
+    )
+
     CompositionLocalProvider(LocalDensityScale provides densityScale) {
-        MaterialExpressiveTheme(colorScheme = colorScheme, typography = Typography, content = content)
+        MaterialExpressiveTheme(colorScheme = tintedScheme, typography = Typography, content = content)
     }
 }
 
 /**
- * Deterministic light/dark scheme from a 24-bit RGB seed. Lightweight
- * port of tonearmboy's `deriveCustomScheme` — we don't pull in
- * `androidx.compose.material3.dynamiccolor` (not on classpath) and the
- * full Hct pipeline is overkill for this surface; instead derive a
- * sensible primary/secondary/tertiary from the seed and let M3
- * lightColorScheme / darkColorScheme fill the rest.
+ * D.25.1 — derive a Material 3 [ColorScheme] from a 24-bit RGB seed.
+ *
+ * Builds primary / secondary / tertiary tonal anchors by shifting the seed's
+ * hue (secondary = +30°, tertiary = +60°) and lightness, then plugs them into
+ * the canonical [lightColorScheme] / [darkColorScheme] factories. Sidesteps
+ * Material 3's `dynamicColorScheme(seed, isDark)` (added in 1.4) so the build
+ * works regardless of the active Material 3 version.
  */
-private fun deriveCustomScheme(seedRgb: Long, dark: Boolean): ColorScheme {
-    val primary = Color(0xFF000000L or (seedRgb and 0xFFFFFFL))
-    val secondary = primary.shift(0.85f)
-    val tertiary = primary.shift(0.70f)
+internal fun deriveCustomScheme(seedRgb: Long, dark: Boolean): ColorScheme {
+    val primary = colorFromRgbLong(seedRgb)
+    val (h, s, _) = rgbToHslTriple(primary)
+    val secondary = hslColor(((h + 30f) % 360f), (s * 0.7f).coerceIn(0f, 1f), if (dark) 0.7f else 0.45f)
+    val tertiary = hslColor(((h + 60f) % 360f), (s * 0.6f).coerceIn(0f, 1f), if (dark) 0.7f else 0.5f)
+    val primaryDark = hslColor(h, s, if (dark) 0.7f else 0.4f)
+    val onPrimary = if (luminance(primaryDark) > 0.5f) Color.Black else Color.White
     return if (dark) {
         darkColorScheme(
-            primary = primary,
+            primary = primaryDark,
             secondary = secondary,
             tertiary = tertiary,
+            onPrimary = onPrimary,
         )
     } else {
         lightColorScheme(
-            primary = primary,
+            primary = primaryDark,
             secondary = secondary,
             tertiary = tertiary,
+            onPrimary = onPrimary,
         )
     }
 }
 
-/** Crude HSV-ish shift — scale RGB channels by `factor` toward black. */
-private fun Color.shift(factor: Float): Color =
-    Color(
-        red = (red * factor).coerceIn(0f, 1f),
-        green = (green * factor).coerceIn(0f, 1f),
-        blue = (blue * factor).coerceIn(0f, 1f),
-        alpha = alpha,
+private fun colorFromRgbLong(rgb: Long): Color {
+    val r = ((rgb shr 16) and 0xFFL).toInt()
+    val g = ((rgb shr 8) and 0xFFL).toInt()
+    val b = (rgb and 0xFFL).toInt()
+    return Color(red = r / 255f, green = g / 255f, blue = b / 255f, alpha = 1f)
+}
+
+/** Returns (hue 0..360, saturation 0..1, lightness 0..1). */
+internal fun rgbToHslTriple(c: Color): Triple<Float, Float, Float> {
+    val r = c.red; val g = c.green; val b = c.blue
+    val max = maxOf(r, g, b); val min = minOf(r, g, b)
+    val l = (max + min) / 2f
+    val delta = max - min
+    if (delta == 0f) return Triple(0f, 0f, l)
+    val s = if (l > 0.5f) delta / (2f - max - min) else delta / (max + min)
+    val h = when (max) {
+        r -> 60f * (((g - b) / delta) % 6f)
+        g -> 60f * (((b - r) / delta) + 2f)
+        else -> 60f * (((r - g) / delta) + 4f)
+    }.let { if (it < 0f) it + 360f else it }
+    return Triple(h, s, l)
+}
+
+internal fun hslColor(hue: Float, saturation: Float, lightness: Float): Color {
+    val h = ((hue % 360f) + 360f) % 360f
+    val s = saturation.coerceIn(0f, 1f)
+    val l = lightness.coerceIn(0f, 1f)
+    val c = (1f - kotlin.math.abs(2f * l - 1f)) * s
+    val hp = h / 60f
+    val x = c * (1f - kotlin.math.abs((hp % 2f) - 1f))
+    val (r1, g1, b1) = when {
+        hp < 1f -> Triple(c, x, 0f)
+        hp < 2f -> Triple(x, c, 0f)
+        hp < 3f -> Triple(0f, c, x)
+        hp < 4f -> Triple(0f, x, c)
+        hp < 5f -> Triple(x, 0f, c)
+        else -> Triple(c, 0f, x)
+    }
+    val m = l - c / 2f
+    return Color(red = (r1 + m).coerceIn(0f, 1f), green = (g1 + m).coerceIn(0f, 1f), blue = (b1 + m).coerceIn(0f, 1f), alpha = 1f)
+}
+
+internal fun luminance(c: Color): Float =
+    0.2126f * c.red + 0.7152f * c.green + 0.0722f * c.blue
+
+/**
+ * Blend [base] toward [tint] by [fraction] (0..1). 40 % is the canonical
+ * value tonearmboy uses — chrome stays *chrome*, just tinted.
+ */
+internal fun blendSurface(base: Color, tint: Color?, fraction: Float = 0.4f): Color {
+    if (tint == null) return base
+    val f = fraction.coerceIn(0f, 1f)
+    return Color(
+        red = base.red * (1f - f) + tint.red * f,
+        green = base.green * (1f - f) + tint.green * f,
+        blue = base.blue * (1f - f) + tint.blue * f,
+        alpha = base.alpha,
     )
+}

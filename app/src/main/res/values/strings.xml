@@ -281,6 +281,7 @@
     <string name="settings_color_picker_title">Pick a color</string>
     <string name="settings_color_picker_confirm">Confirm</string>
     <string name="settings_color_picker_cancel">Cancel</string>
+    <string name="settings_color_picker_reset">Reset</string>
 
     <!-- S.10 About -->
     <string name="settings_about_build_sha">Build commit: %1$s</string>

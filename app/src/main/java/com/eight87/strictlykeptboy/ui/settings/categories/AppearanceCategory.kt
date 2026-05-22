@@ -247,6 +247,10 @@ fun AppearanceCategory(
                         showBaseThemeColorPicker = false
                     },
                     onDismiss = { showBaseThemeColorPicker = false },
+                    onReset = {
+                        prefs.setBaseTheme(BaseTheme.Default)
+                        showBaseThemeColorPicker = false
+                    },
                 )
             }
             if (showChromeTintPicker) {
@@ -258,6 +262,10 @@ fun AppearanceCategory(
                         showChromeTintPicker = false
                     },
                     onDismiss = { showChromeTintPicker = false },
+                    onReset = {
+                        prefs.setCustomChromeTint(0L)
+                        showChromeTintPicker = false
+                    },
                 )
             }
         }
