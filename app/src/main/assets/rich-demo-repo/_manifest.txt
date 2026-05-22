@@ -70,9 +70,9 @@ calendars/kinky-rituals/recurrences/plug-evening.md
 calendars/play/calendar.toml
 calendars/play/events/2026/05/2026-05-23-playtime.md
 calendars/routines/calendar.toml
-calendars/routines/deviations/0190d4ab-2b7a-7c50-9c1e-h00000000001/2026-05-14.md
-calendars/routines/deviations/0190d4ab-2b7a-7c50-9c1e-h00000000004/2026-05-19.md
-calendars/routines/deviations/0190d4ab-2b7a-7c50-9c1e-h00000000005/2026-05-20.md
+calendars/routines/deviations/0190d4ab-2b7a-7c50-9c1e-900000000001/2026-05-14.md
+calendars/routines/deviations/0190d4ab-2b7a-7c50-9c1e-900000000004/2026-05-19.md
+calendars/routines/deviations/0190d4ab-2b7a-7c50-9c1e-900000000005/2026-05-20.md
 calendars/routines/recurrences/bedtime-by-2330.md
 calendars/routines/recurrences/cleaning.md
 calendars/routines/recurrences/evening-brush-teeth.md
@@ -92,7 +92,7 @@ calendars/social/calendar.toml
 calendars/social/events/2026/05/2026-05-15-friday-drinks-roses.md
 calendars/social/events/2026/05/2026-05-18-coffee-lukas.md
 calendars/social/events/2026/05/2026-05-22-queer-book-club.md
-calendars/social/overrides/vacation/0190d4ab-2b7a-7c50-9c1e-s00000000001/2026-05-31.md
+calendars/social/overrides/vacation/0190d4ab-2b7a-7c50-9c1e-800000000001/2026-05-31.md
 calendars/social/recurrences/family-call.md
 calendars/social/recurrences/text-daddy-morning.md
 calendars/social/recurrences/weekly-daddy-meetup.md

@@ -1,6 +1,6 @@
 +++
 schema_version = 1
-id = "0190d4ab-2b7a-7c50-9c1e-base00000002"
+id = "0190d4ab-2b7a-7c50-9c1e-ba5e00000002"
 kind = "recurrence"
 created_at = 2026-05-09T08:00:00+01:00
 updated_at = 2026-05-22T08:00:00+01:00
