@@ -140,6 +140,12 @@ fun StrictlyKeptBoyTheme(
     }
     val tint: Color? = tintRgb?.let { Color(0xFF000000L or (it and 0xFFFFFFL)) }
 
+    // NB: do NOT blend surfaceContainerHigh / surfaceContainerHighest. M3
+    // AlertDialog + ModalBottomSheet default to surfaceContainerHigh for
+    // their container; tinting those toward the chrome tint makes the dialog
+    // visually merge with the tinted scaffold behind it (reads as
+    // "translucent" even though alpha is 1.0). Keep them on the base scheme
+    // so modals stay distinct.
     val tintedScheme = if (tint == null) baseScheme else baseScheme.copy(
         surface = blendSurface(baseScheme.surface, tint),
         surfaceVariant = blendSurface(baseScheme.surfaceVariant, tint),
@@ -147,8 +153,6 @@ fun StrictlyKeptBoyTheme(
         surfaceContainerLowest = blendSurface(baseScheme.surfaceContainerLowest, tint),
         surfaceContainerLow = blendSurface(baseScheme.surfaceContainerLow, tint),
         surfaceContainer = blendSurface(baseScheme.surfaceContainer, tint),
-        surfaceContainerHigh = blendSurface(baseScheme.surfaceContainerHigh, tint),
-        surfaceContainerHighest = blendSurface(baseScheme.surfaceContainerHighest, tint),
         secondaryContainer = blendSurface(baseScheme.secondaryContainer, tint),
     )
 
