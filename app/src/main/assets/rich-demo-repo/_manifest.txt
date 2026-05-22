@@ -11,8 +11,12 @@ calendars/cat-care/recurrences/feed-morning.md
 calendars/cat-care/recurrences/flea-treatment.md
 calendars/cat-care/recurrences/litter-sun.md
 calendars/cat-care/recurrences/litter-wed.md
+calendars/collar/calendar.toml
+calendars/collar/recurrences/collar-on-home.md
+calendars/outings/calendar.toml
+calendars/outings/events/2026/05/2026-05-22-evening-errands.md
+calendars/outings/recurrences/saturday-groceries.md
 calendars/base/calendar.toml
-calendars/base/recurrences/collar-on-home.md
 calendars/base/recurrences/commute-in.md
 calendars/base/recurrences/commute-out.md
 calendars/base/recurrences/grooming-block.md
