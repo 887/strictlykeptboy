@@ -477,26 +477,40 @@ private fun BandsLayer(
         else if (autoExpand || key in expandedKeys) g.children.map { Renderable(it, null) }
         else listOf(Renderable(makeCollapsedSyntheticBand(g), key))
     }
-    // Pure priority-driven cascade — independent of CalendarKind, so
-    // the on-disk `kind = "base"` field doesn't need to round-trip
-    // through extract→re-extract before the visual works. Bands sort
-    // by ascending priority; bands at the SAME priority value share a
-    // lane (priority groups → lane 0, 1, 2, …). Lowest priority
-    // number lands at lane 0 = full-width, leftmost, behind. Highest
-    // priority cascades furthest right and paints on top.
+    // Dependency-respecting cascade: anything that *depends on*
+    // something else paints to the right of (and on top of) its
+    // dependency target. Two sort keys, in order:
     //
-    // Compose paints in iteration order so sorting by priority asc =
-    // highest priority paints last = on top.
-    val byPaintOrder: List<Renderable> = unsorted.sortedBy { it.band.priority }
-    val priorityToLane: Map<Int, Int> = run {
-        val map = linkedMapOf<Int, Int>()
+    //   1. **Kind rank** — `Base` is the scaffolding everything else
+    //      depends on, so it always lands at the lowest lane numbers
+    //      regardless of priority. Regular / External / Timebox
+    //      events stack on top of it.
+    //   2. **Priority** (ascending) — within a kind, lower priority
+    //      number = lower lane = more scaffold-like. Higher priority
+    //      cascades further right and paints on top.
+    //
+    // Bands sharing both (kind-rank, priority) share a lane. Compose
+    // paints in iteration order, so this sort means "dependencies
+    // paint first → end up behind dependents".
+    fun kindRank(k: com.eight87.strictlykeptboy.resolver.CalendarKind): Int = when (k) {
+        com.eight87.strictlykeptboy.resolver.CalendarKind.Base -> 0
+        com.eight87.strictlykeptboy.resolver.CalendarKind.External -> 1
+        com.eight87.strictlykeptboy.resolver.CalendarKind.Regular -> 2
+        com.eight87.strictlykeptboy.resolver.CalendarKind.Timebox -> 3
+    }
+    val byPaintOrder: List<Renderable> = unsorted.sortedWith(
+        compareBy<Renderable> { kindRank(it.band.kind) }
+            .thenBy { it.band.priority },
+    )
+    val laneIndexById: Map<String, Int> = run {
+        val groupKeyToLane = linkedMapOf<Pair<Int, Int>, Int>()
+        val map = mutableMapOf<String, Int>()
         byPaintOrder.forEach { r ->
-            if (r.band.priority !in map) map[r.band.priority] = map.size
+            val key = kindRank(r.band.kind) to r.band.priority
+            val lane = groupKeyToLane.getOrPut(key) { groupKeyToLane.size }
+            map[r.band.instance.instanceId] = lane
         }
         map
-    }
-    val laneIndexById: Map<String, Int> = byPaintOrder.associate { r ->
-        r.band.instance.instanceId to (priorityToLane[r.band.priority] ?: 0)
     }
     // Selected-band brought to front: paint it dead last (= top of
     // the z-stack) with a halo + elevation per the visual treatment
