@@ -210,6 +210,11 @@ private fun SkbAppShellContent(
     // adding it doesn't invalidate the existing 6-destination test
     // expectations or the top-bar visual budget.
     var tripWizardOpen by rememberSaveable { mutableStateOf(false) }
+    // Settings opens as a full-shell-cover overlay (tonearmboy /
+    // whisperboy parity) rather than swapping the active destination.
+    // The `TopDestination.Settings` enum value is retained for tests +
+    // exhaustive `when` arms but is no longer reachable via the UI.
+    var settingsOpen by rememberSaveable { mutableStateOf(false) }
 
     // Big top-left title = destination name ("Schedule" / "Tasks" / etc.).
     // The rail already shows the current view-mode (rotated "Day" / "Week"
@@ -263,7 +268,7 @@ private fun SkbAppShellContent(
                 // in the row to satisfy `AppShellNavigationSwapTest`; the
                 // avatar is a parallel affordance per user direction.
                 onRepoSwitcherClick = { selected = TopDestination.Repos },
-                onSettingsTap = { selected = TopDestination.Settings },
+                onSettingsTap = { settingsOpen = true },
                 modePrefs = context.settingsAccess.modePrefs,
             )
             Row(modifier = Modifier.fillMaxSize()) {
@@ -284,7 +289,7 @@ private fun SkbAppShellContent(
                         items = railItems,
                         activeIconKind = activeIconKind,
                         onAccountTap = { selected = TopDestination.Repos },
-                        onSettingsTap = { selected = TopDestination.Settings },
+                        onSettingsTap = { settingsOpen = true },
                         overlayPickerCalendars = pickerCalendars,
                         overlayPickerPrefs = context.calendarVisibility,
                         onOverlayPickerClick = { overlayPickerOpen = true },
@@ -314,6 +319,7 @@ private fun SkbAppShellContent(
                         secretsStore = context.secretsStore,
                         settingsAccess = context.settingsAccess,
                         onSelectDest = { selected = it },
+                        onOpenSettings = { settingsOpen = true },
                         onPickInternalStorage = callbacks.onPickInternalStorage,
                         onWizardScaffold = callbacks.onWizardScaffold,
                         onWizardFinish = callbacks.onWizardFinish,
@@ -401,6 +407,29 @@ private fun SkbAppShellContent(
                             android.widget.Toast.LENGTH_SHORT,
                         ).show()
                     },
+                )
+            }
+        }
+        // Settings full-shell overlay (tonearmboy / whisperboy parity).
+        // Mounted at the outer Box root above the (top-bar + rail +
+        // content) Column so its own Surface fully covers the chrome.
+        // Back navigates to the pane underneath without changing
+        // `selected`, so the user returns to whatever destination they
+        // were on when they tapped the cog.
+        if (settingsOpen) {
+            BackHandler { settingsOpen = false }
+            Surface(
+                color = MaterialTheme.colorScheme.background,
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                com.eight87.strictlykeptboy.ui.settings.SettingsOverlayScreen(
+                    importExportState = context.importExportState,
+                    onPickImportFile = callbacks.onPickImportFile,
+                    onPickExportFile = callbacks.onPickExportFile,
+                    access = context.settingsAccess.copy(
+                        onPlanTrip = { tripWizardOpen = true },
+                    ),
+                    onBack = { settingsOpen = false },
                 )
             }
         }

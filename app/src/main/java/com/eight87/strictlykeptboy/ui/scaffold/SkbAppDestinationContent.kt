@@ -60,6 +60,12 @@ internal fun SkbAppDestinationContent(
     secretsStore: SecretsStore?,
     settingsAccess: SettingsAccess,
     onSelectDest: (TopDestination) -> Unit,
+    /**
+     * Opens Settings as a full-shell overlay (tonearmboy / whisperboy
+     * parity). Routed by `SkbAppShellContent` to the `settingsOpen`
+     * overlay state hoisted there.
+     */
+    onOpenSettings: () -> Unit = {},
     onPickInternalStorage: () -> Unit,
     onWizardScaffold: suspend (WizardDraft) -> Result<Unit>,
     onWizardFinish: () -> Unit,
@@ -115,7 +121,7 @@ internal fun SkbAppDestinationContent(
                 secretsStore = secretsStore,
                 onOpenTogether = { onSelectDest(TopDestination.Together) },
                 onOpenWizard = { onSelectDest(TopDestination.Wizard) },
-                onOpenAppSettings = { onSelectDest(TopDestination.Settings) },
+                onOpenAppSettings = onOpenSettings,
                 // Round 2.7.D.2-UI — banner inputs forwarded via SettingsAccess
                 // because that's the only narrow surface that already carries
                 // RepoStoragePrefs + NotificationPrefs into the shell.
