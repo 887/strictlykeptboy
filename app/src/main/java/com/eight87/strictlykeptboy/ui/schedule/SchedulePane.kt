@@ -325,10 +325,67 @@ private fun ScheduleMasterContent(
         }
     }
 
+    // Layout + filter state — hoisted per-tab via rememberSaveable so
+    // tab changes reset to the per-tab default. Stacked = single long
+    // agenda column (default on Week + 3-day); Grid = the per-tab
+    // canonical multi-column / time-positioned view.
+    var layoutMode by androidx.compose.runtime.saveable.rememberSaveable(selectedTab) {
+        androidx.compose.runtime.mutableStateOf(defaultLayoutFor(selectedTab))
+    }
+    val defaults = ScheduleFilterFlags.defaultFor(selectedTab, layoutMode)
+    var fImportant by androidx.compose.runtime.saveable.rememberSaveable(selectedTab, layoutMode) {
+        androidx.compose.runtime.mutableStateOf(defaults.important)
+    }
+    var fActive by androidx.compose.runtime.saveable.rememberSaveable(selectedTab, layoutMode) {
+        androidx.compose.runtime.mutableStateOf(defaults.active)
+    }
+    var fRoutine by androidx.compose.runtime.saveable.rememberSaveable(selectedTab, layoutMode) {
+        androidx.compose.runtime.mutableStateOf(defaults.routine)
+    }
+    val filterFlags = ScheduleFilterFlags(fImportant, fActive, fRoutine)
+    val applyFlags: (ScheduleFilterFlags) -> Unit = { next ->
+        fImportant = next.important
+        fActive = next.active
+        fRoutine = next.routine
+    }
+    val filteredBandSource = androidx.compose.runtime.remember(dayBandSource, filterFlags) {
+        dayBandSource.filteredBy(filterFlags)
+    }
+    val fabEligibleTab = selectedTab == com.eight87.strictlykeptboy.ui.scaffold.ScheduleViewTab.Day ||
+        selectedTab == com.eight87.strictlykeptboy.ui.scaffold.ScheduleViewTab.ThreeDay ||
+        selectedTab == com.eight87.strictlykeptboy.ui.scaffold.ScheduleViewTab.Week
+
+    androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize()) {
     Column(modifier = Modifier.fillMaxSize()) {
         @Suppress("UNUSED_VARIABLE") val _repo = activeRepoName
         @Suppress("UNUSED_VARIABLE") val _sync = onSyncClick
-        when (selectedTab) {
+        // When Stacked layout is active on Day/3-day/Week, render the
+        // same date range as a single agenda column. The Grid branches
+        // below still own the canonical per-tab multi-column views.
+        val stackedDates: List<java.time.LocalDate>? = when {
+            !fabEligibleTab -> null
+            layoutMode != ScheduleLayoutMode.Stacked -> null
+            selectedTab == com.eight87.strictlykeptboy.ui.scaffold.ScheduleViewTab.Day ->
+                listOf(date)
+            selectedTab == com.eight87.strictlykeptboy.ui.scaffold.ScheduleViewTab.ThreeDay ->
+                (0..2).map { date.plusDays(it.toLong()) }
+            selectedTab == com.eight87.strictlykeptboy.ui.scaffold.ScheduleViewTab.Week -> {
+                val monday = date.with(
+                    java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY),
+                )
+                (0..6).map { monday.plusDays(it.toLong()) }
+            }
+            else -> null
+        }
+        if (stackedDates != null) {
+            ScheduleAgendaView(
+                dates = stackedDates,
+                dayBands = filteredBandSource,
+                modifier = Modifier.fillMaxSize(),
+                onBandTap = onBandTap,
+                includeEmptyDays = true,
+            )
+        } else when (selectedTab) {
             // `Now` (renamed from Agenda, replaces old Schedule tab) —
             // today + 6 forward days rendered as an agenda list, reusing
             // the same colored-time row layout the prior Schedule tab used.
@@ -348,7 +405,7 @@ private fun ScheduleMasterContent(
                 }
                 ScheduleThreeDayView(
                     anchor = date,
-                    dayBands = dayBandSource,
+                    dayBands = filteredBandSource,
                     modifier = Modifier.fillMaxSize(),
                     onBandTap = onBandTap,
                     effectiveZoom = effectiveZoom,
@@ -390,7 +447,7 @@ private fun ScheduleMasterContent(
                 val weekStart = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
                 ScheduleWeekView(
                     weekStart = weekStart,
-                    dayBands = dayBandSource,
+                    dayBands = filteredBandSource,
                     modifier = Modifier.fillMaxSize(),
                     onBandTap = onBandTap,
                     onSwipeWeek = { delta -> state.setDate(date.plusWeeks(delta.toLong())) },
@@ -421,6 +478,20 @@ private fun ScheduleMasterContent(
             )
         }
     }
+    // Shutterboy-style FAB cluster — layout toggle + filter menu.
+    // Only renders on Day / 3-day / Week (the tabs the layout
+    // toggle is meaningful for). Sits at bottom-end of the pane,
+    // above the system nav bar.
+    if (fabEligibleTab) {
+        ScheduleFloatingActions(
+            layout = layoutMode,
+            onLayoutChange = { layoutMode = it },
+            flags = filterFlags,
+            onFlagsChange = applyFlags,
+            modifier = Modifier.align(androidx.compose.ui.Alignment.BottomEnd),
+        )
+    }
+    }  // end outer Box
 }
 
 @Composable
