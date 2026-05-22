@@ -292,12 +292,25 @@ private fun ScrollbarThumb(
             .padding(end = thumbWidth + 4.dp)
             .semantics { testTag = "fast_scrollbar_section_$label" },
         ) {
-          Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
-          )
+          // Tonearmboy / shutterboy parity — every section-chip
+          // floaty gets a tonal pill background so it reads cleanly
+          // on top of arbitrary content (was previously a bare Text
+          // that vanished against busy band colours). Uses
+          // `secondaryContainer` so the chip has visible contrast on
+          // both light and dark themes.
+          androidx.compose.material3.Surface(
+            shape = androidx.compose.foundation.shape.CircleShape,
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            shadowElevation = 2.dp,
+          ) {
+            Text(
+              text = label,
+              style = MaterialTheme.typography.labelSmall,
+              fontWeight = FontWeight.Bold,
+              color = MaterialTheme.colorScheme.onSecondaryContainer,
+              modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
+            )
+          }
         }
       }
     }
