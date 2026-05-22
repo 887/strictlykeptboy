@@ -477,29 +477,27 @@ private fun BandsLayer(
         else if (autoExpand || key in expandedKeys) g.children.map { Renderable(it, null) }
         else listOf(Renderable(makeCollapsedSyntheticBand(g), key))
     }
-    // Priority-ordered cascade — base layers paint first at lane 0
-    // full-width (the day's scaffold: work / sleep / commute / leisure
-    // / chores). Non-base bands cascade right by lane index 1, 2, 3, …
-    // in *ascending priority* order, so the lowest-priority overlay
-    // sits one notch right of the base and the highest-priority
-    // overlay sits furthest right and paints on top. Z-order = paint
-    // order, so highest priority paints last = on top.
+    // Pure priority-driven cascade — independent of CalendarKind, so
+    // the on-disk `kind = "base"` field doesn't need to round-trip
+    // through extract→re-extract before the visual works. Bands sort
+    // by ascending priority; bands at the SAME priority value share a
+    // lane (priority groups → lane 0, 1, 2, …). Lowest priority
+    // number lands at lane 0 = full-width, leftmost, behind. Highest
+    // priority cascades furthest right and paints on top.
     //
-    // Splitting the lane enumeration in two passes (base first, then
-    // non-base) ensures non-base bands start at lane 1 rather than
-    // lane N+1 (where N = number of base bands on this day) — the
-    // previous single-list enumeration pushed every overlay way out
-    // to the right when the demo had several base recurrences.
-    val baseRenderables = unsorted.filter {
-        it.band.kind == com.eight87.strictlykeptboy.resolver.CalendarKind.Base
+    // Compose paints in iteration order so sorting by priority asc =
+    // highest priority paints last = on top.
+    val byPaintOrder: List<Renderable> = unsorted.sortedBy { it.band.priority }
+    val priorityToLane: Map<Int, Int> = run {
+        val map = linkedMapOf<Int, Int>()
+        byPaintOrder.forEach { r ->
+            if (r.band.priority !in map) map[r.band.priority] = map.size
+        }
+        map
     }
-    val nonBaseRenderables = unsorted
-        .filterNot { it.band.kind == com.eight87.strictlykeptboy.resolver.CalendarKind.Base }
-        .sortedBy { it.band.priority }
-    val laneIndexById: Map<String, Int> = nonBaseRenderables
-        .mapIndexed { idx, r -> r.band.instance.instanceId to (idx + 1) }
-        .toMap()
-    val byPaintOrder: List<Renderable> = baseRenderables + nonBaseRenderables
+    val laneIndexById: Map<String, Int> = byPaintOrder.associate { r ->
+        r.band.instance.instanceId to (priorityToLane[r.band.priority] ?: 0)
+    }
     // Selected-band brought to front: paint it dead last (= top of
     // the z-stack) with a halo + elevation per the visual treatment
     // below. Its lane-index keeps its priority-derived offset, so the
@@ -517,11 +515,12 @@ private fun BandsLayer(
         // thin sliver under higher-priority overlays.
         val cascadeStep = 14.dp
         renderables.forEach { (band, groupKey) ->
-            val isBase = band.kind == com.eight87.strictlykeptboy.resolver.CalendarKind.Base
-            // Base layers ignore lane cascade: they always paint full-width
-            // as the day's scaffolding so on-top events read cleanly.
-            val laneIdx = if (isBase) 0
-            else laneIndexById[band.instance.instanceId] ?: 0
+            val laneIdx = laneIndexById[band.instance.instanceId] ?: 0
+            // Lane 0 = the day's scaffolding (lowest priority value)
+            // → full width, behind everything. Treated as "base" for
+            // alpha purposes regardless of CalendarKind. Higher lanes
+            // = events stacking on top with progressive right offset.
+            val isBase = laneIdx == 0
             val cascadeX = cascadeStep * laneIdx
             val bandWidth = (widthPx - cascadeX - 4.dp).coerceAtLeast(48.dp)
 
