@@ -272,32 +272,26 @@ private fun SkbAppShellContent(
                 modePrefs = context.settingsAccess.modePrefs,
             )
             Row(modifier = Modifier.fillMaxSize()) {
-                // Left rail only renders when the destination has view-mode
-                // tabs to show. Settings/Repos/Wizard have no view-modes so
-                // the rail collapses and the pane spans edge-to-edge (user
-                // direction 2026-05-13 — "still space on the left").
-                if (railItems.isNotEmpty()) {
-                    // Round 2.22 / Fix 2 — overlay-picker icon now lives at
-                    // the bottom of the rail (tonearmboy LibraryRail
-                    // parity). Only the Schedule destination has the
-                    // picker wiring; other rail-bearing destinations pass
-                    // nulls and the bottom slot collapses.
-                    val pickerCalendars = if (selected == TopDestination.Schedule) {
-                        context.scheduleState.calendarsFlow
-                    } else null
-                    RailColumn(
-                        items = railItems,
-                        activeIconKind = activeIconKind,
-                        onAccountTap = { selected = TopDestination.Repos },
-                        onSettingsTap = { settingsOpen = true },
-                        overlayPickerCalendars = pickerCalendars,
-                        overlayPickerPrefs = context.calendarVisibility,
-                        onOverlayPickerClick = { overlayPickerOpen = true },
-                        onEditScheduleClick = if (selected == TopDestination.Schedule) {
-                            { editScheduleOpen = true }
-                        } else null,
-                    )
-                }
+                // Left rail is always present — even on destinations
+                // without view-mode tabs (Repos / Wizard / Together)
+                // — because it now carries the bat-avatar repo
+                // switcher at the bottom-most slot. Tonearmboy /
+                // whisperboy / shutterboy parity.
+                val pickerCalendars = if (selected == TopDestination.Schedule) {
+                    context.scheduleState.calendarsFlow
+                } else null
+                RailColumn(
+                    items = railItems,
+                    activeIconKind = activeIconKind,
+                    onAccountTap = { selected = TopDestination.Repos },
+                    onSettingsTap = { settingsOpen = true },
+                    overlayPickerCalendars = pickerCalendars,
+                    overlayPickerPrefs = context.calendarVisibility,
+                    onOverlayPickerClick = { overlayPickerOpen = true },
+                    onEditScheduleClick = if (selected == TopDestination.Schedule) {
+                        { editScheduleOpen = true }
+                    } else null,
+                )
                 Box(
                     modifier = Modifier.fillMaxSize().testTag(TestTagShellContent),
                 ) {

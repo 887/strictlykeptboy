@@ -129,13 +129,14 @@ internal fun ShellTopBar(
                     modifier = Modifier.size(22.dp),
                 )
             }
-            IdentityAvatar(
-                onClick = onRepoSwitcherClick,
-                iconKind = activeIconKind,
-                sizeDp = 40,
-            )
-            // Keep params referenced so an accidental removal of either
-            // ModePill/SyncButton call-site doesn't silently lose meaning.
+            // Repo-avatar was moved to the rail bottom-left
+            // (tonearmboy / whisperboy / shutterboy parity — the top-bar
+            // carries Android-style icon buttons only). Repo switching
+            // is also reachable from Settings; the rail avatar is just
+            // a shortcut. Keep callbacks referenced so call-sites stay
+            // valid.
+            @Suppress("UNUSED_EXPRESSION") onRepoSwitcherClick
+            @Suppress("UNUSED_EXPRESSION") activeIconKind
             @Suppress("UNUSED_EXPRESSION") modePrefs
             @Suppress("UNUSED_EXPRESSION") onSyncClick
             @Suppress("UNUSED_EXPRESSION") onIdentityClick

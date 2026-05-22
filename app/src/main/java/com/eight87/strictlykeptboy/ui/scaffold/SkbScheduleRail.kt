@@ -159,17 +159,25 @@ internal fun RailColumn(
                     calendarsFlow = overlayPickerCalendars,
                     visibilityPrefs = overlayPickerPrefs,
                     onClick = onOverlayPickerClick,
-                    modifier = Modifier.padding(bottom = 8.dp),
+                    modifier = Modifier.padding(bottom = 4.dp),
                 )
-            } else {
-                Spacer(Modifier.height(12.dp))
             }
+            // BOTTOM-MOST: repo avatar. Tapping switches repo (= opens
+            // the Repos destination). Per user direction this is the
+            // canonical home for the bat avatar — the top-bar now
+            // carries Android-style icon buttons only (tonearmboy /
+            // whisperboy / shutterboy parity). Repo management is also
+            // reachable from Settings; the rail-bottom avatar is just a
+            // shortcut.
+            com.eight87.strictlykeptboy.ui.components.IdentityAvatar(
+                onClick = onAccountTap,
+                iconKind = activeIconKind,
+                sizeDp = 36,
+                modifier = Modifier.padding(bottom = 12.dp),
+            )
         }
     }
-    // Keep params referenced so callers retain the existing surface
-    // (account/settings slots may return in a tablet expansion).
-    @Suppress("UNUSED_EXPRESSION") activeIconKind
-    @Suppress("UNUSED_EXPRESSION") onAccountTap
+    // Keep params referenced so callers retain the existing surface.
     @Suppress("UNUSED_EXPRESSION") onSettingsTap
 }
 
