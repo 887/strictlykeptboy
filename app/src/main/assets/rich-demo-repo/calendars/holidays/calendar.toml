@@ -1,6 +1,6 @@
 schema_version = 1
 id = "0190a0aa-1c1d-7000-8a0a-000000000009"
-kind = "timebox"
+kind = "base"
 name = "Public holidays"
 emoji = "🇬🇧"
 color = "#d4af37"
@@ -8,6 +8,20 @@ color_seed = 15684432
 priority = 950
 tz_id = "Europe/London"
 created_at = 2026-01-01T00:00:00+01:00
-updated_at = 2026-05-09T08:00:00+01:00
+updated_at = 2026-05-23T20:00:00+01:00
 author = "01900000-0000-7000-8000-0000000000b0"
 non_superseable = true
+# Round 2026-05-23 — public holidays are a SPECIAL BASE layer
+# (Lane 0, priority 950). On Christmas Day / bank holidays the
+# Lane-1 work/commute/routine stack disappears; sleep, cat-care
+# and kinky-rituals continue (cage stays on, cat still gets fed).
+supersedes = [
+    "0190a0aa-1c1d-7000-8a0a-000000000003",
+    "0190a0aa-1c1d-7000-8a0a-000000000001",
+    "0190a0aa-1c1d-7000-8a0a-000000000002",
+    "0190a0aa-1c1d-7000-8a0a-000000000004",
+    "0190a0aa-1c1d-7000-8a0a-000000000006",
+    "0190a0aa-1c1d-7000-8a0a-000000000021",
+    "0190a0aa-1c1d-7000-8a0a-000000000020",
+    "0190a0aa-1c1d-7000-8a0a-00000000000d",
+]

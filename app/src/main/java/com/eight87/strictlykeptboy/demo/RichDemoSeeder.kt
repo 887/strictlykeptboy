@@ -148,6 +148,6 @@ class RichDemoSeeder(
         // cage-feels-midweek, proof-photo one-offs, seeded response)
         // and Phase F persona realism (gaming / voice-chat / play
         // calendars, work-sprint tasks, convention exception).
-        const val KEY_SEEDED = "pref_rich_demo_seeded_v2"
+        const val KEY_SEEDED = "pref_rich_demo_seeded_v3"
     }
 }
