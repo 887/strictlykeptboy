@@ -46,6 +46,8 @@ class SettingsNavigationTest {
         templateIds = listOf("atomic-medical", "atomic-flight"),
     )
 
+    private lateinit var testState: SettingsPaneState
+
     private fun renderAt(widthClass: WindowWidthSizeClass) {
         composeRule.setContent {
             StrictlyKeptBoyTheme {
@@ -54,7 +56,12 @@ class SettingsNavigationTest {
                     // verticalScroll inside fillMaxSize, so the host needs a
                     // finite height for Robolectric to lay it out.
                     Box(Modifier.size(width = 800.dp, height = 1600.dp)) {
-                        SettingsPane(importExportState = null, access = fullAccess())
+                        testState = rememberSettingsPaneState()
+                        SettingsPane(
+                            importExportState = null,
+                            access = fullAccess(),
+                            state = testState,
+                        )
                     }
                 }
             }
@@ -70,14 +77,22 @@ class SettingsNavigationTest {
     )
 
     @Test fun compact_routes_each_category_to_stacked_content() {
+        // Post `ui(settings)` header-chrome cleanup, the back button
+        // lives on SettingsOverlayScreen's TopAppBar, not inside
+        // SettingsPane itself. The pane just swaps content when a
+        // category is selected, and the test pops back via the
+        // hoisted SettingsPaneState the harness passes in.
         renderAt(WindowWidthSizeClass.Compact)
         for (tag in allCategoryTags) {
             composeRule.onNodeWithTag(TestTagSettingsCategoryList)
                 .performScrollToNode(hasTestTag("$TestTagSettingsCategoryPrefix$tag"))
             composeRule.onNodeWithTag("$TestTagSettingsCategoryPrefix$tag").performClick()
             composeRule.onNodeWithTag(TestTagSettingsContent).assertExists()
-            composeRule.onNodeWithTag(TestTagSettingsBack).assertExists()
-            composeRule.onNodeWithTag(TestTagSettingsBack).performClick()
+            // Pop back to the category list via the hoisted state
+            // (the outer overlay would handle this in production via
+            // the TopAppBar back arrow — the pane itself no longer
+            // renders chrome).
+            composeRule.runOnIdle { testState.popToCategoryList() }
         }
     }
 

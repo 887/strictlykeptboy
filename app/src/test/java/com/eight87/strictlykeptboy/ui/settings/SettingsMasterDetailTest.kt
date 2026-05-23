@@ -44,9 +44,12 @@ class SettingsMasterDetailTest {
         composeRule.onNodeWithTag(TestTagSettingsCategoryList).assertExists()
         composeRule.onNodeWithTag(TestTagMasterDetailRow).assertDoesNotExist()
         // Tap the Repos category — content swaps in (single-pane push).
+        // Post `ui(settings): unify header chrome` the back button lives
+        // on the outer overlay's TopAppBar (SettingsOverlayScreen), not
+        // inside the pane, so we no longer assert TestTagSettingsBack
+        // here.
         composeRule.onNodeWithTag("${TestTagSettingsCategoryPrefix}Repos").performClick()
         composeRule.onNodeWithTag(TestTagSettingsContent).assertExists()
-        composeRule.onNodeWithTag(TestTagSettingsBack).assertExists()
     }
 
     @Test fun medium_shows_two_pane() {

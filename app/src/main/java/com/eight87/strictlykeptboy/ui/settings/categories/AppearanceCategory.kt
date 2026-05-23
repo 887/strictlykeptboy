@@ -61,6 +61,8 @@ import com.eight87.strictlykeptboy.theme.DensityScale
 import com.eight87.strictlykeptboy.theme.ThemeMode
 import com.eight87.strictlykeptboy.theme.baseThemeMatch
 import com.eight87.strictlykeptboy.theme.baseThemePickerOptions
+import com.eight87.strictlykeptboy.ui.components.CategoryAccentName
+import com.eight87.strictlykeptboy.ui.components.CategoryIconCircle
 import com.eight87.strictlykeptboy.ui.components.ColorPickerDialog
 import com.eight87.strictlykeptboy.ui.wizard.NeutralModePrefs
 import com.eight87.strictlykeptboy.avatar.AvatarPackPrefs
@@ -97,30 +99,17 @@ fun AppearanceCategory(
     onJumpToLifestyleNeutral: () -> Unit = {},
 ) {
     val state by prefs.state.collectAsState()
-    var query by remember { mutableStateOf("") }
-    val q = query.trim().lowercase()
-    fun matches(vararg kw: String): Boolean =
-        q.isEmpty() || kw.any { it.lowercase().contains(q) }
-
-    val showTheme = matches(
-        "theme", "dark", "light", "auto", "system", "appearance",
-        "dynamic", "material you", "color", "colour", "palette", "wallpaper",
-        "base", "tint", "pure black", "custom color", "swatch", "repo", "avatar",
-    )
-    val showDensity = matches(
-        "density", "compact", "comfortable", "spacious", "spacing", "dense", "padding",
-    )
-    val showFontScale = matches(
-        "font", "size", "scale", "text", "readable", "accessibility",
-    )
-    val showNeutral = matches(
-        "neutral", "kink", "role", "templates", "discreet", "privacy", "hide",
-    )
-    val showStickers = (avatarPackPrefs != null && packStore != null) && matches(
-        "sticker", "pack", "avatar", "animal", "species", "bat", "fox", "tiger", "lion", "wolf", "bunny", "cat",
-    )
-
-    val nothingMatched = !showTheme && !showDensity && !showFontScale && !showNeutral && !showStickers
+    // Inline per-subpage search retired (post-`ui(settings)` cleanup).
+    // The top-level Settings search now indexes every subpage row via
+    // SettingsSearchRegistry, so a second search field here would be
+    // both visually noisy and functionally redundant. All sections
+    // render unconditionally; theme + display + neutral hits surface
+    // through the outer search.
+    val showTheme = true
+    val showDensity = true
+    val showFontScale = true
+    val showNeutral = true
+    val showStickers = avatarPackPrefs != null && packStore != null
 
     Column(
         modifier = modifier
@@ -129,36 +118,6 @@ fun AppearanceCategory(
             .padding(vertical = 8.dp)
             .testTag(TestTagCatAppearance),
     ) {
-        TextField(
-            value = query,
-            onValueChange = { query = it },
-            placeholder = { Text(stringResource(R.string.settings_appearance_search_placeholder)) },
-            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-            singleLine = true,
-            shape = RoundedCornerShape(28.dp),
-            colors = TextFieldDefaults.colors(
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-                disabledIndicatorColor = Color.Transparent,
-                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp)
-                .testTag("$TestTagCatAppearance-Search"),
-        )
-
-        if (nothingMatched) {
-            Text(
-                text = stringResource(R.string.settings_appearance_no_results, query),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(24.dp),
-            )
-            return@Column
-        }
-
         if (showTheme) {
             SectionHeader(stringResource(R.string.settings_appearance_section_theme))
             // Look-and-feel parity port — 4-row Theme section (tonearmboy
@@ -170,7 +129,7 @@ fun AppearanceCategory(
             CategoryCard {
                 ThemeListItem(
                     icon = Icons.Outlined.Brightness6,
-                    tint = MaterialTheme.colorScheme.primary,
+                    accent = CategoryAccentName.SkyBlue,
                     label = stringResource(R.string.settings_appearance_theme),
                     supporting = themeModeLabel(state.themeMode),
                     onClick = { showThemeDialog = true },
@@ -179,7 +138,7 @@ fun AppearanceCategory(
                 RowDivider()
                 ThemeListItem(
                     icon = Icons.Outlined.Palette,
-                    tint = MaterialTheme.colorScheme.secondary,
+                    accent = CategoryAccentName.Magenta,
                     label = stringResource(R.string.settings_appearance_base_theme),
                     supporting = baseThemeLabel(state.baseTheme),
                     onClick = { showBaseThemeDialog = true },
@@ -191,7 +150,7 @@ fun AppearanceCategory(
                 RowDivider()
                 ToggleRowM3(
                     icon = Icons.Outlined.ColorLens,
-                    tint = MaterialTheme.colorScheme.tertiary,
+                    accent = CategoryAccentName.Orange,
                     label = stringResource(R.string.settings_appearance_tint_by_repo_avatar),
                     subtitle = stringResource(R.string.settings_appearance_tint_by_repo_avatar_subtitle),
                     checked = state.tintByRepoAvatar,
@@ -201,7 +160,7 @@ fun AppearanceCategory(
                 RowDivider()
                 ThemeListItem(
                     icon = Icons.Outlined.ColorLens,
-                    tint = MaterialTheme.colorScheme.primary,
+                    accent = CategoryAccentName.Purple,
                     label = stringResource(R.string.settings_appearance_custom_chrome_tint),
                     supporting = if (state.customChromeTint == 0L) {
                         stringResource(R.string.settings_appearance_custom_chrome_tint_unset)
@@ -276,7 +235,7 @@ fun AppearanceCategory(
                 if (showDensity) {
                     PickerRow(
                         icon = Icons.Outlined.SpaceBar,
-                        tint = MaterialTheme.colorScheme.primary,
+                        accent = CategoryAccentName.Cyan,
                         label = stringResource(R.string.settings_appearance_density),
                         subtitle = stringResource(R.string.settings_appearance_density_subtitle),
                     ) {
@@ -302,7 +261,7 @@ fun AppearanceCategory(
                     var fontScale by remember { mutableFloatStateOf(state.densityScale.multiplier) }
                     PickerRow(
                         icon = Icons.Outlined.FormatSize,
-                        tint = MaterialTheme.colorScheme.tertiary,
+                        accent = CategoryAccentName.Teal,
                         label = stringResource(
                             R.string.settings_appearance_font_scale,
                             "%.2f".format(fontScale),
@@ -341,7 +300,7 @@ fun AppearanceCategory(
                         )
                     },
                     leadingContent = {
-                        LeadingBadge(Icons.Outlined.VisibilityOff, MaterialTheme.colorScheme.tertiary)
+                        LeadingBadge(Icons.Outlined.VisibilityOff, CategoryAccentName.Indigo)
                     },
                     trailingContent = {
                         androidx.compose.material3.TextButton(
@@ -390,7 +349,7 @@ private fun StickerPackSection(
     CategoryCard {
         PickerRow(
             icon = Icons.Outlined.Palette,
-            tint = MaterialTheme.colorScheme.primary,
+            accent = CategoryAccentName.Pink,
             label = stringResource(R.string.settings_appearance_sticker_pack),
             subtitle = stringResource(R.string.settings_appearance_sticker_pack_subtitle),
         ) {
@@ -453,22 +412,32 @@ private fun CategoryCard(content: @Composable () -> Unit) {
     ) { content() }
 }
 
+/**
+ * M3E colourful row icon — the shutterboy-parity treatment ported
+ * from the top-level category list to every subpage row. Replaces the
+ * old `tint.copy(alpha = 0.18f)` watery-square look so the theme is
+ * consistent end-to-end.
+ */
 @Composable
-private fun LeadingBadge(icon: ImageVector, tint: Color) {
-    Box(
-        modifier = Modifier
-            .size(40.dp)
-            .background(color = tint.copy(alpha = 0.18f), shape = CircleShape),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(imageVector = icon, contentDescription = null, tint = tint)
-    }
+private fun LeadingBadge(icon: ImageVector, accent: CategoryAccentName) {
+    CategoryIconCircle(icon = icon, accentName = accent, contentDescription = null)
+}
+
+/** Legacy two-arg form kept for the few neutral-mode call site below. */
+@Composable
+private fun LeadingBadge(icon: ImageVector, @Suppress("UNUSED_PARAMETER") tint: Color) {
+    // Map onto a sensible accent — the colour argument is ignored;
+    // each call site that still uses this overload is at a row that
+    // doesn't have a strong semantic colour mapping (e.g. the neutral-
+    // mode deeplink). Magenta keeps it visually paired with the
+    // Appearance category accent.
+    LeadingBadge(icon, CategoryAccentName.Magenta)
 }
 
 @Composable
 private fun PickerRow(
     icon: ImageVector,
-    tint: Color,
+    accent: CategoryAccentName,
     label: String,
     subtitle: String,
     content: @Composable () -> Unit,
@@ -479,7 +448,7 @@ private fun PickerRow(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.Top,
     ) {
-        LeadingBadge(icon, tint)
+        LeadingBadge(icon, accent)
         Spacer(Modifier.size(16.dp))
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(label, style = MaterialTheme.typography.bodyLarge)
@@ -500,7 +469,7 @@ private fun PickerRow(
 @Composable
 private fun ToggleRowM3(
     icon: ImageVector,
-    tint: Color,
+    accent: CategoryAccentName,
     label: String,
     subtitle: String,
     checked: Boolean,
@@ -516,7 +485,7 @@ private fun ToggleRowM3(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         },
-        leadingContent = { LeadingBadge(icon, tint) },
+        leadingContent = { LeadingBadge(icon, accent) },
         trailingContent = {
             Switch(
                 checked = checked,
@@ -539,7 +508,7 @@ private fun RowDivider() {
 @Composable
 private fun ThemeListItem(
     icon: ImageVector,
-    tint: Color,
+    accent: CategoryAccentName,
     label: String,
     supporting: String,
     onClick: () -> Unit,
@@ -555,7 +524,7 @@ private fun ThemeListItem(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         },
-        leadingContent = { LeadingBadge(icon, tint) },
+        leadingContent = { LeadingBadge(icon, accent) },
         trailingContent = trailing,
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
         modifier = Modifier

@@ -285,6 +285,57 @@ data class SettingsAccess(
     val onPublishToOsChanged: (Boolean) -> Unit = { _ -> },
 )
 
+/**
+ * Hoisted state for [SettingsPane]. Lets the enclosing overlay /
+ * scaffold drive the title / back behaviour from a single source of
+ * truth, instead of the pane rendering its own redundant header.
+ *
+ * In compact mode (`compactPushed == true`), the outer chrome should
+ * show [activeCategory]'s label and invoke [popToCategoryList] when the
+ * user hits the back arrow. In master-detail mode the pane is always
+ * in "category-list visible" state, so `compactPushed` stays false.
+ */
+class SettingsPaneState internal constructor(
+    initialSelectedTag: String,
+    initialCompactPushed: Boolean,
+) {
+    var selectedTag: String by mutableStateOf(initialSelectedTag)
+        internal set
+    var compactPushed: Boolean by mutableStateOf(initialCompactPushed)
+        internal set
+
+    val activeCategory: SettingsCategory
+        get() = SettingsCategory.fromTag(selectedTag) ?: SettingsCategory.Repos
+
+    fun selectCategory(cat: SettingsCategory) {
+        selectedTag = cat.testTag
+        compactPushed = true
+    }
+
+    fun popToCategoryList() {
+        compactPushed = false
+    }
+}
+
+@Composable
+fun rememberSettingsPaneState(
+    initialCategory: SettingsCategory = SettingsCategory.Repos,
+): SettingsPaneState {
+    val tag = rememberSaveable { mutableStateOf(initialCategory.testTag) }
+    val pushed = rememberSaveable { mutableStateOf(false) }
+    return remember {
+        SettingsPaneState(tag.value, pushed.value).also {
+            // wire the saveable state through so process death restores correctly
+            it.selectedTag = tag.value
+            it.compactPushed = pushed.value
+        }
+    }.also {
+        // keep the saveables in sync with the holder
+        tag.value = it.selectedTag
+        pushed.value = it.compactPushed
+    }
+}
+
 @Composable
 fun SettingsPane(
     importExportState: ImportExportViewState?,
@@ -292,21 +343,16 @@ fun SettingsPane(
     onPickImportFile: (RepoConfig) -> Unit = {},
     onPickExportFile: (RepoConfig) -> Unit = {},
     access: SettingsAccess = SettingsAccess(),
+    state: SettingsPaneState = rememberSettingsPaneState(),
 ) {
     val widthClass = LocalWindowWidthSizeClass.current
-    var selectedTag by rememberSaveable { mutableStateOf(SettingsCategory.Repos.testTag) }
-    val selected = remember(selectedTag) {
-        SettingsCategory.fromTag(selectedTag) ?: SettingsCategory.Repos
-    }
-    var compactPushed by rememberSaveable { mutableStateOf(false) }
+    val selected = state.activeCategory
 
     val categoryList: @Composable () -> Unit = {
         SettingsCategoryList(
             selected = selected,
-            onSelect = { cat ->
-                selectedTag = cat.testTag
-                compactPushed = true
-            },
+            onSelect = { cat -> state.selectCategory(cat) },
+            onJumpTo = { cat -> state.selectCategory(cat) },
         )
     }
 
@@ -317,14 +363,8 @@ fun SettingsPane(
             onPickImportFile = onPickImportFile,
             onPickExportFile = onPickExportFile,
             access = access,
-            onJumpToIdentity = {
-                selectedTag = SettingsCategory.Identity.testTag
-                compactPushed = true
-            },
-            onJumpToLifestyle = {
-                selectedTag = SettingsCategory.Lifestyle.testTag
-                compactPushed = true
-            },
+            onJumpToIdentity = { state.selectCategory(SettingsCategory.Identity) },
+            onJumpToLifestyle = { state.selectCategory(SettingsCategory.Lifestyle) },
         )
     }
 
@@ -336,30 +376,13 @@ fun SettingsPane(
                 detail = content,
             )
         } else {
-            if (compactPushed) {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    Surface(color = MaterialTheme.colorScheme.surface) {
-                        androidx.compose.foundation.layout.Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
-                        ) {
-                            IconButton(
-                                onClick = { compactPushed = false },
-                                modifier = Modifier.testTag(TestTagSettingsBack),
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = stringResource(R.string.settings_back_to_categories),
-                                )
-                            }
-                            Text(
-                                text = stringResource(selected.labelRes),
-                                style = MaterialTheme.typography.titleMedium,
-                            )
-                        }
-                    }
-                    Box(modifier = Modifier.weight(1f).fillMaxWidth()) { content() }
-                }
+            // Compact: the outer overlay's TopAppBar shows the subpage
+            // title + back arrow (see SettingsOverlayScreen). The pane
+            // itself just renders the active content (no duplicate
+            // header strip). When not pushed, the category list is the
+            // root content.
+            if (state.compactPushed) {
+                content()
             } else {
                 categoryList()
             }
@@ -494,12 +517,19 @@ private val sections: List<SettingsSection> = listOf(
 private fun SettingsCategoryList(
     selected: SettingsCategory,
     onSelect: (SettingsCategory) -> Unit,
+    onJumpTo: (SettingsCategory) -> Unit = onSelect,
 ) {
     var query by remember { mutableStateOf("") }
     // 2.1.E.9 — index label + subtitle + per-category searchKeywordRes
     // (mirrors AppearanceCategory's pattern). Drops the testTag-substring
     // fallback so the user typing "neutral" or "tablet" gets sensible hits.
     val ctx = androidx.compose.ui.platform.LocalContext.current
+    // Cross-subpage search index — flat list of every searchable row
+    // declared by each subpage. The top-level search filters this
+    // index too, so typing "density" surfaces "Look and Feel → Density"
+    // even though the row lives inside Appearance, not in the category
+    // list itself.
+    val searchEntries = remember { SettingsSearchRegistry.allEntries(ctx) }
     val visibleSections = remember(query) {
         val q = query.trim().lowercase()
         if (q.isEmpty()) sections
@@ -513,6 +543,15 @@ private fun SettingsCategoryList(
                 label.contains(q) || subtitle.contains(q) || keywords.contains(q)
             }
             if (kept.isEmpty()) null else SettingsSection(sec.titleRes, kept)
+        }
+    }
+    val crossHits: List<SearchableSettingsEntry> = remember(query) {
+        val q = query.trim().lowercase()
+        if (q.isEmpty()) emptyList()
+        else searchEntries.filter { e ->
+            e.title.lowercase().contains(q) ||
+                e.subtitle.lowercase().contains(q) ||
+                e.keywords.any { it.lowercase().contains(q) }
         }
     }
     Column(
@@ -549,6 +588,59 @@ private fun SettingsCategoryList(
                 .padding(horizontal = 16.dp, vertical = 12.dp)
                 .testTag("SettingsSearchField"),
         )
+
+        // Cross-subpage search results — show a flat "Inside settings"
+        // card when the user types a query that matches rows inside
+        // subpages (not just category names). Tapping a hit jumps to
+        // the owning subpage.
+        if (crossHits.isNotEmpty()) {
+            Text(
+                text = stringResource(R.string.settings_search_inside_results),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
+            )
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                ),
+                shape = RoundedCornerShape(20.dp),
+            ) {
+                crossHits.forEachIndexed { idx, hit ->
+                    val accent = hit.accent ?: subpageAccent(hit.category)
+                    ListItem(
+                        headlineContent = { Text(hit.title) },
+                        supportingContent = {
+                            Text(
+                                "${ctx.getString(hit.category.labelRes)} • ${hit.subtitle}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        },
+                        leadingContent = {
+                            CategoryIconCircle(
+                                icon = hit.icon ?: Icons.Filled.Tune,
+                                accentName = accent,
+                                contentDescription = null,
+                            )
+                        },
+                        colors = ListItemDefaults.colors(
+                            containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                        ),
+                        modifier = Modifier
+                            .testTag("SettingsSearchHit-${hit.category.testTag}-${hit.title}")
+                            .clickable { onJumpTo(hit.category) },
+                    )
+                    if (idx < crossHits.lastIndex) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(start = 72.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                        )
+                    }
+                }
+            }
+        }
 
         visibleSections.forEach { section ->
             Text(
@@ -834,6 +926,30 @@ private fun StorageCategoryHost(
 }
 
 private enum class StorageSubScreen { Rows, Folder, BackupRestore }
+
+/**
+ * Default accent to use for a cross-search result whose entry didn't
+ * declare its own. Mirrors `metaFor(cat).accent` but is non-composable
+ * so it works in the search-hit render path.
+ */
+private fun subpageAccent(cat: SettingsCategory): CategoryAccentName = when (cat) {
+    SettingsCategory.Appearance -> CategoryAccentName.Magenta
+    SettingsCategory.Repos -> CategoryAccentName.SkyBlue
+    SettingsCategory.CalDav -> CategoryAccentName.SkyBlue
+    SettingsCategory.Calendars -> CategoryAccentName.Teal
+    SettingsCategory.Todolists -> CategoryAccentName.Green
+    SettingsCategory.Templates -> CategoryAccentName.Orange
+    SettingsCategory.Sync -> CategoryAccentName.SkyBlue
+    SettingsCategory.Notifications -> CategoryAccentName.Red
+    SettingsCategory.Mode -> CategoryAccentName.Indigo
+    SettingsCategory.Lifestyle -> CategoryAccentName.Purple
+    SettingsCategory.Identity -> CategoryAccentName.Pink
+    SettingsCategory.About -> CategoryAccentName.Orange
+    SettingsCategory.Access -> CategoryAccentName.Amber
+    SettingsCategory.AutoTablet -> CategoryAccentName.Cyan
+    SettingsCategory.Storage -> CategoryAccentName.Brown
+    SettingsCategory.ExternalCalendars -> CategoryAccentName.SkyBlue
+}
 
 @Composable
 private fun CategoryPlaceholder(label: String) {

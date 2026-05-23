@@ -17,6 +17,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.git.RepoConfig
+import com.eight87.strictlykeptboy.ui.adaptive.LocalWindowWidthSizeClass
+import com.eight87.strictlykeptboy.ui.adaptive.isTwoPane
 import com.eight87.strictlykeptboy.ui.import_export.ImportExportViewState
 
 const val TestTagSettingsOverlay = "SettingsOverlay"
@@ -30,8 +32,12 @@ const val TestTagSettingsOverlayBack = "SettingsOverlayBack"
  * dismisses the overlay (returning the user to whatever pane they
  * were on when they tapped the cog).
  *
- * The body is the existing [SettingsPane] verbatim — only the outer
- * chrome (TopAppBar + back arrow + dismiss wiring) is new.
+ * Header chrome rule (post-`ui(settings)` cleanup): the TopAppBar here
+ * is the ONLY header in the Settings stack. When the user has drilled
+ * into a subpage on a compact-width screen, the bar swaps to show the
+ * subpage label and the back arrow pops back to the category list;
+ * one more tap (now on the root list) dismisses the overlay entirely.
+ * No subpage renders its own header.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,19 +49,39 @@ fun SettingsOverlayScreen(
     onPickExportFile: (RepoConfig) -> Unit = {},
     access: SettingsAccess = SettingsAccess(),
 ) {
+    val state = rememberSettingsPaneState()
+    val widthClass = LocalWindowWidthSizeClass.current
+    val twoPane = widthClass.isTwoPane()
+    val inSubpage = state.compactPushed && !twoPane
+
+    val title: String = if (inSubpage) {
+        stringResource(state.activeCategory.labelRes)
+    } else {
+        stringResource(R.string.dest_settings)
+    }
+
     Scaffold(
         modifier = modifier.fillMaxSize().testTag(TestTagSettingsOverlay),
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.dest_settings)) },
+                title = { Text(title) },
                 navigationIcon = {
                     IconButton(
-                        onClick = onBack,
-                        modifier = Modifier.testTag(TestTagSettingsOverlayBack),
+                        onClick = {
+                            if (inSubpage) {
+                                state.popToCategoryList()
+                            } else {
+                                onBack()
+                            }
+                        },
+                        modifier = Modifier
+                            .testTag(if (inSubpage) TestTagSettingsBack else TestTagSettingsOverlayBack),
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                            contentDescription = stringResource(android.R.string.cancel),
+                            contentDescription = stringResource(
+                                if (inSubpage) R.string.settings_back_to_categories else android.R.string.cancel,
+                            ),
                         )
                     }
                 },
@@ -68,6 +94,7 @@ fun SettingsOverlayScreen(
                 onPickImportFile = onPickImportFile,
                 onPickExportFile = onPickExportFile,
                 access = access,
+                state = state,
             )
         }
     }

@@ -93,6 +93,7 @@
          to render as "Identity" which read as a duplicate in the list. -->
     <string name="settings_category_identity">Authors</string>
     <string name="settings_search_placeholder">Search settings</string>
+    <string name="settings_search_inside_results">Inside settings</string>
     <!-- Phase 2.2.B.4 — Mode category becomes "Lifestyle" (six-radio
          aligned with the wizard's six lifestyle cards). Test tags +
          sealed-class case SettingsCategory.Mode stay stable. -->
