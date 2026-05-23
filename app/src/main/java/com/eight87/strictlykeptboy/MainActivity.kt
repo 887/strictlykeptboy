@@ -491,6 +491,67 @@ class MainActivity : ComponentActivity() {
                         ageOk = true
                     }
                 }
+                // Round 2026-05-24 — auto-update rich-demo content on app
+                // upgrade. The hash header on `_manifest.txt` (written by
+                // the build-time `regenerateRichDemoManifest` task) is
+                // compared against the last-seeded hash. Mismatch ⇒
+                // force-reseed the extracted dir + Room reindex so the
+                // user sees the new demo content without toggling demo
+                // off/on. Idempotent: when hashes match, this is one prefs
+                // read + zero IO.
+                LaunchedEffect(Unit) {
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        val demoCfg = graph.repoStore.list().firstOrNull { it.isDemo }
+                            ?: return@withContext
+                        if (!graph.richDemoSeeder.needsReseed()) return@withContext
+                        android.util.Log.d(
+                            "skb.demo",
+                            "bundled rich-demo hash drift detected — reseeding + reindexing",
+                        )
+                        runCatching {
+                            val parent = filesDir.resolve("demo-repos")
+                            graph.richDemoSeeder.resetSeededFlag()
+                            graph.richDemoSeeder.seedIfNeeded(parent).getOrThrow()
+                            val rootDir = File(demoCfg.rootDir)
+                            val gitRepo = GitRepoRegistry.get(demoCfg.repoId) ?: run {
+                                val gd = File(rootDir, ".git")
+                                if (gd.isDirectory) {
+                                    GitRepo.open(
+                                        rootDir = rootDir,
+                                        repoId = demoCfg.repoId,
+                                        remotes = demoCfg.remotes,
+                                        primaryRemote = demoCfg.primaryRemote,
+                                        authorIdentity = demoCfg.authorIdentity,
+                                        defaultBranch = demoCfg.defaultBranch,
+                                    )
+                                } else {
+                                    GitRepo.initLocalOnly(
+                                        rootDir = rootDir,
+                                        repoId = demoCfg.repoId,
+                                        authorIdentity = demoCfg.authorIdentity,
+                                    ).also { fresh ->
+                                        runCatching {
+                                            fresh.commitAll("rich-demo: hash-drift reseed")
+                                        }
+                                    }
+                                }
+                            }.also(GitRepoRegistry::put)
+                            // The extracted files are new on disk; the
+                            // git repo (if present) still tracks the
+                            // old commit. Commit the new state so the
+                            // indexer's diff-since-last-head picks up
+                            // everything as Modified/Added/Deleted.
+                            runCatching { gitRepo.commitAll("rich-demo: hash-drift reseed") }
+                            com.eight87.strictlykeptboy.cache.Indexer(
+                                graph.cacheDatabase,
+                            ).fullScan(demoCfg.repoId, gitRepo)
+                        }.onFailure {
+                            android.util.Log.e("skb.demo", "hash-drift reseed FAILED", it)
+                        }.onSuccess {
+                            android.util.Log.d("skb.demo", "hash-drift reseed OK")
+                        }
+                    }
+                }
                 // Round 2.18.B.6 — first-run "new calendar accounts
                 // detected" nudge. Observe AccountChangeNudge.shouldShowNudge
                 // and surface a one-shot Toast pointing the user at the

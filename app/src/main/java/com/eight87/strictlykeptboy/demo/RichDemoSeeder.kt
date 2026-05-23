@@ -75,6 +75,20 @@ class RichDemoSeeder(
 
     fun isSeeded(): Boolean = prefs.getBoolean(KEY_SEEDED, false)
 
+    /**
+     * Cheap hash-check used by MainActivity's on-startup re-seed gate. Reads
+     * the bundled manifest header (one asset open + a couple of lines) and
+     * compares against [KEY_SEEDED_HASH]. Returns true when the seed should
+     * be re-extracted (asset content changed since the last seed). False if
+     * the seed is fresh, never ran, or the asset open fails — never seeded
+     * is handled by [seedIfNeeded] on the next call.
+     */
+    fun needsReseed(): Boolean = runCatching {
+        val bundledHash = readManifestLines().contentHash
+        val seededHash = prefs.getString(KEY_SEEDED_HASH, null) ?: return@runCatching true
+        seededHash != bundledHash
+    }.getOrDefault(false)
+
     fun resetSeededFlag() {
         prefs.edit {
             remove(KEY_SEEDED)
