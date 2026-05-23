@@ -74,8 +74,12 @@ class RichDemoPassiveHabitTest {
             renderTz = tz,
             now = now,
         )
+        // Tightened from `contains("bedtime")` — the kinky-rituals
+        // `cage-off-bedtime` recurrence also matches that substring and
+        // gets picked first by `firstOrNull` iteration order, returning
+        // the wrong band.
         val bedtimeBand = rendered.days.single().bands.firstOrNull { b ->
-            b.instance.title.contains("bedtime", ignoreCase = true)
+            b.instance.title.startsWith("Bedtime", ignoreCase = true)
         }
         assertNotNull("expected bedtime-by-2330 band on 2026-05-19", bedtimeBand)
         assertEquals(

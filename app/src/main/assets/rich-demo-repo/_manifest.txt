@@ -1,4 +1,4 @@
-# content-hash: 1a30448a670fe32825b9f37d32e3ce21cdd34cd3705bd846ff29ff77849d236d
+# content-hash: b366ea8946e5705bf7df36d32cf33c9a9fe47fcc34ca64cc461b5e212b26024b
 .strictlykeptboy/repo.toml
 .strictlykeptboy/schema.toml
 AGENTS.md
@@ -65,11 +65,13 @@ calendars/holidays/recurrences/spring-bank-holiday.md
 calendars/holidays/recurrences/summer-bank-holiday.md
 calendars/kinky-rituals/cage-check-responses/0190d0a0-7fab-7c50-9c1e-c100000000a1/2026-05-10.md
 calendars/kinky-rituals/calendar.toml
+calendars/kinky-rituals/deviations/0190d4ab-2b7a-7c50-9c1e-a00000000003/2026-05-16.md
 calendars/kinky-rituals/events/2026/05/2026-05-16-saturday-scene.md
 calendars/kinky-rituals/recurrences/cage-feels-midweek.md
 calendars/kinky-rituals/recurrences/cage-off-bedtime.md
 calendars/kinky-rituals/recurrences/cage-on.md
 calendars/kinky-rituals/recurrences/cage-photo-sunday.md
+calendars/kinky-rituals/recurrences/cage-stays-on.md
 calendars/kinky-rituals/recurrences/edging-session.md
 calendars/kinky-rituals/recurrences/kink-journal.md
 calendars/kinky-rituals/recurrences/plug-evening.md
@@ -82,6 +84,7 @@ calendars/routines/calendar.toml
 calendars/routines/deviations/0190d4ab-2b7a-7c50-9c1e-900000000001/2026-05-14.md
 calendars/routines/deviations/0190d4ab-2b7a-7c50-9c1e-900000000004/2026-05-19.md
 calendars/routines/deviations/0190d4ab-2b7a-7c50-9c1e-900000000005/2026-05-20.md
+calendars/routines/recurrences/bedtime-by-2330.md
 calendars/routines/recurrences/cleaning.md
 calendars/routines/recurrences/evening-brush-teeth.md
 calendars/routines/recurrences/evening-dinner.md

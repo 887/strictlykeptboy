@@ -86,11 +86,15 @@ class OverlayPickerScreenTest {
         assertEquals(4, store.zoomOf("c", "r"))
     }
 
-    @Test fun inline_priority_field_renders_for_each_row_and_fires_writer() {
-        // Round 2.22 / Fix 3 — each row in the picker surfaces a typeable
-        // priority field. We assert one OutlinedTextField per (visible)
-        // calendar row and that an edit fires onPriorityChange with the
-        // parsed Int + the row's CalendarMeta.
+    @Test fun row_renders_for_each_calendar_and_chevron_opens_editor() {
+        // Round 2026-05-23 — `OverlayCard` was simplified to a slim row
+        // with toggle + chevron; per-row Color / Priority / Repo-name /
+        // Hex-input editors moved into `CalendarSettingsSheet` reached
+        // by tapping the row or the chevron. The legacy
+        // `inline_priority_field_*` / `card_layout_*` / `hex_input_*` /
+        // `repo_name_row_*` assertions used to pin that retired shape;
+        // this test replaces all of them with the shape we actually
+        // ship now: one row per calendar + tap routes to `onEditCalendar`.
         val prefs = open()
         val cals = listOf(
             CalendarMeta(
@@ -106,62 +110,19 @@ class OverlayPickerScreenTest {
                 priority = 250,
             ),
         )
-        val captured = mutableListOf<Pair<String, Int>>()
+        val edited = mutableListOf<String>()
         composeRule.setContent {
             OverlayPickerScreen(
                 calendarsFlow = MutableStateFlow(cals),
                 visibilityPrefs = prefs,
                 onBack = {},
-                onEditCalendar = {},
-                onPriorityChange = { meta, newPriority ->
-                    captured += meta.ref.id to newPriority
-                },
+                onEditCalendar = { meta -> edited += meta.ref.id },
             )
         }
-        // One priority field per row.
-        composeRule.onAllNodesWithTag(TestTagOverlayPickerPriority + "-repo-a-cal-routines")
-            .assertCountEquals(1)
-        composeRule.onAllNodesWithTag(TestTagOverlayPickerPriority + "-repo-a-cal-trips")
-            .assertCountEquals(1)
-        // Spot-check the row tag also exists (sanity).
         composeRule.onNodeWithTag("$TestTagOverlayPickerRow-repo-a-cal-routines").assertExists()
-    }
-
-    @Test fun card_layout_renders_color_row_and_opens_palette_and_fires_writer() {
-        // Round 2.23.2 / D.119 — each overlay row is a multi-row Card
-        // with a clickable Color row that expands the 12-swatch palette
-        // and writes through onColorChange.
-        val prefs = open()
-        val cals = listOf(
-            CalendarMeta(
-                ref = CalendarRef("cal-routines"),
-                repo = RepoRef("repo-a"),
-                displayName = "Routines",
-                priority = 100,
-                colorSeed = 0xEF5350, // red
-            ),
-        )
-        val captured = mutableListOf<Pair<String, Int>>()
-        composeRule.setContent {
-            OverlayPickerScreen(
-                calendarsFlow = MutableStateFlow(cals),
-                visibilityPrefs = prefs,
-                onBack = {},
-                onEditCalendar = {},
-                onColorChange = { meta, rgb -> captured += meta.ref.id to rgb },
-            )
-        }
-        // Color row exists on the card.
-        composeRule.onNodeWithTag("$TestTagOverlayPickerColorRow-repo-a-cal-routines").assertExists()
-        // Priority field also exists on the card (card layout sanity).
-        composeRule.onNodeWithTag("$TestTagOverlayPickerPriority-repo-a-cal-routines").assertExists()
-        // Tap the Color row -> palette expands -> the blue swatch becomes hittable.
-        composeRule.onNodeWithTag("$TestTagOverlayPickerColorRow-repo-a-cal-routines").performClick()
-        val blueTag = "${TestTagOverlayPickerColorSwatchPrefix}repo-a-cal-routines-42A5F5"
-        composeRule.onNodeWithTag(blueTag).assertExists().performClick()
-        assertEquals(1, captured.size)
-        assertEquals("cal-routines", captured[0].first)
-        assertEquals(0x42A5F5, captured[0].second)
+        composeRule.onNodeWithTag("$TestTagOverlayPickerRow-repo-a-cal-trips").assertExists()
+        composeRule.onNodeWithTag("$TestTagOverlayPickerEdit-repo-a-cal-routines").performClick()
+        assertEquals(listOf("cal-routines"), edited)
     }
 
     @Test fun top_explainer_is_present_exactly_once() {
@@ -211,90 +172,12 @@ class OverlayPickerScreenTest {
             .assertCountEquals(0)
     }
 
-    @Test fun repo_name_row_renders_resolved_display_name() {
-        // Round 2.23.5 / Fix 3 — second row of each card shows the
-        // resolver-supplied repo display name (e.g. "demo · richdemo").
-        val prefs = open()
-        val cals = listOf(
-            CalendarMeta(
-                ref = CalendarRef("cal-x"),
-                repo = RepoRef("0190a000-0000-7000-8000-000000000001"),
-                displayName = "Beans",
-                priority = 100,
-            ),
-        )
-        composeRule.setContent {
-            OverlayPickerScreen(
-                calendarsFlow = MutableStateFlow(cals),
-                visibilityPrefs = prefs,
-                onBack = {},
-                onEditCalendar = {},
-                repoDisplayNameFor = { id ->
-                    if (id == "0190a000-0000-7000-8000-000000000001") "demo · richdemo" else null
-                },
-            )
-        }
-        composeRule.onNodeWithTag(
-            "$TestTagOverlayPickerRepoName-0190a000-0000-7000-8000-000000000001-cal-x",
-        ).assertTextEquals("demo · richdemo")
-    }
-
-    @Test fun repo_name_row_falls_back_to_truncated_guid_when_unresolved() {
-        // Round 2.23.5 / Fix 3 — foreign UID with no local config falls
-        // back to first 8 chars + ellipsis.
-        val prefs = open()
-        val cals = listOf(
-            CalendarMeta(
-                ref = CalendarRef("cal-y"),
-                repo = RepoRef("0190a000-ffff-7000-8000-000000000999"),
-                displayName = "Foreign",
-                priority = 100,
-            ),
-        )
-        composeRule.setContent {
-            OverlayPickerScreen(
-                calendarsFlow = MutableStateFlow(cals),
-                visibilityPrefs = prefs,
-                onBack = {},
-                onEditCalendar = {},
-                repoDisplayNameFor = { null },
-            )
-        }
-        composeRule.onNodeWithTag(
-            "$TestTagOverlayPickerRepoName-0190a000-ffff-7000-8000-000000000999-cal-y",
-        ).assertTextEquals("0190a000…")
-    }
-
-    @Test fun hex_input_fires_color_writer_when_six_chars_typed() {
-        // Round 2.23.5 / Fix 4 — typing a 6-char hex into the custom
-        // hex TextField in the color expansion routes through the same
-        // onColorChange writer the swatches use.
-        val prefs = open()
-        val cals = listOf(
-            CalendarMeta(
-                ref = CalendarRef("cal-h"),
-                repo = RepoRef("repo-a"),
-                displayName = "Hex",
-                priority = 100,
-            ),
-        )
-        val captured = mutableListOf<Int>()
-        composeRule.setContent {
-            OverlayPickerScreen(
-                calendarsFlow = MutableStateFlow(cals),
-                visibilityPrefs = prefs,
-                onBack = {},
-                onEditCalendar = {},
-                onColorChange = { _, rgb -> captured += rgb },
-            )
-        }
-        // Expand color palette.
-        composeRule.onNodeWithTag("$TestTagOverlayPickerColorRow-repo-a-cal-h").performClick()
-        // Type 6-char hex — should fire writer once on the 6th char.
-        composeRule.onNodeWithTag("$TestTagOverlayPickerHexInput-repo-a-cal-h")
-            .performTextInput("FF8800")
-        assertTrue("expected hex writer to fire; captured=$captured", captured.contains(0xFF8800))
-    }
+    // Round 2026-05-23 — repo_name_row_renders_resolved_display_name,
+    // repo_name_row_falls_back_to_truncated_guid_when_unresolved, and
+    // hex_input_fires_color_writer_when_six_chars_typed deleted along
+    // with the retired inline editor rows (color, priority, hex,
+    // repo-name). The replacement editor is `CalendarSettingsSheet` —
+    // its own test suite covers those assertions.
 
     @Test fun zoom_survives_reopen() {
         val prefs = ctx.getSharedPreferences("list_visibility_v1", Context.MODE_PRIVATE)
