@@ -489,40 +489,37 @@ private fun BandsLayer(
         else if (autoExpand || key in expandedKeys) g.children.map { Renderable(it, null) }
         else listOf(Renderable(makeCollapsedSyntheticBand(g), key))
     }
-    // Dependency-respecting cascade: anything that *depends on*
-    // something else paints to the right of (and on top of) its
-    // dependency target. Two sort keys, in order:
+    // Round 2026-05-23 — fixed 3-lane layout, no priority-driven cascade.
     //
-    //   1. **Kind rank** — `Base` is the scaffolding everything else
-    //      depends on, so it always lands at the lowest lane numbers
-    //      regardless of priority. Regular / External / Timebox
-    //      events stack on top of it.
-    //   2. **Priority** (ascending) — within a kind, lower priority
-    //      number = lower lane = more scaffold-like. Higher priority
-    //      cascades further right and paints on top.
+    // Per user direction: more than 3 columns of cascade are unreadable
+    // anyway, and priority was being misused to drive *spatial* layout
+    // when it's really a paint-order / supersedence concept. The lane
+    // index is now purely a function of CalendarKind:
     //
-    // Bands sharing both (kind-rank, priority) share a lane. Compose
-    // paints in iteration order, so this sort means "dependencies
-    // paint first → end up behind dependents".
-    fun kindRank(k: com.eight87.strictlykeptboy.resolver.CalendarKind): Int = when (k) {
+    //   - **Lane 0 — Base** (full-width scaffold): the "what the day
+    //     usually looks like" stratum. Leisure, grooming, sleep blocks.
+    //   - **Lane 1 — Regular / External**: actual scheduled events
+    //     (file-backed Regular calendars + CalendarContract External).
+    //   - **Lane 2 — Special** (Timebox): the "this is *different*
+    //     today" stratum — vacation overlays, dom-authored overrides,
+    //     focused work boxes.
+    //
+    // Priority is still consulted, but only for **within-lane paint
+    // order** (higher priority paints later → on top of same-lane
+    // peers) and for the supersedence pass that runs upstream of this
+    // composable. It no longer offsets the band horizontally.
+    fun laneForKind(k: com.eight87.strictlykeptboy.resolver.CalendarKind): Int = when (k) {
         com.eight87.strictlykeptboy.resolver.CalendarKind.Base -> 0
+        com.eight87.strictlykeptboy.resolver.CalendarKind.Regular -> 1
         com.eight87.strictlykeptboy.resolver.CalendarKind.External -> 1
-        com.eight87.strictlykeptboy.resolver.CalendarKind.Regular -> 2
-        com.eight87.strictlykeptboy.resolver.CalendarKind.Timebox -> 3
+        com.eight87.strictlykeptboy.resolver.CalendarKind.Timebox -> 2
     }
     val byPaintOrder: List<Renderable> = unsorted.sortedWith(
-        compareBy<Renderable> { kindRank(it.band.kind) }
+        compareBy<Renderable> { laneForKind(it.band.kind) }
             .thenBy { it.band.priority },
     )
-    val laneIndexById: Map<String, Int> = run {
-        val groupKeyToLane = linkedMapOf<Pair<Int, Int>, Int>()
-        val map = mutableMapOf<String, Int>()
-        byPaintOrder.forEach { r ->
-            val key = kindRank(r.band.kind) to r.band.priority
-            val lane = groupKeyToLane.getOrPut(key) { groupKeyToLane.size }
-            map[r.band.instance.instanceId] = lane
-        }
-        map
+    val laneIndexById: Map<String, Int> = byPaintOrder.associate {
+        it.band.instance.instanceId to laneForKind(it.band.kind)
     }
     // Selected-band brought to front: paint it dead last (= top of
     // the z-stack) with a halo + elevation per the visual treatment
@@ -535,15 +532,12 @@ private fun BandsLayer(
     else byPaintOrder.filter { it !== selectedRenderable } + selectedRenderable
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val widthPx = maxWidth
-        // Cascade overlap: each successive priority-lane is shifted
-        // right by [cascadeStep]; width shrinks by the same per-lane
-        // amount so the lower-priority scaffold stays visible as a
-        // clear vertical slab under higher-priority overlays.
-        // 36dp is the minimum step where the lane-0 base layer reads
-        // as a distinct visible band on phones — anything smaller
-        // and the cascade collapses into a thin sliver that the eye
-        // misses against the higher-priority overlay on top.
-        val cascadeStep = 36.dp
+        // Round 2026-05-23 — with only 3 fixed lanes the cascade step
+        // can breathe. Base = 0dp (full-width scaffold), Regular = 1
+        // step right, Timebox = 2 steps right. 56dp gives each lane a
+        // visibly distinct left-edge column on phones without
+        // collapsing the Timebox band into a sliver.
+        val cascadeStep = 56.dp
         renderables.forEach { (band, groupKey) ->
             val laneIdx = laneIndexById[band.instance.instanceId] ?: 0
             // Lane 0 = the day's scaffolding (lowest priority value)
