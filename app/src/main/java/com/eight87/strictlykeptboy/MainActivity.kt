@@ -410,16 +410,29 @@ class MainActivity : ComponentActivity() {
                 // mounted. No app reinstall needed.
                 val demoState by graph.demoModePrefs.state.collectAsState()
                 LaunchedEffect(demoState.isActive, firstLaunchDone) {
-                    // The intro-wizard owns the very first demo-seed path —
-                    // skip the reactive seeder until first-launch is complete
-                    // to avoid a duplicate seed/add race with that flow.
-                    if (!firstLaunchDone) return@LaunchedEffect
+                    // Skip only while the intro wizard is still on screen —
+                    // it owns the very first demo-seed path and we don't
+                    // want a duplicate seed/add race with that flow. Once
+                    // the wizard is dismissed (`firstLaunchDone == true`)
+                    // OR if the user is past the wizard entirely (no demo
+                    // active AND no perspective chosen), the reactive
+                    // seeder is authoritative: flipping the toggle on
+                    // *always* seeds, flipping off un-mounts.
+                    val wizardOnScreen = !firstLaunchDone &&
+                        !demoState.isActive &&
+                        demoState.perspective == null &&
+                        graph.repoStore.list().isEmpty()
+                    if (wizardOnScreen) return@LaunchedEffect
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                         if (!demoState.isActive) {
                             graph.repoStore.list().filter { it.isDemo }.forEach { cfg ->
                                 runCatching { graph.repoStore.remove(cfg.repoId) }
                             }
                         } else if (graph.repoStore.list().none { it.isDemo }) {
+                            android.util.Log.d(
+                                "skb.demo",
+                                "reactive seed: demo on + no demo repo found, extracting…",
+                            )
                             runCatching {
                                 val parent = filesDir.resolve("demo-repos")
                                 // Force re-extraction so manifest additions
@@ -456,6 +469,14 @@ class MainActivity : ComponentActivity() {
                                 com.eight87.strictlykeptboy.cache.Indexer(
                                     graph.cacheDatabase,
                                 ).fullScan(config.repoId, gitRepo)
+                            }.onFailure {
+                                android.util.Log.e(
+                                    "skb.demo",
+                                    "reactive seed FAILED",
+                                    it,
+                                )
+                            }.onSuccess {
+                                android.util.Log.d("skb.demo", "reactive seed OK")
                             }
                         }
                     }
