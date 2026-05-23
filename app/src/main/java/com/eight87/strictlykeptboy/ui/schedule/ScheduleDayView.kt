@@ -163,6 +163,13 @@ fun ScheduleDayView(
      * one — so multiple sibling DayViews (3-day, week) scroll in sync.
      */
     sharedScrollState: androidx.compose.foundation.ScrollState? = null,
+    /**
+     * When false, the DayView omits its own `verticalScroll` modifier
+     * and the now-line auto-scroll `LaunchedEffect`. Used by the
+     * Stacked-layout path on 3-day / Week, where multiple DayViews
+     * stack inside an outer scroll container (user 2026-05-23).
+     */
+    internalScroll: Boolean = true,
 ) {
     // Sliding 24-hour window per user direction:
     //   - on today: anchor at `now - 12h` (snapped to the hour) so the
@@ -204,7 +211,7 @@ fun ScheduleDayView(
             }
     }
 
-    if (bands.isEmpty()) {
+    if (bands.isEmpty() && internalScroll) {
         EmptyScheduleState(
             modifier = modifier.fillMaxSize().testTag(TestTagDayEmpty),
             onPlanTrip = onPlanTrip,
@@ -223,7 +230,8 @@ fun ScheduleDayView(
     // 12h from windowStart, so center it on the visible region (now
     // lands roughly half-way down). Non-today views scroll to a
     // reasonable morning anchor.
-    LaunchedEffect(isToday, hourHeightPx) {
+    LaunchedEffect(isToday, hourHeightPx, internalScroll) {
+        if (!internalScroll) return@LaunchedEffect
         if (hourHeightPx <= 0f) return@LaunchedEffect
         if (isToday) {
             val targetPx = (12f * hourHeightPx) - (hourHeightPx * 6f)
@@ -247,7 +255,11 @@ fun ScheduleDayView(
         androidx.activity.compose.BackHandler { selectedBandId = null }
     }
     val dragState = rememberDragRescheduleUiState()
-    Column(modifier = modifier.fillMaxSize().testTag(TestTagDayView)) {
+    Column(
+        modifier = (
+            if (internalScroll) modifier.fillMaxSize() else modifier.fillMaxWidth()
+            ).testTag(TestTagDayView),
+    ) {
         if (showWeekdayHeader) {
             // Round 2.23 Phase B — weekday emoji strip.
             Row(
@@ -264,7 +276,7 @@ fun ScheduleDayView(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .verticalScroll(scroll),
+            .then(if (internalScroll) Modifier.verticalScroll(scroll) else Modifier),
     ) {
         if (showHourGutter) DayHourGutter(hourHeight = hourHeight, windowStart = windowStart)
         // Round 2.21 Phase D.5 — pinch-to-zoom on the day-grid Box.

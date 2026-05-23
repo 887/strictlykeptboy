@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.MaterialTheme
@@ -378,13 +380,67 @@ private fun ScheduleMasterContent(
             else -> null
         }
         if (stackedDates != null) {
-            ScheduleAgendaView(
-                dates = stackedDates,
-                dayBands = filteredBandSource,
-                modifier = Modifier.fillMaxSize(),
-                onBandTap = onBandTap,
-                includeEmptyDays = true,
-            )
+            // Day tab Stacked === Now/Schedule (covered by separate tab),
+            // so we only reach here for 3-day + Week. Render each day's
+            // full 24h DayView grid stacked vertically inside one scroll
+            // column — *not* the agenda list (per user 2026-05-23).
+            val today = java.time.LocalDate.now()
+            val stackedScroll = rememberScrollState()
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            val hourHeightDp = hourHeightForZoom(effectiveZoom)
+            val hourHeightPx = with(density) { hourHeightDp.toPx() }
+            // Auto-scroll to "morning of first day with content" on first
+            // composition (and whenever the date range / zoom changes).
+            // Each day's grid is 24h tall. The first day's window starts at
+            // (today ? now-12h : 00:00); a sensible anchor is the position
+            // of 06:00 on the first day so the morning routine bands are
+            // visible without scrolling.
+            val weekdayHeaderDp = 32  // approx — emoji header height
+            androidx.compose.runtime.LaunchedEffect(
+                stackedDates,
+                hourHeightPx,
+            ) {
+                if (hourHeightPx <= 0f) return@LaunchedEffect
+                val firstDate = stackedDates.firstOrNull() ?: return@LaunchedEffect
+                val firstIsToday = firstDate == today
+                val zone = java.time.ZoneId.systemDefault()
+                val firstWindowStart: java.time.ZonedDateTime = if (firstIsToday) {
+                    java.time.ZonedDateTime.now(zone)
+                        .minusHours(12)
+                        .truncatedTo(java.time.temporal.ChronoUnit.HOURS)
+                } else {
+                    firstDate.atStartOfDay(zone)
+                }
+                val anchor: java.time.ZonedDateTime = if (firstIsToday) {
+                    java.time.ZonedDateTime.now(zone).minusMinutes(30)
+                } else {
+                    firstWindowStart.withHour(6)
+                }
+                val hoursFromStart = java.time.Duration
+                    .between(firstWindowStart, anchor)
+                    .toMinutes() / 60.0
+                val targetPx = (hoursFromStart * hourHeightPx).toInt() + weekdayHeaderDp
+                stackedScroll.scrollTo(targetPx.coerceAtLeast(0))
+            }
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(stackedScroll),
+            ) {
+                stackedDates.forEach { d ->
+                    ScheduleDayView(
+                        date = d,
+                        dayBands = filteredBandSource,
+                        modifier = Modifier.fillMaxWidth(),
+                        onBandTap = onBandTap,
+                        isToday = d == today,
+                        effectiveZoom = effectiveZoom,
+                        metaGroupByCalendar = metaGroupByCalendar,
+                        onDragReschedule = onDragReschedule,
+                        internalScroll = false,
+                    )
+                }
+            }
         } else when (selectedTab) {
             // `Now` (renamed from Agenda, replaces old Schedule tab) —
             // today + 6 forward days rendered as an agenda list, reusing
@@ -488,7 +544,14 @@ private fun ScheduleMasterContent(
             onLayoutChange = { layoutMode = it },
             flags = filterFlags,
             onFlagsChange = applyFlags,
-            modifier = Modifier.align(androidx.compose.ui.Alignment.BottomEnd),
+            // Bottom-start so the cluster hugs the rail edge and never
+            // overlaps schedule content; the "+ New" FAB stays at
+            // bottom-end (per user 2026-05-23).
+            modifier = Modifier.align(androidx.compose.ui.Alignment.BottomStart),
+            // Day already has a separate Now/Schedule tab — the layout
+            // toggle is meaningless there. Filter FAB still useful.
+            showLayoutToggle = selectedTab !=
+                com.eight87.strictlykeptboy.ui.scaffold.ScheduleViewTab.Day,
         )
     }
     }  // end outer Box

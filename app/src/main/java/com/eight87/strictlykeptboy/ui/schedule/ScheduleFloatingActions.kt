@@ -49,35 +49,44 @@ fun ScheduleFloatingActions(
     flags: ScheduleFilterFlags,
     onFlagsChange: (ScheduleFilterFlags) -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * When false, the layout-toggle FAB is omitted. Day tab passes
+     * `false` because the "Now" tab already covers the
+     * stacked-list use-case (per user 2026-05-23).
+     */
+    showLayoutToggle: Boolean = true,
 ) {
-    // Offset the cluster above the existing "+ New" FAB at
-    // bottom-end (16dp self-padding + ~56dp FAB + 16dp gap).
+    // Bottom-start cluster — placed against the rail edge so it
+    // never overlaps actual schedule content. The "+ New" FAB still
+    // lives at bottom-end. Per user 2026-05-23.
     Column(
-        modifier = modifier.padding(end = 16.dp, bottom = 96.dp),
+        modifier = modifier.padding(start = 16.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        SmallFloatingActionButton(
-            onClick = {
-                onLayoutChange(
-                    if (layout == ScheduleLayoutMode.Stacked) ScheduleLayoutMode.Grid
-                    else ScheduleLayoutMode.Stacked
+        if (showLayoutToggle) {
+            SmallFloatingActionButton(
+                onClick = {
+                    onLayoutChange(
+                        if (layout == ScheduleLayoutMode.Stacked) ScheduleLayoutMode.Grid
+                        else ScheduleLayoutMode.Stacked
+                    )
+                },
+                modifier = Modifier.testTag(TestTagScheduleLayoutFab),
+            ) {
+                Icon(
+                    imageVector = if (layout == ScheduleLayoutMode.Stacked) {
+                        Icons.Outlined.GridView
+                    } else {
+                        Icons.Outlined.ViewAgenda
+                    },
+                    contentDescription = if (layout == ScheduleLayoutMode.Stacked) {
+                        "Switch to grid layout"
+                    } else {
+                        "Switch to stacked layout"
+                    },
+                    modifier = Modifier.size(22.dp),
                 )
-            },
-            modifier = Modifier.testTag(TestTagScheduleLayoutFab),
-        ) {
-            Icon(
-                imageVector = if (layout == ScheduleLayoutMode.Stacked) {
-                    Icons.Outlined.GridView
-                } else {
-                    Icons.Outlined.ViewAgenda
-                },
-                contentDescription = if (layout == ScheduleLayoutMode.Stacked) {
-                    "Switch to grid layout"
-                } else {
-                    "Switch to stacked layout"
-                },
-                modifier = Modifier.size(22.dp),
-            )
+            }
         }
 
         var menuOpen by remember { mutableStateOf(false) }
