@@ -59,6 +59,14 @@ class EventCreateController(
     private var pendingTemplate: AtomicTemplate? = null
 
     /**
+     * Round 2026-05-23 — when set, [confirmFreeForm]'s mint reuses this
+     * event id so [EntityWriter.write] overwrites the same file on disk
+     * rather than creating a new one. Cleared by [closeSheet]. Only the
+     * OneOff edit path sets this; recurring rule edits still TODO.
+     */
+    private var editingEventId: String? = null
+
+    /**
      * Phase 2.1.D.7 — listener invoked when a draft carrying
      * `relatedTaskId` lands as a committed event. Receives the
      * (taskId, eventId, start) triple; the caller updates the matching
@@ -88,6 +96,41 @@ class EventCreateController(
             relatedTaskId = taskId,
         )
         if (shippedTemplates.isEmpty()) loadShippedTemplates()
+        _state.value = EventCreateSheetState(
+            tab = EventCreateTab.FreeForm,
+            draft = draft,
+            calendars = cals,
+            templateEntries = shippedTemplates,
+            neutralMode = neutralModeProvider(),
+        )
+        _sheetOpen.value = true
+    }
+
+    /**
+     * Round 2026-05-23 — opens the create sheet pre-populated from an
+     * existing event so the user can edit it. On confirm, the write
+     * path reuses [eventId] so the file is overwritten in place.
+     * RuleInstance edits aren't supported yet; the caller should gate
+     * the Edit button when [band.instance.source] is RuleInstance.
+     */
+    fun openSheetForEdit(
+        eventId: String,
+        title: String,
+        start: OffsetDateTime,
+        end: OffsetDateTime,
+        calendarId: String,
+        body: String,
+    ) {
+        val cals = calendarOptionsProvider()
+        val draft = EventDraft(
+            title = title,
+            start = start,
+            end = end,
+            calendarId = calendarId.ifBlank { cals.firstOrNull()?.id ?: "" },
+            notes = body,
+        )
+        if (shippedTemplates.isEmpty()) loadShippedTemplates()
+        editingEventId = eventId
         _state.value = EventCreateSheetState(
             tab = EventCreateTab.FreeForm,
             draft = draft,
@@ -137,6 +180,7 @@ class EventCreateController(
             overlap = null,
         )
         pendingTemplate = null
+        editingEventId = null
     }
 
     fun setTab(tab: EventCreateTab) {
@@ -237,8 +281,11 @@ class EventCreateController(
             return
         }
         val author = cfg.authorIdentity.name
-        val event = DraftToEvent.mint(draft = draft, author = author)
-        writeEvent(cfg, event, commitMessage = "add event \"${event.title}\"")
+        val editingId = editingEventId
+        val event = DraftToEvent.mint(draft = draft, author = author, overrideId = editingId)
+        val msg = if (editingId != null) "edit event \"${event.title}\""
+        else "add event \"${event.title}\""
+        writeEvent(cfg, event, commitMessage = msg)
         // Phase 2.1.D.7 — reciprocal link back from this event to its
         // originating task. Fires synchronously off the UI thread; the
         // write itself is dispatched onto Dispatchers.IO above.

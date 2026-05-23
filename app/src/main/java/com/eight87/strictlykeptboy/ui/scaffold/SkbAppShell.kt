@@ -394,6 +394,36 @@ private fun SkbAppShellContent(
         pendingEventDetail?.let { band ->
             BackHandler { pendingEventDetail = null }
             val detailCtx = androidx.compose.ui.platform.LocalContext.current
+            // Resolve friendly names + priority from the live flows so
+            // the detail surface shows "Repo: Demo · Calendar: Gaming ·
+            // Priority: 30" instead of opaque UUIDs.
+            val calsList = context.scheduleState.calendarsFlow
+                ?.collectAsState()?.value.orEmpty()
+            val reposList2 = context.reposState?.repos?.collectAsState()?.value.orEmpty()
+            val repoNameForDetail = reposList2
+                .firstOrNull { it.repoId == band.instance.repo.id }
+                ?.displayName
+            val matchedCal = calsList.firstOrNull {
+                it.ref.id == band.instance.calendar.id &&
+                    it.repo.id == band.instance.repo.id
+            }
+            val calNameForDetail = matchedCal?.displayName
+            val calPriorityForDetail = matchedCal?.priority
+            val supersededByName = band.supersededByCalendar?.let { ref ->
+                calsList.firstOrNull { it.ref.id == ref.id }?.displayName
+            }
+            // Linked tasks — surface any task whose linkedEventId matches
+            // this band's eventId so the user can see "what todos belong
+            // to this event" inline. Empty list is fine.
+            val tasksItems = context.tasksState?.state?.collectAsState()?.value?.tasks.orEmpty()
+            val bandEventId = when (val s = band.instance.source) {
+                is com.eight87.strictlykeptboy.resolver.InstanceSource.OneOff -> s.eventId.id
+                is com.eight87.strictlykeptboy.resolver.InstanceSource.RuleInstance -> s.ruleId.id
+            }
+            val linkedTaskTitles = if (bandEventId.isBlank()) emptyList()
+            else tasksItems.filter { it.linkedEventId == bandEventId }.map { it.title }
+            val isOneOff = band.instance.source is
+                com.eight87.strictlykeptboy.resolver.InstanceSource.OneOff
             Surface(
                 color = MaterialTheme.colorScheme.background,
                 modifier = Modifier.fillMaxSize(),
@@ -401,12 +431,32 @@ private fun SkbAppShellContent(
                 com.eight87.strictlykeptboy.ui.schedule.EventDetailScreen(
                     band = band,
                     onBack = { pendingEventDetail = null },
+                    calendarName = calNameForDetail,
+                    repoName = repoNameForDetail,
+                    calendarPriority = calPriorityForDetail,
+                    linkedTaskTitles = linkedTaskTitles,
+                    supersededByName = supersededByName,
+                    notificationPrefs = context.settingsAccess.notificationPrefs,
                     onEdit = {
-                        android.widget.Toast.makeText(
-                            detailCtx,
-                            "Event editor coming in Round 3",
-                            android.widget.Toast.LENGTH_SHORT,
-                        ).show()
+                        val controller = context.eventCreateController
+                        if (controller != null && isOneOff) {
+                            controller.openSheetForEdit(
+                                eventId = bandEventId,
+                                title = band.instance.title,
+                                start = band.instance.effectiveStart.toOffsetDateTime(),
+                                end = band.instance.effectiveEnd.toOffsetDateTime(),
+                                calendarId = band.instance.calendar.id,
+                                body = band.instance.body,
+                            )
+                            pendingEventDetail = null
+                        } else {
+                            android.widget.Toast.makeText(
+                                detailCtx,
+                                if (controller == null) "Editor unavailable here"
+                                else "Editing recurring events lands next round",
+                                android.widget.Toast.LENGTH_SHORT,
+                            ).show()
+                        }
                     },
                 )
             }

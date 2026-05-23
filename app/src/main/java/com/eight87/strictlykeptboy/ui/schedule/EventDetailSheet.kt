@@ -75,6 +75,8 @@ const val TestTagEventDetailSource = "EventDetailSource"
 const val TestTagEventDetailSourceRepo = "EventDetailSourceRepo"
 const val TestTagEventDetailSourceKind = "EventDetailSourceKind"
 const val TestTagEventDetailSourceAuthor = "EventDetailSourceAuthor"
+const val TestTagEventDetailSourcePriority = "EventDetailSourcePriority"
+const val TestTagEventDetailSourceLinkedTasks = "EventDetailSourceLinkedTasks"
 const val TestTagEventDetailSupersededNote = "EventDetailSupersededNote"
 // Round 2.18.C.7 — external-event attribution header
 const val TestTagEventDetailExternalSource = "EventDetailExternalSource"
@@ -133,6 +135,8 @@ fun EventDetailContent(
     attachments: List<AttachmentRef> = emptyList(),
     calendarName: String? = null,
     repoName: String? = null,
+    calendarPriority: Int? = null,
+    linkedTaskTitles: List<String> = emptyList(),
     supersededByName: String? = null,
     notificationPrefs: NotificationPrefs? = null,
     /** Round 2.18.C.8 — already-resolved attendees for external events. */
@@ -228,6 +232,22 @@ fun EventDetailContent(
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.testTag(TestTagEventDetailSourceAuthor),
+                    )
+                }
+                calendarPriority?.let { p ->
+                    Text(
+                        text = "Priority: $p",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testTag(TestTagEventDetailSourcePriority),
+                    )
+                }
+                if (linkedTaskTitles.isNotEmpty()) {
+                    Text(
+                        text = "Linked tasks: " + linkedTaskTitles.joinToString(", "),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testTag(TestTagEventDetailSourceLinkedTasks),
                     )
                 }
             }

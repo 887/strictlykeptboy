@@ -551,8 +551,15 @@ private fun BandsLayer(
             // alpha purposes regardless of CalendarKind. Higher lanes
             // = events stacking on top with progressive right offset.
             val isBase = laneIdx == 0
-            val cascadeX = cascadeStep * laneIdx
-            val bandWidth = (widthPx - cascadeX - 4.dp).coerceAtLeast(48.dp)
+            // Clamp cascadeX so the band always stays inside the column.
+            // Without this, a high-lane band whose desired offset would
+            // leave less than the 48dp minimum band-width gets its width
+            // floored to 48dp at the original offset, pushing it past the
+            // right edge (user-visible 2026-05-23: yellow band escaped).
+            val minBandWidth = 48.dp
+            val maxCascadeX = (widthPx - minBandWidth - 4.dp).coerceAtLeast(0.dp)
+            val cascadeX = (cascadeStep * laneIdx).coerceAtMost(maxCascadeX)
+            val bandWidth = (widthPx - cascadeX - 4.dp).coerceAtLeast(minBandWidth)
 
             val rawStart = band.instance.effectiveStart
             val rawEnd = band.instance.effectiveEnd

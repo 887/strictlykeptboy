@@ -44,6 +44,8 @@ fun EventDetailScreen(
     attachments: List<AttachmentRef> = emptyList(),
     calendarName: String? = null,
     repoName: String? = null,
+    calendarPriority: Int? = null,
+    linkedTaskTitles: List<String> = emptyList(),
     supersededByName: String? = null,
     notificationPrefs: NotificationPrefs? = null,
     modifier: Modifier = Modifier,
@@ -87,6 +89,8 @@ fun EventDetailScreen(
                     attachments = attachments,
                     calendarName = calendarName,
                     repoName = repoName,
+                    calendarPriority = calendarPriority,
+                    linkedTaskTitles = linkedTaskTitles,
                     supersededByName = supersededByName,
                     notificationPrefs = notificationPrefs,
                 )

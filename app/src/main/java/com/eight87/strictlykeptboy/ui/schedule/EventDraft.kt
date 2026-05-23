@@ -64,8 +64,9 @@ object DraftToEvent {
         author: String,
         now: OffsetDateTime = OffsetDateTime.now(),
         subbeats: List<AtomicTemplateSubbeat> = emptyList(),
+        overrideId: String? = null,
     ): Event {
-        val id = Uuid7.generate().toString()
+        val id = overrideId ?: Uuid7.generate().toString()
         val iso = DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(now)
         return Event(
             header = EntityHeader(
