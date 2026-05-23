@@ -7,7 +7,7 @@ updated_at = 2026-05-22T08:00:00+01:00
 author = "01900000-0000-7000-8000-0000000000b0"
 title = "Saturday groceries"
 group = "morning"
-dtstart = 2026-05-16T10:00:00
+dtstart = 2026-05-16T13:00:00
 duration = "PT1H30M"
 tz_id = "Europe/London"
 rrule = "FREQ=WEEKLY;BYDAY=SA"

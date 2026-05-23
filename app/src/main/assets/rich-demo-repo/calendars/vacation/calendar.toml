@@ -1,6 +1,6 @@
 schema_version = 1
 id = "0190a0aa-1c1d-7000-8a0a-00000000000a"
-kind = "calendar"
+kind = "timebox"
 name = "Vacation"
 emoji = "✈️"
 color = "#6db1bf"
@@ -8,6 +8,25 @@ color_seed = 2541274
 priority = 900
 tz_id = "Europe/London"
 created_at = 2026-01-01T00:00:00+01:00
-updated_at = 2026-05-09T08:00:00+01:00
+updated_at = 2026-05-23T18:00:00+01:00
 author = "01900000-0000-7000-8000-0000000000b0"
-supersedes = ["work", "commute", "gym", "dom-overlay", "social"]
+# Round 2026-05-23 — vacation is a Special / Timebox-kind calendar
+# (Lane 2). When active, it suppresses the regular daily stack:
+# routines, work, commute, gym, dom-overlay, social, voice-chat,
+# gaming, play, collar, outings, family-visits. Cat-care + holidays
+# + kinky-rituals are `non_superseable = true` so they continue
+# regardless (cat needs feeding; cage stays on).
+supersedes = [
+    "0190a0aa-1c1d-7000-8a0a-000000000003",
+    "0190a0aa-1c1d-7000-8a0a-000000000001",
+    "0190a0aa-1c1d-7000-8a0a-000000000002",
+    "0190a0aa-1c1d-7000-8a0a-000000000004",
+    "0190a0aa-1c1d-7000-8a0a-000000000006",
+    "0190a0aa-1c1d-7000-8a0a-000000000007",
+    "0190a0aa-1c1d-7000-8a0a-000000000021",
+    "0190a0aa-1c1d-7000-8a0a-000000000020",
+    "0190a0aa-1c1d-7000-8a0a-000000000022",
+    "0190a0aa-1c1d-7000-8a0a-00000000000c",
+    "0190a0aa-1c1d-7000-8a0a-00000000000d",
+    "0190a0aa-1c1d-7000-8a0a-00000000000f",
+]

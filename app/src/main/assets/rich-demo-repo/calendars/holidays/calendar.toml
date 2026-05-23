@@ -1,6 +1,6 @@
 schema_version = 1
 id = "0190a0aa-1c1d-7000-8a0a-000000000009"
-kind = "calendar"
+kind = "timebox"
 name = "Public holidays"
 emoji = "🇬🇧"
 color = "#d4af37"
