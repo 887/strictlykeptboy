@@ -510,38 +510,26 @@ class MainActivity : ComponentActivity() {
                         )
                         runCatching {
                             val parent = filesDir.resolve("demo-repos")
+                            // Evict the cached GitRepo BEFORE the seeder
+                            // deletes the underlying dir — a stale instance
+                            // pointing at a .git path we're about to wipe
+                            // will fail every subsequent write.
+                            GitRepoRegistry.evict(demoCfg.repoId)
                             graph.richDemoSeeder.resetSeededFlag()
                             graph.richDemoSeeder.seedIfNeeded(parent).getOrThrow()
                             val rootDir = File(demoCfg.rootDir)
-                            val gitRepo = GitRepoRegistry.get(demoCfg.repoId) ?: run {
-                                val gd = File(rootDir, ".git")
-                                if (gd.isDirectory) {
-                                    GitRepo.open(
-                                        rootDir = rootDir,
-                                        repoId = demoCfg.repoId,
-                                        remotes = demoCfg.remotes,
-                                        primaryRemote = demoCfg.primaryRemote,
-                                        authorIdentity = demoCfg.authorIdentity,
-                                        defaultBranch = demoCfg.defaultBranch,
-                                    )
-                                } else {
-                                    GitRepo.initLocalOnly(
-                                        rootDir = rootDir,
-                                        repoId = demoCfg.repoId,
-                                        authorIdentity = demoCfg.authorIdentity,
-                                    ).also { fresh ->
-                                        runCatching {
-                                            fresh.commitAll("rich-demo: hash-drift reseed")
-                                        }
-                                    }
-                                }
+                            // seedIfNeeded just `deleteRecursively`'d the
+                            // dir + extracted fresh files, so any
+                            // pre-existing .git subdir is gone. Init a
+                            // fresh local-only repo and commit the seeded
+                            // working tree.
+                            val gitRepo = GitRepo.initLocalOnly(
+                                rootDir = rootDir,
+                                repoId = demoCfg.repoId,
+                                authorIdentity = demoCfg.authorIdentity,
+                            ).also { fresh ->
+                                runCatching { fresh.commitAll("rich-demo: hash-drift reseed") }
                             }.also(GitRepoRegistry::put)
-                            // The extracted files are new on disk; the
-                            // git repo (if present) still tracks the
-                            // old commit. Commit the new state so the
-                            // indexer's diff-since-last-head picks up
-                            // everything as Modified/Added/Deleted.
-                            runCatching { gitRepo.commitAll("rich-demo: hash-drift reseed") }
                             com.eight87.strictlykeptboy.cache.Indexer(
                                 graph.cacheDatabase,
                             ).fullScan(demoCfg.repoId, gitRepo)

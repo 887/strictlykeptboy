@@ -85,13 +85,26 @@ class RichDemoSupersedenceTest {
             )
             val day = rendered.days.single()
 
+            // Round 2026-05-24 — supersedence is now per-TIME-OVERLAP, not
+            // per-day. DevConf Berlin recurrence runs Wed 07:00 → Sat 19:00,
+            // so on those days only bands whose time intersects the
+            // convention window get suppressed (the morning 06:30 alarm and
+            // the Sat-evening 22:00 lights-out are intentionally OUT of
+            // scope — they're the "regular schedule up to the hour where
+            // the special-base event takes over" semantics the user asked
+            // for). Assert: at least one band on the superseded stack is
+            // paused per day (proves the supersedor is active), and every
+            // band tagged paused points at vacation.
             val supersededBands = day.bands.filter { it.instance.calendar in supersededRefs }
-            // We don't require every weekday have all 5 calendars firing —
-            // dom-overlay only emits weekdays etc. — but every superseded band
-            // we DO see on these days must be paused.
-            for (band in supersededBands) {
+            val pausedBands = supersededBands.filter { it.supersededByCalendar != null }
+            assertTrue(
+                "$date: expected at least one superseded-stack band paused by vacation, " +
+                    "got none of ${supersededBands.size}",
+                pausedBands.isNotEmpty(),
+            )
+            for (band in pausedBands) {
                 assertEquals(
-                    "$date: band on superseded calendar ${band.instance.calendar.id} must be paused",
+                    "$date: paused band must point at vacation",
                     vacationRef,
                     band.supersededByCalendar,
                 )

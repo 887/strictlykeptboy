@@ -47,12 +47,26 @@ class OverlayResolver(
         // each one-off event's start/end. With this change the user
         // can author Brighton as a single weekend event + ship the
         // vacation overlay with no per-trip activeWindows toml edits.
-        val suppressorDaysByRef: Map<CalendarRef, Set<LocalDate>> = instances
+        // Round 2026-05-24 — per-TIME-OVERLAP supersedence (was per-day).
+        // A band on a superseded calendar is only tagged superseded when
+        // its time interval actually overlaps the suppressor instance's
+        // interval. So Brighton weekend Sat 10:00–Sun 20:00 suppresses
+        // events INSIDE that window but the Sat 06:30 morning alarm + the
+        // Sun 22:00 lights-out still surface — the user gets regular
+        // schedule up to / after the special-base event, exactly as
+        // they want. For all-day-spans-24h suppressors the practical
+        // outcome matches the old per-day behavior (the whole day's
+        // bands overlap).
+        val suppressorIntervalsByRef: Map<CalendarRef, List<Pair<Long, Long>>> = instances
             .filter { it.calendar in activeCalendars }
             .filter { calMetaByRef[it.calendar]?.supersedes?.isNotEmpty() == true }
-            .flatMap { inst -> daysCovered(inst, rangeFrom, rangeTo).map { it to inst.calendar } }
-            .groupBy({ it.second }, { it.first })
-            .mapValues { (_, days) -> days.toSet() }
+            .groupBy { it.calendar }
+            .mapValues { (_, insts) ->
+                insts.map { inst ->
+                    inst.effectiveStart.toInstant().toEpochMilli() to
+                        inst.effectiveEnd.toInstant().toEpochMilli()
+                }
+            }
 
         // RV-O override re-include: an override pinned to a specific event/date forces show.
         val forcedShownByEventOnDate: Map<Pair<String, LocalDate>, Unit> = overrides
@@ -76,27 +90,31 @@ class OverlayResolver(
             .flatMap { inst -> daysCovered(inst, rangeFrom, rangeTo).map { it to inst } }
             .groupBy({ it.first }) { it.second }
 
-        val bandsByDay = byDay.mapValues { (day, dayInstances) ->
-            // Per-day supersedence: a suppressor is "in effect" on this
-            // day if it has at least one instance covering this day.
-            // No instance on this day → no supersedence (e.g. vacation
-            // doesn't silence the Tuesday morning routine just because
-            // a Brighton-weekend event exists on Sat–Sun).
-            val suppressorsToday = activeCalendars
+        // Reverse-index calendars that get suppressed BY which supersedor.
+        // For each potential target calendar, list (suppressorCal, intervals).
+        val suppressedByMap: Map<CalendarRef, List<Pair<CalendarRef, List<Pair<Long, Long>>>>> =
+            activeCalendars
                 .mapNotNull { calMetaByRef[it] }
-                .filter { meta ->
-                    if (meta.supersedes.isEmpty()) return@filter false
-                    day in suppressorDaysByRef[meta.ref].orEmpty()
-                }
-            val perDaySupersedeMap: Map<CalendarRef, CalendarRef> = suppressorsToday
+                .filter { it.supersedes.isNotEmpty() }
                 .flatMap { suppressor ->
+                    val intervals = suppressorIntervalsByRef[suppressor.ref].orEmpty()
+                    if (intervals.isEmpty()) return@flatMap emptyList()
                     suppressor.supersedes
                         .filter { it in activeCalendars }
-                        .map { suppressed -> suppressed to suppressor.ref }
+                        .map { suppressed -> suppressed to (suppressor.ref to intervals) }
                 }
-                .toMap()
+                .groupBy({ it.first }, { it.second })
+
+        val bandsByDay = byDay.mapValues { (_, dayInstances) ->
             assignLanes(dayInstances, calMetaByRef).map { laneBand ->
-                val supersededBy = perDaySupersedeMap[laneBand.instance.calendar]
+                val candidates = suppressedByMap[laneBand.instance.calendar].orEmpty()
+                val bandStartMs = laneBand.instance.effectiveStart.toInstant().toEpochMilli()
+                val bandEndMs = laneBand.instance.effectiveEnd.toInstant().toEpochMilli()
+                // Pick the first supersedor whose interval actually overlaps
+                // the band. Stable iteration order = stable visual outcome.
+                val supersededBy = candidates.firstNotNullOfOrNull { (suppressor, intervals) ->
+                    if (intervals.any { (s, e) -> s < bandEndMs && e > bandStartMs }) suppressor else null
+                }
                 val instDay = laneBand.instance.effectiveStart.toLocalDate()
                 val forceShown = (laneBand.instance.instanceId to instDay) in forcedShownByEventOnDate
                 laneBand.copy(

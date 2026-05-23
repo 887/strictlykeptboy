@@ -6,9 +6,9 @@ created_at = 2026-05-23T18:00:00+01:00
 updated_at = 2026-05-23T18:00:00+01:00
 author = "01900000-0000-7000-8000-0000000000b0"
 title = "DevConf — Berlin (4 days)"
-dtstart = 2026-05-27T00:00:00
-duration = "P4D"
-all_day = true
+dtstart = 2026-05-27T07:00:00
+duration = "P3DT12H"
+all_day = false
 tz_id = "Europe/London"
 rrule = "FREQ=YEARLY;BYMONTH=5;BYDAY=-1WE"
 calendar_id = "0190a0aa-1c1d-7000-8a0a-00000000000a"
