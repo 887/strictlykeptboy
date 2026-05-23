@@ -91,7 +91,10 @@ class RendererTest {
             cal("vacation", priority = 999, supersedes = listOf("work")),
         )
         val sources = Renderer.Sources(
-            events = listOf(event("a", "work", "2026-05-11T10:00:00", "2026-05-11T11:00:00")),
+            events = listOf(
+                event("a", "work", "2026-05-11T10:00:00", "2026-05-11T11:00:00"),
+                event("v", "vacation", "2026-05-11T00:00:00", "2026-05-12T00:00:00"),
+            ),
             rules = emptyList(),
             exceptionsByRule = emptyMap(),
             deviations = emptyList(),
@@ -102,8 +105,9 @@ class RendererTest {
             ViewMode.Day, snap, sources,
             now = zdt("2026-05-11T08:00:00"),
         )
-        val band = out.days.single().bands.single()
-        assertEquals(CalendarRef("vacation"), band.supersededByCalendar)
+        val workBand = out.days.single().bands
+            .single { it.instance.calendar == CalendarRef("work") }
+        assertEquals(CalendarRef("vacation"), workBand.supersededByCalendar)
     }
 
     @Test fun offSchedule_taggedWhenBeyondBaselineCadence() = runTest {

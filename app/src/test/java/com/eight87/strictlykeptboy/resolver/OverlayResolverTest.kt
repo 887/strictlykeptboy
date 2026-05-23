@@ -104,14 +104,20 @@ class OverlayResolverTest {
             cal("work"),
             cal("vacation", priority = 999, supersedes = listOf("work")),
         )
-        val e = mat.fromOneOff(event("a", "work", "2026-05-11T10:00:00", "2026-05-11T11:00:00"))
+        // Round 2026-05-23 — supersedence now requires the suppressor
+        // to have an instance covering this day (so Brighton weekend
+        // doesn't silence Tuesday's routine). Feed an all-day vacation
+        // event so the supersedence path activates.
+        val workEvent = mat.fromOneOff(event("a", "work", "2026-05-11T10:00:00", "2026-05-11T11:00:00"))
+        val vacationEvent = mat.fromOneOff(event("v", "vacation", "2026-05-11T00:00:00", "2026-05-12T00:00:00"))
         val v = overlay.layer(
-            setOf(CalendarRef("work"), CalendarRef("vacation")), listOf(e), snap,
+            setOf(CalendarRef("work"), CalendarRef("vacation")), listOf(workEvent, vacationEvent), snap,
             zdt("2026-05-11T00:00:00"), zdt("2026-05-12T00:00:00"),
             now = zdt("2026-05-11T00:00:00"),
         )
-        val band = v.bandsByDay.getValue(LocalDate.parse("2026-05-11")).single()
-        assertEquals(CalendarRef("vacation"), band.supersededByCalendar)
+        val workBand = v.bandsByDay.getValue(LocalDate.parse("2026-05-11"))
+            .single { it.instance.calendar == CalendarRef("work") }
+        assertEquals(CalendarRef("vacation"), workBand.supersededByCalendar)
     }
 
     @Test fun supersedence_overrideClearsTag() {
@@ -119,7 +125,8 @@ class OverlayResolverTest {
             cal("work"),
             cal("vacation", priority = 999, supersedes = listOf("work")),
         )
-        val e = mat.fromOneOff(event("a", "work", "2026-05-11T10:00:00", "2026-05-11T11:00:00"))
+        val workEvent = mat.fromOneOff(event("a", "work", "2026-05-11T10:00:00", "2026-05-11T11:00:00"))
+        val vacationEvent = mat.fromOneOff(event("v", "vacation", "2026-05-11T00:00:00", "2026-05-12T00:00:00"))
         val ov = OverrideInput(
             supersededCalendar = CalendarRef("work"),
             eventId = "a",
@@ -127,13 +134,14 @@ class OverlayResolverTest {
             kind = OverrideKind.ForceShow,
         )
         val v = overlay.layer(
-            setOf(CalendarRef("work"), CalendarRef("vacation")), listOf(e), snap,
+            setOf(CalendarRef("work"), CalendarRef("vacation")), listOf(workEvent, vacationEvent), snap,
             zdt("2026-05-11T00:00:00"), zdt("2026-05-12T00:00:00"),
             overrides = listOf(ov),
             now = zdt("2026-05-11T00:00:00"),
         )
-        val band = v.bandsByDay.getValue(LocalDate.parse("2026-05-11")).single()
-        assertNull(band.supersededByCalendar)
+        val workBand = v.bandsByDay.getValue(LocalDate.parse("2026-05-11"))
+            .single { it.instance.calendar == CalendarRef("work") }
+        assertNull(workBand.supersededByCalendar)
     }
 
     @Test fun priorityOverride_winsOverCalendarPriority() {

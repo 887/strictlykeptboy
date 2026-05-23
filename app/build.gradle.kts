@@ -1,3 +1,4 @@
+import java.security.MessageDigest
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -411,20 +412,55 @@ tasks.named("check") {
 // The runtime seeder reads this manifest because AssetManager.list()
 // is non-recursive. `RichDemoManifestCoverageTest` fails the unit
 // suite if the manifest drifts from the asset tree.
-tasks.register("regenerateRichDemoManifest") {
+val regenerateRichDemoManifest = tasks.register("regenerateRichDemoManifest") {
     group = "build setup"
     description = "Regenerate app/src/main/assets/rich-demo-repo/_manifest.txt by walking the asset tree."
     val assetRoot = file("src/main/assets/rich-demo-repo")
+    val manifestOutput = File(assetRoot, "_manifest.txt")
+    inputs.files(
+        fileTree(assetRoot) { exclude("_manifest.txt") },
+    ).withPropertyName("richDemoAssets").withPathSensitivity(PathSensitivity.RELATIVE)
+    outputs.file(manifestOutput).withPropertyName("manifest")
     doLast {
         require(assetRoot.isDirectory) { "rich-demo asset dir missing: $assetRoot" }
         val rootPath = assetRoot.toPath()
+        val manifest = File(assetRoot, "_manifest.txt")
+        // Exclude the manifest itself from the walk so its hash doesn't
+        // depend on its previous contents (chicken-and-egg).
         val entries = assetRoot
             .walkTopDown()
-            .filter { it.isFile }
+            .filter { it.isFile && it != manifest }
             .map { rootPath.relativize(it.toPath()).toString().replace('\\', '/') }
             .toSortedSet()
-        val manifest = File(assetRoot, "_manifest.txt")
-        manifest.writeText(entries.joinToString(separator = "\n", postfix = "\n"))
-        logger.lifecycle("regenerated ${manifest.relativeTo(rootDir)} (${entries.size} entries)")
+        // Content hash of (sorted relative path + SHA-256 of file contents) for
+        // every entry. Runtime seeder uses this as the idempotency key so any
+        // change to the bundled demo auto-invalidates the seeded flag on the
+        // next install — no manual KEY_SEEDED bump required.
+        val md = MessageDigest.getInstance("SHA-256")
+        for (rel in entries) {
+            md.update(rel.toByteArray(Charsets.UTF_8))
+            md.update(0.toByte())
+            md.update(File(assetRoot, rel).readBytes())
+            md.update(0.toByte())
+        }
+        val contentHash = md.digest().joinToString(separator = "") { byte -> "%02x".format(byte) }
+        val lines = buildList {
+            add("# content-hash: $contentHash")
+            addAll(entries)
+        }
+        manifest.writeText(lines.joinToString(separator = "\n", postfix = "\n"))
+        logger.lifecycle("regenerated ${manifest.relativeTo(rootDir)} (${entries.size} entries, hash=${contentHash.take(12)}…)")
     }
+}
+
+// Auto-run the manifest regeneration before assets are packaged so the
+// bundled `_manifest.txt` (and its content-hash header) always reflects
+// the current asset tree. The RichDemoSeeder keys its seeded-flag on
+// that hash, so any change to the demo content auto-invalidates the
+// on-device seed without a manual KEY_SEEDED bump.
+tasks.matching { it.name.startsWith("merge") && it.name.endsWith("Assets") }.configureEach {
+    dependsOn(regenerateRichDemoManifest)
+}
+tasks.matching { it.name.startsWith("package") && (it.name.endsWith("Resources") || it.name.endsWith("Assets")) }.configureEach {
+    dependsOn(regenerateRichDemoManifest)
 }

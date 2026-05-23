@@ -27,6 +27,10 @@ class RichDemoManifestCoverageTest {
 
         val actual = walkAssetTree(assets, RichDemoSeeder.ASSET_ROOT)
             .map { it.removePrefix("${RichDemoSeeder.ASSET_ROOT}/") }
+            // The manifest no longer lists itself — its content-hash
+            // header would be a chicken-and-egg input. Exclude on both
+            // sides so equality is well-defined.
+            .filter { it != RichDemoSeeder.MANIFEST_NAME }
             .toSortedSet()
 
         val manifest = assets.open("${RichDemoSeeder.ASSET_ROOT}/${RichDemoSeeder.MANIFEST_NAME}")
@@ -35,9 +39,6 @@ class RichDemoManifestCoverageTest {
             .filter { it.isNotEmpty() && !it.startsWith("#") }
             .toSortedSet()
 
-        // The manifest lists itself; the walker also returns it. Both
-        // sets include `_manifest.txt`, so equality works without
-        // special-casing.
         val onlyInTree = actual - manifest
         val onlyInManifest = manifest - actual
         assertEquals(

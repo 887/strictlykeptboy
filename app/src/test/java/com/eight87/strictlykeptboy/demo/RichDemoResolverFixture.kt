@@ -130,17 +130,33 @@ data class RichDemoResolverFixture(
             // with like. activeWindows is supplied for any calendar that
             // declares `supersedes` so the resolver only suppresses other
             // calendars on days where this one actually has an event.
+            val uuidToFolder = folderToUuid.entries.associate { (k, v) -> v to k }
             val calendars = folderToUuid.map { (folder, uuid) ->
-                val supersedesFolders = supersedesByFolder[folder].orEmpty()
-                val supersedesRefs = supersedesFolders
-                    .filter { it !in nonSuperseable }
-                    .mapNotNull { folderToUuid[it] }
+                // Round 2026-05-23 — the supersedes list in calendar.toml
+                // contains calendar UUIDs (the canonical CalendarRef.id);
+                // legacy demos used folder-name strings. Accept either:
+                // if the entry looks up in folderToUuid (folder name) use
+                // that mapping; otherwise treat it as a UUID directly and
+                // resolve the folder for the nonSuperseable check.
+                val supersedesEntries = supersedesByFolder[folder].orEmpty()
+                val supersedesRefs = supersedesEntries
+                    .mapNotNull { entry ->
+                        val uuidStr = folderToUuid[entry] ?: entry
+                        val folderName = uuidToFolder[uuidStr] ?: entry
+                        if (folderName in nonSuperseable) null else uuidStr
+                    }
                     .map { CalendarRef(it) }
-                val windows = if (supersedesRefs.isNotEmpty()) {
-                    activeWindowsByUuid[uuid].orEmpty().toList()
-                } else {
-                    emptyList()
-                }
+                // Round 2026-05-23 — OverlayResolver now infers
+                // supersedor activation per-day from MaterializedInstance
+                // presence (so a Brighton-weekend event on a vacation
+                // calendar suppresses routines only Sat–Sun, without
+                // requiring per-trip `active_windows` toml edits). Leave
+                // activeWindows empty for supersedor calendars so the
+                // resolver's per-day path takes over — supplying static
+                // event-derived windows here would mask recurrence-based
+                // supersedence (e.g. yearly DevConf) that the per-day
+                // path handles correctly.
+                val windows = emptyList<DateRange>()
                 CalendarMeta(
                     ref = CalendarRef(uuid),
                     repo = RepoRef(REPO_ID),

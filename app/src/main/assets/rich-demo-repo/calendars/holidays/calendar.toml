@@ -15,13 +15,4 @@ non_superseable = true
 # (Lane 0, priority 950). On Christmas Day / bank holidays the
 # Lane-1 work/commute/routine stack disappears; sleep, cat-care
 # and kinky-rituals continue (cage stays on, cat still gets fed).
-supersedes = [
-    "0190a0aa-1c1d-7000-8a0a-000000000003",
-    "0190a0aa-1c1d-7000-8a0a-000000000001",
-    "0190a0aa-1c1d-7000-8a0a-000000000002",
-    "0190a0aa-1c1d-7000-8a0a-000000000004",
-    "0190a0aa-1c1d-7000-8a0a-000000000006",
-    "0190a0aa-1c1d-7000-8a0a-000000000021",
-    "0190a0aa-1c1d-7000-8a0a-000000000020",
-    "0190a0aa-1c1d-7000-8a0a-00000000000d",
-]
+supersedes = ["0190a0aa-1c1d-7000-8a0a-000000000003", "0190a0aa-1c1d-7000-8a0a-000000000001", "0190a0aa-1c1d-7000-8a0a-000000000002", "0190a0aa-1c1d-7000-8a0a-000000000004", "0190a0aa-1c1d-7000-8a0a-000000000006", "0190a0aa-1c1d-7000-8a0a-000000000021", "0190a0aa-1c1d-7000-8a0a-000000000020", "0190a0aa-1c1d-7000-8a0a-00000000000d"]

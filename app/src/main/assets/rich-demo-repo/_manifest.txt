@@ -1,8 +1,8 @@
+# content-hash: 1a30448a670fe32825b9f37d32e3ce21cdd34cd3705bd846ff29ff77849d236d
 .strictlykeptboy/repo.toml
 .strictlykeptboy/schema.toml
 AGENTS.md
 README.md
-_manifest.txt
 calendars/base/calendar.toml
 calendars/base/recurrences/commute-in.md
 calendars/base/recurrences/commute-out.md

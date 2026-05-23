@@ -48,16 +48,24 @@ class RichDemoSeeder(
      */
     suspend fun seedIfNeeded(parentDir: File): Result<File> = withContext(Dispatchers.IO) {
         val repoRoot = File(parentDir, REPO_DIR_NAME)
-        if (isSeeded() && repoRoot.exists()) {
+        val manifestLines = readManifestLines()
+        val bundledHash = manifestLines.contentHash
+        val seededHash = prefs.getString(KEY_SEEDED_HASH, null)
+        if (seededHash != null && seededHash == bundledHash && repoRoot.exists()) {
             return@withContext Result.success(repoRoot)
         }
         runCatching {
             if (repoRoot.exists()) {
                 repoRoot.deleteRecursively()
             }
-            extract(repoRoot.toPath())
+            extract(repoRoot.toPath(), manifestLines.entries)
             reconstructSymlink(repoRoot.toPath())
-            prefs.edit { putBoolean(KEY_SEEDED, true) }
+            prefs.edit {
+                putString(KEY_SEEDED_HASH, bundledHash)
+                // Keep the legacy boolean for callers that still read it
+                // (DemoRepoSeeder gating, settings "demo seeded?" badge).
+                putBoolean(KEY_SEEDED, true)
+            }
             repoRoot
         }.onFailure { t ->
             Log.w(TAG, "rich-demo seed failed; cleaning partial extract", t)
@@ -68,15 +76,17 @@ class RichDemoSeeder(
     fun isSeeded(): Boolean = prefs.getBoolean(KEY_SEEDED, false)
 
     fun resetSeededFlag() {
-        prefs.edit { remove(KEY_SEEDED) }
+        prefs.edit {
+            remove(KEY_SEEDED)
+            remove(KEY_SEEDED_HASH)
+        }
     }
 
     // --- internals --------------------------------------------------
 
-    private fun extract(repoRoot: Path) {
+    private fun extract(repoRoot: Path, entries: List<String>) {
         Files.createDirectories(repoRoot)
-        val manifest = readManifest()
-        for (relPath in manifest) {
+        for (relPath in entries) {
             // Skip the manifest itself — no need to extract the index.
             if (relPath == MANIFEST_NAME) continue
             val target = repoRoot.resolve(relPath)
@@ -88,14 +98,48 @@ class RichDemoSeeder(
         }
     }
 
-    private fun readManifest(): List<String> {
-        return context.assets.open("$ASSET_ROOT/$MANIFEST_NAME").bufferedReader().use { r ->
-            r.lineSequence()
-                .map { it.trim() }
-                .filter { it.isNotEmpty() && !it.startsWith("#") }
-                .toList()
+    /**
+     * Parses the manifest into its content-hash header (`# content-hash: …`,
+     * written by the `regenerateRichDemoManifest` gradle task) and its
+     * ordered list of file entries. Manifest lines without a hash header
+     * (legacy builds) fall back to a hash derived from the entry list
+     * itself — still better than the previous boolean idempotency since
+     * adding / removing a file invalidates the seed.
+     */
+    private fun readManifestLines(): ManifestContents {
+        var headerHash: String? = null
+        val entries = mutableListOf<String>()
+        context.assets.open("$ASSET_ROOT/$MANIFEST_NAME").bufferedReader().use { r ->
+            r.lineSequence().forEach { raw ->
+                val line = raw.trim()
+                if (line.isEmpty()) return@forEach
+                if (line.startsWith("#")) {
+                    val prefix = "# content-hash:"
+                    if (line.startsWith(prefix)) {
+                        headerHash = line.removePrefix(prefix).trim().takeIf { it.isNotEmpty() }
+                    }
+                    return@forEach
+                }
+                entries += line
+            }
         }
+        val hash = headerHash ?: run {
+            // Fallback: hash the entry list. Won't catch in-place content
+            // edits, but does catch adds / renames / removes.
+            val md = java.security.MessageDigest.getInstance("SHA-256")
+            entries.forEach {
+                md.update(it.toByteArray(Charsets.UTF_8))
+                md.update(0)
+            }
+            md.digest().joinToString("") { "%02x".format(it) }
+        }
+        return ManifestContents(contentHash = hash, entries = entries)
     }
+
+    private data class ManifestContents(
+        val contentHash: String,
+        val entries: List<String>,
+    )
 
     private fun reconstructSymlink(repoRoot: Path) {
         val marker = repoRoot.resolve(SYMLINK_MARKER)
@@ -142,12 +186,23 @@ class RichDemoSeeder(
         /** Subdirectory under [seedIfNeeded]'s `parentDir`. */
         const val REPO_DIR_NAME = "rich-demo"
 
-        /** Versioned idempotency key — bump to force re-seed after content updates. */
-        // Round 2.27 / Phase E + F — bumped to v2 to force re-seed of
-        // the Phase E keeper-prompt demo content (cage-photo-sunday,
-        // cage-feels-midweek, proof-photo one-offs, seeded response)
-        // and Phase F persona realism (gaming / voice-chat / play
-        // calendars, work-sprint tasks, convention exception).
+        /**
+         * Legacy boolean kept for back-compat with callers that just want
+         * "did the rich-demo get extracted at any point". The actual
+         * idempotency now lives in [KEY_SEEDED_HASH] — the seeder
+         * re-extracts whenever the bundled manifest's content-hash header
+         * (written by the `regenerateRichDemoManifest` gradle task)
+         * differs from the hash stored after the last successful seed.
+         * So content changes auto-invalidate; no manual version-bump
+         * dance required.
+         */
         const val KEY_SEEDED = "pref_rich_demo_seeded_v3"
+
+        /**
+         * Content-hash of the bundled rich-demo at last successful seed.
+         * Compared against the manifest header on every launch — mismatch
+         * triggers a re-extract.
+         */
+        const val KEY_SEEDED_HASH = "pref_rich_demo_seeded_hash"
     }
 }

@@ -110,12 +110,15 @@ class RichDemoResolverOverlayTest {
         val day = rendered.days.single()
 
         val vacationRef = CalendarRef(fixture.calendarUuid("vacation"))
-        val supersededCalendars = setOf("work", "commute", "gym", "dom-overlay", "social")
+        // Round 2026-05-23 — vacation became a special BASE layer that
+        // also supersedes the morning-routine stack while active.
+        // Cat-care + holidays + kinky-rituals stay (non_superseable).
+        val supersededCalendars = setOf("work", "commute", "gym", "dom-overlay", "social", "routines")
             .map { fixture.calendarUuid(it) }
             .map { CalendarRef(it) }
             .toSet()
         val preservedCalendars = setOf(
-            "kinky-rituals", "cat-care", "holidays", "routines",
+            "kinky-rituals", "cat-care", "holidays",
         )
             .map { fixture.calendarUuid(it) }
             .map { CalendarRef(it) }

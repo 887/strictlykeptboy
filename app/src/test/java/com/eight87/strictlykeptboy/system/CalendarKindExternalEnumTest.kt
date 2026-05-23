@@ -31,10 +31,11 @@ class CalendarKindExternalEnumTest {
 
     @Test fun externalIsExactlyTheThirdEnumEntry() {
         val values = CalendarKind.values().toList()
-        assertEquals(3, values.size)
+        assertEquals(4, values.size)
         assertEquals(CalendarKind.Regular, values[0])
         assertEquals(CalendarKind.Timebox, values[1])
         assertEquals(CalendarKind.External, values[2])
+        assertEquals(CalendarKind.Base, values[3])
         // Ordinal contract — load-bearing for any downstream `.ordinal`
         // serializer (Room TypeConverter, kotlinx.serialization default,
         // SharedPreferences int storage). Pinning it here so a reorder
@@ -86,6 +87,7 @@ class CalendarKindExternalEnumTest {
                 CalendarKind.Regular -> "Regular"
                 CalendarKind.Timebox -> "Timebox"
                 CalendarKind.External -> "External"
+                CalendarKind.Base -> "Base"
             }
             assertEquals(k.name, label)
         }

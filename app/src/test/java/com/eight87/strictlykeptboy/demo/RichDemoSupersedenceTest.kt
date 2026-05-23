@@ -61,10 +61,15 @@ class RichDemoSupersedenceTest {
 
     @Test fun `vacation_supersedes_work_commute_gym_domoverlay_social_across_window`() = runTest {
         val vacationRef = CalendarRef(fixture.calendarUuid("vacation"))
-        val supersededRefs = listOf("work", "commute", "gym", "dom-overlay", "social")
+        // Round 2026-05-23 — vacation became a special BASE layer that
+        // also suppresses the morning-routine timebox stack while
+        // active (Brighton weekend = clean canvas to plan trip-specific
+        // events on top, no routine clutter). Cat-care + holidays +
+        // kinky-rituals stay (non_superseable).
+        val supersededRefs = listOf("work", "commute", "gym", "dom-overlay", "social", "routines")
             .map { CalendarRef(fixture.calendarUuid(it)) }
             .toSet()
-        val preservedRefs = listOf("kinky-rituals", "cat-care", "holidays", "routines")
+        val preservedRefs = listOf("kinky-rituals", "cat-care", "holidays")
             .map { CalendarRef(fixture.calendarUuid(it)) }
             .toSet()
 

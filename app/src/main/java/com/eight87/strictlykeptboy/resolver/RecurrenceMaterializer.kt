@@ -44,8 +44,14 @@ class RecurrenceMaterializer {
             .plusDays(1).atStartOfDay(rule.tzId).toInstant().toEpochMilli()
 
         val it = parsed.iterator(DateTime(tz, startInstant))
-        // fastForward is faster than iterating from DTSTART when range is far in future
-        if (rangeStartInstant > startInstant) it.fastForward(DateTime(tz, rangeStartInstant))
+        // Round 2026-05-23 — fastForward needs to back off by the rule's
+        // own duration so multi-day instances whose dtstart is BEFORE
+        // the range but whose duration extends INTO the range are still
+        // returned. Without this, a 4-day DevConf recurrence starting
+        // Wed gets dropped when the caller renders just Thu.
+        val durationMs = rule.duration.toMillis()
+        val fastForwardTarget = rangeStartInstant - durationMs
+        if (fastForwardTarget > startInstant) it.fastForward(DateTime(tz, fastForwardTarget))
 
         val rawStarts = mutableListOf<ZonedDateTime>()
         var guard = 0
@@ -54,6 +60,11 @@ class RecurrenceMaterializer {
             val dt = it.nextDateTime()
             val ms = dt.timestamp
             if (ms >= rangeEndExclusive) break
+            // Skip instances whose end falls before rangeStart (back-off
+            // from fastForward may iterate over a couple of pre-range
+            // firings; this filter drops them so callers only see the
+            // ones that actually overlap the requested range).
+            if (ms + durationMs <= rangeStartInstant) continue
             rawStarts += Instant.ofEpochMilli(ms).atZone(rule.tzId)
             guard++
         }

@@ -35,16 +35,24 @@ class OverlayResolver(
     ): LayeredView {
         val calMetaByRef = snapshot.calendars.associateBy { it.ref }
 
-        // RV-O: per-day supersedence map. For each active calendar that
-        // supersedes others, mark the suppressed calendar's bands.
-        val supersedeMap: Map<CalendarRef, CalendarRef> = activeCalendars
-            .mapNotNull { calMetaByRef[it] }
-            .flatMap { suppressor ->
-                suppressor.supersedes
-                    .filter { it in activeCalendars }
-                    .map { suppressed -> suppressed to suppressor.ref }
-            }
-            .toMap()
+        // Round 2026-05-23 — per-day suppressor presence. A supersedor
+        // calendar (e.g. `vacation`) only suppresses on days where it
+        // actually has an instance — a Brighton-weekend event Sat–Sun
+        // should not silence the morning routine on the following
+        // Tuesday. The previous range-wide map activated supersedence
+        // for the whole render window whenever the suppressor was
+        // active at "now", which over-suppressed in production
+        // (vacation with empty activeWindows = always active) and
+        // forced test fixtures to fabricate static activeWindows from
+        // each one-off event's start/end. With this change the user
+        // can author Brighton as a single weekend event + ship the
+        // vacation overlay with no per-trip activeWindows toml edits.
+        val suppressorDaysByRef: Map<CalendarRef, Set<LocalDate>> = instances
+            .filter { it.calendar in activeCalendars }
+            .filter { calMetaByRef[it.calendar]?.supersedes?.isNotEmpty() == true }
+            .flatMap { inst -> daysCovered(inst, rangeFrom, rangeTo).map { it to inst.calendar } }
+            .groupBy({ it.second }, { it.first })
+            .mapValues { (_, days) -> days.toSet() }
 
         // RV-O override re-include: an override pinned to a specific event/date forces show.
         val forcedShownByEventOnDate: Map<Pair<String, LocalDate>, Unit> = overrides
@@ -68,11 +76,29 @@ class OverlayResolver(
             .flatMap { inst -> daysCovered(inst, rangeFrom, rangeTo).map { it to inst } }
             .groupBy({ it.first }) { it.second }
 
-        val bandsByDay = byDay.mapValues { (_, dayInstances) ->
+        val bandsByDay = byDay.mapValues { (day, dayInstances) ->
+            // Per-day supersedence: a suppressor is "in effect" on this
+            // day if it has at least one instance covering this day.
+            // No instance on this day → no supersedence (e.g. vacation
+            // doesn't silence the Tuesday morning routine just because
+            // a Brighton-weekend event exists on Sat–Sun).
+            val suppressorsToday = activeCalendars
+                .mapNotNull { calMetaByRef[it] }
+                .filter { meta ->
+                    if (meta.supersedes.isEmpty()) return@filter false
+                    day in suppressorDaysByRef[meta.ref].orEmpty()
+                }
+            val perDaySupersedeMap: Map<CalendarRef, CalendarRef> = suppressorsToday
+                .flatMap { suppressor ->
+                    suppressor.supersedes
+                        .filter { it in activeCalendars }
+                        .map { suppressed -> suppressed to suppressor.ref }
+                }
+                .toMap()
             assignLanes(dayInstances, calMetaByRef).map { laneBand ->
-                val supersededBy = supersedeMap[laneBand.instance.calendar]
-                val day = laneBand.instance.effectiveStart.toLocalDate()
-                val forceShown = (laneBand.instance.instanceId to day) in forcedShownByEventOnDate
+                val supersededBy = perDaySupersedeMap[laneBand.instance.calendar]
+                val instDay = laneBand.instance.effectiveStart.toLocalDate()
+                val forceShown = (laneBand.instance.instanceId to instDay) in forcedShownByEventOnDate
                 laneBand.copy(
                     supersededByCalendar = if (supersededBy != null && !forceShown) supersededBy else null,
                     completionState = inversionStateFor(laneBand.instance, deviations, now),

@@ -34,8 +34,14 @@ class RendererSupersedenceTest {
             cal("work"),
             cal("vacation", priority = 999, supersedes = listOf("work")),
         )
+        // Round 2026-05-23 — supersedence now requires the suppressor
+        // to have an instance covering this day. Feed a vacation event
+        // so the supersedence path activates.
         val sources = Renderer.Sources(
-            events = listOf(event("a", "work", "2026-05-11T10:00:00", "2026-05-11T11:00:00")),
+            events = listOf(
+                event("a", "work", "2026-05-11T10:00:00", "2026-05-11T11:00:00"),
+                event("v", "vacation", "2026-05-11T00:00:00", "2026-05-12T00:00:00"),
+            ),
             rules = emptyList(),
             exceptionsByRule = emptyMap(),
             deviations = emptyList(),
@@ -46,9 +52,10 @@ class RendererSupersedenceTest {
             ViewMode.Day, snap, sources,
             now = zdt("2026-05-11T08:00:00"),
         )
-        val band = out.days.single().bands.single()
-        assertNotNull("superseded band must remain in the render output", band.supersededByCalendar)
-        assertEquals(CalendarRef("vacation"), band.supersededByCalendar)
+        val workBand = out.days.single().bands
+            .single { it.instance.calendar == CalendarRef("work") }
+        assertNotNull("superseded band must remain in the render output", workBand.supersededByCalendar)
+        assertEquals(CalendarRef("vacation"), workBand.supersededByCalendar)
     }
 
     @Test fun nonSupersededBands_areNotTagged() = runTest {
