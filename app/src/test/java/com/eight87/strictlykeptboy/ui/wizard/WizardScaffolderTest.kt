@@ -46,7 +46,13 @@ class WizardScaffolderTest {
             val rules = Files.list(recurDir).use { it.toList() }
             assertTrue("at least one recurrence for ${role.id}", rules.isNotEmpty())
         }
-        assertEquals(5, outcome.standingTasksWritten)
+        // Walkthrough-2 enrichment: 5 onboarding standing tasks + sample
+        // standing tasks + 1 dated sample. Bound is `>= 5` to stay stable
+        // if the sample-task roster shifts later.
+        assertTrue(
+            "≥ 5 standing/sample tasks (got ${outcome.standingTasksWritten})",
+            outcome.standingTasksWritten >= 5,
+        )
         // identity.toml has alignment + tone
         val idToml = String(Files.readAllBytes(root.resolve("identity.toml")), Charsets.UTF_8)
         assertTrue(idToml.contains("submissive"))

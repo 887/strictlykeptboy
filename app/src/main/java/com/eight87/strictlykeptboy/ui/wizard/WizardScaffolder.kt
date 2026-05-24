@@ -57,6 +57,12 @@ object WizardScaffolder {
         val recurrencesWritten: Int,
         val standingTasksWritten: Int,
         val authorIdentity: AuthorIdentity,
+        /**
+         * Walkthrough-2 enrichment counters. See [WizardBaseLayersScaffolder].
+         * `null` only in the (defensive) case that the enrichment step was
+         * skipped — today it always runs after Step 4.
+         */
+        val baseLayers: WizardBaseLayersScaffolder.Outcome? = null,
     )
 
     /**
@@ -230,6 +236,19 @@ object WizardScaffolder {
             EntityWriter.write(rootDir, task)
         }
 
+        // Walkthrough-2 enrichment — base / public-holidays / vacation
+        // calendars + a handful of sample tasks + one upcoming event so
+        // the user's first-paint schedule has demo-comparable density.
+        // See WizardBaseLayersScaffolder kdoc for the full rationale.
+        val baseLayersOutcome = WizardBaseLayersScaffolder.materialize(
+            rootDir = rootDir,
+            identityId = scaffold.identityId,
+            tzId = tzId,
+            roleCalendarIds = calendarsByRole.values,
+            onboardingTodolistId = scaffold.todolistIds[onboardingTodolist]!!,
+            now = now,
+        )
+
         // Identity.toml — Phase 2.1.J.2: replace the legacy text-concat
         // appendix with a single codec-driven write so the on-disk format
         // matches IdentityTomlCodec exactly (and so Settings edits can
@@ -328,7 +347,8 @@ object WizardScaffolder {
         val commitMsg = buildString {
             append("wizard: scaffold lifestyle (")
             append(normalized.alignment.id).append("/").append(normalized.lifestyle.id)
-            append(", ${calendarsByRole.size} roles, $recurCount recurrences)")
+            append(", ${calendarsByRole.size} roles, ")
+            append("${recurCount + baseLayersOutcome.recurrencesWritten} recurrences)")
         }
         gitRepo.commitAll(commitMsg)
         gitRepo.close()
@@ -338,9 +358,10 @@ object WizardScaffolder {
             rootDir = rootDir,
             calendarIds = calendarsByRole,
             todolistId = todoId,
-            recurrencesWritten = recurCount,
-            standingTasksWritten = onboarding.size,
+            recurrencesWritten = recurCount + baseLayersOutcome.recurrencesWritten,
+            standingTasksWritten = onboarding.size + baseLayersOutcome.sampleTasksWritten,
             authorIdentity = author,
+            baseLayers = baseLayersOutcome,
         )
     }
 }
