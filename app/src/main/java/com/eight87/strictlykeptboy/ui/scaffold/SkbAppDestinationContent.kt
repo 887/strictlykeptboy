@@ -54,6 +54,7 @@ internal fun SkbAppDestinationContent(
     onPlanTrip: () -> Unit,
     calendarVisibility: com.eight87.strictlykeptboy.ui.settings.CalendarVisibilityPrefs?,
     onLongPressCalendar: ((com.eight87.strictlykeptboy.resolver.CalendarMeta) -> Unit)?,
+    scheduleViewModePrefs: com.eight87.strictlykeptboy.ui.schedule.ScheduleViewModePrefs?,
     togetherViewModel: TogetherViewModel?,
     neutralMode: Boolean,
     reposState: ReposViewState?,
@@ -110,6 +111,7 @@ internal fun SkbAppDestinationContent(
             onSingleDrop = onSingleDrop,
             onRecurringDrop = onRecurringDrop,
             onOpenEventDetailFullScreen = onOpenEventDetailFullScreen,
+            viewModePrefs = scheduleViewModePrefs,
         )
         TopDestination.Tasks -> TasksPane(
             filter = tasksFilter,

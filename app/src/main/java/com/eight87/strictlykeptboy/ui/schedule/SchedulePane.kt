@@ -103,6 +103,12 @@ fun SchedulePane(
      * lets the user search any zone.
      */
     repoDefaultTzId: String? = null,
+    /**
+     * Round 2026-05-24 — drives the new "Superseded mode" floating
+     * toggle (Hide vs Strikethrough). When null the schedule still
+     * renders + the toggle is omitted (test / preview entry-points).
+     */
+    viewModePrefs: ScheduleViewModePrefs? = null,
 ) {
     androidx.compose.runtime.LaunchedEffect(state) {
         com.eight87.strictlykeptboy.perf.PerfTraceRecorder.begin(
@@ -159,6 +165,7 @@ fun SchedulePane(
                             calendarVisibility = calendarVisibility,
                             onDragReschedule = onDragReschedule,
                             repoDefaultTzId = repoDefaultTzId,
+                            viewModePrefs = viewModePrefs,
                         )
                     }
                 },
@@ -197,6 +204,7 @@ fun SchedulePane(
                     calendarVisibility = calendarVisibility,
                     onDragReschedule = onDragReschedule,
                     repoDefaultTzId = repoDefaultTzId,
+                    viewModePrefs = viewModePrefs,
                 )
             }
             // Round 2.23 Phase D (D-2.23.d) — full-screen event detail
@@ -272,14 +280,24 @@ private fun ScheduleMasterContent(
     calendarVisibility: CalendarVisibilityPrefs? = null,
     onDragReschedule: ((DayBand, java.time.OffsetDateTime) -> Unit)? = null,
     repoDefaultTzId: String? = null,
+    viewModePrefs: ScheduleViewModePrefs? = null,
 ) {
     val selectedTab by state.selectedTab.collectAsState()
     val date by state.date.collectAsState()
     val rendered by state.rendered.collectAsState()
+    val supersededMode by (viewModePrefs?.supersededDisplayMode
+        ?: kotlinx.coroutines.flow.MutableStateFlow(SupersededDisplayMode.Hidden))
+        .collectAsState()
     // Round 2026-05-17 [M] #10 — narrow the schedule god-handle to a
     // [DayBandSource] before passing it to leaf views (ISP / R.X.1).
-    val dayBandSource: DayBandSource = remember(rendered) {
-        rendered?.asDayBandSource() ?: DayBandSource.Empty
+    val dayBandSource: DayBandSource = remember(rendered, supersededMode) {
+        val base = rendered?.asDayBandSource() ?: DayBandSource.Empty
+        // Round 2026-05-24 — Hide (default) drops superseded bands so the
+        // user sees only the active special-base event; Strikethrough
+        // keeps them visible at 0.35 alpha + LineThrough.
+        if (supersededMode == SupersededDisplayMode.Hidden) {
+            DayBandSource { date -> base.bandsFor(date).filter { it.supersededByCalendar == null } }
+        } else base
     }
     val renderedDates = remember(rendered) {
         rendered?.days?.map { it.date }.orEmpty()
@@ -552,6 +570,11 @@ private fun ScheduleMasterContent(
             // toggle is meaningless there. Filter FAB still useful.
             showLayoutToggle = selectedTab !=
                 com.eight87.strictlykeptboy.ui.scaffold.ScheduleViewTab.Day,
+            supersededMode = supersededMode,
+            onSupersededModeChange = { mode ->
+                viewModePrefs?.setSupersededDisplayMode(mode)
+            },
+            showSupersededToggle = viewModePrefs != null,
         )
     }
     }  // end outer Box

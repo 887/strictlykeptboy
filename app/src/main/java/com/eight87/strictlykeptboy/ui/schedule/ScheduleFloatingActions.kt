@@ -10,7 +10,9 @@ import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.PriorityHigh
 import androidx.compose.material.icons.outlined.Repeat
+import androidx.compose.material.icons.outlined.StrikethroughS
 import androidx.compose.material.icons.outlined.ViewAgenda
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -28,6 +30,7 @@ import androidx.compose.ui.unit.dp
 const val TestTagScheduleLayoutFab = "ScheduleLayoutFab"
 const val TestTagScheduleFilterFab = "ScheduleFilterFab"
 const val TestTagScheduleFilterMenu = "ScheduleFilterMenu"
+const val TestTagScheduleSupersededFab = "ScheduleSupersededFab"
 
 /**
  * Shutterboy-style floating action cluster for Schedule.
@@ -55,6 +58,22 @@ fun ScheduleFloatingActions(
      * stacked-list use-case (per user 2026-05-23).
      */
     showLayoutToggle: Boolean = true,
+    /**
+     * Round 2026-05-24 — current visual treatment for supersedence-tagged
+     * bands. Tapping the FAB cycles between [SupersededDisplayMode.Hidden]
+     * (drops them entirely — the default; "I just want to see what the
+     * special-base event actually replaced my day with") and
+     * [SupersededDisplayMode.Strikethrough] (keeps them visible at 0.35
+     * alpha + LineThrough; "I want to see what got skipped").
+     */
+    supersededMode: SupersededDisplayMode = SupersededDisplayMode.Hidden,
+    onSupersededModeChange: (SupersededDisplayMode) -> Unit = {},
+    /**
+     * When false, the superseded-mode toggle FAB is omitted. Preview /
+     * test entry-points without a wired [ScheduleViewModePrefs] pass
+     * `false` so taps don't no-op silently.
+     */
+    showSupersededToggle: Boolean = true,
 ) {
     // Bottom-start cluster — placed against the rail edge so it
     // never overlaps actual schedule content. The "+ New" FAB still
@@ -132,6 +151,35 @@ fun ScheduleFloatingActions(
                     onFlagsChange(if (next.anyOn()) next else flags)
                 },
             )
+        }
+
+        if (showSupersededToggle) {
+            SmallFloatingActionButton(
+                onClick = {
+                    onSupersededModeChange(
+                        if (supersededMode == SupersededDisplayMode.Hidden) {
+                            SupersededDisplayMode.Strikethrough
+                        } else {
+                            SupersededDisplayMode.Hidden
+                        },
+                    )
+                },
+                modifier = Modifier.testTag(TestTagScheduleSupersededFab),
+            ) {
+                Icon(
+                    imageVector = if (supersededMode == SupersededDisplayMode.Hidden) {
+                        Icons.Outlined.VisibilityOff
+                    } else {
+                        Icons.Outlined.StrikethroughS
+                    },
+                    contentDescription = if (supersededMode == SupersededDisplayMode.Hidden) {
+                        "Superseded events hidden — tap to show as strikethrough"
+                    } else {
+                        "Superseded events shown as strikethrough — tap to hide"
+                    },
+                    modifier = Modifier.size(22.dp),
+                )
+            }
         }
     }
 }

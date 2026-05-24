@@ -36,6 +36,7 @@ data class ShellContext(
     val activeIconKindFlow: StateFlow<com.eight87.strictlykeptboy.ui.theming.RepoIconKind>? = null,
     val eventCreateController: com.eight87.strictlykeptboy.ui.schedule.EventCreateController? = null,
     val calendarVisibility: com.eight87.strictlykeptboy.ui.settings.CalendarVisibilityPrefs? = null,
+    val scheduleViewModePrefs: com.eight87.strictlykeptboy.ui.schedule.ScheduleViewModePrefs? = null,
     val taskPlaybackSource: Any = StubTaskPlaybackSource,
     val nowNextFlow: StateFlow<com.eight87.strictlykeptboy.resolver.NowNextSnapshot>? = null,
 )

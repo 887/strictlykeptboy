@@ -313,6 +313,7 @@ private fun SkbAppShellContent(
                         onPlanTrip = { tripWizardOpen = true },
                         calendarVisibility = context.calendarVisibility,
                         onLongPressCalendar = callbacks.onLongPressCalendar,
+                        scheduleViewModePrefs = context.scheduleViewModePrefs,
                         togetherViewModel = context.togetherViewModel,
                         neutralMode = selections.neutralMode,
                         reposState = context.reposState,

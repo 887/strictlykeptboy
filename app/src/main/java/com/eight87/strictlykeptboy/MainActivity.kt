@@ -1426,6 +1426,7 @@ class MainActivity : ComponentActivity() {
                             activeIconKindFlow = graph.activeRepoIconKind,
                             eventCreateController = eventCreateController,
                             calendarVisibility = graph.calendarVisibility,
+                            scheduleViewModePrefs = graph.viewModePrefs,
                             // Round 2.16.B — wire the real projector + transport
                             // adapter so MiniPlayer/NowPlayingScreen read live
                             // active-task state.
