@@ -84,18 +84,25 @@ class RendererTest {
     }
 
     @Test fun supersededBands_keptWithTag_perRound2_1_C_4() = runTest {
-        // Round 2.1.C.4: superseded bands MUST flow through the renderer so
-        // the UI can paint them as paused. Previously they were filtered out.
+        // Round 2.1.C.4: superseded bands MUST flow through the renderer
+        // so the UI can paint them as paused. Decision 2026-05-24: only
+        // recurrence-derived bands inherit supersedence; one-offs stay
+        // visible. The work band here comes from a daily rule.
         val snap = snapshot(
             cal("work"),
             cal("vacation", priority = 999, supersedes = listOf("work")),
         )
+        val workRule = rule(
+            "work-rule", "work",
+            dtstart = "2026-05-11T10:00:00",
+            duration = Duration.ofHours(1),
+            rrule = "FREQ=DAILY",
+        )
         val sources = Renderer.Sources(
             events = listOf(
-                event("a", "work", "2026-05-11T10:00:00", "2026-05-11T11:00:00"),
                 event("v", "vacation", "2026-05-11T00:00:00", "2026-05-12T00:00:00"),
             ),
-            rules = emptyList(),
+            rules = listOf(workRule),
             exceptionsByRule = emptyMap(),
             deviations = emptyList(),
             overrides = emptyList(),

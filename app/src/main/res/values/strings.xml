@@ -12,7 +12,7 @@
     <string name="schedule_empty_cta_open_calendars">Open Calendars</string>
     <string name="schedule_empty_cta_add_event">+ Add event</string>
     <string name="cd_bat_mascot">Bat mascot</string>
-    <string name="cd_identity_avatar">Identity</string>
+    <string name="cd_identity_avatar">Switch repository</string>
     <string name="cd_repo_switcher_active">Switch repo, active: %1$s</string>
 
     <!-- Sync button content descriptions -->
@@ -97,7 +97,7 @@
     <!-- Phase 2.2.B.4 — Mode category becomes "Lifestyle" (six-radio
          aligned with the wizard's six lifestyle cards). Test tags +
          sealed-class case SettingsCategory.Mode stay stable. -->
-    <string name="settings_category_mode">Lifestyle</string>
+    <string name="settings_category_mode">Mode</string>
     <string name="settings_category_notifications">Notifications</string>
     <!-- 2.1.E.3 — user-facing copy renamed to "Accounts"; testTag stays "Repos". -->
     <string name="settings_category_repos">Accounts</string>

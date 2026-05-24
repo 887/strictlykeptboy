@@ -30,19 +30,27 @@ class RendererSupersedenceTest {
     private val renderer = Renderer()
 
     @Test fun supersededBands_areKeptAndTagged() = runTest {
+        // Decision 2026-05-24: supersedence applies to RECURRENCE-derived
+        // bands only. The work band here comes from a daily rule so it
+        // gets suppressed by the vacation one-off. (A one-off work event
+        // on the same day would render normally — see
+        // `OverlayResolverTest.supersedence_skipsOneOffEvents`.)
         val snap = snapshot(
             cal("work"),
             cal("vacation", priority = 999, supersedes = listOf("work")),
         )
-        // Round 2026-05-23 — supersedence now requires the suppressor
-        // to have an instance covering this day. Feed a vacation event
-        // so the supersedence path activates.
+        val workRule = com.eight87.strictlykeptboy.resolver.Factories.rule(
+            ruleId = "work-rule",
+            cal = "work",
+            dtstart = "2026-05-11T10:00:00",
+            duration = java.time.Duration.ofHours(1),
+            rrule = "FREQ=DAILY",
+        )
         val sources = Renderer.Sources(
             events = listOf(
-                event("a", "work", "2026-05-11T10:00:00", "2026-05-11T11:00:00"),
                 event("v", "vacation", "2026-05-11T00:00:00", "2026-05-12T00:00:00"),
             ),
-            rules = emptyList(),
+            rules = listOf(workRule),
             exceptionsByRule = emptyMap(),
             deviations = emptyList(),
             overrides = emptyList(),

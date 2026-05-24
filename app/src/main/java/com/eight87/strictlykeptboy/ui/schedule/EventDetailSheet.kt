@@ -148,6 +148,12 @@ fun EventDetailContent(
     val tz = band.instance.effectiveStart.zone
     val fmt = DateTimeFormatter.ofPattern("EEE MMM d  HH:mm", Locale.getDefault())
     val endFmt = DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
+    // Round 2026-05-24 R-2 — multi-day events show the END DATE too,
+    // not just the end time on the start date. `Brighton weekend Sat
+    // 10:00 – 20:00` is wrong when end is Sun 20:00; show
+    // `Sat May 23 10:00 → Sun May 24 20:00` instead.
+    val isMultiDay = band.instance.effectiveStart.toLocalDate() !=
+        band.instance.effectiveEnd.toLocalDate()
     Column(
         modifier = modifier
             .padding(horizontal = 20.dp)
@@ -195,8 +201,13 @@ fun EventDetailContent(
             }
             // Time + tz
             Text(
-                text = "${fmt.format(band.instance.effectiveStart)} – " +
-                    "${endFmt.format(band.instance.effectiveEnd)}  ($tz)",
+                text = if (isMultiDay) {
+                    "${fmt.format(band.instance.effectiveStart)} → " +
+                        "${fmt.format(band.instance.effectiveEnd)}  ($tz)"
+                } else {
+                    "${fmt.format(band.instance.effectiveStart)} – " +
+                        "${endFmt.format(band.instance.effectiveEnd)}  ($tz)"
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.testTag(TestTagEventDetailTime),

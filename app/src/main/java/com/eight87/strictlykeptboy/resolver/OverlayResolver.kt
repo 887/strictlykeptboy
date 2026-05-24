@@ -107,7 +107,16 @@ class OverlayResolver(
 
         val bandsByDay = byDay.mapValues { (_, dayInstances) ->
             assignLanes(dayInstances, calMetaByRef).map { laneBand ->
-                val candidates = suppressedByMap[laneBand.instance.calendar].orEmpty()
+                // Decision 2026-05-24: supersedence applies to RECURRENCE-
+                // derived bands only. One-off events the user deliberately
+                // created stay visible even during a special-base window —
+                // the assumption being that if you scheduled `send the
+                // keeper a cage 12:00` during Brighton, you meant for it
+                // to happen. Recurrences are the "inherited routine" that
+                // vacation pauses.
+                val isOneOff = laneBand.instance.source is com.eight87.strictlykeptboy.resolver.InstanceSource.OneOff
+                val candidates = if (isOneOff) emptyList()
+                else suppressedByMap[laneBand.instance.calendar].orEmpty()
                 val bandStartMs = laneBand.instance.effectiveStart.toInstant().toEpochMilli()
                 val bandEndMs = laneBand.instance.effectiveEnd.toInstant().toEpochMilli()
                 // Pick the first supersedor whose interval actually overlaps

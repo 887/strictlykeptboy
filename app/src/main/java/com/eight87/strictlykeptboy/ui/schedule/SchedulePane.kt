@@ -517,7 +517,13 @@ private fun ScheduleMasterContent(
                 onDragReschedule = onDragReschedule,
                 )
             }
-            ScheduleViewTab.Week -> {
+            ScheduleViewTab.Week -> Column(modifier = Modifier.fillMaxSize()) {
+                if (calendarVisibility != null) {
+                    ZoomLevelRow(
+                        selectedOverride = visState.globalZoomOverride,
+                        onSelect = { calendarVisibility.setGlobalZoomOverride(it) },
+                    )
+                }
                 val weekStart = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
                 ScheduleWeekView(
                     weekStart = weekStart,

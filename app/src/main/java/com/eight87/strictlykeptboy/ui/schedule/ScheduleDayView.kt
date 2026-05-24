@@ -712,10 +712,28 @@ private fun BandsLayer(
                                     modifier = Modifier.weight(1f),
                                 )
                             }
+                            // Round 2026-05-24 R-1 — the in-band time
+                            // label uses the band's RAW times, not the
+                            // window-clipped times. Brighton (Sat 10:00
+                            // → Sun 20:00) on the Sun-tab was rendering
+                            // as "05:00–20:00" because the sliding-now
+                            // window starts at "now - 12h truncated"
+                            // (≈ 05:00 in the afternoon). The clip is
+                            // still applied to band POSITION + HEIGHT,
+                            // just not to the displayed text. A "↳"
+                            // prefix flags that this band is continuing
+                            // from before the visible window.
+                            val crossesWindowStart = rawStart.isBefore(windowStart)
+                            val crossesWindowEnd = rawEnd.isAfter(windowEnd)
+                            val timeLabel = buildString {
+                                if (crossesWindowStart) append("↳ ")
+                                append("%02d:%02d".format(rawStart.hour, rawStart.minute))
+                                append("–")
+                                append("%02d:%02d".format(rawEnd.hour, rawEnd.minute))
+                                if (crossesWindowEnd) append(" ↴")
+                            }
                             Text(
-                                text = "%02d:%02d–%02d:%02d".format(
-                                    start.hour, start.minute, end.hour, end.minute,
-                                ),
+                                text = timeLabel,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )

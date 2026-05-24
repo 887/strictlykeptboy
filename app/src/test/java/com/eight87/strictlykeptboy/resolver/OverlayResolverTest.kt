@@ -99,15 +99,15 @@ class OverlayResolverTest {
         )
     }
 
-    @Test fun supersedence_marksBandWithSuppressor() {
+    @Test fun supersedence_skipsOneOffEvents() {
+        // Decision 2026-05-24: one-off events the user deliberately
+        // created stay visible during a special-base window. Only
+        // recurrence-derived bands inherit the suppression. So a
+        // one-off "work" event during a vacation day renders normally.
         val snap = snapshot(
             cal("work"),
             cal("vacation", priority = 999, supersedes = listOf("work")),
         )
-        // Round 2026-05-23 — supersedence now requires the suppressor
-        // to have an instance covering this day (so Brighton weekend
-        // doesn't silence Tuesday's routine). Feed an all-day vacation
-        // event so the supersedence path activates.
         val workEvent = mat.fromOneOff(event("a", "work", "2026-05-11T10:00:00", "2026-05-11T11:00:00"))
         val vacationEvent = mat.fromOneOff(event("v", "vacation", "2026-05-11T00:00:00", "2026-05-12T00:00:00"))
         val v = overlay.layer(
@@ -117,7 +117,7 @@ class OverlayResolverTest {
         )
         val workBand = v.bandsByDay.getValue(LocalDate.parse("2026-05-11"))
             .single { it.instance.calendar == CalendarRef("work") }
-        assertEquals(CalendarRef("vacation"), workBand.supersededByCalendar)
+        assertNull(workBand.supersededByCalendar)
     }
 
     @Test fun supersedence_overrideClearsTag() {

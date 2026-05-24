@@ -92,7 +92,7 @@ fun CalendarsCategoryMaster(
                 Column(Modifier.weight(1f)) {
                     Text(cal.displayName, style = MaterialTheme.typography.bodyLarge)
                     Text(
-                        "repo: ${cal.repo.id}  •  priority ${cal.priority}",
+                        "priority ${cal.priority}",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
