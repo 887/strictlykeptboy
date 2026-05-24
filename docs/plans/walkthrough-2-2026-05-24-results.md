@@ -19,7 +19,7 @@ No new ship-stoppers found in this round's scope.
 
 ### BUGS — correctness (1)
 
-1. **W2-B-1 — Wizard standing tasks indexed only as keeper-prompt
+1. **[x] W2-B-1 — Wizard standing tasks indexed only as keeper-prompt
    derivations, never as raw `StandingTask` entries in the Tasks
    pane.** After wizard finish, `todolists/<uuid>/standing/` contains
    10 standing tasks on disk (5 onboarding + 5 walkthrough-2 sample
@@ -32,10 +32,17 @@ No new ship-stoppers found in this round's scope.
    Screenshots: `15-tasks.png`, `16-tasks-all.png`, `17-tasks-by-repo.png`.
    Cross-ref: round 1 R-5 noted the same shape for the Settings →
    Todolists screen on the demo. Same root cause likely.
+   *Fixed in worktree-agent-aa270341 — MainActivity `onWizardScaffold`
+   now re-opens the freshly-scaffolded `GitRepo` and runs
+   `Indexer.fullScan` after `repoStore.add`, mirroring the demo
+   reseed path. Without this, neither the wizard's standing/dated
+   tasks nor its recurrences ever land in Room, so Tasks pane +
+   Schedule both render empty on first paint. Regression:
+   `WizardScaffolderIndexerRoundTripTest`.*
 
 ### POLISH / UX (2)
 
-2. **W2-U-1 — Schedule Day-view collapses to empty-state ("nothing
+2. **[x] W2-U-1 — Schedule Day-view collapses to empty-state ("nothing
    scheduled — good boy can rest ;3") on the freshly-wizarded repo
    even though 16 recurrences + 1 sample event are on disk and the
    filter-FAB shows a `5` superseded badge.** The "5" suggests the
@@ -49,6 +56,20 @@ No new ship-stoppers found in this round's scope.
    start = 2026-05-27T11:00+02:00
    end = 2026-05-27T11:45+02:00
    ```
+   *Fixed in worktree-agent-aa270341 — root cause was identical to
+   W2-B-1: the wizard never triggered an `Indexer.fullScan` on the
+   freshly scaffolded repo, so `IndexerSnapshotPublisher` +
+   `SourcesPublisher` (both Room-backed) had zero `recurrence_rules`
+   / `events` rows to read. The Day view rendered "no events in
+   range" because the renderer's input flow was empty. AVD-verified
+   after the fix: post-wizard schedule shows Sleep, Morning routine,
+   Evening wind-down, Spring bank holiday and the cal-briefings
+   recurrences on first paint. Supersedence wiring in
+   `WizardBaseLayersScaffolder` is correct as-shipped — holidays
+   only suppress on YEARLY-recurrence dates, vacation has zero
+   recurrences (suppressor with no intervals = no suppression),
+   per `OverlayResolver.layer`. Same regression test as W2-B-1
+   covers the rule round-trip.*
 
 3. **W2-U-2 — Repositories overlay's only entry-point label is `+`
    icon (a11y label "Set up a new account") at the top-right.

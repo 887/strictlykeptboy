@@ -1503,6 +1503,41 @@ class MainActivity : ComponentActivity() {
                                     // can be re-enabled later from the Repos
                                     // overlay.
                                     graph.demoModePrefs.setActive(false)
+                                    // W2-B-1 / W2-U-1 — index the freshly scaffolded
+                                    // repo into Room so the Tasks pane + Schedule
+                                    // surface its standing tasks + recurrences on
+                                    // first paint. Without this the IndexerSnapshot-
+                                    // Publisher + SourcesPublisher have no rows to
+                                    // read and both panes stay empty until something
+                                    // else (e.g. an unrelated write) triggers a
+                                    // scan. Mirrors the demo-reseed path at the top
+                                    // of MainActivity. Re-opens the GitRepo here
+                                    // because WizardScaffolder.materialize closed
+                                    // its handle after the initial commit.
+                                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                        runCatching {
+                                            val gitRepo = GitRepo.open(
+                                                rootDir = outcome.rootDir,
+                                                repoId = outcome.repoId,
+                                                remotes = emptyList(),
+                                                primaryRemote = null,
+                                                authorIdentity = outcome.authorIdentity,
+                                            ).also(GitRepoRegistry::put)
+                                            com.eight87.strictlykeptboy.cache.Indexer(
+                                                graph.cacheDatabase,
+                                            ).fullScan(
+                                                outcome.repoId,
+                                                gitRepo,
+                                                adjustToLocalTimezone = scaffoldedConfig.adjustToLocalTimezone,
+                                            )
+                                        }.onFailure {
+                                            android.util.Log.e(
+                                                "skb.wizard",
+                                                "post-scaffold index FAILED",
+                                                it,
+                                            )
+                                        }
+                                    }
                                     Unit
                                 }
                             },
