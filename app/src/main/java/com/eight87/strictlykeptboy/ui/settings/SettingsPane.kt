@@ -172,6 +172,14 @@ data class SettingsAccess(
      * repos via `CalendarsCategoryMaster`.
      */
     val calendarsFlow: kotlinx.coroutines.flow.StateFlow<List<com.eight87.strictlykeptboy.resolver.CalendarMeta>>? = null,
+    /**
+     * W2.3 / R-5 — cross-repo todolists feed. When set, the Todolists
+     * settings category renders a master list derived from the live
+     * indexer registry (parallel to [calendarsFlow]). When null, the
+     * legacy fall-back reads from `CalendarVisibilityPrefs.state.ordered`
+     * (user-toggled subset only) and shows empty on a fresh install.
+     */
+    val todolistsFlow: kotlinx.coroutines.flow.StateFlow<List<com.eight87.strictlykeptboy.resolver.TodolistMeta>>? = null,
     /** Row-tap → open CalendarSettingsSheet. */
     val onEditCalendar: (com.eight87.strictlykeptboy.resolver.CalendarMeta) -> Unit = {},
     val templateIds: List<String> = emptyList(),
@@ -749,7 +757,15 @@ private fun SettingsCategoryContent(
                 }
             } ?: CategoryPlaceholder(stringResource(category.labelRes))
             SettingsCategory.Todolists -> access.todolistVisibility?.let { p ->
-                TodolistsCategory(prefs = p)
+                val tFlow = access.todolistsFlow
+                if (tFlow != null) {
+                    com.eight87.strictlykeptboy.ui.settings.categories.TodolistsCategoryMaster(
+                        prefs = p,
+                        todolistsFlow = tFlow,
+                    )
+                } else {
+                    TodolistsCategory(prefs = p)
+                }
             } ?: DiagnosticMissingPrefBanner(category, "todolistVisibility")
             SettingsCategory.Templates -> TemplatesCategory(
                 templateIds = access.templateIds,

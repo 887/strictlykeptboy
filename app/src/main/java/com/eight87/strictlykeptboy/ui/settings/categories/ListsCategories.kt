@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.clickable
 import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.resolver.CalendarMeta
+import com.eight87.strictlykeptboy.resolver.TodolistMeta
 import com.eight87.strictlykeptboy.ui.settings.CalendarVisibilityPrefs
 import com.eight87.strictlykeptboy.ui.settings.ListKind
 import kotlinx.coroutines.flow.StateFlow
@@ -122,6 +123,61 @@ fun CalendarsCategoryMaster(
                         contentDescription = stringResource(R.string.settings_lists_move_down),
                     )
                 }
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+    }
+}
+
+/**
+ * W2.3 / R-5 — Todolists master list across all repos, parallel to
+ * [CalendarsCategoryMaster]. Reads from the live indexer registry so
+ * fresh installs see every todolist the indexer discovered, not just
+ * the user-toggled subset stored in [CalendarVisibilityPrefs].
+ */
+@Composable
+fun TodolistsCategoryMaster(
+    prefs: CalendarVisibilityPrefs,
+    todolistsFlow: StateFlow<List<TodolistMeta>>,
+    modifier: Modifier = Modifier,
+) {
+    val todolists by todolistsFlow.collectAsState()
+    val visibility by prefs.state.collectAsState()
+    val visMap = visibility.ordered.associateBy { it.repoId to it.id }
+    CategorySurface(
+        testTag = TestTagCatTodolists,
+        title = stringResource(R.string.settings_category_todolists),
+        modifier = modifier,
+    ) {
+        if (todolists.isEmpty()) {
+            Text(
+                stringResource(R.string.settings_lists_empty, stringResource(R.string.settings_lists_todolists_word)),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            return@CategorySurface
+        }
+        SectionLabel(stringResource(R.string.settings_lists_visibility_title))
+        todolists.forEach { tl ->
+            val key = tl.repo.id to tl.ref.id
+            val visible = visMap[key]?.visible ?: true
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp)
+                    .testTag("$TestTagCatTodolists-Row-${tl.repo.id}-${tl.ref.id}"),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(tl.displayName, style = MaterialTheme.typography.bodyLarge)
+                }
+                Switch(
+                    checked = visible,
+                    onCheckedChange = { v ->
+                        prefs.setVisible(id = tl.ref.id, visible = v, repoId = tl.repo.id)
+                    },
+                    modifier = Modifier.testTag("$TestTagCatTodolists-Vis-${tl.repo.id}-${tl.ref.id}"),
+                )
             }
         }
         Spacer(Modifier.height(16.dp))
