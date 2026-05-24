@@ -186,22 +186,15 @@ class Indexer(private val db: CacheDatabase) {
             }
         }
 
-        events.chunked(BATCH).forEach { chunk ->
-            db.events().upsertAll(chunk.map { EntityMapping.event(repoId, it.first, it.second, adjustToLocalTimezone) })
-            // FTS: delete then upsert so re-indexed events don't accumulate duplicates.
-            chunk.forEach { db.fts().deleteEvent(repoId, it.first.id) }
-            db.fts().upsertEvents(chunk.map { EntityMapping.eventFts(repoId, it.first) })
-        }
-        tasks.chunked(BATCH).forEach { chunk ->
-            db.tasks().upsertAll(chunk.map { EntityMapping.task(repoId, it.first, it.second) })
-            chunk.forEach { db.fts().deleteTask(repoId, it.first.id) }
-            db.fts().upsertTasks(chunk.map { EntityMapping.taskFts(repoId, it.first) })
-        }
-        standing.chunked(BATCH).forEach { chunk ->
-            db.standingTasks().upsertAll(chunk.map { EntityMapping.standingTask(repoId, it.first, it.second) })
-            chunk.forEach { db.fts().deleteTask(repoId, it.first.id) }
-            db.fts().upsertTasks(chunk.map { EntityMapping.taskFts(repoId, it.first) })
-        }
+        // Round 2026-05-24 — insert order matters: `db.events().byDateRange`
+        // is a Flow that emits on every event-table insert; SourcesPublisher
+        // reads `db.recurrenceRules().listAll(...)` synchronously inside that
+        // emission's `.map` block. If events go in first, the flow fires
+        // while rules/exceptions/etc are still empty, and the snapshot
+        // captured by the resolver has zero rules — the schedule renders
+        // events only, and no further trigger ever brings rules back in.
+        // Insert events LAST so the flow emission lands after every other
+        // table is populated.
         rules.chunked(BATCH).forEach { chunk ->
             db.recurrenceRules().upsertAll(chunk.map { EntityMapping.recurrenceRule(repoId, it.first, it.second, adjustToLocalTimezone) })
         }
@@ -220,7 +213,26 @@ class Indexer(private val db: CacheDatabase) {
         identities.chunked(BATCH).forEach { chunk ->
             db.identities().upsertAll(chunk.map { EntityMapping.identity(repoId, it.first, it.second) })
         }
+        tasks.chunked(BATCH).forEach { chunk ->
+            db.tasks().upsertAll(chunk.map { EntityMapping.task(repoId, it.first, it.second) })
+            chunk.forEach { db.fts().deleteTask(repoId, it.first.id) }
+            db.fts().upsertTasks(chunk.map { EntityMapping.taskFts(repoId, it.first) })
+        }
+        standing.chunked(BATCH).forEach { chunk ->
+            db.standingTasks().upsertAll(chunk.map { EntityMapping.standingTask(repoId, it.first, it.second) })
+            chunk.forEach { db.fts().deleteTask(repoId, it.first.id) }
+            db.fts().upsertTasks(chunk.map { EntityMapping.taskFts(repoId, it.first) })
+        }
         if (errors.isNotEmpty()) db.indexErrors().upsertAll(errors)
+        // Events last: the flow watching this table fires the resolver
+        // snapshot, which expects everything else above to already be in
+        // place.
+        events.chunked(BATCH).forEach { chunk ->
+            db.events().upsertAll(chunk.map { EntityMapping.event(repoId, it.first, it.second, adjustToLocalTimezone) })
+            // FTS: delete then upsert so re-indexed events don't accumulate duplicates.
+            chunk.forEach { db.fts().deleteEvent(repoId, it.first.id) }
+            db.fts().upsertEvents(chunk.map { EntityMapping.eventFts(repoId, it.first) })
+        }
 
         // Phase 2.2.E.1 — emit post-commit events so the reminder arming
         // bridge can re-arm AlarmManager alarms for foreground commits.
