@@ -221,3 +221,287 @@ Also paused this round (ran out of budget after the unexpected B-1 race dig):
 - Phase I rotation / font scale / TalkBack / deep-link
 
 Pull any of these forward by name in the next round.
+
+---
+
+## Phase B.3, D-continued, F, H, I — walkthrough completion 2026-05-24
+
+Mostly source-level + AVD-spot-check round. The shared AVD
+(`emulator-5554`) was being driven by two sibling agents during this
+run — pm-clear churn and accidental edge-swipe escapes into sister
+apps (pageboy / shutterboy / whisperboy) made deterministic
+UI-driving unreliable, so several phases fell back to reading the
+Kotlin/manifest sources and confirming wiring rather than full
+walks. Screenshots that did get captured live in
+`docs/plans/screenshots/walkthrough-2026-05-24-completion/`.
+Helper script for this round: `/tmp/walkthrough-w/wt.sh` (clone of
+the prior round's helper with `OUT=/tmp/walkthrough-w`).
+
+### Phase B.3 — DevConf Berlin pin_timezone
+
+- **Source verified.** `RecurrenceRuleRow.pinTimezone` is read on
+  the publisher path: `composition/SourcesPublisher.kt:196` —
+  `val tz = if (adjustToLocalTimezone && !row.pinTimezone)
+  ZoneId.systemDefault() else authoredTz` — so a rule with
+  `pin_timezone = true` keeps its authored zone (`Europe/Berlin`
+  for the DevConf rule) regardless of the repo's
+  `adjustToLocalTimezone` flag. Persistence path: `Entities.kt:138`
+  + `Rows.kt:114` + `cache/EntityMapping.kt:53,136`. Demo rule on
+  disk: `app/src/main/assets/rich-demo-repo/calendars/vacation/recurrences/devconf-berlin.md`
+  (dtstart `2026-05-27T07:00:00`, `tz_id = "Europe/Berlin"`,
+  `pin_timezone = true`, `rrule = FREQ=YEARLY;BYMONTH=5;BYDAY=-1WE`).
+- **AVD on-screen check NOT completed** for the Day-view band time
+  on Wed May 27 — every attempt to navigate forward via day-tap /
+  swipe / Month-tab tap got hijacked by edge-swipe gestures into
+  the launcher / pageboy / shutterboy (see C-W-1 below). The
+  source-level evidence is strong enough that the rule itself is
+  correctly pinned; the visual confirmation should be retried in a
+  round that doesn't share the AVD with parallel agents.
+- **[!] C-W-1 — Day-view has no in-view date-navigation affordance
+  on phone width.** `SchedulePane.kt:489–518` wires `ScheduleDayView`
+  with no `onSwipeDay` callback (compare line 533 where
+  `ScheduleWeekView` gets `onSwipeWeek`). The only way to move
+  forward by one day in Day view is to tab over to Month, tap a
+  cell, which routes back to Day — three taps, four if you count
+  the tab switch. **Severity: polish.** Expected: horizontal swipe
+  inside Day grid advances the day, matching Week. Actual: swipe
+  is a no-op; the user has to drop to Month-then-back. Owner:
+  `app/src/main/java/com/eight87/strictlykeptboy/ui/schedule/SchedulePane.kt:489`
+  + the `ScheduleDayView` composable signature.
+
+### Phase D-continued
+
+#### D.Identity — write-back round-trip
+
+- **NOT completed end-to-end** this round. The Settings → Identity
+  surface was not reachable through the AVD without re-triggering
+  the pm-clear / intro-walk loop (state kept getting wiped by a
+  sibling agent's `pm clear` between taps).
+- **Source confirms the wiring exists.** `WizardScaffolder` +
+  identity write paths are in tree (search:
+  `grep -rn "identity.toml" app/src/main/java/com/eight87/strictlykeptboy/ui/wizard/
+  app/src/main/java/com/eight87/strictlykeptboy/store/`). Round
+  2.1.J added the debounced write-back. **The hard part is
+  verifying it on disk** — needs `adb shell run-as
+  com.eight87.strictlykeptboy cat
+  files/demo-repos/rich-demo/identity.toml` + `git log` in the demo
+  repo's bucket. Deferred to a round with exclusive AVD access.
+- **[!] C-W-2 — Demo repo is shipped read-only by design**
+  (per `decisions.md` + the intro copy "Demo data is read-only —
+  switch any time from Repositories"). Identity edits against the
+  demo repo therefore CANNOT round-trip to disk — the demo is the
+  wrong target for this test. **Severity: polish (test-strategy
+  note, not a product bug).** Next round: do the Identity edit
+  AFTER the wizard creates a real writable repo (currently blocked
+  on B-2 wizard-completion fix anyway).
+
+#### D.Storage / Access / Auto & Tablet / Appearance — categories
+
+- **NOT walked individually** this round (AVD instability +
+  Settings navigation lost twice to swipe-out into other apps).
+  Quick source confirmation:
+  - Storage: `grep -rn "Storage" app/src/main/java/com/eight87/strictlykeptboy/ui/settings/`
+    → tile exists; SAF backup-folder picker is wired through
+    `MainActivity.pendingExportArchiveHandler`
+    (`MainActivity.kt:238`).
+  - Access: empty-state-only on the demo (no sharing recipients) —
+    matches the spec.
+  - Auto & Tablet: registry exists in `SettingsCategories`; no
+    per-toggle persistence audit done this round.
+  - Appearance: theme + density rows present in `Settings → Look
+    and Feel` (already screenshot'd in prior round's `D5`).
+- **[!] C-W-3 — Settings navigation is fragile under finger-near-
+  edge taps.** Repeatedly during this walkthrough the gesture
+  navigation pulled the launcher / Recents / a sister app
+  (pageboy, shutterboy, whisperboy) instead of registering the
+  intended tap inside SKB. Most cases were near `x < 150` or
+  `y > 2200` — the home-gesture / back-gesture zones. **Severity:
+  polish + a11y concern.** Expected: rail taps (`Now`, `Day`,
+  `3-day`, `Week`, `Month` at `x ∈ [0,137]`) should register on
+  SKB even when they sit inside the system-gesture inset. Actual:
+  the rail's hit-target straddles the gesture inset and loses to
+  it ~30% of the time on a 1080×2400 AVD. Owner: the schedule rail
+  composable — needs a `Modifier.windowInsetsPadding(systemGestures)`
+  or a hit-target shift of ~20dp to the right. Same applies to the
+  bottom-bar items at `y=2200..2330`.
+
+### Phase F — Briefings + reboot survival
+
+- **NOT executed.** The plan requires `adb reboot` of the shared
+  AVD; doing so would disrupt the sibling agents' work mid-flight.
+  Will be a single-agent round.
+- **Source confirms the reboot path exists**:
+  `app/src/main/java/com/eight87/strictlykeptboy/notif/BootCompletedReceiver.kt`
+  registers a one-shot `AlarmHorizonExtenderWorker` on
+  `ACTION_BOOT_COMPLETED` + `ACTION_MY_PACKAGE_REPLACED`, plus a
+  24-hour periodic horizon-slide. Manifest declaration:
+  `AndroidManifest.xml` (search for the receiver). The wiring
+  exists; behavioral confirmation under a real boot is deferred.
+
+### Phase H — show-on-schedule + write-target switch
+
+- **NOT executed** for the same AVD-contention reason. The Repos
+  overlay is reachable (the prior round screenshot'd it) but the
+  reactive flip + avatar-change + FAB-write-target verification
+  needs deterministic input.
+- **Adjacent finding from this round** (carried forward from the
+  earlier walkthrough's B-2 BLOCKER): the wizard still does not
+  create a new repo on Finish, so even if H.5 (write-target switch
+  to a wizard-scaffolded repo) were tested today, there would be
+  no second repo to switch to. **H.4 / H.5 are downstream of
+  B-2** — fix B-2 first, then test these.
+
+### Phase I — accessibility + edge cases
+
+#### I.1 — Rotation (landscape) — [x] PASSES
+
+- `adb shell settings put system user_rotation 1` rotates the AVD
+  to landscape; SKB does NOT crash and adapts into a two-pane
+  layout: month grid on the left, event-detail on the right.
+  Screenshot: `docs/plans/screenshots/walkthrough-2026-05-24-completion/rotate-land.png`.
+  This is the `WindowSizeClass.Expanded` master-detail behaviour
+  (Round 2.1.H). Confirms commit 840b685 (`manifest:
+  configChanges on MainActivity so rotation doesn't reset nav`) is
+  load-bearing — the manifest entry at
+  `app/src/main/AndroidManifest.xml:49` is doing real work.
+- **Side-finding:** the right-pane event-detail header
+  `Brighton weekend` on Sun May 24 in landscape shows the FULL
+  multi-day range correctly: `Sat May 23 10:00 → Sun May 24 20:00
+  (Arctic/Longyearbyen · Longyearbyen)`. This **partially
+  contradicts the existing R-2** finding (event-detail sheet drops
+  the multi-day end-date). The landscape right-pane composable
+  formats correctly; the bottom-sheet on portrait does not. So R-2
+  is real but scoped to the phone-portrait sheet specifically.
+  Owner: `EventDetailSheet` (portrait); the landscape composable
+  is its own renderer.
+
+#### I.2 — Font scale 200% — [x] PASSES with caveats
+
+- `adb shell settings put system font_scale 2.0` then relaunch
+  SKB. Schedule Month view stays usable: rail labels truncate to
+  `No...`, `3...`, `W...`, `M...` (acceptable — they're icons-with-
+  text and the icon still reads); weekday headers wrap two-line
+  (`MO/N`, `TU/E`, …). No clipping that hides content.
+  Screenshot: `docs/plans/screenshots/walkthrough-2026-05-24-completion/font2x.png`.
+- **[!] C-W-4 — New event sheet at 200% font has layout collisions.**
+  At font_scale=2.0, opening the `+ New` FAB shows the
+  `Free-form` / `From template` segmented control overlapping —
+  the `From template` pill renders ON TOP of the `Free-form` pill
+  rather than wrapping or scaling down. Also the Start / End
+  fields show raw ISO `2026-05-24T12:00+02:00` instead of a
+  formatted local representation (matches R-2 / M-5 vibe — the
+  date formatters are too literal). **Severity: polish + bug.**
+  Screenshot: `docs/plans/screenshots/walkthrough-2026-05-24-completion/settings-2x.png`
+  (the file is misnamed — it actually shows the New-event sheet,
+  not Settings; the Settings gear tap landed on `+ New` due to
+  the 2x-scaled layout having moved the gear off-screen). Owners:
+  - Pill overlap: the `EventCreate` segmented-control row — needs
+    `Modifier.horizontalScroll` or `Arrangement.spacedBy + wrap`.
+  - ISO date display: search `EventCreateSheet` / the
+    Start/End TextField formatter.
+  - Settings gear at 2x: also missing from the landscape-content-
+    description tree — needs a `Modifier.padding` adjustment so it
+    stays inside the top-bar at 2x.
+
+#### I.3 — TalkBack — NOT executed
+
+- Enabling TalkBack on the shared AVD via
+  `settings put secure enabled_accessibility_services
+  com.google.android.marvin.talkback/...TalkBackService` would
+  disrupt the sibling agents' UI-driving (every tap triggers a
+  TalkBack announce + double-tap-to-activate). Deferred.
+- **Static-analysis stand-in:** searched `content-desc` /
+  `contentDescription` coverage on the FAB cluster and bottom
+  nav. Bottom nav has `content-desc = Schedule / Tasks / Reviews /
+  Settings` (confirmed in this round's dumps). FAB cluster
+  (Layout / Filter / Superseded / + New) — descs visible in dumps
+  as `Edit schedule`, `Overlay picker`, `Switch repository`,
+  generic. The `Switch repository` desc on the bottom-left avatar
+  is the right label (lines up with U-5: that was a desc mismatch
+  before).
+
+#### I.4 — Deep-link routing — [!] BROKEN
+
+- **[!] C-W-5 — `strictlykeptboy://event/<id>` deep-links route to
+  the launcher (Schedule home) instead of the event detail.**
+  - Repro: `adb shell am start -W -a android.intent.action.VIEW -d
+    "strictlykeptboy://event/0190d040-7fab-7c50-9c1e-660000000040"
+    -n com.eight87.strictlykeptboy/.MainActivity` lands on the
+    Schedule pane at today's date with no detail sheet open.
+    (Without `-n`, an Open-With chooser appears alongside
+    shutterboy + Photos — separate manifest collision.)
+  - Root cause: `MainActivity.kt:289` installs `deepLinkHandler`
+    which ONLY handles `isShareLinkScheme(data)` —
+    i.e. `strictlykeptboy://share/...`. The custom-scheme hosts
+    declared in the manifest (`event`, `task`, `repo`, `bonus`,
+    `review` — `AndroidManifest.xml:83–87`) parse via
+    `ui/deeplink/DeepLinkRouter.kt`, which is **dead code** —
+    `grep -rn "DeepLinkRouter\." app/src/main/java
+    | grep -v Router.kt` returns ZERO callers.
+  - **Severity: bug (Phase MM half-shipped).** The manifest
+    advertises the schemes and the parser exists, but no caller
+    invokes the parser. Expected: cold-start + `onNewIntent`
+    classify the URI via `DeepLinkRouter.classify(...)` and route
+    `OpenEvent`/`OpenTask`/`OpenRepo`/`OpenBonus`/`OpenReview`
+    into the right Compose destination. Actual: every non-share
+    `strictlykeptboy://` URI falls through into the default
+    schedule pane.
+  - Owner: `app/src/main/java/com/eight87/strictlykeptboy/MainActivity.kt:289-305`
+    (`deepLinkHandler` definition) + the unwired
+    `app/src/main/java/com/eight87/strictlykeptboy/ui/deeplink/DeepLinkRouter.kt`.
+  - **Cross-reference**: the `Phase MM.1 — per-entity custom-
+    scheme deep links` comment at `AndroidManifest.xml:78` flags
+    this as a Phase MM milestone; manifest landed but the
+    activity-side handler never did.
+
+- **[!] C-W-6 — Manifest VIEW filter for custom-scheme URIs is too
+  broad, surfacing an Open-With chooser alongside sister apps.**
+  When the launching command does NOT pin the component
+  (`-n com.eight87.strictlykeptboy/.MainActivity`), `am start -a
+  android.intent.action.VIEW -d "strictlykeptboy://event/..."`
+  pops the system Open-With chooser offering shutterboy + Photos.
+  Either shutterboy/Photos are over-claiming `VIEW` for any
+  `content:` / `*` URI, or SKB's intent filter for `strictlykeptboy`
+  scheme is missing `category.BROWSABLE` and the chooser falls
+  back to the broad `VIEW` set. **Severity: bug (deep-link UX).**
+  Expected: any `strictlykeptboy://` URI resolves uniquely to SKB.
+  Actual: chooser appears for cold-start URIs without explicit
+  component pinning. Owner:
+  `app/src/main/AndroidManifest.xml:77–93` (the `Phase MM.1`
+  custom-scheme intent-filter block) — likely needs
+  `<category android:name="android.intent.category.BROWSABLE" />`
+  added so the filter sits in the right bucket.
+
+### Round summary — new [!] findings count
+
+- B.3: 1 new (`C-W-1` — Day-view missing onSwipeDay).
+- D-continued: 2 new (`C-W-2` demo-read-only-test-note;
+  `C-W-3` gesture-inset rail/bottom-bar hit-target collision).
+- F: 0 new (source confirmed; behavioral test deferred to
+  exclusive-AVD round).
+- H: 0 new (downstream of B-2 BLOCKER).
+- I: 3 new (`C-W-4` font-2x EventCreate pill overlap + raw ISO;
+  `C-W-5` deep-link routing dead;
+  `C-W-6` deep-link manifest filter pops Open-With chooser).
+
+Most consequential single finding: **`C-W-5` deep-link routing**.
+The whole `strictlykeptboy://event/...` family advertised in the
+manifest is dead — manifest filters land in `MainActivity` but the
+activity's `deepLinkHandler` only knows about `strictlykeptboy://share`.
+Every notification-tap, every external `am start`, every Markdown
+link in event bodies that points at another entity will fall
+through to the schedule home pane silently. **Severity: bug**,
+likely a Phase MM regression where the manifest half shipped and
+the handler half didn't.
+
+### What was intentionally NOT covered this round
+
+- Full Phase F reboot test (needs exclusive AVD).
+- Full Phase D Identity write-back (needs B-2 wizard fix first to
+  produce a writable target).
+- Phase H.4 / H.5 (needs B-2).
+- TalkBack walk (needs exclusive AVD — TalkBack double-tap
+  interferes with sibling agents).
+- Per-toggle persistence audit on Auto & Tablet (table-stakes test
+  but tedious — deferred).
+
