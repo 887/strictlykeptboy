@@ -160,6 +160,8 @@ fun ScheduleDayView(
      * one — so multiple sibling DayViews (3-day, week) scroll in sync.
      */
     sharedScrollState: androidx.compose.foundation.ScrollState? = null,
+    /** W2-U-2 — wizard entry-point for the empty-state CTA. */
+    onSetupWizard: (() -> Unit)? = null,
 ) {
     val bands = dayBands.bandsFor(date)
 
@@ -167,6 +169,7 @@ fun ScheduleDayView(
         EmptyScheduleState(
             modifier = modifier.fillMaxSize().testTag(TestTagDayEmpty),
             onPlanTrip = onPlanTrip,
+            onSetupWizard = onSetupWizard,
         )
         return
     }

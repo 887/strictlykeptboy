@@ -67,6 +67,8 @@ fun ScheduleTimeboxView(
     onPlanTrip: (() -> Unit)? = null,
     /** Round 2.2.C.2 — default-write repo for `isForeignBand`. Empty = chip suppressed. */
     defaultWriteRepoId: String = "",
+    /** W2-U-2 — wizard entry-point for the empty-state CTA. */
+    onSetupWizard: (() -> Unit)? = null,
 ) {
     val allBands = dayBands.bandsFor(date)
     // Round 2.2.C.9 — primary list is Timebox-kind only; Regular bands flow into a secondary section.
@@ -78,6 +80,7 @@ fun ScheduleTimeboxView(
         EmptyScheduleState(
             modifier = modifier.fillMaxSize().testTag(TestTagTimeboxEmpty),
             onPlanTrip = onPlanTrip,
+            onSetupWizard = onSetupWizard,
         )
         return
     }

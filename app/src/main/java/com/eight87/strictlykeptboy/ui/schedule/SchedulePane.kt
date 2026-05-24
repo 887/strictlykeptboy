@@ -62,6 +62,12 @@ fun SchedulePane(
     /** Phase CCC.10 / HV-G.3 — opens the quick-trip wizard from the FAB long-press or schedule empty-state. */
     onPlanTrip: () -> Unit = {},
     /**
+     * W2-U-2 — opens the lifestyle setup wizard from the prominent
+     * empty-state CTA. `null` ⇒ CTA suppressed (preview / test entry
+     * points that don't wire the wizard surface).
+     */
+    onSetupWizard: (() -> Unit)? = null,
+    /**
      * Round 2.1.B.2 — visibility prefs powering the calendar chip strip.
      * When `null`, the chip strip is suppressed (back-compat with
      * preview / test entry-points that don't wire the multirepo path).
@@ -154,6 +160,7 @@ fun SchedulePane(
                             onSyncClick = onSyncClick,
                             onBandTap = { detailBand = it },
                             onPlanTrip = onPlanTrip,
+                            onSetupWizard = onSetupWizard,
                             calendarVisibility = calendarVisibility,
                             onDragReschedule = onDragReschedule,
                             repoDefaultTzId = repoDefaultTzId,
@@ -190,6 +197,7 @@ fun SchedulePane(
                         }
                     },
                     onPlanTrip = onPlanTrip,
+                    onSetupWizard = onSetupWizard,
                     // Round 2.23 Phase C — needed so the ZoomLevelRow
                     // mounts in compact (phone) mode too.
                     calendarVisibility = calendarVisibility,
@@ -267,6 +275,8 @@ private fun ScheduleMasterContent(
     onSyncClick: () -> Unit,
     onBandTap: (DayBand) -> Unit,
     onPlanTrip: (() -> Unit)? = null,
+    /** W2-U-2 — wizard entry-point forwarded to the day-view empty-state CTA. */
+    onSetupWizard: (() -> Unit)? = null,
     calendarVisibility: CalendarVisibilityPrefs? = null,
     onDragReschedule: ((DayBand, java.time.OffsetDateTime) -> Unit)? = null,
     repoDefaultTzId: String? = null,
@@ -368,6 +378,7 @@ private fun ScheduleMasterContent(
                 modifier = Modifier.fillMaxSize(),
                 onBandTap = onBandTap,
                 onPlanTrip = onPlanTrip,
+                onSetupWizard = onSetupWizard,
                 effectiveZoom = effectiveZoom,
                 metaGroupByCalendar = metaGroupByCalendar,
                 // Round 2.21 Phase D.5 — pinch-to-zoom on the day grid.

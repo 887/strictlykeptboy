@@ -11,6 +11,10 @@
     <string name="schedule_empty_cta_open_repos">Open Repos</string>
     <string name="schedule_empty_cta_open_calendars">Open Calendars</string>
     <string name="schedule_empty_cta_add_event">+ Add event</string>
+    <!-- W2-U-2 — prominent "Set up your calendar" CTA on the empty
+         schedule, surfaced whenever the host wires a wizard entry-point. -->
+    <string name="schedule_empty_cta_setup_wizard">Set up your calendar</string>
+    <string name="repos_empty_cta_setup_wizard">Set up a new account</string>
     <string name="cd_bat_mascot">Bat mascot</string>
     <string name="cd_identity_avatar">Identity</string>
     <string name="cd_repo_switcher_active">Switch repo, active: %1$s</string>

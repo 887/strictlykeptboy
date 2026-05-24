@@ -485,7 +485,18 @@ class MainActivity : ComponentActivity() {
                                 // Schedule. They build their own repo from
                                 // the "+ New" entry-point.
                                 if (choice is com.eight87.strictlykeptboy.ui.wizard.intro.DemoPerspectiveChoice.Empty) {
+                                    // W2-U-2 — auto-launch the wizard on
+                                    // "Empty calendar" pick so the first-time
+                                    // user lands directly in setup, not on a
+                                    // blank Schedule with no obvious CTA. The
+                                    // wizard's onCancel/onFinish wiring in
+                                    // SkbAppDestinationContent gracefully
+                                    // drops the user back on the (still empty)
+                                    // Schedule if they back out.
                                     graph.demoModePrefs.setActive(false)
+                                    graph.setWizardEntryRequest(
+                                        com.eight87.strictlykeptboy.ui.wizard.WizardScreen.Welcome,
+                                    )
                                     firstLaunchDone = true
                                     return@launch
                                 }
