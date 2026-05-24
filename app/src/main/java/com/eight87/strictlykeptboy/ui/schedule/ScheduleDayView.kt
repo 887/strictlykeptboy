@@ -504,10 +504,13 @@ private fun BandsLayer(
     //     today" stratum — vacation overlays, dom-authored overrides,
     //     focused work boxes.
     //
-    // Priority is still consulted, but only for **within-lane paint
-    // order** (higher priority paints later → on top of same-lane
-    // peers) and for the supersedence pass that runs upstream of this
-    // composable. It no longer offsets the band horizontally.
+    // Within-lane paint order is **start-time ascending** so a later
+    // band always paints on top of an earlier same-lane peer (user
+    // 2026-05-24: tight stacks like the 06:30→07:35 morning routine
+    // were rendering with the earliest band on top, hiding the next
+    // one's title). Priority is the tiebreaker for bands that start
+    // at the same instant — higher priority paints later → on top.
+    // Supersedence runs upstream of this composable and is unaffected.
     fun laneForKind(k: com.eight87.strictlykeptboy.resolver.CalendarKind): Int = when (k) {
         com.eight87.strictlykeptboy.resolver.CalendarKind.Base -> 0
         com.eight87.strictlykeptboy.resolver.CalendarKind.Regular -> 1
@@ -516,6 +519,7 @@ private fun BandsLayer(
     }
     val byPaintOrder: List<Renderable> = unsorted.sortedWith(
         compareBy<Renderable> { laneForKind(it.band.kind) }
+            .thenBy { it.band.instance.effectiveStart }
             .thenBy { it.band.priority },
     )
     val laneIndexById: Map<String, Int> = byPaintOrder.associate {

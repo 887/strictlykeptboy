@@ -148,17 +148,6 @@ object TasksDemoSeed {
             )
             return listOf(
                 TaskItem(
-                    id = "demo-prompt-photo-overdue",
-                    title = "send proof you're still caged",
-                    todolist = keepers,
-                    due = t.minusDays(2),
-                    source = TaskSource.KeeperPrompt,
-                    promptKind = com.eight87.strictlykeptboy.store.PromptKind.Photo,
-                    promptCalendarId = "demo-keeper",
-                    promptRuleId = "demo-prompt-photo-overdue",
-                    author = "Keeper",
-                ),
-                TaskItem(
                     id = "demo-prompt-text-today",
                     title = "how does the cage feel today",
                     todolist = keepers,

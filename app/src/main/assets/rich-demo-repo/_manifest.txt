@@ -1,4 +1,4 @@
-# content-hash: a96207871c57eaac8a8595efe7aff8fb4b68fc450ca9a3e7de18dd767a460bbe
+# content-hash: 9f8109046cef05dbdf993713135ae1b78d41d509451fc0767a88f39cf92ddf0f
 .strictlykeptboy/repo.toml
 .strictlykeptboy/schema.toml
 AGENTS.md
@@ -10,7 +10,6 @@ calendars/base/recurrences/grooming-block.md
 calendars/base/recurrences/leisure-evening.md
 calendars/base/recurrences/leisure-weekend.md
 calendars/base/recurrences/sleep-block.md
-calendars/base/recurrences/work-block.md
 calendars/cat-care/calendar.toml
 calendars/cat-care/events/2026/05/2026-05-26-vet-checkup.md
 calendars/cat-care/events/2026/05/2026-05-27-cat-sitter-handover.md
@@ -28,12 +27,8 @@ calendars/commute/recurrences/commute-in.md
 calendars/commute/recurrences/commute-out.md
 calendars/dom-overlay/calendar.toml
 calendars/dom-overlay/events/2026/05/2026-05-15-friday-socialization-mandate.md
-calendars/dom-overlay/events/2026/05/2026-05-15-proof-photo.md
 calendars/dom-overlay/events/2026/05/2026-05-17-praise-note.md
-calendars/dom-overlay/events/2026/05/2026-05-18-proof-photo-monday.md
 calendars/dom-overlay/events/2026/05/2026-05-20-midweek-scene-note.md
-calendars/dom-overlay/events/2026/05/2026-05-21-proof-photo-thursday.md
-calendars/dom-overlay/events/2026/05/2026-05-23-proof-photo-saturday.md
 calendars/dom-overlay/events/2026/05/2026-05-25-corrective-note.md
 calendars/dom-overlay/recurrences/afternoon-selfie.md
 calendars/dom-overlay/recurrences/evening-report.md
