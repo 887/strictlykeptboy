@@ -194,15 +194,17 @@ ADB driver: `/tmp/walkthrough/wt.sh` (tap/shot/dump helpers, uiautomator-based; 
 
 ---
 
-## Open questions for the user
+## Decisions (locked 2026-05-24)
 
-1. **Per-time-overlap supersedence** for one-off events (B-3) — should `send the keeper a cage 12:00` be hidden during Brighton 10:00-20:00? Existing per-time-overlap logic was implemented for recurrence-vs-recurrence; this is event-vs-base-event. Confirm intent.
+1. **B-3 — per-time-overlap supersedence for one-off events: ONLY recurrences are auto-suppressed.** One-off events stay visible during a base-layer's active window because the user deliberately created them — the assumption is they meant for the event to happen even on vacation / a holiday. Recurrences are the "inherited routine" that vacation pauses. **Implementation:** in `OverlayResolver`, gate the per-time-overlap suppression branch on `bandSource == Recurrence` (or equivalent). Leave one-off `EventInput`-derived bands untouched.
 
-2. **Holiday supersedence** (B-4) — is `spring-bank-holiday.md` supposed to suppress work routines? The calendar.toml has `non_superseable = true` AND a `supersedes` list. Need to verify the resolver actually wires this up — maybe the `non_superseable` only protects ITS bands from being suppressed and doesn't grant the calendar suppressor power.
+2. **B-4 — bank holidays pause work: YES, fix the wiring.** The holidays calendar's `supersedes` list is already correct; the bug is that the suppression never fires. Investigate whether (a) the all-day rule isn't materializing into a band, or (b) the supersedence pass treats all-day events differently from timed events, or (c) `non_superseable = true` is accidentally read as "doesn't suppress others" rather than "isn't suppressed by others". Fix the wiring so bank holidays + Christmas + similar all-day base events suppress the dependent stack the same way vacation does.
 
-3. **Wizard finish path** (B-2) — when finishing the wizard from inside the Repos overlay (which is itself opened in demo mode), what's the intended behavior? Does it disable demo + add the new repo? Or run the wizard but write to demo? The "Open my calendar" tap probably routes through a code path that assumes demo-off, but demo is still on.
+3. **B-2 — wizard finish: disable demo + add new repo as write-target.** When the wizard completes (from any entry point, including the Repos overlay while demo is on), atomically: flip `demo mode` off, add the scaffolded repo via `RepoStore.add`, set it as `defaultWriteRepoName`, switch the top-bar avatar. Schedule re-renders with the new repo's bands and no demo bands. User can re-enable demo from Repos later.
 
-4. **"Now" semantic** (M-3) — should the Now tab include the currently-in-progress band at the top, or strictly upcoming?
+4. **M-3 — Now tab includes in-progress + upcoming.** First card = currently-running band (matches the bottom banner's `Now: …` text — removes the banner-vs-tab inconsistency). Subsequent cards = upcoming, today first. Empty state when nothing is running and nothing is upcoming in the next 12h or so.
+
+These decisions feed directly into the next-round fix-batch's scope. Don't re-prompt; act on them.
 
 ---
 
