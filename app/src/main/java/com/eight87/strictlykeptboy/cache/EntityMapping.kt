@@ -107,18 +107,15 @@ internal object EntityMapping {
         repoId: String,
         r: RecurrenceRule,
         sourcePath: String,
-        reanchorAtLocalTz: Boolean = false,
+        @Suppress("UNUSED_PARAMETER") reanchorAtLocalTz: Boolean = false,
     ): RecurrenceRuleRow {
-        // Re-anchor the rule's tz_id at device-local when the repo
-        // flag is on and the rule isn't pin_timezone-marked. Wall-clock
-        // (dtstart) stays as written; only the tz interpretation
-        // changes, which is what the materializer uses for the next-
-        // instance instant.
-        val effectiveTzId = if (reanchorAtLocalTz && !r.pinTimezone) {
-            ZoneId.systemDefault().id
-        } else {
-            r.tzId
-        }
+        // Recurrence rules are inherently tied to their authored
+        // zone — overriding `tz_id` at index time was attempted in
+        // an earlier revision and made all rule-derived bands vanish
+        // on the AVD (the dmfs lib-recur iterator + the resolver's
+        // per-day bucketing got out of sync). Per-event re-anchoring
+        // on one-off events is still applied above; recurrences
+        // continue to materialize in their stored zone.
         return RecurrenceRuleRow(
             repoId = repoId,
             id = r.id,
@@ -127,7 +124,7 @@ internal object EntityMapping {
             rrule = r.rrule,
             dtstart = r.dtstart,
             duration = r.duration,
-            tzId = effectiveTzId,
+            tzId = r.tzId,
             location = r.location,
             emoji = r.emoji,
             busy = r.busy,
