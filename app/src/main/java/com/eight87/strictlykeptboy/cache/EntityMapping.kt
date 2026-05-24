@@ -109,13 +109,10 @@ internal object EntityMapping {
         sourcePath: String,
         @Suppress("UNUSED_PARAMETER") reanchorAtLocalTz: Boolean = false,
     ): RecurrenceRuleRow {
-        // Recurrence rules are inherently tied to their authored
-        // zone — overriding `tz_id` at index time was attempted in
-        // an earlier revision and made all rule-derived bands vanish
-        // on the AVD (the dmfs lib-recur iterator + the resolver's
-        // per-day bucketing got out of sync). Per-event re-anchoring
-        // on one-off events is still applied above; recurrences
-        // continue to materialize in their stored zone.
+        // The re-anchor decision is made in SourcesPublisher.toRuleInput
+        // where the materializer's iterator + range bounds are built in
+        // the same zone, so they stay consistent. EntityMapping just
+        // stores the authored `tz_id` + the `pin_timezone` flag.
         return RecurrenceRuleRow(
             repoId = repoId,
             id = r.id,
@@ -136,6 +133,7 @@ internal object EntityMapping {
             requiresResponse = r.requiresResponse,
             promptKindRaw = r.promptKind?.tomlValue,
             promptTargetRaw = r.promptTarget?.tomlValue,
+            pinTimezone = r.pinTimezone,
         )
     }
 

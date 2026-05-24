@@ -104,6 +104,14 @@ data class RecurrenceRuleRow(
     val promptKindRaw: String? = null,
     /** Round 2.27 / D-2.27.a — prompt-target TOML string. */
     val promptTargetRaw: String? = null,
+    /**
+     * Round 2026-05-24 — per-rule opt-out from the repo-level
+     * `adjustToLocalTimezone` re-anchor. Same semantic as
+     * `Event.pinTimezone`; persisted so the resolver can decide
+     * whether to materialize the rule in its stored `tzId` or in
+     * the device's local zone.
+     */
+    val pinTimezone: Boolean = false,
 )
 
 @Entity(tableName = "exceptions", primaryKeys = ["repoId", "ruleId", "instanceDate"])

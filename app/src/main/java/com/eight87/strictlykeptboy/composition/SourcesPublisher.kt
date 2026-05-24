@@ -133,8 +133,9 @@ class SourcesPublisher(
         val overrides = mutableListOf<OverrideInput>()
         for (rd in perRepo) {
             val repoRef = RepoRef(rd.cfg.repoId)
+            val adjustTz = rd.cfg.adjustToLocalTimezone
             rd.events.mapTo(events) { row -> toEventInput(row, repoRef, zone) }
-            rd.rules.mapTo(rules) { row -> toRuleInput(row, repoRef) }
+            rd.rules.mapTo(rules) { row -> toRuleInput(row, repoRef, adjustTz) }
             for (row in rd.exceptions) {
                 val ruleRef = RuleRef(row.ruleId)
                 val input = toExceptionInput(row)
@@ -178,8 +179,21 @@ class SourcesPublisher(
         )
     }
 
-    private fun toRuleInput(row: RecurrenceRuleRow, repo: RepoRef): RecurrenceInput {
-        val tz = runCatching { ZoneId.of(row.tzId) }.getOrDefault(ZoneId.systemDefault())
+    private fun toRuleInput(
+        row: RecurrenceRuleRow,
+        repo: RepoRef,
+        adjustToLocalTimezone: Boolean = false,
+    ): RecurrenceInput {
+        // Authored zone is what's on disk in `tz_id`. Effective zone is
+        // device-local when the repo flag is on and the rule isn't
+        // pin_timezone-marked. Re-anchoring the rule means: keep the
+        // wall-clock (`dtstart` as written), interpret it in the
+        // effective zone, and hand the same zone to the materializer
+        // so its iterator + range-window math stay consistent (the
+        // earlier index-time tz override broke this consistency and
+        // dropped every rule from the schedule on the AVD).
+        val authoredTz = runCatching { ZoneId.of(row.tzId) }.getOrDefault(ZoneId.systemDefault())
+        val tz = if (adjustToLocalTimezone && !row.pinTimezone) ZoneId.systemDefault() else authoredTz
         val dtstart = parseZdt(row.dtstart, tz)
         val duration = runCatching { Duration.parse(row.duration) }.getOrDefault(Duration.ZERO)
         // Passive flag is not (yet) a column on RecurrenceRuleRow — derive
