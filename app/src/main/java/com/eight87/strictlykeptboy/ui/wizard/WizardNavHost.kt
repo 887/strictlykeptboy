@@ -277,7 +277,20 @@ fun WizardNavHost(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         // Progress dots
-        ProgressRow(currentIndex = SCREEN_ORDER.indexOf(current), total = SCREEN_ORDER.size)
+        // W2.4 / U-8 + U-10 — show the user-visible step counter only.
+        // Scaffold runs invisibly (auto-progress → Done), and ShareWithDom
+        // only renders for kept-by-human users. Filter the order to what
+        // the user will actually see for THIS draft.
+        val visibleOrder = remember(draft) {
+            SCREEN_ORDER.filter { s ->
+                s != WizardScreen.Scaffold &&
+                (s != WizardScreen.ShareWithDom || shouldShowShareWithDom(draft))
+            }
+        }
+        val visibleIndex = visibleOrder.indexOf(current).let { idx ->
+            if (idx >= 0) idx else (visibleOrder.indexOf(WizardScreen.Done).coerceAtLeast(0))
+        }
+        ProgressRow(currentIndex = visibleIndex, total = visibleOrder.size)
         Spacer(Modifier.height(4.dp))
 
         val stepContent: @Composable () -> Unit = {

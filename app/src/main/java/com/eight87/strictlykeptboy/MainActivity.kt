@@ -1076,6 +1076,7 @@ class MainActivity : ComponentActivity() {
                             calendarVisibility = graph.calendarVisibility,
                             todolistVisibility = graph.todolistVisibility,
                             calendarsFlow = graph.calendarRegistry.state,
+                            todolistsFlow = graph.todolistsFlow,
                             onEditCalendar = { meta -> pendingCalendarEdit = meta },
                             identityPrefs = graph.identityPrefs,
                             appearancePrefs = graph.appearancePrefs,
@@ -1493,6 +1494,15 @@ class MainActivity : ComponentActivity() {
                                     )
                                     graph.repoStore.add(scaffoldedConfig)
                                     graph.setDefaultWriteRepoName(draft.displayName.ifBlank { "my calendar" })
+                                    // W2.2 / B-2 — wizard finish atomically flips
+                                    // demo OFF so the new repo becomes the sole
+                                    // write target and the schedule re-renders
+                                    // with the user's data, not the read-only
+                                    // demo bands. Per the locked decision
+                                    // (walkthrough-2026-05-24-results.md), demo
+                                    // can be re-enabled later from the Repos
+                                    // overlay.
+                                    graph.demoModePrefs.setActive(false)
                                     Unit
                                 }
                             },

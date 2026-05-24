@@ -523,6 +523,21 @@ class AppGraph(private val appContext: Context) {
     }
 
     /**
+     * W2.3 / R-5 — derived todolist metas across every repo, sourced
+     * directly from the live [snapshot]. The Settings → Todolists
+     * category reads from this flow so the master list reflects the
+     * indexer's actual todolist registry (per-repo `todolist.toml` is
+     * synthesized today; promote to a TodolistRegistry the same shape
+     * as [calendarRegistry] when per-todolist TOML lands).
+     */
+    @Suppress("OPT_IN_USAGE")
+    val todolistsFlow: StateFlow<List<com.eight87.strictlykeptboy.resolver.TodolistMeta>> by lazy {
+        snapshot
+            .map { it.todolists }
+            .stateIn(appScope, SharingStarted.Eagerly, snapshot.value.todolists)
+    }
+
+    /**
      * Round 2.1.B.9 — Together picker options at the calendar grain.
      * Derived from [calendarRegistry]: every active calendar across
      * every repo gets its own option; the source repo's display name

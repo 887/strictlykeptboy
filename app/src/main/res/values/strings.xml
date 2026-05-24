@@ -1368,7 +1368,7 @@
     <!-- Round 2.18 Phase I — Default-calendar-app onboarding card. -->
     <string name="wizard_default_calendar_title">Make skb your default calendar app?</string>
     <string name="wizard_default_calendar_blurb">Skb doesn\'t claim a system role — instead, the next time you tap a .ics file or calendar invite from another app, you\'ll see a chooser. Pick skb and tap \"Always\" to set the default. You can change this anytime from your phone\'s Settings.</string>
-    <string name="wizard_default_calendar_got_it">Got it</string>
+    <string name="wizard_default_calendar_got_it">Continue</string>
     <string name="wizard_default_calendar_open_settings">Open default apps now</string>
 
     <!-- Round 2.18 Phase I — Settings power-user shortcut + badge. -->

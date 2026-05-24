@@ -463,12 +463,32 @@ private fun ScheduleMasterContent(
             // `Now` (renamed from Agenda, replaces old Schedule tab) —
             // today + 6 forward days rendered as an agenda list, reusing
             // the same colored-time row layout the prior Schedule tab used.
-            ScheduleViewTab.Now -> ScheduleAgendaView(
-                dates = renderedDates,
-                dayBands = dayBandSource,
-                modifier = Modifier.fillMaxSize(),
-                onBandTap = onBandTap,
-            )
+            // W2.5 / M-3 — for today, lead with the in-progress band (if
+            // any), then upcoming. Bands that finished before `now` get
+            // dropped so the user isn't scrolling past a wall of past
+            // events to find what's running. Other days render as-is.
+            ScheduleViewTab.Now -> {
+                val today = java.time.LocalDate.now()
+                val nowZdt = java.time.ZonedDateTime.now()
+                val nowFirstSource = remember(dayBandSource, today, nowZdt.minute) {
+                    com.eight87.strictlykeptboy.resolver.DayBandSource { d ->
+                        val bands = dayBandSource.bandsFor(d)
+                        if (d != today) return@DayBandSource bands
+                        val ongoing = bands.filter {
+                            !it.instance.effectiveStart.isAfter(nowZdt) &&
+                                it.instance.effectiveEnd.isAfter(nowZdt)
+                        }
+                        val upcoming = bands.filter { it.instance.effectiveStart.isAfter(nowZdt) }
+                        ongoing + upcoming
+                    }
+                }
+                ScheduleAgendaView(
+                    dates = renderedDates,
+                    dayBands = nowFirstSource,
+                    modifier = Modifier.fillMaxSize(),
+                    onBandTap = onBandTap,
+                )
+            }
             // Round 2.21 Phase E.3 — 3-day timeline anchored at `date`.
             ScheduleViewTab.ThreeDay -> Column(modifier = Modifier.fillMaxSize()) {
                 if (calendarVisibility != null) {
