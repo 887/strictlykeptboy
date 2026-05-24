@@ -37,7 +37,7 @@ object RestoreReindex {
                         authorIdentity = cfg.authorIdentity,
                         defaultBranch = cfg.defaultBranch,
                     ).also(GitRepoRegistry::put)
-                    indexer.fullScan(cfg.repoId, gitRepo)
+                    indexer.fullScan(cfg.repoId, gitRepo, adjustToLocalTimezone = cfg.adjustToLocalTimezone)
                 }
             }
         }

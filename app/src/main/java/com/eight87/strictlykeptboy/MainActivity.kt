@@ -468,7 +468,7 @@ class MainActivity : ComponentActivity() {
                                 }.also(GitRepoRegistry::put)
                                 com.eight87.strictlykeptboy.cache.Indexer(
                                     graph.cacheDatabase,
-                                ).fullScan(config.repoId, gitRepo)
+                                ).fullScan(config.repoId, gitRepo, adjustToLocalTimezone = config.adjustToLocalTimezone)
                             }.onFailure {
                                 android.util.Log.e(
                                     "skb.demo",
@@ -532,7 +532,7 @@ class MainActivity : ComponentActivity() {
                             }.also(GitRepoRegistry::put)
                             com.eight87.strictlykeptboy.cache.Indexer(
                                 graph.cacheDatabase,
-                            ).fullScan(demoCfg.repoId, gitRepo)
+                            ).fullScan(demoCfg.repoId, gitRepo, adjustToLocalTimezone = demoCfg.adjustToLocalTimezone)
                         }.onFailure {
                             android.util.Log.e("skb.demo", "hash-drift reseed FAILED", it)
                         }.onSuccess {
@@ -662,7 +662,7 @@ class MainActivity : ComponentActivity() {
                                                 }.also(GitRepoRegistry::put)
                                             com.eight87.strictlykeptboy.cache.Indexer(
                                                 graph.cacheDatabase,
-                                            ).fullScan(config.repoId, gitRepo)
+                                            ).fullScan(config.repoId, gitRepo, adjustToLocalTimezone = config.adjustToLocalTimezone)
                                         }
                                     }
                                 }
@@ -1937,7 +1937,7 @@ class MainActivity : ComponentActivity() {
                         authorIdentity = cfg.authorIdentity,
                         defaultBranch = cfg.defaultBranch,
                     ).also(GitRepoRegistry::put)
-                    indexer.fullScan(cfg.repoId, gitRepo)
+                    indexer.fullScan(cfg.repoId, gitRepo, adjustToLocalTimezone = cfg.adjustToLocalTimezone)
                 }
             }
         }
@@ -1979,7 +1979,7 @@ class MainActivity : ComponentActivity() {
             val gitRepo = com.eight87.strictlykeptboy.git.GitRepoRegistry.get(cfg.repoId)
             if (gitRepo != null) {
                 com.eight87.strictlykeptboy.cache.Indexer(graph.cacheDatabase)
-                    .fullScan(cfg.repoId, gitRepo)
+                    .fullScan(cfg.repoId, gitRepo, adjustToLocalTimezone = cfg.adjustToLocalTimezone)
             }
         }
     }

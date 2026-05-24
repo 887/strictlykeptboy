@@ -68,6 +68,7 @@ const val TestTagRepoCardSwitchDrawTasksFrom = "RepoCard-Switch-DrawTasksFrom"
 const val TestTagRepoCardSwitchAutoSync = "RepoCard-Switch-AutoSync"
 const val TestTagRepoCardSwitchWifiOnly = "RepoCard-Switch-WifiOnly"
 const val TestTagRepoCardSwitchImportStickers = "RepoCard-Switch-ImportStickers"
+const val TestTagRepoCardSwitchAdjustToLocalTimezone = "RepoCard-Switch-AdjustToLocalTimezone"
 
 /**
  * One repo as an expandable Material3 card. See file-level comment for
@@ -83,6 +84,7 @@ fun RepoCard(
     onToggleAutoSync: (Boolean) -> Unit,
     onToggleWifiOnly: (Boolean) -> Unit,
     onToggleImportStickers: (Boolean) -> Unit,
+    onToggleAdjustToLocalTimezone: (Boolean) -> Unit = {},
     onOpenMoreSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -225,6 +227,12 @@ fun RepoCard(
                         checked = repo.importStickersToRepo,
                         onCheckedChange = onToggleImportStickers,
                         testTag = "$TestTagRepoCardSwitchImportStickers-${repo.repoId}",
+                    )
+                    SwitchRow(
+                        label = "Adjust to local timezone",
+                        checked = repo.adjustToLocalTimezone,
+                        onCheckedChange = onToggleAdjustToLocalTimezone,
+                        testTag = "$TestTagRepoCardSwitchAdjustToLocalTimezone-${repo.repoId}",
                     )
 
                     // -------- Footer --------

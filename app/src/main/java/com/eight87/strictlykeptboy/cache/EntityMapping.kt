@@ -25,6 +25,7 @@ import kotlinx.serialization.json.Json
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
+import java.time.ZoneId
 import java.time.ZoneOffset
 
 /**
@@ -39,12 +40,23 @@ internal object EntityMapping {
 
     private val json = Json { encodeDefaults = false }
 
-    fun event(repoId: String, e: Event, sourcePath: String): EventRow = EventRow(
+    fun event(
+        repoId: String,
+        e: Event,
+        sourcePath: String,
+        reanchorAtLocalTz: Boolean = false,
+    ): EventRow {
+        // Per-event `pin_timezone = true` overrides the repo-level
+        // re-anchor so travel/convention events stay in their stored
+        // zone (e.g. devconf-berlin must render at Europe/Berlin
+        // 09:00 regardless of where the device is).
+        val reanchor = reanchorAtLocalTz && !e.pinTimezone
+        return EventRow(
         repoId = repoId,
         id = e.id,
         calendarId = e.calendarId,
-        startEpochMs = parseEpochMs(e.start),
-        endEpochMs = parseEpochMs(e.end),
+        startEpochMs = parseEpochMs(e.start, reanchor),
+        endEpochMs = parseEpochMs(e.end, reanchor),
         allDay = e.allDay,
         title = e.title,
         body = e.body,
@@ -60,7 +72,8 @@ internal object EntityMapping {
         requiresResponse = e.requiresResponse,
         promptKindRaw = e.promptKind?.tomlValue,
         promptTargetRaw = e.promptTarget?.tomlValue,
-    )
+        )
+    }
 
     fun task(repoId: String, t: Task, sourcePath: String): TaskRow = TaskRow(
         repoId = repoId,
@@ -90,8 +103,23 @@ internal object EntityMapping {
             sourcePath = sourcePath,
         )
 
-    fun recurrenceRule(repoId: String, r: RecurrenceRule, sourcePath: String): RecurrenceRuleRow =
-        RecurrenceRuleRow(
+    fun recurrenceRule(
+        repoId: String,
+        r: RecurrenceRule,
+        sourcePath: String,
+        reanchorAtLocalTz: Boolean = false,
+    ): RecurrenceRuleRow {
+        // Re-anchor the rule's tz_id at device-local when the repo
+        // flag is on and the rule isn't pin_timezone-marked. Wall-clock
+        // (dtstart) stays as written; only the tz interpretation
+        // changes, which is what the materializer uses for the next-
+        // instance instant.
+        val effectiveTzId = if (reanchorAtLocalTz && !r.pinTimezone) {
+            ZoneId.systemDefault().id
+        } else {
+            r.tzId
+        }
+        return RecurrenceRuleRow(
             repoId = repoId,
             id = r.id,
             calendarId = r.calendarId,
@@ -99,7 +127,7 @@ internal object EntityMapping {
             rrule = r.rrule,
             dtstart = r.dtstart,
             duration = r.duration,
-            tzId = r.tzId,
+            tzId = effectiveTzId,
             location = r.location,
             emoji = r.emoji,
             busy = r.busy,
@@ -112,6 +140,7 @@ internal object EntityMapping {
             promptKindRaw = r.promptKind?.tomlValue,
             promptTargetRaw = r.promptTarget?.tomlValue,
         )
+    }
 
     fun exception(repoId: String, x: StoreException, sourcePath: String): ExceptionRow =
         ExceptionRow(
@@ -190,17 +219,31 @@ internal object EntityMapping {
     private fun encodeTags(items: List<String>): String =
         if (items.isEmpty()) "[]" else json.encodeToString(items)
 
-    fun parseEpochMs(s: String): Long {
+    fun parseEpochMs(s: String, reanchorAtLocalTz: Boolean = false): Long {
         if (s.isEmpty()) return 0L
-        // Try offset datetime (`2026-05-09T18:30:00+02:00`) first.
+        val deviceZone = ZoneId.systemDefault()
+        // Try offset datetime (`2026-05-09T18:30:00+02:00`) first. When
+        // re-anchoring, drop the stored offset and treat the wall-clock
+        // as device-local (so 23:30+01:00 becomes 23:30 in whatever zone
+        // the device is in — same wall-clock, different absolute
+        // instant).
         return try {
-            OffsetDateTime.parse(s).toInstant().toEpochMilli()
+            val odt = OffsetDateTime.parse(s)
+            if (reanchorAtLocalTz) {
+                odt.toLocalDateTime().atZone(deviceZone).toInstant().toEpochMilli()
+            } else {
+                odt.toInstant().toEpochMilli()
+            }
         } catch (_: Throwable) {
             try {
-                LocalDateTime.parse(s).toInstant(ZoneOffset.UTC).toEpochMilli()
+                val ldt = LocalDateTime.parse(s)
+                val anchor = if (reanchorAtLocalTz) deviceZone else ZoneOffset.UTC
+                ldt.atZone(anchor).toInstant().toEpochMilli()
             } catch (_: Throwable) {
                 try {
-                    LocalDate.parse(s).atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
+                    val ld = LocalDate.parse(s)
+                    val anchor = if (reanchorAtLocalTz) deviceZone else ZoneOffset.UTC
+                    ld.atStartOfDay(anchor).toInstant().toEpochMilli()
                 } catch (_: Throwable) {
                     0L
                 }

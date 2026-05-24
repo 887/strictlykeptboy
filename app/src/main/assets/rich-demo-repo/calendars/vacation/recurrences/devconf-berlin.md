@@ -9,7 +9,8 @@ title = "DevConf — Berlin (4 days)"
 dtstart = 2026-05-27T07:00:00
 duration = "P3DT12H"
 all_day = false
-tz_id = "Europe/London"
+tz_id = "Europe/Berlin"
+pin_timezone = true
 rrule = "FREQ=YEARLY;BYMONTH=5;BYDAY=-1WE"
 calendar_id = "0190a0aa-1c1d-7000-8a0a-00000000000a"
 tags = ["vacation", "conference", "berlin"]

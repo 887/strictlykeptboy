@@ -70,10 +70,11 @@ class Indexer(private val db: CacheDatabase) {
         repoId: String,
         gitRepo: GitRepo,
         scanner: RepoScanner = RepoScanner,
+        adjustToLocalTimezone: Boolean = false,
     ): IndexStats = withContext(Dispatchers.IO) {
         clearRepo(repoId)
         val results = scanner.scanAll(gitRepo.rootDir)
-        val stats = applyResults(repoId, gitRepo.rootDir, results)
+        val stats = applyResults(repoId, gitRepo.rootDir, results, adjustToLocalTimezone)
         recordHead(repoId, gitRepo.headSha())
         stats
     }
@@ -87,16 +88,17 @@ class Indexer(private val db: CacheDatabase) {
         repoId: String,
         gitRepo: GitRepo,
         scanner: RepoScanner = RepoScanner,
+        adjustToLocalTimezone: Boolean = false,
     ): IndexStats = withContext(Dispatchers.IO) {
         val state = db.repoState().get(repoId)
         if (state == null || state.schemaVersion != CURRENT_SCHEMA_VERSION) {
-            return@withContext fullScan(repoId, gitRepo, scanner)
+            return@withContext fullScan(repoId, gitRepo, scanner, adjustToLocalTimezone)
         }
         val lastSha = state.lastIndexedHeadSha?.let { ObjectId.fromString(it) }
         val changed = try {
             gitRepo.diffSinceLastIndexed(lastSha)
         } catch (_: Throwable) {
-            return@withContext fullScan(repoId, gitRepo, scanner)
+            return@withContext fullScan(repoId, gitRepo, scanner, adjustToLocalTimezone)
         }
         if (changed.isEmpty()) {
             recordHead(repoId, gitRepo.headSha())
@@ -134,7 +136,7 @@ class Indexer(private val db: CacheDatabase) {
         }
         if (toReparse.isNotEmpty()) {
             val rescans = toReparse.mapNotNull { scanner.parseSingle(gitRepo.rootDir, it) }
-            val stats = applyResults(repoId, gitRepo.rootDir, rescans)
+            val stats = applyResults(repoId, gitRepo.rootDir, rescans, adjustToLocalTimezone)
             touched += stats.touched
             failed += stats.failed
         }
@@ -146,6 +148,7 @@ class Indexer(private val db: CacheDatabase) {
         repoId: String,
         rootDir: File,
         results: List<ParseResult>,
+        adjustToLocalTimezone: Boolean = false,
     ): IndexStats {
         val rootPath = rootDir.toPath().toAbsolutePath().normalize()
         val events = mutableListOf<Pair<Event, String>>()
@@ -184,7 +187,7 @@ class Indexer(private val db: CacheDatabase) {
         }
 
         events.chunked(BATCH).forEach { chunk ->
-            db.events().upsertAll(chunk.map { EntityMapping.event(repoId, it.first, it.second) })
+            db.events().upsertAll(chunk.map { EntityMapping.event(repoId, it.first, it.second, adjustToLocalTimezone) })
             // FTS: delete then upsert so re-indexed events don't accumulate duplicates.
             chunk.forEach { db.fts().deleteEvent(repoId, it.first.id) }
             db.fts().upsertEvents(chunk.map { EntityMapping.eventFts(repoId, it.first) })
@@ -200,7 +203,7 @@ class Indexer(private val db: CacheDatabase) {
             db.fts().upsertTasks(chunk.map { EntityMapping.taskFts(repoId, it.first) })
         }
         rules.chunked(BATCH).forEach { chunk ->
-            db.recurrenceRules().upsertAll(chunk.map { EntityMapping.recurrenceRule(repoId, it.first, it.second) })
+            db.recurrenceRules().upsertAll(chunk.map { EntityMapping.recurrenceRule(repoId, it.first, it.second, adjustToLocalTimezone) })
         }
         exceptions.chunked(BATCH).forEach { chunk ->
             db.exceptions().upsertAll(chunk.map { EntityMapping.exception(repoId, it.first, it.second) })

@@ -100,8 +100,11 @@ class RepoOverlayPrefsMigrationTest {
     @Test fun config_defaults_when_missing_keys() = runTest {
         val store = freshStore("config_defaults")
         store.add(cfg("a"))
-        // Defaults: showOnSchedule = true, drawTasksFrom = false.
+        // Defaults: showOnSchedule = true, drawTasksFrom = true
+        // (flipped 2026-05-24 — by default a repo's tasks show up in
+        // the unified Tasks pane, matching how its events show up in
+        // the unified Schedule).
         assertTrue(store.get("a")!!.showOnSchedule)
-        assertFalse(store.get("a")!!.drawTasksFrom)
+        assertTrue(store.get("a")!!.drawTasksFrom)
     }
 }

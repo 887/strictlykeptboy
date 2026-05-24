@@ -239,6 +239,12 @@ internal fun ReposList(
                             state.store.update(cur.copy(importStickersToRepo = v))
                         }
                     },
+                    onToggleAdjustToLocalTimezone = { v ->
+                        scope.launch {
+                            val cur = state.store.get(repo.repoId) ?: return@launch
+                            state.store.update(cur.copy(adjustToLocalTimezone = v))
+                        }
+                    },
                     onOpenMoreSettings = { onOpenSettings(repo.repoId) },
                 )
             }

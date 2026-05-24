@@ -1,4 +1,4 @@
-# content-hash: 9f8109046cef05dbdf993713135ae1b78d41d509451fc0767a88f39cf92ddf0f
+# content-hash: ffad2f82ca29e940e39438be4a8dc6841427e5766bb3161b661fe06cb4e6e84c
 .strictlykeptboy/repo.toml
 .strictlykeptboy/schema.toml
 AGENTS.md

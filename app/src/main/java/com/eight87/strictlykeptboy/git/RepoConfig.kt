@@ -73,7 +73,7 @@ data class RepoConfig(
      * user's task list by default (per the three-repo acceptance
      * scenario in `docs/plans/round-2-5.md`).
      */
-    val drawTasksFrom: Boolean = false,
+    val drawTasksFrom: Boolean = true,
     /**
      * Round 2.8 — per-repo opt-in: when `true`, the active sticker pack's
      * image files are copied into `<repoRoot>/stickers/<species>/` and
@@ -89,6 +89,22 @@ data class RepoConfig(
      * user re-enables demo mode for the same perspective.
      */
     val isDemo: Boolean = false,
+    /**
+     * Round 2026-05-24 — when `true`, timestamps stored in this repo's
+     * event/recurrence files are re-anchored at parse time to the
+     * device's local time zone (same wall-clock, different absolute
+     * instant). Per-event `pin_timezone = true` overrides this and
+     * keeps the stored zone authoritative — used for travel/convention
+     * events where 10:00 in Berlin must stay 10:00 Berlin time
+     * regardless of where the device is.
+     *
+     * Default `true` because the typical user wants their schedule
+     * to render at the wall-clock times they wrote, not warped
+     * by whatever zone the file was authored in (especially for the
+     * bundled demo repo, which any first-launch user from any time
+     * zone in the world should be able to make sense of).
+     */
+    val adjustToLocalTimezone: Boolean = true,
 ) {
     init {
         require(remotes.isEmpty() == (primaryRemote == null)) {
