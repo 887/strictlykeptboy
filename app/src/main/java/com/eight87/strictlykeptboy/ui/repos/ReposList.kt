@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -197,6 +198,19 @@ internal fun ReposList(
                     stringResource(R.string.repos_empty_hint),
                     style = MaterialTheme.typography.bodySmall,
                 )
+                // W2-U-2 — prominent wizard CTA so first-time users
+                // landing on the Repos overlay (via the bottom-left
+                // avatar) have an obvious entry-point beyond the tiny
+                // `+` icon top-right. Routes to the same destination
+                // the top-right icon does (Wizard); the "+ Add repo"
+                // footer below still owns the power-user local-only /
+                // remote-connect path.
+                Button(
+                    onClick = onOpenWizard,
+                    modifier = Modifier.testTag("ReposEmptySetupWizard"),
+                ) {
+                    Text(stringResource(R.string.repos_empty_cta_setup_wizard))
+                }
             }
         }
 

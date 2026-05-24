@@ -170,6 +170,8 @@ fun ScheduleDayView(
      * stack inside an outer scroll container (user 2026-05-23).
      */
     internalScroll: Boolean = true,
+    /** W2-U-2 — wizard entry-point for the empty-state CTA. */
+    onSetupWizard: (() -> Unit)? = null,
 ) {
     // Sliding 24-hour window per user direction:
     //   - on today: anchor at `now - 12h` (snapped to the hour) so the
@@ -215,6 +217,7 @@ fun ScheduleDayView(
         EmptyScheduleState(
             modifier = modifier.fillMaxSize().testTag(TestTagDayEmpty),
             onPlanTrip = onPlanTrip,
+            onSetupWizard = onSetupWizard,
         )
         return
     }

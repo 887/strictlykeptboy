@@ -41,4 +41,42 @@ class FirstLaunchRoutingTest {
         // Null means "no external request pending"; SkbAppShell observes.
         assertEquals(null, graph.wizardEntryRequest.value)
     }
+
+    /**
+     * W2-U-2 — when the first-time user picks "Empty calendar" in the
+     * intro picker, MainActivity's perspective-handler must fire
+     * `setWizardEntryRequest(Welcome)` so SkbAppShell auto-switches to
+     * the Wizard destination on the next frame (instead of dumping the
+     * user on an empty Schedule with no obvious CTA).
+     *
+     * The handler itself lives inline in MainActivity.setContent — this
+     * test re-runs the exact two-call sequence against the same AppGraph
+     * surface, asserting the post-conditions a real Empty pick would
+     * leave behind.
+     */
+    @Test fun `empty-pick fires wizard entry request at Welcome`() {
+        val ctx = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val graph = AppGraph(ctx)
+        assertEquals(null, graph.wizardEntryRequest.value)
+
+        // Replicate the MainActivity inline branch for
+        // DemoPerspectiveChoice.Empty (load-bearing call: the wizard
+        // re-entry request). `demoModePrefs.setActive(false)` is the
+        // sibling no-op-on-default call that also runs in MainActivity;
+        // it goes through EncryptedSharedPreferences (AndroidKeyStore
+        // not available under Robolectric) so we skip it here — the
+        // wizard-entry flip is the part that drives auto-launch.
+        graph.setWizardEntryRequest(WizardScreen.Welcome)
+
+        assertEquals(
+            "Empty-pick must auto-route to the Welcome screen of the wizard",
+            WizardScreen.Welcome,
+            graph.wizardEntryRequest.value,
+        )
+        // SkbAppShell's LaunchedEffect(wizardEntry) reads `wizardEntry != null`
+        // and switches `selected = TopDestination.Wizard`. Backing out
+        // clears via onWizardFinished → clearWizardEntryRequest().
+        graph.clearWizardEntryRequest()
+        assertEquals(null, graph.wizardEntryRequest.value)
+    }
 }

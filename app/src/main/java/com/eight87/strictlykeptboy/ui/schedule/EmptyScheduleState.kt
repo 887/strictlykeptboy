@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -25,6 +26,9 @@ const val TestTagEmptyBat = "EmptyBat"
 const val TestTagEmptyMessage = "EmptyMessage"
 const val TestTagEmptyPlanTrip = "EmptyPlanTrip"
 const val TestTagEmptyCta = "EmptyCta"
+
+/** W2-U-2 — prominent "Set up your calendar" CTA on the empty-state. */
+const val TestTagEmptySetupWizard = "EmptySetupWizard"
 
 /**
  * Round 2.2.C.8 — three-state empty schedule kind.
@@ -86,6 +90,14 @@ fun EmptyScheduleState(
     onOpenCalendars: (() -> Unit)? = null,
     /** Routes to the EventCreate sheet for (c) — "+ Add event". */
     onAddEvent: (() -> Unit)? = null,
+    /**
+     * W2-U-2 — prominent "Set up your calendar" CTA. When non-null,
+     * renders a filled [Button] above the per-kind text CTAs so a
+     * first-time user staring at an empty schedule has an obvious
+     * next step that lands them in the 10-step wizard. Caller wires
+     * to `graph.setWizardEntryRequest(WizardScreen.Welcome)`.
+     */
+    onSetupWizard: (() -> Unit)? = null,
 ) {
     val message = when (kind) {
         EmptyScheduleKind.NoRepos -> stringResource(R.string.schedule_empty_no_repos)
@@ -116,6 +128,19 @@ fun EmptyScheduleState(
             modifier = Modifier.padding(top = 16.dp).testTag(TestTagEmptyMessage),
         )
         Spacer(Modifier.height(12.dp))
+        // W2-U-2 — prominent setup CTA. Rendered above the per-kind
+        // text CTAs whenever wired, regardless of [kind] — so even the
+        // [NoEvents] case (e.g. wizard backed-out, sample event date
+        // is empty) still surfaces an obvious wizard entry-point.
+        if (onSetupWizard != null) {
+            Button(
+                onClick = onSetupWizard,
+                modifier = Modifier.testTag(TestTagEmptySetupWizard),
+            ) {
+                Text(stringResource(R.string.schedule_empty_cta_setup_wizard))
+            }
+            Spacer(Modifier.height(8.dp))
+        }
         when (kind) {
             EmptyScheduleKind.NoRepos -> if (onOpenRepos != null) {
                 TextButton(onClick = onOpenRepos, modifier = Modifier.testTag(TestTagEmptyCta)) {

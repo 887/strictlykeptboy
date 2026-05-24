@@ -52,6 +52,8 @@ internal fun SkbAppDestinationContent(
     onSyncClick: () -> Unit,
     eventCreateController: com.eight87.strictlykeptboy.ui.schedule.EventCreateController?,
     onPlanTrip: () -> Unit,
+    /** W2-U-2 — wizard entry-point for empty-state CTA + Repos-empty CTA. */
+    onSetupWizard: () -> Unit,
     calendarVisibility: com.eight87.strictlykeptboy.ui.settings.CalendarVisibilityPrefs?,
     onLongPressCalendar: ((com.eight87.strictlykeptboy.resolver.CalendarMeta) -> Unit)?,
     scheduleViewModePrefs: com.eight87.strictlykeptboy.ui.schedule.ScheduleViewModePrefs?,
@@ -106,6 +108,7 @@ internal fun SkbAppDestinationContent(
             onSyncClick = onSyncClick,
             eventCreateController = eventCreateController,
             onPlanTrip = onPlanTrip,
+            onSetupWizard = onSetupWizard,
             calendarVisibility = calendarVisibility,
             onLongPressCalendar = onLongPressCalendar,
             onSingleDrop = onSingleDrop,

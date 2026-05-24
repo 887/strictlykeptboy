@@ -311,6 +311,12 @@ private fun SkbAppShellContent(
                         onSyncClick = callbacks.onSyncClick,
                         eventCreateController = context.eventCreateController,
                         onPlanTrip = { tripWizardOpen = true },
+                        // W2-U-2 — empty-Schedule "Set up your calendar" CTA
+                        // jumps to the existing Wizard destination via the
+                        // shell's standard top-destination switch. The
+                        // wizard's onCancel returns to Schedule (handled in
+                        // SkbAppDestinationContent), so backing out is safe.
+                        onSetupWizard = { selected = TopDestination.Wizard },
                         calendarVisibility = context.calendarVisibility,
                         onLongPressCalendar = callbacks.onLongPressCalendar,
                         scheduleViewModePrefs = context.scheduleViewModePrefs,
