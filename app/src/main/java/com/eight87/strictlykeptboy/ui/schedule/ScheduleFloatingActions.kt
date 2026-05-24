@@ -15,9 +15,14 @@ import androidx.compose.material.icons.outlined.ViewAgenda
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,6 +50,7 @@ const val TestTagScheduleSupersededFab = "ScheduleSupersededFab"
  * than a unified mode pill — the layout is orthogonal to what's
  * filtered.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScheduleFloatingActions(
     layout: ScheduleLayoutMode,
@@ -83,41 +89,57 @@ fun ScheduleFloatingActions(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         if (showLayoutToggle) {
-            SmallFloatingActionButton(
-                onClick = {
-                    onLayoutChange(
-                        if (layout == ScheduleLayoutMode.Stacked) ScheduleLayoutMode.Grid
-                        else ScheduleLayoutMode.Stacked
-                    )
-                },
-                modifier = Modifier.testTag(TestTagScheduleLayoutFab),
+            // Fix-batch W3.11 / M-1 (2026-05-24) — long-press / hover
+            // tooltip describes what the FAB does so users don't have
+            // to tap blind.
+            val layoutTip = if (layout == ScheduleLayoutMode.Stacked) {
+                "Switch to grid layout"
+            } else {
+                "Switch to stacked layout"
+            }
+            TooltipBox(
+                positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                tooltip = { PlainTooltip { Text(layoutTip) } },
+                state = rememberTooltipState(),
             ) {
-                Icon(
-                    imageVector = if (layout == ScheduleLayoutMode.Stacked) {
-                        Icons.Outlined.GridView
-                    } else {
-                        Icons.Outlined.ViewAgenda
+                SmallFloatingActionButton(
+                    onClick = {
+                        onLayoutChange(
+                            if (layout == ScheduleLayoutMode.Stacked) ScheduleLayoutMode.Grid
+                            else ScheduleLayoutMode.Stacked
+                        )
                     },
-                    contentDescription = if (layout == ScheduleLayoutMode.Stacked) {
-                        "Switch to grid layout"
-                    } else {
-                        "Switch to stacked layout"
-                    },
-                    modifier = Modifier.size(22.dp),
-                )
+                    modifier = Modifier.testTag(TestTagScheduleLayoutFab),
+                ) {
+                    Icon(
+                        imageVector = if (layout == ScheduleLayoutMode.Stacked) {
+                            Icons.Outlined.GridView
+                        } else {
+                            Icons.Outlined.ViewAgenda
+                        },
+                        contentDescription = layoutTip,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
             }
         }
 
         var menuOpen by remember { mutableStateOf(false) }
-        SmallFloatingActionButton(
-            onClick = { menuOpen = true },
-            modifier = Modifier.testTag(TestTagScheduleFilterFab),
+        TooltipBox(
+            positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+            tooltip = { PlainTooltip { Text("Filter events by tag") } },
+            state = rememberTooltipState(),
         ) {
-            Icon(
-                imageVector = Icons.Outlined.FilterList,
-                contentDescription = "Filter events",
-                modifier = Modifier.size(22.dp),
-            )
+            SmallFloatingActionButton(
+                onClick = { menuOpen = true },
+                modifier = Modifier.testTag(TestTagScheduleFilterFab),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.FilterList,
+                    contentDescription = "Filter events",
+                    modifier = Modifier.size(22.dp),
+                )
+            }
         }
         DropdownMenu(
             expanded = menuOpen,
@@ -154,31 +176,43 @@ fun ScheduleFloatingActions(
         }
 
         if (showSupersededToggle) {
-            SmallFloatingActionButton(
-                onClick = {
-                    onSupersededModeChange(
-                        if (supersededMode == SupersededDisplayMode.Hidden) {
-                            SupersededDisplayMode.Strikethrough
-                        } else {
-                            SupersededDisplayMode.Hidden
-                        },
-                    )
-                },
-                modifier = Modifier.testTag(TestTagScheduleSupersededFab),
+            // Fix-batch W3.5 / U-2 + W3.11 / M-1 (2026-05-24) —
+            // long-press / hover tooltip describing what tapping the
+            // FAB does. The content-description is also more concrete
+            // about what "superseded" means (events hidden by an
+            // overriding base layer like a holiday or vacation).
+            val supersededTip = if (supersededMode == SupersededDisplayMode.Hidden) {
+                "Show events hidden by base layer (as strikethrough)"
+            } else {
+                "Hide events hidden by base layer"
+            }
+            TooltipBox(
+                positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                tooltip = { PlainTooltip { Text(supersededTip) } },
+                state = rememberTooltipState(),
             ) {
-                Icon(
-                    imageVector = if (supersededMode == SupersededDisplayMode.Hidden) {
-                        Icons.Outlined.VisibilityOff
-                    } else {
-                        Icons.Outlined.StrikethroughS
+                SmallFloatingActionButton(
+                    onClick = {
+                        onSupersededModeChange(
+                            if (supersededMode == SupersededDisplayMode.Hidden) {
+                                SupersededDisplayMode.Strikethrough
+                            } else {
+                                SupersededDisplayMode.Hidden
+                            },
+                        )
                     },
-                    contentDescription = if (supersededMode == SupersededDisplayMode.Hidden) {
-                        "Superseded events hidden — tap to show as strikethrough"
-                    } else {
-                        "Superseded events shown as strikethrough — tap to hide"
-                    },
-                    modifier = Modifier.size(22.dp),
-                )
+                    modifier = Modifier.testTag(TestTagScheduleSupersededFab),
+                ) {
+                    Icon(
+                        imageVector = if (supersededMode == SupersededDisplayMode.Hidden) {
+                            Icons.Outlined.VisibilityOff
+                        } else {
+                            Icons.Outlined.StrikethroughS
+                        },
+                        contentDescription = supersededTip,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
             }
         }
     }

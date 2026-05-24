@@ -49,13 +49,19 @@ class PackManifestTest {
         PackManifest.parse(toml, "x")
     }
 
-    @Test(expected = PackManifestException::class)
-    fun `rejects manifest with no stickers`() {
+    @Test
+    fun `accepts manifest with no stickers (W3-9 - scaffold packs)`() {
+        // Fix-batch W3.9 / U-11 (2026-05-24) — bundled scaffold packs
+        // for non-bat species ship without [[sticker]] rows until
+        // artwork lands; the pack must still load so the wizard /
+        // selector enumerates every installed species.
         val toml = """
-            species = "bat"
-            name = "Empty"
+            species = "wolf"
+            name = "Default Wolf"
         """.trimIndent()
-        PackManifest.parse(toml, "x")
+        val pack = PackManifest.parse(toml, "default-wolf")
+        assertEquals("wolf", pack.species)
+        assertEquals(0, pack.stickers.size)
     }
 
     @Test

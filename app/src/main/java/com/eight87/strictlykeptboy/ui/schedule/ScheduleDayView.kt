@@ -541,7 +541,19 @@ private fun BandsLayer(
         // step right, Timebox = 2 steps right. 56dp gives each lane a
         // visibly distinct left-edge column on phones without
         // collapsing the Timebox band into a sliver.
-        val cascadeStep = 56.dp
+        // Fix-batch W3.1 / R-4 (2026-05-24) — scale the cascade step
+        // with effective zoom so dense 8-band 90-min morning stacks
+        // don't bury same-lane content under a wall of right-shifted
+        // labels at low zoom. At zoom 1 (40dp/hr, "overview") the
+        // grid is too vertically compressed for the full 56dp shift;
+        // at zoom ≥ 3 ("detail") the bands have headroom and the
+        // full 56dp shift reads cleanly.
+        val cascadeStep = when (effectiveZoom) {
+            1 -> 28.dp
+            2 -> 40.dp
+            3 -> 56.dp
+            else -> 56.dp
+        }
         renderables.forEach { (band, groupKey) ->
             val laneIdx = laneIndexById[band.instance.instanceId] ?: 0
             // Lane 0 = the day's scaffolding (lowest priority value)

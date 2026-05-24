@@ -1,7 +1,7 @@
 schema_version = 1
 id = "0190a0aa-1c1d-7000-8a0a-00000000000b"
 kind = "base"
-name = "Base layers"
+name = "Sleep & work hours"
 emoji = "🟦"
 color = "#4a90c2"
 color_seed = 4886722

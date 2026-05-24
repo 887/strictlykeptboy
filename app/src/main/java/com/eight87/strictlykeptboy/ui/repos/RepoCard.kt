@@ -69,6 +69,7 @@ const val TestTagRepoCardSwitchAutoSync = "RepoCard-Switch-AutoSync"
 const val TestTagRepoCardSwitchWifiOnly = "RepoCard-Switch-WifiOnly"
 const val TestTagRepoCardSwitchImportStickers = "RepoCard-Switch-ImportStickers"
 const val TestTagRepoCardSwitchAdjustToLocalTimezone = "RepoCard-Switch-AdjustToLocalTimezone"
+const val TestTagRepoCardAdjustTzCoach = "RepoCard-AdjustTzCoach"
 
 /**
  * One repo as an expandable Material3 card. See file-level comment for
@@ -234,6 +235,29 @@ fun RepoCard(
                         onCheckedChange = onToggleAdjustToLocalTimezone,
                         testTag = "$TestTagRepoCardSwitchAdjustToLocalTimezone-${repo.repoId}",
                     )
+                    // Fix-batch W3.12 / M-2 (2026-05-24) — when the
+                    // toggle is OFF, surface a coach card that
+                    // explains what users will see (raw wall-clock
+                    // times that look warped when the repo author's
+                    // zone differs from the device zone). The demo
+                    // ships repo data anchored to Europe/London; a
+                    // non-UK user without the toggle sees event
+                    // bands sliding off the expected hour.
+                    if (!repo.adjustToLocalTimezone) {
+                        val deviceTz = java.time.ZoneId.systemDefault().id
+                        Text(
+                            text = "Showing each event's original wall-clock time. " +
+                                "If the repo's authors used a different timezone than " +
+                                "yours (device: $deviceTz), the bands won't line up with " +
+                                "your local hours. Turn this on to re-anchor times to your zone.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 8.dp, top = 0.dp, bottom = 8.dp)
+                                .testTag("$TestTagRepoCardAdjustTzCoach-${repo.repoId}"),
+                        )
+                    }
 
                     // -------- Footer --------
                     TextButton(

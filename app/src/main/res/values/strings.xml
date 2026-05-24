@@ -99,8 +99,11 @@
          sealed-class case SettingsCategory.Mode stay stable. -->
     <string name="settings_category_mode">Mode</string>
     <string name="settings_category_notifications">Notifications</string>
-    <!-- 2.1.E.3 — user-facing copy renamed to "Accounts"; testTag stays "Repos". -->
-    <string name="settings_category_repos">Accounts</string>
+    <!-- Fix-batch W3.8 / U-7 (2026-05-24) — unified vocabulary across
+         the app: bottom-left avatar opens "Repositories", wizard says
+         "your repo", so Settings now matches with "Repositories"
+         instead of the old "Accounts" label. testTag stays "Repos". -->
+    <string name="settings_category_repos">Repositories</string>
     <string name="settings_category_about">About</string>
     <string name="settings_category_placeholder">This section ships in a later phase.</string>
     <string name="settings_about_app_name">strictlykeptboy</string>
@@ -121,7 +124,7 @@
 
     <!-- Section headers + per-row subtitles for the M3E grouped-card
          settings list (tonearmboy parity). -->
-    <string name="settings_section_accounts">Accounts</string>
+    <string name="settings_section_accounts">Repositories</string>
     <string name="settings_section_content">Content</string>
     <string name="settings_section_lifestyle">Lifestyle</string>
     <string name="settings_section_app">App</string>
@@ -847,9 +850,15 @@
     <string name="task_filter_done">Done</string>
 
     <!-- Unified-today section headers + Now/Next hint (Round 2.26.B/C.4). -->
+    <!-- Fix-batch W3.2 / R-7 (2026-05-24) — bucket label now spells
+         out the 14-day window so a fresh demo install (whose due
+         dates span ~12 days back from today) doesn't look like the
+         user has 21 ancient missed tasks they need to triage. The
+         bound is enforced in `UnifiedToday.kt`; per-todolist views
+         still surface anything older. -->
     <plurals name="tasks_unified_section_overdue">
-        <item quantity="one">Overdue (%1$d)</item>
-        <item quantity="other">Overdue (%1$d)</item>
+        <item quantity="one">Overdue, last 14 days (%1$d)</item>
+        <item quantity="other">Overdue, last 14 days (%1$d)</item>
     </plurals>
     <string name="tasks_unified_section_today">Today</string>
     <string name="tasks_unified_section_pinned_standing">Pinned standing</string>

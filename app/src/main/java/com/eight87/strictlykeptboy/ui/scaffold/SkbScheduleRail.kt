@@ -116,6 +116,11 @@ internal fun RailColumn(
         modifier = Modifier
             .fillMaxHeight()
             .requiredWidth(railWidth)
+            // Fix-batch W3.6 / U-3 (2026-05-24) — clip the rail so
+            // rotated `wrapContentSize(unbounded = true)` labels like
+            // "3-day" / "Month" can't bleed horizontally into the
+            // schedule band column behind it.
+            .clip(androidx.compose.ui.graphics.RectangleShape)
             .background(MaterialTheme.colorScheme.surface)
             .testTag(TestTagShellRail),
     ) {
@@ -200,14 +205,21 @@ private fun RailTabItem(item: RailItem) {
             .semantics { contentDescription = label },
         contentAlignment = Alignment.Center,
     ) {
+        // Fix-batch W3.6 / U-3 (2026-05-24) — constrain the rotated
+        // text to the item height (108dp) and ellipsize. Previously
+        // `wrapContentSize(unbounded = true)` let "3-day" / "Month"
+        // measure unbounded then rotate, so the post-rotation text
+        // bled past the rail's 52dp width into the band column on the
+        // right and overlapped event content.
         Text(
             text = label,
             style = MaterialTheme.typography.labelLarge,
             color = labelColor,
             fontWeight = if (item.selected) FontWeight.Bold else FontWeight.Normal,
             maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             modifier = Modifier
-                .wrapContentSize(unbounded = true)
+                .width(96.dp)
                 .rotate(-90f),
         )
         if (item.selected) {

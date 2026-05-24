@@ -47,10 +47,16 @@ object PackManifest {
         val style = root.getString("style")
         val schemaVersion = root.getInt("schema_version") ?: 1
 
+        // Fix-batch W3.9 / U-11 (2026-05-24) — bundled scaffold packs
+        // for cat / fox / lion / tiger / wolf / bunny ship without
+        // [[sticker]] rows (the artwork drop is pending). Previously
+        // a missing sticker list caused PackManifestException, the
+        // AssetPackLoader swallowed it, and the wizard's pack list
+        // only ever showed Bat (the one species with stickers wired)
+        // + Bunny. Treating an empty sticker list as valid lets all
+        // bundled species packs enumerate; per-sticker resolution
+        // falls back to R.drawable.about_bat as before.
         val entries = root.aotables["sticker"].orEmpty()
-        if (entries.isEmpty()) {
-            throw PackManifestException("at least one [[sticker]] entry is required")
-        }
 
         val stickers = LinkedHashMap<String, StickerEntry>(entries.size)
         for ((index, t) in entries.withIndex()) {

@@ -128,12 +128,18 @@ fun IntroWizardHost(
                 }
             }
             if (step == IntroStep.Manifesto) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        onClick = { step = IntroStep.Picker },
-                        modifier = Modifier.testTag("IntroWizard-Continue"),
-                    ) { Text("Continue") }
-                }
+                // Fix-batch W3.4 / U-1 (2026-05-24) — Continue button
+                // is full-width so taps anywhere along the bottom of
+                // the screen (including down to the navigation gesture
+                // area) hit the button instead of falling through to
+                // the manifesto body text. Stretches edge-to-edge to
+                // maximize the click target.
+                Button(
+                    onClick = { step = IntroStep.Picker },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("IntroWizard-Continue"),
+                ) { Text("Continue") }
             }
         }
     }
@@ -317,30 +323,21 @@ private fun PerspectivePickerStep(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                // Fix-batch W3.7 / U-4 (2026-05-24) — de-emphasized
+                // bullet list (no per-row icons, no titleMedium emoji,
+                // tighter spacing) so users read these as docs/intent
+                // rather than tappable options. They aren't tappable;
+                // the previous icon+title+blurb layout looked like a
+                // tile-grid that should be.
                 supportedScenarios.forEach { card ->
-                    Row(
+                    Text(
+                        "  •  " + perspectiveTitle(card) + " — " + perspectiveBlurb(card),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 6.dp),
-                        verticalAlignment = ComposeAlign.Top,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        Text(
-                            card.emoji,
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                perspectiveTitle(card),
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                            Text(
-                                perspectiveBlurb(card),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
+                            .padding(vertical = 2.dp),
+                    )
                 }
             }
         }

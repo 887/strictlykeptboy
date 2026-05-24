@@ -28,6 +28,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.store.ReviewResponseWriter
+import java.time.Duration
+import java.time.OffsetDateTime
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
+import java.util.Locale
 
 /**
  * Phase DDD.13 / UI-SS — Reviews surface.
@@ -51,6 +57,44 @@ const val TestTagReviewItemPrefix = "ReviewItem-"
 const val TestTagReviewReactionPrefix = "ReviewReaction-"
 const val TestTagReviewComposerInput = "ReviewComposerInput"
 const val TestTagReviewSubmit = "ReviewSubmit"
+const val TestTagReviewsMarkAllRead = "ReviewsMarkAllRead"
+
+/**
+ * Fix-batch W3.3 / R-8 (2026-05-24) — humanize the raw ISO timestamps
+ * the ReviewFeedReader stores. Format priority:
+ *  - within 60 seconds → "just now"
+ *  - same day → "HH:mm"
+ *  - within 6 days → "EEE HH:mm" (e.g. "Sat 20:30")
+ *  - same year → "MMM d HH:mm" (e.g. "May 23 20:30")
+ *  - otherwise → "yyyy-MM-dd"
+ *
+ * Falls back to the raw string when the input doesn't parse (so demo
+ * data with non-ISO strings still renders).
+ */
+internal fun formatReviewTimestamp(
+    raw: String,
+    now: ZonedDateTime = ZonedDateTime.now(),
+    locale: Locale = Locale.getDefault(),
+): String {
+    if (raw.isBlank()) return raw
+    val parsed: OffsetDateTime = try {
+        OffsetDateTime.parse(raw)
+    } catch (_: DateTimeParseException) {
+        return raw
+    }
+    val local = parsed.atZoneSameInstant(now.zone)
+    val seconds = Duration.between(parsed.toInstant(), now.toInstant()).seconds
+    if (seconds in 0..59) return "just now"
+    val today = now.toLocalDate()
+    val thatDay = local.toLocalDate()
+    val daysBack = java.time.temporal.ChronoUnit.DAYS.between(thatDay, today)
+    return when {
+        thatDay == today -> local.format(DateTimeFormatter.ofPattern("HH:mm", locale))
+        daysBack in 1..6 -> local.format(DateTimeFormatter.ofPattern("EEE HH:mm", locale))
+        thatDay.year == today.year -> local.format(DateTimeFormatter.ofPattern("MMM d HH:mm", locale))
+        else -> local.format(DateTimeFormatter.ofPattern("yyyy-MM-dd", locale))
+    }
+}
 
 enum class ReviewsSide { Dom, Boy }
 enum class ReviewsFilter { All, Unread, ReactionsOnly, Threaded }
@@ -117,9 +161,28 @@ fun ReviewsPane(
         }
     }
 
+    // Fix-batch W3.13 / M-4 — locally-marked-read shas. The on-disk
+    // schema doesn't persist read-state today (ReviewFeedReader returns
+    // `unread = true` unconditionally), so "mark all read" is an
+    // ephemeral session-scoped action: it hides the chip until the
+    // process restarts. Real read-state persistence is a follow-up.
+    var locallyRead by remember { mutableStateOf(setOf<String>()) }
     Column(
         modifier = modifier.fillMaxSize().padding(12.dp).testTag(TestTagReviewsPane),
     ) {
+        val anyUnread = filtered.any { it.unread && it.commitSha !in locallyRead }
+        if (anyUnread) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(
+                    onClick = {
+                        locallyRead = locallyRead + filtered.map { it.commitSha }
+                    },
+                    modifier = Modifier.testTag(TestTagReviewsMarkAllRead),
+                ) {
+                    Text("Mark all read")
+                }
+            }
+        }
         if (filtered.isEmpty()) {
             Card(
                 Modifier
@@ -139,9 +202,12 @@ fun ReviewsPane(
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(filtered, key = { it.commitSha }) { entry ->
+                    val effectiveEntry = if (entry.commitSha in locallyRead) {
+                        entry.copy(unread = false)
+                    } else entry
                     ReviewItem(
                         side = side,
-                        entry = entry,
+                        entry = effectiveEntry,
                         onSubmit = { reactions, body -> onSubmitResponse(entry.commitSha, reactions, body) },
                     )
                 }
@@ -179,7 +245,7 @@ private fun ReviewItem(
                 }
             }
             Spacer(Modifier.height(2.dp))
-            Text(entry.timestamp, style = MaterialTheme.typography.labelSmall)
+            Text(formatReviewTimestamp(entry.timestamp), style = MaterialTheme.typography.labelSmall)
             Spacer(Modifier.height(6.dp))
             Text(entry.autoSummary, style = MaterialTheme.typography.bodyMedium)
             // Existing responses

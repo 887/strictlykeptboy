@@ -146,6 +146,25 @@ fun EventDetailContent(
     modifier: Modifier = Modifier,
 ) {
     val tz = band.instance.effectiveStart.zone
+    // Fix-batch W3.14 / M-5 (2026-05-24) — friendly zone label.
+    // Raw IANA ids like `Arctic/Longyearbyen` or
+    // `America/Indiana/Indianapolis` are noise for end users. Show
+    // the short display name (e.g. "CEST") with the city portion of
+    // the IANA id as a hint when one exists.
+    val tzLabel = remember(tz) {
+        val short = try {
+            tz.getDisplayName(
+                java.time.format.TextStyle.SHORT,
+                Locale.getDefault(),
+            )
+        } catch (_: Throwable) {
+            tz.id
+        }
+        val city = tz.id.substringAfterLast('/').replace('_', ' ')
+        if (city.isNotBlank() && !short.equals(city, ignoreCase = true)) {
+            "$short · $city"
+        } else short
+    }
     val fmt = DateTimeFormatter.ofPattern("EEE MMM d  HH:mm", Locale.getDefault())
     val endFmt = DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
     // Round 2026-05-24 R-2 — multi-day events show the END DATE too,
@@ -203,10 +222,10 @@ fun EventDetailContent(
             Text(
                 text = if (isMultiDay) {
                     "${fmt.format(band.instance.effectiveStart)} → " +
-                        "${fmt.format(band.instance.effectiveEnd)}  ($tz)"
+                        "${fmt.format(band.instance.effectiveEnd)}  ($tzLabel)"
                 } else {
                     "${fmt.format(band.instance.effectiveStart)} – " +
-                        "${endFmt.format(band.instance.effectiveEnd)}  ($tz)"
+                        "${endFmt.format(band.instance.effectiveEnd)}  ($tzLabel)"
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
