@@ -42,6 +42,15 @@ sealed class UnifiedTodayItem {
 enum class UnifiedTodaySection { Overdue, Today, PinnedStanding }
 
 /**
+ * Round 2026-05-24 fix-batch W3.2 / R-7 — cap the "Overdue" bucket
+ * to the last 14 days so a fresh demo install (whose seeded tasks
+ * span weeks) doesn't surface a 21-count overdue list out of the
+ * box. Anything older still appears in the per-todolist views; only
+ * the Today destination's overdue bookend is bounded.
+ */
+const val OVERDUE_WINDOW_DAYS: Long = 14L
+
+/**
  * Round 2.26.B.2 — pure-function builder for the unified day-of feed.
  *
  * Inputs:
@@ -68,9 +77,17 @@ fun buildUnifiedToday(
     val today: LocalDate = now.toLocalDate()
     val offset: ZoneOffset = now.offset
 
-    // --- Bucket 1: overdue ---
+    // --- Bucket 1: overdue (bounded to last 14 days so a fresh
+    // demo install doesn't dump every legacy task into Today). Tasks
+    // older than the window are intentionally hidden here — they
+    // remain visible in the per-todolist views.
+    val overdueWindowStart = today.minusDays(OVERDUE_WINDOW_DAYS)
     val overdue = tasks
-        .filter { !it.done && it.due != null && it.due.isBefore(today) }
+        .filter {
+            !it.done && it.due != null &&
+                it.due.isBefore(today) &&
+                !it.due.isBefore(overdueWindowStart)
+        }
         .sortedWith(
             compareBy<TaskItem> { it.due }
                 .thenByDescending { it.priority }
@@ -140,7 +157,9 @@ fun List<UnifiedTodayItem>.bySection(today: LocalDate): Map<UnifiedTodaySection,
             is UnifiedTodayItem.TaskEntry -> {
                 val t = item.task
                 when {
-                    t.due != null && t.due.isBefore(today) && !t.done -> overdue.add(item)
+                    t.due != null && t.due.isBefore(today) &&
+                        !t.due.isBefore(today.minusDays(OVERDUE_WINDOW_DAYS)) &&
+                        !t.done -> overdue.add(item)
                     t.due == today && !t.done -> todayBucket.add(item)
                     t.due == null && t.pinnedForToday -> pinned.add(item)
                     else -> todayBucket.add(item)
