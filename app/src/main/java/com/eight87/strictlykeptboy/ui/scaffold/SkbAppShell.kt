@@ -311,6 +311,7 @@ private fun SkbAppShellContent(
                         onSyncClick = callbacks.onSyncClick,
                         eventCreateController = context.eventCreateController,
                         onPlanTrip = { tripWizardOpen = true },
+                        onEditSchedule = { editScheduleOpen = true },
                         // W2-U-2 — empty-Schedule "Set up your calendar" CTA
                         // jumps to the existing Wizard destination via the
                         // shell's standard top-destination switch. The

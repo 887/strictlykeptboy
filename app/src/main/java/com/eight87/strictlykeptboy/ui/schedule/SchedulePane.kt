@@ -1,10 +1,15 @@
 package com.eight87.strictlykeptboy.ui.schedule
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -19,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -63,6 +69,12 @@ fun SchedulePane(
     eventCreateEnabled: Boolean = true,
     /** Phase CCC.10 / HV-G.3 — opens the quick-trip wizard from the FAB long-press or schedule empty-state. */
     onPlanTrip: () -> Unit = {},
+    /**
+     * Round 2026-05-27 — opens the full-screen Edit Schedule overlay.
+     * Surfaced as a small floating pen FAB left of the `+ New` FAB at
+     * bottom-end. `null` ⇒ pen FAB suppressed.
+     */
+    onEditSchedule: (() -> Unit)? = null,
     /**
      * W2-U-2 — opens the lifestyle setup wizard from the prominent
      * empty-state CTA. `null` ⇒ CTA suppressed (preview / test entry
@@ -149,7 +161,29 @@ fun SchedulePane(
     }
     val effectiveDetail = detailBand ?: if (widthClass.isTwoPane()) activeNowBand else null
 
-    Box(modifier = modifier.fillMaxSize()) {
+    // Round 2026-05-27 — FAB scroll-collapse. NestedScroll connection
+    // intercepts scroll deltas bubbling up from whichever schedule view
+    // is active (Day / Week / 3-day / Now-stacked) and shrinks the
+    // `+ New` FAB to icon-only when scrolling down, expands back when
+    // scrolling up.
+    var fabExpanded by remember { mutableStateOf(true) }
+    val nestedScrollConnection = remember {
+        object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+            override fun onPreScroll(
+                available: androidx.compose.ui.geometry.Offset,
+                source: androidx.compose.ui.input.nestedscroll.NestedScrollSource,
+            ): androidx.compose.ui.geometry.Offset {
+                if (available.y < -8f) fabExpanded = false
+                else if (available.y > 8f) fabExpanded = true
+                return androidx.compose.ui.geometry.Offset.Zero
+            }
+        }
+    }
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .nestedScroll(nestedScrollConnection),
+    ) {
         if (widthClass.isTwoPane()) {
             MasterDetailLayout(
                 modifier = Modifier.fillMaxSize(),
@@ -253,22 +287,45 @@ fun SchedulePane(
         }
 
         if (eventCreateController != null) {
-            EventCreateFab(
-                onClick = {
-                    eventCreateController.openSheet(
-                        defaultStart = state.date.value.atTime(12, 0)
-                            .atZone(java.time.ZoneId.systemDefault())
-                            .toOffsetDateTime(),
-                        defaultDurationMinutes = 5,
-                        defaultRecurrence = RecurrencePreset.Once,
-                    )
-                },
-                onLongPressPlanTrip = onPlanTrip,
-                enabled = eventCreateEnabled,
+            // Round 2026-05-27 — bottom-end FAB cluster: Edit Schedule
+            // pen (small, circular) sits left of the `+ New` FAB. The
+            // pen used to live at the rail bottom-left; per user
+            // direction both creation affordances belong together at
+            // bottom-right.
+            Row(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(16.dp),
-            )
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                if (onEditSchedule != null) {
+                    SmallFloatingActionButton(
+                        onClick = onEditSchedule,
+                        modifier = Modifier.testTag("ScheduleEditFab"),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Edit,
+                            contentDescription = "Edit schedule",
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+                }
+                EventCreateFab(
+                    onClick = {
+                        eventCreateController.openSheet(
+                            defaultStart = state.date.value.atTime(12, 0)
+                                .atZone(java.time.ZoneId.systemDefault())
+                                .toOffsetDateTime(),
+                            defaultDurationMinutes = 5,
+                            defaultRecurrence = RecurrencePreset.Once,
+                        )
+                    },
+                    onLongPressPlanTrip = onPlanTrip,
+                    enabled = eventCreateEnabled,
+                    expanded = fabExpanded,
+                )
+            }
             // EventCreateSheet rendering is hoisted to SkbAppShell so
             // the full-screen surface covers the rail + top-bar
             // (previously it mounted inside the pane area, leaving the

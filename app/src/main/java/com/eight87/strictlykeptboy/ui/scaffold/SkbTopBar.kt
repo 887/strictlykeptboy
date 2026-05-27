@@ -83,9 +83,11 @@ internal fun ShellTopBar(
         // they no longer render anything here.
         // Round 2.26.A — Tasks reinstated as a TopDestination (D-2.26.a),
         // back in the top-bar icon row between Schedule and Reviews.
+        // Round 2026-05-28 — Tasks removed from the top-bar icon row.
+        // Pulled-up bottom-sheet (NowPlayingScreen, anchored to the
+        // bottom mini-player) is the canonical tasks surface now.
         val topBarDestinations = listOf(
             TopDestination.Schedule,
-            TopDestination.Tasks,
             TopDestination.Reviews,
         )
         Row(

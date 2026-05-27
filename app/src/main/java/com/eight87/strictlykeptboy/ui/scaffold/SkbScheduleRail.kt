@@ -140,24 +140,11 @@ internal fun RailColumn(
                     RailTabItem(item = item)
                 }
             }
-            // BOTTOM (above the overlay-picker): Edit Schedule pen,
-            // always-visible on the Schedule destination. Opens the
-            // full-screen Edit Schedule overlay (Monday-anchored agenda).
-            if (onEditScheduleClick != null) {
-                androidx.compose.material3.IconButton(
-                    onClick = onEditScheduleClick,
-                    modifier = Modifier
-                        .padding(bottom = 4.dp)
-                        .testTag(TestTagEditScheduleRailButton),
-                ) {
-                    androidx.compose.material3.Icon(
-                        imageVector = Icons.Outlined.Edit,
-                        contentDescription = stringResource(R.string.cd_edit_schedule),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(22.dp),
-                    )
-                }
-            }
+            // Round 2026-05-27 — Edit Schedule pen moved off the rail
+            // into a bottom-right floating FAB next to `+ New` (see
+            // `SchedulePane`). Param retained on the signature so
+            // existing call-sites compile; intentionally not rendered.
+            @Suppress("UNUSED_EXPRESSION") onEditScheduleClick
             // BOTTOM: overlay-picker filter icon (when wired).
             if (overlayPickerCalendars != null && overlayPickerPrefs != null) {
                 OverlayPickerButton(
