@@ -19,10 +19,11 @@ emoji = "🇩🇪"
 DevConf Berlin — Wed → Sat of the last week in May, yearly.
 
 Anna approves 4 days conference + travel each year. Flight out Wed
-07:00, return Sat evening. Boy Keeper's standing rules apply: skip
-morning gym overlay; cage stays on; evening reports continue; one
-selfie per day from the venue badge.
+07:00, return Sat evening. Mira covers Beans for the week.
 
-During this window vacation supersedes work / commute / gym /
-dom-overlay / social. Cat-care (Mira covers), holidays, kinky-
-rituals continue.
+During this window the trip supersedes the entire usual schedule —
+work / commute / gym / dom-overlay / social / cat-care / kinky-
+rituals / collar / play. Trip-specific plans (talks, dinners, venue
+sessions) go on top as fresh events. Public holidays still render
+because they're real-world dates. The usual cage / cat / ritual
+cadence resumes on return.

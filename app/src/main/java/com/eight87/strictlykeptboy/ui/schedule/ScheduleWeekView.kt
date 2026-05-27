@@ -87,6 +87,21 @@ fun ScheduleWeekView(
         days.associateWith { dayBands.bandsFor(it) }
 
     val scroll = rememberScrollState()
+    // Auto-scroll to the NowLine when today is in the visible week,
+    // else anchor at 07:00 morning. Mirrors ScheduleDayView's anchor
+    // behaviour so view-switches always land near the user's current
+    // hour instead of 00:00.
+    LaunchedEffect(weekStart, hourHeightPx) {
+        if (hourHeightPx <= 0f) return@LaunchedEffect
+        val weekContainsToday = today in days
+        val targetHours = if (weekContainsToday) {
+            val now = java.time.LocalTime.now()
+            (now.hour + now.minute / 60f) - 3f
+        } else {
+            7f
+        }
+        scroll.scrollTo((targetHours * hourHeightPx).toInt().coerceAtLeast(0))
+    }
 
     Column(
         modifier = modifier

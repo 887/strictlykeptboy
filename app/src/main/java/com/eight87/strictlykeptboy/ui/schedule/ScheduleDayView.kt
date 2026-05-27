@@ -54,6 +54,7 @@ import com.eight87.strictlykeptboy.resolver.DayBandSource
 import com.eight87.strictlykeptboy.resolver.RepoRef
 import com.eight87.strictlykeptboy.ui.share.isForeignBand
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZonedDateTime
@@ -258,10 +259,14 @@ fun ScheduleDayView(
         androidx.activity.compose.BackHandler { selectedBandId = null }
     }
     val dragState = rememberDragRescheduleUiState()
+    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+    Box(
+        modifier = if (internalScroll) modifier.fillMaxSize() else modifier.fillMaxWidth(),
+    ) {
     Column(
-        modifier = (
-            if (internalScroll) modifier.fillMaxSize() else modifier.fillMaxWidth()
-            ).testTag(TestTagDayView),
+        modifier = Modifier
+            .then(if (internalScroll) Modifier.fillMaxSize() else Modifier.fillMaxWidth())
+            .testTag(TestTagDayView),
     ) {
         if (showWeekdayHeader) {
             // Round 2.23 Phase B — weekday emoji strip.
@@ -383,6 +388,67 @@ fun ScheduleDayView(
             if (isToday) NowLine(hourHeight = hourHeight, windowStart = windowStart)
         }
     }
+    }
+    // Round 2.25 — floating "Now" chip. When the red NowLine is
+    // scrolled off-screen, surface a tap-target that animates back to
+    // it. Hidden when the line is in the viewport (or when not today).
+    if (isToday && internalScroll) {
+        val nowOffsetPx = 12f * hourHeightPx  // see windowStart math above
+        val scrollVal = scroll.value.toFloat()
+        val viewportH = scroll.viewportSize.toFloat()
+        val visible = viewportH > 0f &&
+            nowOffsetPx in scrollVal..(scrollVal + viewportH)
+        if (!visible) {
+            val above = viewportH > 0f && nowOffsetPx < scrollVal
+            FloatingNowChip(
+                arrowUp = above,
+                onTap = {
+                    coroutineScope.launch {
+                        val target = (nowOffsetPx - hourHeightPx * 6f)
+                            .toInt().coerceAtLeast(0)
+                        scroll.animateScrollTo(target)
+                    }
+                },
+                modifier = Modifier
+                    .align(if (above) Alignment.TopEnd else Alignment.BottomEnd)
+                    .padding(12.dp),
+            )
+        }
+    }
+    }
+}
+
+@Composable
+private fun FloatingNowChip(
+    arrowUp: Boolean,
+    onTap: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val now = java.time.LocalTime.now()
+    val hhmm = "%02d:%02d".format(now.hour, now.minute)
+    Surface(
+        modifier = modifier
+            .shadow(4.dp, RoundedCornerShape(50))
+            .clickable { onTap() }
+            .testTag("FloatingNowChip"),
+        shape = RoundedCornerShape(50),
+        color = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = if (arrowUp) "▲" else "▼",
+                style = MaterialTheme.typography.labelMedium,
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = "Now · $hhmm",
+                style = MaterialTheme.typography.labelMedium,
+            )
+        }
     }
 }
 

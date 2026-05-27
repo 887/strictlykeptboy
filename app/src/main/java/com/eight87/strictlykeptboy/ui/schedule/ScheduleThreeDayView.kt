@@ -50,6 +50,22 @@ fun ScheduleThreeDayView(
     val dates = (0..2).map { anchor.plusDays(it.toLong()) }
     val sharedScroll = rememberScrollState()
     val hourHeight = hourHeightForZoom(effectiveZoom)
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val hourHeightPx = with(density) { hourHeight.toPx() }
+    // Auto-scroll to the NowLine when today is in the visible range,
+    // else anchor at 07:00. Matches ScheduleDayView / ScheduleWeekView
+    // so view-switches don't dump the user at 00:00.
+    androidx.compose.runtime.LaunchedEffect(anchor, hourHeightPx) {
+        if (hourHeightPx <= 0f) return@LaunchedEffect
+        val rangeContainsToday = today in dates
+        val targetHours = if (rangeContainsToday) {
+            val now = java.time.LocalTime.now()
+            (now.hour + now.minute / 60f) - 3f
+        } else {
+            7f
+        }
+        sharedScroll.scrollTo((targetHours * hourHeightPx).toInt().coerceAtLeast(0))
+    }
     Column(modifier = modifier.fillMaxSize().testTag(TestTagThreeDayView)) {
         // Header strip — gutter spacer + 3 day chips so the day columns
         // line up exactly with the body columns below.
