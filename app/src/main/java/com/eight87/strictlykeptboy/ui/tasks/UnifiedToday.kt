@@ -117,18 +117,24 @@ fun buildUnifiedToday(
     val todayBucket: List<UnifiedTodayItem> = (todayTasks + timeboxes)
         .sortedWith(
             // null sort-keys (no-due tasks) sink to the bottom; otherwise
-            // ascending by sortKey. Stable secondary on title to keep tests
-            // deterministic when two items share a sortKey.
+            // ascending by sortKey. Within an equal sortKey (in v1 every
+            // due-today task shares start-of-day), re-rank by effective
+            // priority DESC so a task whose todolist's `active_hours`
+            // covers `now` surfaces above same-due tasks in inactive lists
+            // (D.6 / walk us-adhd step 17 — the active-hours bump was only
+            // applied in `sortedForCombined`, never in this unified feed).
+            // Stable final tiebreak on title keeps tests deterministic.
             compareBy<UnifiedTodayItem>(
                 { it.sortKey == null },
                 { it.sortKey },
-                {
+            )
+                .thenByDescending { it.rankPriority(now) }
+                .thenBy {
                     when (it) {
                         is UnifiedTodayItem.TaskEntry -> "1:" + it.task.title.lowercase()
                         is UnifiedTodayItem.TimeboxEntry -> "0:" + it.band.instance.title.lowercase()
                     }
                 },
-            ),
         )
 
     // --- Bucket 3: pinned standing ---
@@ -141,6 +147,17 @@ fun buildUnifiedToday(
         .map { UnifiedTodayItem.TaskEntry(it, null) }
 
     return overdue + todayBucket + pinned
+}
+
+/**
+ * Effective rank for the today-bucket re-sort. Tasks fold in their
+ * todolist priority + the active-hours bump (D.6) via [effectivePriority];
+ * timeboxes use their resolved band priority. Higher = surfaces earlier
+ * within an equal sortKey.
+ */
+private fun UnifiedTodayItem.rankPriority(now: ZonedDateTime): Int = when (this) {
+    is UnifiedTodayItem.TaskEntry -> task.effectivePriority(now)
+    is UnifiedTodayItem.TimeboxEntry -> band.priority
 }
 
 /**

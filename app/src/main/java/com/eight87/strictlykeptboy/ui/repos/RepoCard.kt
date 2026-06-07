@@ -63,6 +63,8 @@ const val TestTagRepoCardHeader = "RepoCard-Header"
 const val TestTagRepoCardWriteTarget = "RepoCard-WriteTarget"
 const val TestTagRepoCardExpandIcon = "RepoCard-ExpandIcon"
 const val TestTagRepoCardMoreSettings = "RepoCard-MoreSettings"
+const val TestTagRepoCardSyncNow = "RepoCard-SyncNow"
+const val TestTagRepoCardLocalOnly = "RepoCard-LocalOnly"
 const val TestTagRepoCardSwitchShowOnSchedule = "RepoCard-Switch-ShowOnSchedule"
 const val TestTagRepoCardSwitchDrawTasksFrom = "RepoCard-Switch-DrawTasksFrom"
 const val TestTagRepoCardSwitchAutoSync = "RepoCard-Switch-AutoSync"
@@ -87,6 +89,13 @@ fun RepoCard(
     onToggleImportStickers: (Boolean) -> Unit,
     onToggleAdjustToLocalTimezone: (Boolean) -> Unit = {},
     onOpenMoreSettings: () -> Unit,
+    /**
+     * QA iter-4 D — manual "Sync now" trigger. Null ⇒ no sync wiring at
+     * this call-site. Rendered only for repos with at least one remote;
+     * no-origin repos show a gentle local-only hint instead (so the user
+     * understands there's nothing to sync rather than hunting for a button).
+     */
+    onManualSync: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     // Default: expanded for the write-target repo, collapsed otherwise.
@@ -260,6 +269,27 @@ fun RepoCard(
                     }
 
                     // -------- Footer --------
+                    // QA iter-4 D — manual sync affordance in the Repos pane
+                    // (previously only reachable via the avatar dropdown).
+                    if (onManualSync != null) {
+                        if (repo.remotes.isNotEmpty()) {
+                            TextButton(
+                                onClick = onManualSync,
+                                modifier = Modifier
+                                    .testTag("$TestTagRepoCardSyncNow-${repo.repoId}")
+                                    .padding(top = 4.dp),
+                            ) { Text("Sync now") }
+                        } else {
+                            Text(
+                                text = "Local-only — nothing to sync.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier
+                                    .testTag("$TestTagRepoCardLocalOnly-${repo.repoId}")
+                                    .padding(start = 8.dp, top = 8.dp),
+                            )
+                        }
+                    }
                     TextButton(
                         onClick = onOpenMoreSettings,
                         modifier = Modifier

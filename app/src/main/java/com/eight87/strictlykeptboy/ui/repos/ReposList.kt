@@ -260,6 +260,9 @@ internal fun ReposList(
                         }
                     },
                     onOpenMoreSettings = { onOpenSettings(repo.repoId) },
+                    // QA iter-4 D — surface manual sync in the Repos pane
+                    // (was reachable only from the avatar dropdown).
+                    onManualSync = { onSyncRepo(repo.repoId) },
                 )
             }
             // Footer "Add repo" affordance — keeps the existing test tag
@@ -281,9 +284,6 @@ internal fun ReposList(
                 )
             }
         }
-        // Silence the sync handler — wired but not surfaced on the new
-        // card; per-repo sync now lives behind "More settings…".
-        @Suppress("UNUSED_EXPRESSION") onSyncRepo
     }
     // imports kept used:
     @Suppress("UNUSED_EXPRESSION") AuthorIdentity("", "")

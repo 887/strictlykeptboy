@@ -111,6 +111,41 @@ class UnifiedTodayTest {
     }
 
     @Test
+    fun activeHours_list_outranks_inactive_list_in_today_bucket() {
+        // Walk us-adhd step 17 / D.6 — within the today bucket (all due-today
+        // tasks share start-of-day sortKey in v1), a task whose todolist's
+        // active_hours covers `now` must surface ABOVE a same-due task in a
+        // list that is NOT in its active window. `now` = Sun 2026-05-17 08:00.
+        val work = com.eight87.strictlykeptboy.ui.tasks.TodolistInfo(
+            id = "work", repoId = "r", name = "Work", colorSeed = "w", priority = 0,
+            activeHours = listOf(
+                com.eight87.strictlykeptboy.resolver.HourRange(
+                    day = java.time.DayOfWeek.SUNDAY,
+                    from = java.time.LocalTime.of(7, 0),
+                    to = java.time.LocalTime.of(17, 0),
+                ),
+            ),
+            tzId = tz,
+        )
+        val errands = com.eight87.strictlykeptboy.ui.tasks.TodolistInfo(
+            id = "errands", repoId = "r", name = "Errands", colorSeed = "e", priority = 0,
+        )
+        // Title order alone would put the errand first (aaa < zzz); the
+        // active-hours bump must flip it.
+        val tasks = listOf(
+            TaskItem(id = "errand", title = "aaa-errand", todolist = errands, due = today),
+            TaskItem(id = "workitem", title = "zzz-work", todolist = work, due = today),
+        )
+        val items = buildUnifiedToday(tasks, schedule = null, now = now)
+        assertEquals(2, items.size)
+        assertEquals(
+            "active-hours work task must outrank the inactive errand",
+            "workitem",
+            (items[0] as UnifiedTodayItem.TaskEntry).task.id,
+        )
+    }
+
+    @Test
     fun no_due_task_sinks_below_timebox_in_today_bucket() {
         // Edge case: a pinned standing task (no due, pinned-for-today) should
         // land in the PinnedStanding bucket — AFTER timeboxes.
