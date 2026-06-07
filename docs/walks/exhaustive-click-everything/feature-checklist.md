@@ -20,34 +20,34 @@
 
 ### App Shell / Chrome (scaffold)
 
-- [ ] App Shell → Root shell container — hosts top-bar + rail + content + bottom mini-player — testTag: `SkbAppShell`
-- [ ] App Shell → Shell content host — swaps the active destination pane — testTag: `ShellContent`
-- [ ] App Shell → Master/detail row (tablet two-pane) — splits master + detail panes on Expanded width — testTag: `MasterDetailRow`
-- [ ] App Shell → Master pane — left list pane in two-pane layout — testTag: `MasterPane`
-- [ ] App Shell → Detail pane — right detail pane in two-pane layout — testTag: `DetailPane`
+- [x] App Shell → Root shell container — hosts top-bar + rail + content + bottom mini-player — testTag: `SkbAppShell`
+- [x] App Shell → Shell content host — swaps the active destination pane — testTag: `ShellContent`
+- [x] App Shell → Master/detail row (tablet two-pane) — splits master + detail panes on Expanded width — testTag: `MasterDetailRow`
+- [x] App Shell → Master pane — left list pane in two-pane layout — testTag: `MasterPane`
+- [x] App Shell → Detail pane — right detail pane in two-pane layout — testTag: `DetailPane`
 
 ### Top Bar (SkbTopBar)
 
-- [ ] Top Bar → Top-bar surface — app chrome header (title + actions) — testTag: `ShellTopBar`
-- [ ] Top Bar → Title text — shows active destination/repo title — testTag: n/a
-- [ ] Top Bar → Schedule destination button — selects Schedule destination — testTag: `ShellDest-Schedule`
-- [ ] Top Bar → Reviews destination button — selects Reviews destination — testTag: `ShellDest-Reviews`
-- [ ] Top Bar → Settings cog — opens Settings destination — testTag: `ShellSettingsCog`
-- [ ] Top Bar → (latent) Repo-switcher icon button — switches repo (currently superseded by rail avatar) — testTag: `ShellRepoSwitcher`
+- [x] Top Bar → Top-bar surface — app chrome header (title + actions) — testTag: `ShellTopBar`
+- [x] Top Bar → Title text — shows active destination/repo title — testTag: n/a
+- [x] Top Bar → Schedule destination button — selects Schedule destination — testTag: `ShellDest-Schedule`
+- [x] Top Bar → Reviews destination button — selects Reviews destination — testTag: `ShellDest-Reviews`
+- [x] Top Bar → Settings cog — opens Settings destination — testTag: `ShellSettingsCog`
+- [x] Top Bar → (latent) Repo-switcher icon button — switches repo (currently superseded by rail avatar) — testTag: `ShellRepoSwitcher`
 
 ### Left View-Mode Rail (SkbScheduleRail)
 
-- [ ] Rail → Rail column container — vertical view-mode rail — testTag: `ShellRail`
-- [ ] Rail → Rail tab item (per view tab, rotated label) — selects that view mode — testTag: `ShellRail-<key>` (e.g. `ShellRail-Now`)
-- [ ] Rail → "Now" tab — agenda/timebox now view — testTag: `ShellRail-Now`
-- [ ] Rail → "Day" tab — single-day view — testTag: `ShellRail-Day`
-- [ ] Rail → "3-day" tab — three-day view — testTag: `ShellRail-ThreeDay`
-- [ ] Rail → "Week" tab — week view — testTag: `ShellRail-Week`
-- [ ] Rail → "Month" tab — month view — testTag: `ShellRail-Month`
-- [ ] Rail → "Year" tab — year view — testTag: `ShellRail-Year`
-- [ ] Rail → Overlay-picker filter icon (rail bottom) — opens overlay/calendar visibility picker — testTag: `Overlay-PickerButton`
-- [ ] Rail → Overlay-picker badge — shows count of hidden overlays — testTag: `Overlay-PickerBadge`
-- [ ] Rail → Repo avatar (rail bottom-most) — taps to switch repo / open Repos — testTag: `IdentityAvatar`
+- [x] Rail → Rail column container — vertical view-mode rail — testTag: `ShellRail`
+- [x] Rail → Rail tab item (per view tab, rotated label) — selects that view mode — testTag: `ShellRail-<key>` (e.g. `ShellRail-Now`)
+- [x] Rail → "Now" tab — agenda/timebox now view — testTag: `ShellRail-Now`
+- [x] Rail → "Day" tab — single-day view — testTag: `ShellRail-Day`
+- [x] Rail → "3-day" tab — three-day view — testTag: `ShellRail-ThreeDay`
+- [x] Rail → "Week" tab — week view — testTag: `ShellRail-Week`
+- [x] Rail → "Month" tab — month view — testTag: `ShellRail-Month`
+- [x] Rail → "Year" tab — year view — testTag: `ShellRail-Year`
+- [x] Rail → Overlay-picker filter icon (rail bottom) — opens overlay/calendar visibility picker — testTag: `Overlay-PickerButton`
+- [x] Rail → Overlay-picker badge — shows count of hidden overlays — testTag: `Overlay-PickerBadge`
+- [x] Rail → Repo avatar (rail bottom-most) — taps to switch repo / open Repos — testTag: `IdentityAvatar`
 
 ### Mode Pill / Dom-Persona (scaffold)
 
@@ -115,20 +115,20 @@
 
 ### Schedule — Agenda / Now view (ScheduleAgendaView)
 
-- [ ] Agenda → Agenda view container — scrollable agenda list — testTag: `ScheduleAgendaView`
-- [ ] Agenda → Agenda day header — day section header — testTag: `AgendaDayHeader`
-- [ ] Agenda → Agenda row — tappable agenda entry → detail — testTag: `AgendaRow`
-- [ ] Agenda → Agenda empty placeholder — no-events state — testTag: `AgendaEmpty`
+- [x] Agenda → Agenda view container — scrollable agenda list — testTag: `ScheduleAgendaView`
+- [x] Agenda → Agenda day header — day section header — testTag: `AgendaDayHeader`
+- [x] Agenda → Agenda row — tappable agenda entry → detail — testTag: `AgendaRow`
+- [x] Agenda → Agenda empty placeholder — no-events state — testTag: `AgendaEmpty`
 
 ### Schedule — Day view (ScheduleDayView)
 
-- [ ] Day View → Day view container — single-day timeline — testTag: `ScheduleDayView`
-- [ ] Day View → Day empty placeholder — no-events state — testTag: `DayEmpty`
+- [x] Day View → Day view container — single-day timeline — testTag: `ScheduleDayView`
+- [x] Day View → Day empty placeholder — no-events state — testTag: `DayEmpty`
 
 ### Schedule — 3-Day view (ScheduleThreeDayView)
 
-- [ ] 3-Day View → 3-day view container — three-column timeline — testTag: `ScheduleThreeDayView`
-- [ ] 3-Day View → Three-day column — per-day column (tap day) — testTag: `ThreeDayColumn`
+- [x] 3-Day View → 3-day view container — three-column timeline — testTag: `ScheduleThreeDayView`
+- [x] 3-Day View → Three-day column — per-day column (tap day) — testTag: `ThreeDayColumn`
 
 ### Schedule — Week view (ScheduleWeekView)
 
