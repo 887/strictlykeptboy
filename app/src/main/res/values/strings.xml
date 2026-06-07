@@ -109,7 +109,7 @@
          instead of the old "Accounts" label. testTag stays "Repos". -->
     <string name="settings_category_repos">Repositories</string>
     <string name="settings_category_about">About</string>
-    <string name="settings_category_placeholder">This section ships in a later phase.</string>
+    <string name="settings_category_placeholder">This section is not available yet.</string>
     <string name="settings_about_app_name">strictlykeptboy</string>
     <string name="settings_categories_title">Settings</string>
     <string name="settings_back_to_categories">Back</string>
@@ -152,7 +152,7 @@
     <!-- S.2 Identities (per-repo, placeholder until signed commits) -->
     <string name="settings_identities_intro">Per-repo identity comes from identity.toml in each repo.</string>
     <string name="settings_identities_open_identity">Edit identity</string>
-    <string name="settings_identities_signed_commits_blurb">Signed commits land in Phase GG.</string>
+    <string name="settings_identities_signed_commits_blurb">Signed commits are coming soon.</string>
 
     <!-- S.3 Sync -->
     <string name="settings_sync_default_interval">Default sync interval</string>
@@ -215,7 +215,7 @@
     <string name="settings_templates_registry">Atomic-template registry</string>
     <string name="settings_templates_apply">Apply to a calendar</string>
     <string name="settings_templates_custom_url">Custom template repo URL</string>
-    <string name="settings_templates_custom_url_blurb">Paste a GitHub URL. Clone wiring lands in Phase WW (sticker pack).</string>
+    <string name="settings_templates_custom_url_blurb">Paste a GitHub URL. Cloning custom sticker packs is coming soon.</string>
     <string name="settings_templates_paste_hint">https://github.com/your/templates</string>
     <string name="settings_templates_save">Save URL</string>
 
@@ -294,7 +294,7 @@
     <!-- S.10 About -->
     <string name="settings_about_build_sha">Build commit: %1$s</string>
     <string name="settings_about_build_date">Built: %1$s</string>
-    <string name="settings_about_licenses">Licenses (Phase W)</string>
+    <string name="settings_about_licenses">Licenses</string>
     <string name="settings_about_repo_link">Source on GitHub</string>
     <string name="settings_about_privacy_policy">Privacy policy</string>
     <string name="settings_about_version_tap">strictlykeptboy v%1$s</string>
@@ -1140,9 +1140,9 @@
     <!-- 2.1.E.5 — Identity sub-sections after Identities retirement. -->
     <string name="settings_identity_section_persona">My persona</string>
     <string name="settings_identity_section_signing">Signing and authors</string>
-    <string name="settings_identity_signing_blurb">GPG and SSH key import for signed commits lands in Phase GG. Per-repo author overrides live in each account.</string>
-    <string name="settings_identity_signing_gpg_disabled">Import GPG key (Phase GG)</string>
-    <string name="settings_identity_signing_ssh_disabled">Import SSH key (Phase GG)</string>
+    <string name="settings_identity_signing_blurb">GPG and SSH key import for signed commits is coming soon. Per-repo author overrides live in each account.</string>
+    <string name="settings_identity_signing_gpg_disabled">Import GPG key (coming soon)</string>
+    <string name="settings_identity_signing_ssh_disabled">Import SSH key (coming soon)</string>
 
     <!-- 2.1.E.10 — Diagnostic banner replacing silent CategoryPlaceholder. -->
     <string name="settings_diagnostic_missing_pref_title">%1$s is missing its preferences handle</string>
@@ -1150,9 +1150,9 @@
 
     <!-- 2.1.E.12 — CalDAV stub category. -->
     <string name="settings_category_caldav">CalDAV</string>
-    <string name="settings_subtitle_caldav">Two-way calendar sync (Phase Y).</string>
-    <string name="settings_caldav_intro">Two-way CalDAV mirror is on the roadmap. Phase Y closes this out — until then, this surface is a placeholder.</string>
-    <string name="settings_caldav_coming">Coming with Phase Y close-out</string>
+    <string name="settings_subtitle_caldav">Two-way calendar sync.</string>
+    <string name="settings_caldav_intro">Two-way CalDAV mirror keeps your calendars in sync with Google, Microsoft, Apple, Nextcloud, or your own server. This is coming soon.</string>
+    <string name="settings_caldav_coming">Coming soon</string>
 
     <!-- 2.2.D.2 — Repos as in-pane list. -->
     <string name="settings_repos_inline_header">Your accounts</string>
@@ -1272,8 +1272,8 @@
     <string name="backuprestore_title">Backup / Restore</string>
     <string name="backuprestore_export_title">Export backup</string>
     <string name="backuprestore_export_subtitle">Save the whole strictlykeptboy folder (all repos) as a .tar.gz archive you can keep or move to another device.</string>
-    <string name="backuprestore_export_placeholder">Backup export coming in Phase F</string>
-    <string name="backuprestore_restore_placeholder">Restore coming in Phase G</string>
+    <string name="backuprestore_export_placeholder">Backup export is coming soon</string>
+    <string name="backuprestore_restore_placeholder">Restore is coming soon</string>
     <string name="backuprestore_export_failed">Export failed</string>
     <string name="backuprestore_export_done">Backup saved (%1$s)</string>
     <string name="backuprestore_restore_folder_title">Restore from current folder</string>

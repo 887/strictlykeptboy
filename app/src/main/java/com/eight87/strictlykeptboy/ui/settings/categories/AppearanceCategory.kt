@@ -1,10 +1,15 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package com.eight87.strictlykeptboy.ui.settings.categories
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Brightness6
 import androidx.compose.material.icons.outlined.ColorLens
@@ -244,15 +250,31 @@ fun AppearanceCategory(
                             DensityScale.Comfortable to R.string.settings_appearance_density_comfortable,
                             DensityScale.Spacious to R.string.settings_appearance_density_spacious,
                         )
-                        items.forEach { (scale, label) ->
-                            FilterChip(
-                                selected = state.densityScale == scale,
-                                onClick = { prefs.setDensity(scale) },
-                                label = { Text(stringResource(label)) },
-                                modifier = Modifier
-                                    .padding(end = 6.dp)
-                                    .testTag("$TestTagCatAppearance-Density-${scale.name}"),
-                            )
+                        // FlowRow: chips keep their natural (full-label) width and
+                        // wrap as whole chips to a second line if they don't all
+                        // fit — so no label is ever truncated or split mid-word
+                        // (B.3). The enclosing PickerRow Row gives us full width.
+                        FlowRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            items.forEach { (scale, label) ->
+                                FilterChip(
+                                    selected = state.densityScale == scale,
+                                    onClick = { prefs.setDensity(scale) },
+                                    label = {
+                                        Text(
+                                            stringResource(label),
+                                            maxLines = 1,
+                                            softWrap = false,
+                                            textAlign = TextAlign.Center,
+                                        )
+                                    },
+                                    modifier = Modifier
+                                        .testTag("$TestTagCatAppearance-Density-${scale.name}"),
+                                )
+                            }
                         }
                     }
                 }
@@ -288,7 +310,14 @@ fun AppearanceCategory(
             // useful; the row deeplinks back to the Lifestyle category.
             SectionHeader(stringResource(R.string.settings_appearance_section_neutral))
             CategoryCard {
+                // The whole row is the deeplink (B.3/E follow-up): a long
+                // trailing TextButton was squeezing the headline + blurb into a
+                // word-per-line column. A clickable row + compact chevron lets
+                // the text use full width, matching the navigation-row pattern.
                 ListItem(
+                    modifier = Modifier
+                        .clickable(onClick = onJumpToLifestyleNeutral)
+                        .testTag("$TestTagCatAppearance-NeutralDeeplink"),
                     headlineContent = {
                         Text(stringResource(R.string.settings_appearance_neutral_mode))
                     },
@@ -303,12 +332,13 @@ fun AppearanceCategory(
                         LeadingBadge(Icons.Outlined.VisibilityOff, CategoryAccentName.Indigo)
                     },
                     trailingContent = {
-                        androidx.compose.material3.TextButton(
-                            onClick = onJumpToLifestyleNeutral,
-                            modifier = Modifier.testTag("$TestTagCatAppearance-NeutralDeeplink"),
-                        ) {
-                            Text(stringResource(R.string.settings_appearance_neutral_open_lifestyle))
-                        }
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
+                            contentDescription = stringResource(
+                                R.string.settings_appearance_neutral_open_lifestyle,
+                            ),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
                     },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                 )
@@ -440,7 +470,7 @@ private fun PickerRow(
     accent: CategoryAccentName,
     label: String,
     subtitle: String,
-    content: @Composable () -> Unit,
+    content: @Composable RowScope.() -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -460,6 +490,7 @@ private fun PickerRow(
             Spacer(Modifier.size(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) { content() }
         }

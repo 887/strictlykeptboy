@@ -294,7 +294,11 @@ fun TaskRow(
                         text = item.todolist.name,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.testTag("$TestTagListChip-${item.id}"),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .testTag("$TestTagListChip-${item.id}"),
                     )
                     if (item.author.isNotEmpty() && item.author != activeRepoOwner) {
                         Spacer(Modifier.width(6.dp))
@@ -309,6 +313,8 @@ fun TaskRow(
                             style = MaterialTheme.typography.labelSmall,
                             color = if (item.isOverdue) MaterialTheme.colorScheme.error
                             else MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            softWrap = false,
                             modifier = Modifier.testTag("$TestTagDueChip-${item.id}"),
                         )
                     } else if (item.done && item.doneAt != null) {
@@ -316,6 +322,8 @@ fun TaskRow(
                             text = "  ·  " + agoFormat(item.doneAt, today),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            softWrap = false,
                         )
                     }
                     if (item.linkedEventStart != null) {
