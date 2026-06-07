@@ -573,3 +573,23 @@ already carries its own private `WrappingChipRow` (`ui/wizard/WizardNavHost.kt`)
   wizard's private copy + the inline `FlowRow` duplications. Single place to
   tune spacing / overflow behaviour. Closed-for-modification once landed: a new
   chip group adds a call, not another `FlowRow` block.
+
+### QA-iter-3 finding 2026-06-07 — enforce D.78 S4 in the resolver (LSP/correctness)
+
+`non_superseable` is parsed by `store/SupersedenceConfig.kt` but is NOT carried
+into `resolver/Calendars.kt::CalendarMeta`, so `OverlayResolver` cannot honor
+**D.78 S4** ("`nonSuperseable = true` calendars ignore all supersedence
+requests"). Today preservation relies purely on a non_superseable calendar not
+being listed in any suppressor's `supersedes` array — exactly the discipline
+that broke in the rich-demo data (vacation paused cat-care + kinky-rituals,
+violating D.76). QA iter-3 fixed the data; the invariant should also be enforced
+in code so the class of bug can't recur.
+
+- **[M] #s4-enforcement — open.** Add `nonSuperseable: Boolean = false` to
+  `CalendarMeta`; populate it at every build site (`CalendarRegistry`,
+  `IndexerSnapshotPublisher`, `RepoSettingsHost`, and the test
+  `RichDemoResolverFixture`); in `OverlayResolver` filter non_superseable refs
+  out of every suppressor's effective `supersedes` set
+  (`.filter { it in activeCalendars && calMetaByRef[it]?.nonSuperseable != true }`).
+  Add a regression test: list a non_superseable calendar in a supersedes array
+  and assert it is never tagged `supersededByCalendar`.

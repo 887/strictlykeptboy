@@ -14,8 +14,10 @@ author = "01900000-0000-7000-8000-0000000000b0"
 # priority 900) that supersedes the regular Base layer (sleep
 # scaffold) plus the ENTIRE dependent stack: routines, work,
 # commute, gym, dom-overlay, social, voice-chat, gaming, play,
-# collar, outings, family-visits, cat-care, kinky-rituals. A
-# trip is a trip — the usual schedule is paused wholesale; the
-# trip plan goes on top. Holidays (public dates) remain because
-# they're real-world facts independent of the boy's schedule.
-supersedes = ["0190a0aa-1c1d-7000-8a0a-00000000000b", "0190a0aa-1c1d-7000-8a0a-000000000003", "0190a0aa-1c1d-7000-8a0a-000000000001", "0190a0aa-1c1d-7000-8a0a-000000000002", "0190a0aa-1c1d-7000-8a0a-000000000004", "0190a0aa-1c1d-7000-8a0a-000000000005", "0190a0aa-1c1d-7000-8a0a-000000000006", "0190a0aa-1c1d-7000-8a0a-000000000007", "0190a0aa-1c1d-7000-8a0a-000000000008", "0190a0aa-1c1d-7000-8a0a-000000000021", "0190a0aa-1c1d-7000-8a0a-000000000020", "0190a0aa-1c1d-7000-8a0a-000000000022", "0190a0aa-1c1d-7000-8a0a-00000000000c", "0190a0aa-1c1d-7000-8a0a-00000000000d", "0190a0aa-1c1d-7000-8a0a-00000000000f"]
+# collar, outings, family-visits. A trip is a trip — the usual
+# schedule is paused wholesale; the trip plan goes on top.
+# EXCEPT per decision D.76: pet-care (cat-care) and the lifestyle
+# rituals (kinky-rituals) are nonSuperseable and survive a trip —
+# the cat still gets fed. Holidays (public dates) also remain,
+# being real-world facts independent of the boy's schedule.
+supersedes = ["0190a0aa-1c1d-7000-8a0a-00000000000b", "0190a0aa-1c1d-7000-8a0a-000000000003", "0190a0aa-1c1d-7000-8a0a-000000000001", "0190a0aa-1c1d-7000-8a0a-000000000002", "0190a0aa-1c1d-7000-8a0a-000000000004", "0190a0aa-1c1d-7000-8a0a-000000000006", "0190a0aa-1c1d-7000-8a0a-000000000007", "0190a0aa-1c1d-7000-8a0a-000000000021", "0190a0aa-1c1d-7000-8a0a-000000000020", "0190a0aa-1c1d-7000-8a0a-000000000022", "0190a0aa-1c1d-7000-8a0a-00000000000c", "0190a0aa-1c1d-7000-8a0a-00000000000d", "0190a0aa-1c1d-7000-8a0a-00000000000f"]

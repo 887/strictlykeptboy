@@ -76,9 +76,9 @@ class EmptyScheduleStateTest {
 
     @Test
     fun `initials helper handles single token, dashed, and empty`() {
-        assertEquals("A", initialsForAuthor("alex"))
-        assertEquals("AS", initialsForAuthor("alex-887"))
-        assertEquals("AS", initialsForAuthor("alex_887"))
+        assertEquals("M", initialsForAuthor("mara"))
+        assertEquals("MQ", initialsForAuthor("mara-quinn"))
+        assertEquals("MQ", initialsForAuthor("mara_quinn"))
         assertEquals("?", initialsForAuthor(""))
     }
 }

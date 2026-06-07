@@ -32,12 +32,12 @@ import org.robolectric.annotation.Config
 /**
  * Nav-swap polish — asserts the inverted layout.
  *
- *  - Phase 2.2.A.2 / Round 2.16.E / Round 2.26.A: the top-bar icon row
- *    is restricted to READ surfaces (Schedule / Tasks / Reviews). The
- *    full `TopDestination` enum has 7 cases — Tasks was reinstated in
- *    Round 2.26.A (D-2.26.a) after being deleted in 2.16.E; Wizard /
- *    Together / Repos / Settings are still valid routing targets, just
- *    not rendered as icon-buttons in the row.
+ *  - Phase 2.2.A.2 / Round 2.16.E / Round 2026-05-28: the top-bar icon
+ *    row renders only Schedule + Reviews. Tasks was reinstated in
+ *    Round 2.26.A then removed again on 2026-05-28 (moved to the bottom
+ *    "No active task" bar + FAB cluster). The full `TopDestination` enum
+ *    still has 7 cases — Tasks / Wizard / Together / Repos / Settings
+ *    are valid routing targets, just not icon-buttons in the row.
  *  - The left rail shows view-mode entries per the active destination.
  *  - Schedule rail has 5 entries (Day / Week / Month / Agenda / Year).
  *  - Together / Repos / Wizard / Reviews / Settings contribute zero
@@ -77,14 +77,15 @@ class AppShellNavigationSwapTest {
         setShell()
         composeRule.onNodeWithTag(TestTagAppShell).assertExists()
         composeRule.onNodeWithTag(TestTagShellTopBar).assertExists()
-        // Round 2.26.A — Tasks reinstated (D-2.26.a); enum has 7 cases
-        // and the 3 READ surfaces render as buttons.
+        // Round 2026-05-28 — Tasks removed from the top-bar icon row
+        // (moved to the bottom "No active task" bar + FAB cluster). The
+        // enum still has 7 cases; only Schedule + Reviews render as
+        // top-bar buttons now.
         assert(TopDestination.entries.size == 7) {
             "Expected 7 TopDestination entries, got ${TopDestination.entries.size}"
         }
         val rendered = listOf(
             TopDestination.Schedule,
-            TopDestination.Tasks,
             TopDestination.Reviews,
         )
         rendered.forEach { dest ->
@@ -93,10 +94,12 @@ class AppShellNavigationSwapTest {
                 .assertExists()
                 .assertHasClickAction()
         }
-        // The remaining four destinations are still in the enum (routing
-        // targets via avatar / Repos "+" / `wizardEntryRequest` / gear),
-        // but they must NOT render as icon-buttons in the top row.
+        // The remaining five destinations are still in the enum (routing
+        // targets via the bottom task bar / avatar / Repos "+" /
+        // `wizardEntryRequest` / gear), but they must NOT render as
+        // icon-buttons in the top row.
         val hidden = listOf(
+            TopDestination.Tasks,
             TopDestination.Together,
             TopDestination.Repos,
             TopDestination.Wizard,

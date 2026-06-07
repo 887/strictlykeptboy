@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
 package com.eight87.strictlykeptboy.ui.schedule
 
 import androidx.compose.foundation.layout.Arrangement
@@ -13,21 +15,40 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.LockOpen
+import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
+import java.time.Instant
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 const val TestTagEventCreateFreeForm = "EventCreateFreeForm"
 const val TestTagEventCreateTitle = "EventCreateTitle"
@@ -85,39 +106,24 @@ fun EventCreateFreeFormForm(
             modifier = Modifier.fillMaxWidth().testTag(TestTagEventCreateTitle),
         )
         Spacer(Modifier.height(12.dp))
-        OutlinedTextField(
-            value = draft.start.toString(),
-            onValueChange = {
-                runCatching { java.time.OffsetDateTime.parse(it) }
-                    .onSuccess { v -> onDraftChange(draft.copy(start = v)) }
-            },
-            label = { Text(stringResource(R.string.event_create_start_label)) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth().testTag(TestTagEventCreateStartField),
+        DateTimeField(
+            label = stringResource(R.string.event_create_start_label),
+            value = draft.start,
+            onChange = { onDraftChange(draft.copy(start = it)) },
+            testTag = TestTagEventCreateStartField,
         )
         Spacer(Modifier.height(8.dp))
-        OutlinedTextField(
-            value = draft.end.toString(),
-            onValueChange = {
-                runCatching { java.time.OffsetDateTime.parse(it) }
-                    .onSuccess { v -> onDraftChange(draft.copy(end = v)) }
-            },
-            label = { Text(stringResource(R.string.event_create_end_label)) },
+        DateTimeField(
+            label = stringResource(R.string.event_create_end_label),
+            value = draft.end,
             isError = errors.endNotAfterStart || errors.durationTooLong,
-            supportingText = {
-                when {
-                    errors.endNotAfterStart -> Text(
-                        text = stringResource(R.string.event_create_end_before_start),
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                    errors.durationTooLong -> Text(
-                        text = stringResource(R.string.event_create_duration_too_long),
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
+            errorText = when {
+                errors.endNotAfterStart -> stringResource(R.string.event_create_end_before_start)
+                errors.durationTooLong -> stringResource(R.string.event_create_duration_too_long)
+                else -> null
             },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth().testTag(TestTagEventCreateEndField),
+            onChange = { onDraftChange(draft.copy(end = it)) },
+            testTag = TestTagEventCreateEndField,
         )
         Spacer(Modifier.height(12.dp))
         Text(stringResource(R.string.event_create_repeat_label), style = MaterialTheme.typography.labelMedium)
@@ -214,6 +220,130 @@ fun EventCreateFreeFormForm(
             Text(stringResource(R.string.event_create_confirm))
         }
         Spacer(Modifier.height(32.dp))
+    }
+}
+
+private val DATE_FMT: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("EEE, d MMM yyyy", Locale.getDefault())
+private val TIME_FMT: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
+
+/**
+ * EC-F — friendly date + time entry. Replaces the raw ISO-8601 text
+ * field with two buttons (date / time) showing localized values; each
+ * opens the Material3 [DatePicker] / [TimePicker]. Picks preserve the
+ * untouched component AND the draft's existing UTC offset, so editing
+ * the time never silently shifts the date or zone.
+ */
+@Composable
+private fun DateTimeField(
+    label: String,
+    value: OffsetDateTime,
+    onChange: (OffsetDateTime) -> Unit,
+    testTag: String,
+    isError: Boolean = false,
+    errorText: String? = null,
+) {
+    var showDate by remember { mutableStateOf(false) }
+    var showTime by remember { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth()) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            color = if (isError) {
+                MaterialTheme.colorScheme.error
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+        )
+        Spacer(Modifier.height(4.dp))
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            OutlinedButton(
+                onClick = { showDate = true },
+                modifier = Modifier.weight(1f).testTag("$testTag-Date"),
+            ) {
+                Icon(
+                    Icons.Outlined.CalendarMonth,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.size(8.dp))
+                Text(value.format(DATE_FMT), maxLines = 1)
+            }
+            OutlinedButton(
+                onClick = { showTime = true },
+                modifier = Modifier.weight(1f).testTag("$testTag-Time"),
+            ) {
+                Icon(
+                    Icons.Outlined.Schedule,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.size(8.dp))
+                Text(value.format(TIME_FMT), maxLines = 1)
+            }
+        }
+        if (isError && errorText != null) {
+            Text(
+                text = errorText,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+        }
+    }
+    if (showDate) {
+        val dpState = rememberDatePickerState(
+            initialSelectedDateMillis = value.toInstant().toEpochMilli(),
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDate = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    dpState.selectedDateMillis?.let { ms ->
+                        val d = Instant.ofEpochMilli(ms).atZone(ZoneOffset.UTC).toLocalDate()
+                        onChange(
+                            value.withYear(d.year)
+                                .withMonth(d.monthValue)
+                                .withDayOfMonth(d.dayOfMonth),
+                        )
+                    }
+                    showDate = false
+                }) { Text(stringResource(android.R.string.ok)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDate = false }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+            },
+        ) {
+            DatePicker(state = dpState)
+        }
+    }
+    if (showTime) {
+        val tpState = rememberTimePickerState(
+            initialHour = value.hour,
+            initialMinute = value.minute,
+            is24Hour = true,
+        )
+        AlertDialog(
+            onDismissRequest = { showTime = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    onChange(value.withHour(tpState.hour).withMinute(tpState.minute))
+                    showTime = false
+                }) { Text(stringResource(android.R.string.ok)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTime = false }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+            },
+            text = { TimePicker(state = tpState) },
+        )
     }
 }
 
