@@ -24,7 +24,7 @@ claim.
 
 - [x] **A.1** `CalDavCategory` hosts the real `AddMirrorScreen` + lists mirrors
   (was a disabled "coming soon" button). Wired `reposFlow` at the SettingsPane
-  call site. shipped in commit (pending)
+  call site. shipped in commit f2a633b
 - [x] **A.2** Strings de-stubbed (no "coming soon"); README claim reconciled to
   what's actually wired vs in progress.
 

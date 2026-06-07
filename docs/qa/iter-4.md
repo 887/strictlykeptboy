@@ -8,7 +8,7 @@ Standing loop (per global CLAUDE.md + handoff §0): AVD-drive → log → fix �
 re-verify on AVD → commit. A fix is done only when a clean re-verification
 round finds nothing new.
 
-## Phase A — D.78 S4 resolver enforcement (handoff §2a.2) — shipped in commit (pending)
+## Phase A — D.78 S4 resolver enforcement (handoff §2a.2) — shipped in commit 7394785
 
 `non_superseable` is parsed (`SupersedenceConfig`) but never reaches the
 resolver, so a non_superseable calendar is preserved only by *not* being listed
@@ -35,7 +35,7 @@ preserves existing behaviour); LSP pass (this *closes* a Liskov-spirit gap —
 every suppressor now honours the non_superseable contract); ISP/DIP n/a (pure
 data + resolver). No god-module growth.
 
-## Phase B — Chip-row DRY + B.4 timezone display (handoff §2a.3) — shipped in commit (pending)
+## Phase B — Chip-row DRY + B.4 timezone display (handoff §2a.3) — shipped in commit 5137087
 
 - [x] **B.1** Extracted shared `ui/components/WrappingChipRow.kt`; routed **all**
   inline `FlowRow` chip groups through it + deleted the wizard's private
@@ -61,7 +61,7 @@ overrides, no edits to the component for new groups); ISP/DIP pass (pure
 presentation, no state coupling); no god-modules — this *removed* ~60 LOC of
 duplication. English-only identifiers.
 
-## Phase C — CalDAV decision + action (handoff §2a.1) — shipped in commit (pending)
+## Phase C — CalDAV decision + action (handoff §2a.1) — shipped in commit f2a633b
 
 - [x] **C.1** Audited. Finding: the CalDAV mirror engine is **already built** —
   ~1665 LOC (`caldav/`: PROPFIND discovery, OkHttp client, iCal codec, ETag-
@@ -91,7 +91,7 @@ no crash on keystore-less hosts); DIP pass (category → unit-tested
 `AddMirrorViewModel`, not concretes); no god-modules. Hardcoded English wizard
 copy flagged as caldav-wiring D.1.
 
-## Phase D — Replay the 5 user walks (handoff §2b) — shipped in commit (pending)
+## Phase D — Replay the 5 user walks (handoff §2b) — shipped in commit 71af5d7
 
 Method: a thorough code-audit mapped every walk's pass-criteria + ⚠ flags to the
 implementation (15 scripts across 5 personas), and the high-signal flows were
@@ -125,5 +125,3 @@ sync button reuses existing `onSyncRepo`→`SyncService` plumbing, no new path);
 DIP pass; no god-modules. Both fixes are additive + regression-tested.
 
 ## Status: ✅ DONE (3 logged items + 2 walk-audit defects fixed; suite green; AVD-verified; shipped)
-
-## Status: 🚧 IN PROGRESS
