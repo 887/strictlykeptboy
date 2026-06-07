@@ -249,6 +249,7 @@ private fun scanCalendars(
                     },
                     kind = kind,
                     supersedes = supersedence.supersedes.map { CalendarRef(it) },
+                    nonSuperseable = supersedence.nonSuperseable,
                     colorSeed = activity.colorSeed ?: repoColorFallback,
                 )
             }

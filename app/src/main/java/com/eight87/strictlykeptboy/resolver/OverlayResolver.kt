@@ -101,6 +101,12 @@ class OverlayResolver(
                     if (intervals.isEmpty()) return@flatMap emptyList()
                     suppressor.supersedes
                         .filter { it in activeCalendars }
+                        // D.78 S4 / DM-AA.4 — a `nonSuperseable` calendar
+                        // ignores ALL supersedence requests, even if a
+                        // suppressor explicitly lists it. Enforced in code
+                        // so the "just don't list it" discipline can't break
+                        // again (the cat bug, iter-3).
+                        .filter { calMetaByRef[it]?.nonSuperseable != true }
                         .map { suppressed -> suppressed to (suppressor.ref to intervals) }
                 }
                 .groupBy({ it.first }, { it.second })

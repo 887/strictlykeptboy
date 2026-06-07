@@ -187,6 +187,7 @@ class CalendarRegistry(
             activeWindows = activeWindows.ifEmpty { base.activeWindows },
             activeHours = activeHours.ifEmpty { base.activeHours },
             supersedes = parsed.supersedence.supersedes.map { CalendarRef(it) },
+            nonSuperseable = parsed.supersedence.nonSuperseable,
             tzId = parsed.tzId ?: base.tzId,
             colorSeed = parsed.activity.colorSeed ?: base.colorSeed ?: repoColorFallback,
             metaGroupField = parsed.activity.metaGroupField ?: base.metaGroupField,

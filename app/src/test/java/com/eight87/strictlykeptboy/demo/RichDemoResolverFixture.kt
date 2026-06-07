@@ -165,6 +165,11 @@ data class RichDemoResolverFixture(
                     tzId = TZ_LONDON,
                     activeWindows = windows,
                     supersedes = supersedesRefs,
+                    // QA iter-4 A.4 — carry the parsed `non_superseable` flag
+                    // into the resolver snapshot so OverlayResolver enforces
+                    // D.78 S4 (the fixture's own supersedes pre-filter above is
+                    // now belt-and-suspenders, not the only guard).
+                    nonSuperseable = folder in nonSuperseable,
                 )
             }
 

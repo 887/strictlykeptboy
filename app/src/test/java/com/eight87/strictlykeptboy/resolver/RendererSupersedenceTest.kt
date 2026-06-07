@@ -66,6 +66,46 @@ class RendererSupersedenceTest {
         assertEquals(CalendarRef("vacation"), workBand.supersededByCalendar)
     }
 
+    @Test fun nonSuperseableCalendar_ignoresSupersedeRequest() = runTest {
+        // QA iter-4 A.5 — D.78 S4 enforcement regression. A suppressor that
+        // EXPLICITLY lists a `nonSuperseable` calendar in its `supersedes`
+        // array must NOT pause it. This is the in-code guard that replaces
+        // the fragile "just don't list it" data discipline that broke once
+        // (a vacation paused cat feeding — iter-3 cat bug, violating D.76).
+        val snap = snapshot(
+            cal("cat-care", nonSuperseable = true),
+            cal("vacation", priority = 999, supersedes = listOf("cat-care")),
+        )
+        val catRule = com.eight87.strictlykeptboy.resolver.Factories.rule(
+            ruleId = "feed-cat",
+            cal = "cat-care",
+            dtstart = "2026-05-11T08:00:00",
+            duration = java.time.Duration.ofMinutes(15),
+            rrule = "FREQ=DAILY",
+        )
+        val sources = Renderer.Sources(
+            events = listOf(
+                event("trip", "vacation", "2026-05-11T00:00:00", "2026-05-12T00:00:00"),
+            ),
+            rules = listOf(catRule),
+            exceptionsByRule = emptyMap(),
+            deviations = emptyList(),
+            overrides = emptyList(),
+        )
+        val out = renderer.render(
+            DateRange(LocalDate.parse("2026-05-11"), LocalDate.parse("2026-05-11")),
+            ViewMode.Day, snap, sources,
+            now = zdt("2026-05-11T06:00:00"),
+        )
+        val catBand = out.days.single().bands
+            .single { it.instance.calendar == CalendarRef("cat-care") }
+        assertNull(
+            "nonSuperseable calendar must never be tagged superseded even when " +
+                "a suppressor lists it (D.78 S4)",
+            catBand.supersededByCalendar,
+        )
+    }
+
     @Test fun nonSupersededBands_areNotTagged() = runTest {
         val snap = snapshot(cal("c1"))
         val sources = Renderer.Sources(

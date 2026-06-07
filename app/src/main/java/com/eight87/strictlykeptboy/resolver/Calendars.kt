@@ -46,6 +46,17 @@ data class CalendarMeta(
     val kind: CalendarKind = CalendarKind.Regular,
     val supersedes: List<CalendarRef> = emptyList(),
     /**
+     * D.78 S4 / DM-AA.4 — when true, this calendar (and its events) ignore
+     * ALL supersedence requests: no other calendar's `supersedes` list can
+     * pause it, regardless of whether the discipline of "don't list it" is
+     * followed. Defended invariant enforced in [OverlayResolver]; sourced
+     * from `non_superseable` / `nonSuperseable` in `calendar.toml` via
+     * [com.eight87.strictlykeptboy.store.SupersedenceConfig]. Default-true
+     * categories (medication, pet-care, vet) per D.76 set this in their
+     * seed TOML so a vacation can never silently skip a cat feeding.
+     */
+    val nonSuperseable: Boolean = false,
+    /**
      * Baseline cadence in days for off-schedule detection (RV-P).
      * `null` disables the check. When set, any event whose distance
      * from its calendar's nearest recurrence is greater than this is
