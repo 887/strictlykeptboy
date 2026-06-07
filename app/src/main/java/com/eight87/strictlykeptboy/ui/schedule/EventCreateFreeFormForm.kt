@@ -4,7 +4,6 @@ package com.eight87.strictlykeptboy.ui.schedule
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -44,6 +43,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
+import com.eight87.strictlykeptboy.ui.components.WrappingChipRow
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
@@ -127,10 +127,7 @@ fun EventCreateFreeFormForm(
         )
         Spacer(Modifier.height(12.dp))
         Text(stringResource(R.string.event_create_repeat_label), style = MaterialTheme.typography.labelMedium)
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            modifier = Modifier.padding(top = 4.dp).fillMaxWidth(),
-        ) {
+        WrappingChipRow(modifier = Modifier.padding(top = 4.dp)) {
             RecurrencePreset.entries.forEach { p ->
                 FilterChip(
                     selected = draft.recurrence == p,
@@ -154,10 +151,7 @@ fun EventCreateFreeFormForm(
         }
         Spacer(Modifier.height(12.dp))
         Text(stringResource(R.string.event_create_calendar_label), style = MaterialTheme.typography.labelMedium)
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            modifier = Modifier.padding(top = 4.dp).fillMaxWidth(),
-        ) {
+        WrappingChipRow(modifier = Modifier.padding(top = 4.dp)) {
             calendars.forEach { c ->
                 FilterChip(
                     selected = draft.calendarId == c.id,

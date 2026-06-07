@@ -1,8 +1,6 @@
 package com.eight87.strictlykeptboy.ui.tasks
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -28,6 +26,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
+import com.eight87.strictlykeptboy.ui.components.WrappingChipRow
 import com.eight87.strictlykeptboy.ui.a11y.labelString
 
 const val TestTagQuickAddFab = "QuickAddFab"
@@ -106,10 +105,7 @@ fun TaskQuickAddSheet(
                 style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.padding(top = 12.dp),
             )
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.padding(top = 4.dp).fillMaxWidth(),
-            ) {
+            WrappingChipRow(modifier = Modifier.padding(top = 4.dp)) {
                 targets.forEach { t ->
                     val key = targetKey(t)
                     FilterChip(

@@ -5,7 +5,6 @@ package com.eight87.strictlykeptboy.ui.settings.categories
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -38,6 +37,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.store.DomPersonaStore
+import com.eight87.strictlykeptboy.ui.components.WrappingChipRow
 import com.eight87.strictlykeptboy.ui.settings.AppMode
 import com.eight87.strictlykeptboy.ui.settings.DomCadence
 import com.eight87.strictlykeptboy.ui.settings.KeptBy
@@ -165,11 +165,7 @@ fun ModeCategory(prefs: ModePrefs, modifier: Modifier = Modifier) {
         // 2.1.K.6 — Dom persona row, sourced from DomPersonaStore.
         if (state.mode == AppMode.StrictlyKept && state.keptBy == KeptBy.Ai) {
             SectionLabel(stringResource(R.string.settings_mode_persona_section))
-            FlowRow(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
+            WrappingChipRow(modifier = Modifier.padding(vertical = 4.dp)) {
                 personas.forEach { persona ->
                     FilterChip(
                         selected = state.personaId == persona.id,
@@ -188,10 +184,7 @@ fun ModeCategory(prefs: ModePrefs, modifier: Modifier = Modifier) {
         }
 
         SectionLabel(stringResource(R.string.settings_mode_cadence_section))
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
+        WrappingChipRow {
             val items = listOf(
                 DomCadence.Realtime to R.string.settings_mode_cadence_realtime,
                 DomCadence.EndOfDay to R.string.settings_mode_cadence_eod,

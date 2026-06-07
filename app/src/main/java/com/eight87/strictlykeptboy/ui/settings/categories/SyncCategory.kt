@@ -2,8 +2,6 @@
 
 package com.eight87.strictlykeptboy.ui.settings.categories
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -21,6 +19,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.sync.SyncStatusStore
+import com.eight87.strictlykeptboy.ui.components.WrappingChipRow
 import com.eight87.strictlykeptboy.ui.settings.ConflictPolicy
 import com.eight87.strictlykeptboy.ui.settings.PushPolicy
 import com.eight87.strictlykeptboy.ui.settings.SyncSettingsPrefs
@@ -92,10 +91,7 @@ private fun IntervalRow(current: Int, onSelect: (Int) -> Unit) {
         60 to R.string.settings_sync_interval_60m,
         240 to R.string.settings_sync_interval_240m,
     )
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
+    WrappingChipRow {
         options.forEach { (minutes, label) ->
             FilterChip(
                 selected = current == minutes,
@@ -109,10 +105,7 @@ private fun IntervalRow(current: Int, onSelect: (Int) -> Unit) {
 
 @Composable
 private fun PushPolicyRow(current: PushPolicy, onSelect: (PushPolicy) -> Unit) {
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
+    WrappingChipRow {
         val items = listOf(
             PushPolicy.Push to R.string.settings_sync_push_immediate,
             PushPolicy.PushLazy to R.string.settings_sync_push_lazy,
@@ -131,10 +124,7 @@ private fun PushPolicyRow(current: PushPolicy, onSelect: (PushPolicy) -> Unit) {
 
 @Composable
 private fun ConflictPolicyRow(current: ConflictPolicy, onSelect: (ConflictPolicy) -> Unit) {
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
+    WrappingChipRow {
         val items = listOf(
             ConflictPolicy.AutoRebase to R.string.settings_sync_conflict_auto,
             ConflictPolicy.ManualOnly to R.string.settings_sync_conflict_manual,

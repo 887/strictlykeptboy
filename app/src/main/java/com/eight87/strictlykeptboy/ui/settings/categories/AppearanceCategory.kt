@@ -4,7 +4,6 @@ package com.eight87.strictlykeptboy.ui.settings.categories
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -68,6 +67,7 @@ import com.eight87.strictlykeptboy.theme.ThemeMode
 import com.eight87.strictlykeptboy.theme.baseThemeMatch
 import com.eight87.strictlykeptboy.theme.baseThemePickerOptions
 import com.eight87.strictlykeptboy.ui.components.CategoryAccentName
+import com.eight87.strictlykeptboy.ui.components.WrappingChipRow
 import com.eight87.strictlykeptboy.ui.components.CategoryIconCircle
 import com.eight87.strictlykeptboy.ui.components.ColorPickerDialog
 import com.eight87.strictlykeptboy.ui.wizard.NeutralModePrefs
@@ -254,11 +254,7 @@ fun AppearanceCategory(
                         // wrap as whole chips to a second line if they don't all
                         // fit — so no label is ever truncated or split mid-word
                         // (B.3). The enclosing PickerRow Row gives us full width.
-                        FlowRow(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                        ) {
+                        WrappingChipRow {
                             items.forEach { (scale, label) ->
                                 FilterChip(
                                     selected = state.densityScale == scale,

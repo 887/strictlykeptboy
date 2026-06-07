@@ -19,7 +19,7 @@ import com.eight87.strictlykeptboy.ui.wizard.RoleId
 import com.eight87.strictlykeptboy.ui.wizard.TemplateRegistry
 import com.eight87.strictlykeptboy.ui.wizard.TestTagWizardTemplates
 import com.eight87.strictlykeptboy.ui.wizard.WizardDraft
-import com.eight87.strictlykeptboy.ui.wizard.WrappingChipRow
+import com.eight87.strictlykeptboy.ui.components.WrappingChipRow
 
 @Composable
 internal fun TemplatesScreen(

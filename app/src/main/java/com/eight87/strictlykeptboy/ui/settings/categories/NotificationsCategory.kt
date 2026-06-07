@@ -37,6 +37,7 @@ import com.eight87.strictlykeptboy.notif.LogicalGroup
 import com.eight87.strictlykeptboy.notif.NotificationChannels
 import com.eight87.strictlykeptboy.notif.NotificationPrefs
 import com.eight87.strictlykeptboy.resolver.CalendarMeta
+import com.eight87.strictlykeptboy.ui.components.WrappingChipRow
 import kotlinx.coroutines.flow.StateFlow
 import androidx.compose.runtime.collectAsState
 import java.time.Duration
@@ -308,12 +309,7 @@ private fun NotificationDefaultsBlock(prefs: NotificationPrefs) {
             style = MaterialTheme.typography.labelMedium,
         )
         Spacer(Modifier.height(4.dp))
-        // Manual flow row (Compose's FlowRow lives in Foundation; using a
-        // simple wrapping Row here is fine for 6+1 chips).
-        androidx.compose.foundation.layout.FlowRow(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
-        ) {
+        WrappingChipRow(horizontalSpacing = 8.dp) {
             COMMON_LEAD_OFFSETS.forEach { offset ->
                 FilterChip(
                     selected = offset in selected,
@@ -339,10 +335,7 @@ private fun NotificationDefaultsBlock(prefs: NotificationPrefs) {
         val customs = selected.filter { it !in COMMON_LEAD_OFFSETS }
         if (customs.isNotEmpty()) {
             Spacer(Modifier.height(4.dp))
-            androidx.compose.foundation.layout.FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
-            ) {
+            WrappingChipRow(horizontalSpacing = 8.dp) {
                 customs.forEach { c ->
                     FilterChip(
                         selected = true,

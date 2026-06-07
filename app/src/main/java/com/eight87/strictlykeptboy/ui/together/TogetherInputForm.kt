@@ -2,7 +2,6 @@ package com.eight87.strictlykeptboy.ui.together
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -27,6 +26,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
+import com.eight87.strictlykeptboy.ui.components.WrappingChipRow
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
@@ -81,7 +81,7 @@ fun TogetherInputForm(
 
         // Repo picker
         Text(stringResource(R.string.together_section_repos), style = MaterialTheme.typography.titleSmall)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        WrappingChipRow(horizontalSpacing = 8.dp) {
             repoOptions.forEach { opt ->
                 FilterChip(
                     selected = opt.repoId in state.selectedRepoIds,
@@ -155,7 +155,7 @@ fun TogetherInputForm(
 
         // Day-of-week chips
         Text(stringResource(R.string.together_section_days), style = MaterialTheme.typography.titleSmall)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        WrappingChipRow(horizontalSpacing = 4.dp) {
             DayOfWeek.values().forEach { d ->
                 FilterChip(
                     selected = d in state.daysOfWeek,

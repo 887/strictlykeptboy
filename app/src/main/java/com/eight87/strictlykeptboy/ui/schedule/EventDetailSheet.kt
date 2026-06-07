@@ -1,8 +1,6 @@
 package com.eight87.strictlykeptboy.ui.schedule
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -41,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import com.eight87.strictlykeptboy.notif.NotificationPrefs
+import com.eight87.strictlykeptboy.ui.components.WrappingChipRow
 import com.eight87.strictlykeptboy.resolver.InstanceSource
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -146,25 +145,16 @@ fun EventDetailContent(
     modifier: Modifier = Modifier,
 ) {
     val tz = band.instance.effectiveStart.zone
-    // Fix-batch W3.14 / M-5 (2026-05-24) — friendly zone label.
-    // Raw IANA ids like `Arctic/Longyearbyen` or
-    // `America/Indiana/Indianapolis` are noise for end users. Show
-    // the short display name (e.g. "CEST") with the city portion of
-    // the IANA id as a hint when one exists.
-    val tzLabel = remember(tz) {
-        val short = try {
-            tz.getDisplayName(
-                java.time.format.TextStyle.SHORT,
-                Locale.getDefault(),
-            )
-        } catch (_: Throwable) {
-            tz.id
-        }
-        val city = tz.id.substringAfterLast('/').replace('_', ' ')
-        if (city.isNotBlank() && !short.equals(city, ignoreCase = true)) {
-            "$short · $city"
-        } else short
+    // QA iter-4 B.2 — multi-tz display. The zone is shown ONLY when it
+    // differs from the device's own zone (otherwise it's noise — the user
+    // knows their own timezone), and the label never repeats the raw IANA
+    // id next to its own city ("Arctic/Longyearbyen · Longyearbyen"). See
+    // [friendlyZoneSuffix] + EventDetailZoneLabelTest.
+    val tzSuffix = remember(tz) {
+        friendlyZoneSuffix(tz, java.time.ZoneId.systemDefault(), Locale.getDefault())
     }
+    // Kept for the (tz)-bearing time string below; null ⇒ no suffix rendered.
+    val tzParen = tzSuffix?.let { "  ($it)" } ?: ""
     val fmt = DateTimeFormatter.ofPattern("EEE MMM d  HH:mm", Locale.getDefault())
     val endFmt = DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
     // Round 2026-05-24 R-2 — multi-day events show the END DATE too,
@@ -222,10 +212,10 @@ fun EventDetailContent(
             Text(
                 text = if (isMultiDay) {
                     "${fmt.format(band.instance.effectiveStart)} → " +
-                        "${fmt.format(band.instance.effectiveEnd)}  ($tzLabel)"
+                        "${fmt.format(band.instance.effectiveEnd)}$tzParen"
                 } else {
                     "${fmt.format(band.instance.effectiveStart)} – " +
-                        "${endFmt.format(band.instance.effectiveEnd)}  ($tzLabel)"
+                        "${endFmt.format(band.instance.effectiveEnd)}$tzParen"
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -320,7 +310,7 @@ fun EventDetailContent(
 
             // Tags
             if (band.instance.tags.isNotEmpty()) {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                WrappingChipRow {
                     band.instance.tags.forEach { tag ->
                         SuggestionChip(
                             onClick = {},
@@ -466,6 +456,55 @@ fun EventDetailContent(
  *
  * Composable so we can resolve string resources (translation-correct).
  */
+/**
+ * QA iter-4 B.2 — friendly timezone suffix for the event-detail time line.
+ *
+ * Returns `null` when [tz] matches the device's [deviceZone] (the user knows
+ * their own zone — showing it is noise). Otherwise returns a compact label:
+ *
+ *  - When the platform has a real abbreviation distinct from the city
+ *    ("CEST" for "Europe/Berlin") → `"CEST · Berlin"`.
+ *  - When `getDisplayName(SHORT)` falls back to the raw IANA id (obscure
+ *    zones like `Arctic/Longyearbyen`) → just the city (`"Longyearbyen"`),
+ *    never the redundant `"Arctic/Longyearbyen · Longyearbyen"` the user
+ *    flagged.
+ *  - When the abbreviation already equals the city → just the city.
+ *
+ * Pure / no Compose — unit-tested by `EventDetailZoneLabelTest`.
+ */
+internal fun friendlyZoneSuffix(
+    tz: java.time.ZoneId,
+    deviceZone: java.time.ZoneId,
+    locale: Locale,
+): String? {
+    if (tz.id == deviceZone.id) return null
+    val short = try {
+        tz.getDisplayName(java.time.format.TextStyle.SHORT, locale)
+    } catch (_: Throwable) {
+        tz.id
+    }
+    return zoneSuffixLabel(short, tz.id)
+}
+
+/**
+ * Pure formatter behind [friendlyZoneSuffix] — separated so the redundancy
+ * collapse is deterministically testable without depending on the host JVM's
+ * `getDisplayName` table (which differs from Android's; on-device, obscure
+ * zones fall back to the raw IANA id — exactly the reported bug input).
+ */
+internal fun zoneSuffixLabel(shortName: String, ianaId: String): String {
+    val city = ianaId.substringAfterLast('/').replace('_', ' ').trim()
+    // `getDisplayName` returns the raw id (often containing '/') for zones the
+    // platform has no localized abbreviation for — that's the redundancy source.
+    val shortIsRawId = shortName == ianaId || shortName.contains('/')
+    return when {
+        city.isBlank() -> shortName
+        shortIsRawId -> city
+        shortName.equals(city, ignoreCase = true) -> city
+        else -> "$shortName · $city"
+    }
+}
+
 @Composable
 private fun externalAttributionLabel(accountType: String, accountName: String): String {
     val at = accountType.lowercase()

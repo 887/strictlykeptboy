@@ -36,7 +36,7 @@ import com.eight87.strictlykeptboy.ui.wizard.PronounSet
 import com.eight87.strictlykeptboy.ui.wizard.TestTagWizardIdentity
 import com.eight87.strictlykeptboy.ui.wizard.ToneRegister
 import com.eight87.strictlykeptboy.ui.wizard.WizardDraft
-import com.eight87.strictlykeptboy.ui.wizard.WrappingChipRow
+import com.eight87.strictlykeptboy.ui.components.WrappingChipRow
 
 @Composable
 internal fun IdentityScreen(draft: WizardDraft, onUpdate: (WizardDraft) -> Unit) {

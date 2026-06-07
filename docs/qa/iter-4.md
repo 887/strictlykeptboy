@@ -35,15 +35,31 @@ preserves existing behaviour); LSP pass (this *closes* a Liskov-spirit gap —
 every suppressor now honours the non_superseable contract); ISP/DIP n/a (pure
 data + resolver). No god-module growth.
 
-## Phase B — Chip-row DRY + B.4 timezone display (handoff §2a.3)
+## Phase B — Chip-row DRY + B.4 timezone display (handoff §2a.3) — shipped in commit (pending)
 
-- [ ] **B.1** Extract one shared `ui/components/WrappingChipRow.kt`; route the ~7
-  inline `FlowRow` chip groups + the wizard's private `WrappingChipRow` through it.
-- [ ] **B.2** B.4 multi-tz display: stop showing IANA id + friendly city
-  redundantly ("Arctic/Longyearbyen · Longyearbyen"); show the friendly form,
-  fall back to IANA only when it carries extra info, and only when the event tz
-  differs from the device tz.
-- [ ] **B.3** Unit green + AVD smoke (event-detail tz line, chip groups wrap).
+- [x] **B.1** Extracted shared `ui/components/WrappingChipRow.kt`; routed **all**
+  inline `FlowRow` chip groups through it + deleted the wizard's private
+  `WrappingChipRow`. Migrated: Sync(×3), Identity(×2), Mode(×2), Appearance(×1),
+  Notifications(×2), EventCreateFreeFormForm(×2), EventDetailSheet(×1),
+  TaskDetailSheet(×1), TaskQuickAddFab(×1), TogetherInputForm(×2), wizard
+  Identity/Templates screens. Unused `FlowRow`/`Arrangement` imports + the
+  `@file:OptIn(ExperimentalLayoutApi)` removed where the file no longer needs
+  them. AVD-verified: Look&Feel density chips wrap whole-chip ("Spacious" → line 2).
+- [x] **B.2** Multi-tz display (B.4): event tz shown ONLY when it differs from the
+  device zone; the redundant raw-IANA-id-next-to-city
+  ("Arctic/Longyearbyen · Longyearbyen") collapses to the city. Pure
+  `zoneSuffixLabel` + device-check `friendlyZoneSuffix`, unit-tested by
+  `EventDetailZoneLabelTest` (7 cases incl. the exact reported bug input).
+  AVD-verified: "Collar on (home)" time line reads "Sun Jun 7 17:45 – 23:30",
+  no redundant zone string.
+- [x] **B.3** Full unit suite green (+7 new tz cases); AVD-smoked settings chips +
+  event-detail tz line.
+
+SOLID self-check (B): SRP pass (WrappingChipRow = one wrapping concern;
+zoneSuffixLabel = one formatting concern); OCP pass (callers pass spacing
+overrides, no edits to the component for new groups); ISP/DIP pass (pure
+presentation, no state coupling); no god-modules — this *removed* ~60 LOC of
+duplication. English-only identifiers.
 
 ## Phase C — CalDAV decision + action (handoff §2a.1)
 

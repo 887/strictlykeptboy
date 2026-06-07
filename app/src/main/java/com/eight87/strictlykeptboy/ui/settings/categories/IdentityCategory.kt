@@ -2,9 +2,7 @@
 
 package com.eight87.strictlykeptboy.ui.settings.categories
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,6 +23,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
+import com.eight87.strictlykeptboy.ui.components.WrappingChipRow
 import com.eight87.strictlykeptboy.ui.settings.EmojiDensity
 import com.eight87.strictlykeptboy.ui.settings.IdentityPrefs
 import com.eight87.strictlykeptboy.ui.settings.IdentityState
@@ -166,10 +165,7 @@ private fun ToneRow(current: ToneRegister, onSelect: (ToneRegister) -> Unit) {
         ToneRegister.Stern to R.string.settings_identity_tone_stern,
         ToneRegister.Playful to R.string.settings_identity_tone_playful,
     )
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
+    WrappingChipRow {
         items.forEach { (tone, label) ->
             FilterChip(
                 selected = current == tone,
@@ -189,10 +185,7 @@ private fun EmojiRow(current: EmojiDensity, onSelect: (EmojiDensity) -> Unit) {
         EmojiDensity.Standard to R.string.settings_identity_emoji_standard,
         EmojiDensity.Lush to R.string.settings_identity_emoji_lush,
     )
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
+    WrappingChipRow {
         items.forEach { (density, label) ->
             FilterChip(
                 selected = current == density,

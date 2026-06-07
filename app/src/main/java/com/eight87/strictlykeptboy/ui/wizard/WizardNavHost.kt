@@ -502,13 +502,5 @@ private fun BatMascotSticker(screen: WizardScreen) {
     }
 }
 
-@Composable
-internal fun WrappingChipRow(content: @Composable () -> Unit) {
-    // Compose has no built-in FlowRow in M3 below 1.4; we approximate with
-    // a horizontally-scrolling Row for v1. Switch to FlowRow once available.
-    androidx.compose.foundation.layout.FlowRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalArrangement = Arrangement.spacedBy(0.dp),
-    ) { content() }
-}
+// QA iter-4 B.1 — the wizard's private WrappingChipRow was lifted to the shared
+// `ui/components/WrappingChipRow.kt`; call sites import it from there now.

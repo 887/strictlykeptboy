@@ -2,7 +2,6 @@ package com.eight87.strictlykeptboy.ui.tasks
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -37,6 +36,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
+import com.eight87.strictlykeptboy.ui.components.WrappingChipRow
 import com.eight87.strictlykeptboy.ui.components.MarkdownRenderer
 
 const val TestTagDetailSheet = "TaskDetailSheet"
@@ -149,10 +149,7 @@ fun TaskDetailContent(
             }
 
             if (task.tags.isNotEmpty()) {
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.padding(top = 12.dp).fillMaxWidth(),
-                ) {
+                WrappingChipRow(modifier = Modifier.padding(top = 12.dp)) {
                     task.tags.forEach { tag ->
                         AssistChip(
                             onClick = {},
