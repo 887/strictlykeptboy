@@ -1,5 +1,6 @@
 package com.eight87.strictlykeptboy.ui.settings
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -53,6 +54,14 @@ fun SettingsOverlayScreen(
     val widthClass = LocalWindowWidthSizeClass.current
     val twoPane = widthClass.isTwoPane()
     val inSubpage = state.compactPushed && !twoPane
+
+    // System / gesture back must mirror the toolbar back-arrow's two-step
+    // logic: from a drilled-in subpage it pops to the category list (one
+    // step), NOT straight out to the host pane. Without this, gesture-back
+    // over-popped the whole overlay and skipped the category list (QA B.6).
+    // On the root list (inSubpage == false) we leave back unhandled so it
+    // falls through to dismiss the overlay as before.
+    BackHandler(enabled = inSubpage) { state.popToCategoryList() }
 
     val title: String = if (inSubpage) {
         stringResource(state.activeCategory.labelRes)

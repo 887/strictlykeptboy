@@ -1,6 +1,10 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package com.eight87.strictlykeptboy.ui.settings.categories
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -162,13 +166,16 @@ private fun ToneRow(current: ToneRegister, onSelect: (ToneRegister) -> Unit) {
         ToneRegister.Stern to R.string.settings_identity_tone_stern,
         ToneRegister.Playful to R.string.settings_identity_tone_playful,
     )
-    Row {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
         items.forEach { (tone, label) ->
             FilterChip(
                 selected = current == tone,
                 onClick = { onSelect(tone) },
-                label = { Text(stringResource(label)) },
-                modifier = Modifier.padding(end = 6.dp).testTag("$TestTagCatIdentity-Tone-${tone.name}"),
+                label = { Text(stringResource(label), maxLines = 1, softWrap = false) },
+                modifier = Modifier.testTag("$TestTagCatIdentity-Tone-${tone.name}"),
             )
         }
     }
@@ -182,13 +189,16 @@ private fun EmojiRow(current: EmojiDensity, onSelect: (EmojiDensity) -> Unit) {
         EmojiDensity.Standard to R.string.settings_identity_emoji_standard,
         EmojiDensity.Lush to R.string.settings_identity_emoji_lush,
     )
-    Row {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
         items.forEach { (density, label) ->
             FilterChip(
                 selected = current == density,
                 onClick = { onSelect(density) },
-                label = { Text(stringResource(label)) },
-                modifier = Modifier.padding(end = 6.dp).testTag("$TestTagCatIdentity-Emoji-${density.name}"),
+                label = { Text(stringResource(label), maxLines = 1, softWrap = false) },
+                modifier = Modifier.testTag("$TestTagCatIdentity-Emoji-${density.name}"),
             )
         }
     }

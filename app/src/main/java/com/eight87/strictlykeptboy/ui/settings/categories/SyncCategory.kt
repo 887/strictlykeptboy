@@ -1,5 +1,9 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package com.eight87.strictlykeptboy.ui.settings.categories
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -88,13 +92,16 @@ private fun IntervalRow(current: Int, onSelect: (Int) -> Unit) {
         60 to R.string.settings_sync_interval_60m,
         240 to R.string.settings_sync_interval_240m,
     )
-    Row {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
         options.forEach { (minutes, label) ->
             FilterChip(
                 selected = current == minutes,
                 onClick = { onSelect(minutes) },
-                label = { Text(stringResource(label)) },
-                modifier = Modifier.padding(end = 6.dp).testTag("$TestTagCatSync-Interval-$minutes"),
+                label = { Text(stringResource(label), maxLines = 1, softWrap = false) },
+                modifier = Modifier.testTag("$TestTagCatSync-Interval-$minutes"),
             )
         }
     }
@@ -102,7 +109,10 @@ private fun IntervalRow(current: Int, onSelect: (Int) -> Unit) {
 
 @Composable
 private fun PushPolicyRow(current: PushPolicy, onSelect: (PushPolicy) -> Unit) {
-    Row {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
         val items = listOf(
             PushPolicy.Push to R.string.settings_sync_push_immediate,
             PushPolicy.PushLazy to R.string.settings_sync_push_lazy,
@@ -112,8 +122,8 @@ private fun PushPolicyRow(current: PushPolicy, onSelect: (PushPolicy) -> Unit) {
             FilterChip(
                 selected = current == policy,
                 onClick = { onSelect(policy) },
-                label = { Text(stringResource(label)) },
-                modifier = Modifier.padding(end = 6.dp).testTag("$TestTagCatSync-Push-${policy.name}"),
+                label = { Text(stringResource(label), maxLines = 1, softWrap = false) },
+                modifier = Modifier.testTag("$TestTagCatSync-Push-${policy.name}"),
             )
         }
     }
@@ -121,7 +131,10 @@ private fun PushPolicyRow(current: PushPolicy, onSelect: (PushPolicy) -> Unit) {
 
 @Composable
 private fun ConflictPolicyRow(current: ConflictPolicy, onSelect: (ConflictPolicy) -> Unit) {
-    Row {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
         val items = listOf(
             ConflictPolicy.AutoRebase to R.string.settings_sync_conflict_auto,
             ConflictPolicy.ManualOnly to R.string.settings_sync_conflict_manual,
@@ -130,8 +143,8 @@ private fun ConflictPolicyRow(current: ConflictPolicy, onSelect: (ConflictPolicy
             FilterChip(
                 selected = current == policy,
                 onClick = { onSelect(policy) },
-                label = { Text(stringResource(label)) },
-                modifier = Modifier.padding(end = 6.dp).testTag("$TestTagCatSync-Conflict-${policy.name}"),
+                label = { Text(stringResource(label), maxLines = 1, softWrap = false) },
+                modifier = Modifier.testTag("$TestTagCatSync-Conflict-${policy.name}"),
             )
         }
     }

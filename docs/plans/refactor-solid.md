@@ -556,3 +556,20 @@ Still open from this audit pass (deferred / out-of-scope this run):
 
 - MainActivity inline body dismantling — the bulk of the 1856 LOC remaining is `setContent { … }` Compose-tree wiring + the deep-link dispatcher's inline branches. A genuine split would extract a `MainActivityCompose.kt` host carrying the entire `setContent` block as a top-level `@Composable fun MainScreen(...)`. Risk: high; recompose-stability surface is large. Track for Round 2.29 or later.
 - `AuthMethod` SSH variant closure — `git/auth/CredentialBindings.kt` still throws `NotImplementedError` in the `is AuthMethod.Ssh` branch. The wizard gate from `351634c` keeps users out for now; closing F4 (real SSH key handling) is its own round.
+
+### QA-iter-2 finding 2026-06-07 — chip-group DRY (SOLID-S / OCP)
+
+The "wrap-to-next-line for a chip group" pattern is duplicated inline across
+many surfaces. QA iter-2 found 5 files where a fixed option-group was laid in a
+plain `Row` and wrapped mid-word on a phone (density picker, Identity tone +
+emoji, Sync interval/push/conflict, Mode persona/cadence). All were fixed
+inline with `FlowRow`, but the boilerplate now repeats ~7×, and the wizard
+already carries its own private `WrappingChipRow` (`ui/wizard/WizardNavHost.kt`).
+
+- **[M] #chip-row-dedup — open.** Extract one shared
+  `WrappingChipRow(content: @Composable RowScope.() -> Unit)` into
+  `ui/components/`, route every chip group through it (Appearance density,
+  IdentityCategory, SyncCategory, ModeCategory, wizard screens), and delete the
+  wizard's private copy + the inline `FlowRow` duplications. Single place to
+  tune spacing / overflow behaviour. Closed-for-modification once landed: a new
+  chip group adds a call, not another `FlowRow` block.

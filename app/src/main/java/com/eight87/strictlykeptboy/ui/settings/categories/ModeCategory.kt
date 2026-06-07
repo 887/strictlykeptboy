@@ -1,8 +1,11 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package com.eight87.strictlykeptboy.ui.settings.categories
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -162,13 +165,17 @@ fun ModeCategory(prefs: ModePrefs, modifier: Modifier = Modifier) {
         // 2.1.K.6 — Dom persona row, sourced from DomPersonaStore.
         if (state.mode == AppMode.StrictlyKept && state.keptBy == KeptBy.Ai) {
             SectionLabel(stringResource(R.string.settings_mode_persona_section))
-            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+            FlowRow(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
                 personas.forEach { persona ->
                     FilterChip(
                         selected = state.personaId == persona.id,
                         onClick = { prefs.setPersonaId(persona.id) },
-                        label = { Text(persona.label) },
-                        modifier = Modifier.padding(end = 6.dp).testTag("$TestTagCatMode-Persona-${persona.id}"),
+                        label = { Text(persona.label, maxLines = 1, softWrap = false) },
+                        modifier = Modifier.testTag("$TestTagCatMode-Persona-${persona.id}"),
                     )
                 }
             }
@@ -181,7 +188,10 @@ fun ModeCategory(prefs: ModePrefs, modifier: Modifier = Modifier) {
         }
 
         SectionLabel(stringResource(R.string.settings_mode_cadence_section))
-        Row {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
             val items = listOf(
                 DomCadence.Realtime to R.string.settings_mode_cadence_realtime,
                 DomCadence.EndOfDay to R.string.settings_mode_cadence_eod,
@@ -191,8 +201,8 @@ fun ModeCategory(prefs: ModePrefs, modifier: Modifier = Modifier) {
                 FilterChip(
                     selected = state.cadence == cadence,
                     onClick = { prefs.setCadence(cadence) },
-                    label = { Text(stringResource(label)) },
-                    modifier = Modifier.padding(end = 6.dp).testTag("$TestTagCatMode-Cadence-${cadence.name}"),
+                    label = { Text(stringResource(label), maxLines = 1, softWrap = false) },
+                    modifier = Modifier.testTag("$TestTagCatMode-Cadence-${cadence.name}"),
                 )
             }
         }

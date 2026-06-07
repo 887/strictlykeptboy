@@ -179,7 +179,7 @@
 
     <!-- S.4 Notifications -->
     <string name="settings_notif_briefings_master">Show daily briefings</string>
-    <string name="settings_notif_briefings_blurb">System cal-briefings calendar (D.81).</string>
+    <string name="settings_notif_briefings_blurb">System cal-briefings calendar.</string>
     <string name="settings_notif_lead_section">Default lead times</string>
     <string name="settings_notif_lead_medical">Medical</string>
     <string name="settings_notif_lead_flight">Flight</string>
@@ -260,7 +260,7 @@
     <string name="settings_appearance_density_spacious">Spacious</string>
     <string name="settings_appearance_font_scale">Font scale: %1$s</string>
     <string name="settings_appearance_neutral_mode">Neutral mode</string>
-    <string name="settings_appearance_neutral_mode_blurb">Hide kink role+templates (K-3 / KI).</string>
+    <string name="settings_appearance_neutral_mode_blurb">Hide kink role+templates.</string>
     <string name="settings_appearance_search_placeholder">Search Look and Feel</string>
     <string name="settings_appearance_section_theme">Theme</string>
     <string name="settings_appearance_section_display">Display</string>
@@ -1135,7 +1135,7 @@
     <string name="settings_appearance_neutral_moved_blurb">Neutral mode now lives in Lifestyle — it is a content-mode switch, not a visual one.</string>
     <string name="settings_appearance_neutral_open_lifestyle">Open Lifestyle → Neutral mode</string>
     <string name="settings_lifestyle_neutral_section">Neutral mode</string>
-    <string name="settings_lifestyle_neutral_blurb">Hide kink role + templates (K-3). Per-event private flag is independent.</string>
+    <string name="settings_lifestyle_neutral_blurb">Hide kink role + templates. Per-event private flag is independent.</string>
 
     <!-- 2.1.E.5 — Identity sub-sections after Identities retirement. -->
     <string name="settings_identity_section_persona">My persona</string>

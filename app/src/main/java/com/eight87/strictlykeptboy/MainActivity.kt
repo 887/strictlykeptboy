@@ -1048,8 +1048,15 @@ class MainActivity : ComponentActivity() {
                                     val calId = cfg.defaultCalendarId ?: return@mapNotNull null
                                     com.eight87.strictlykeptboy.ui.schedule.CalendarOption(
                                         id = calId,
+                                        // QA G: repoDisplayName was also set to
+                                        // cfg.displayName, so label() rendered the
+                                        // repo name twice ("my calendar · my
+                                        // calendar"). The option represents a
+                                        // repo's default calendar; show the repo
+                                        // name once. (Resolving the calendar's own
+                                        // display name here is a future nicety.)
                                         displayName = cfg.displayName,
-                                        repoDisplayName = if (list.size > 1) cfg.displayName else null,
+                                        repoDisplayName = null,
                                     )
                                 }
                             },
