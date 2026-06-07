@@ -1148,11 +1148,18 @@
     <string name="settings_diagnostic_missing_pref_title">%1$s is missing its preferences handle</string>
     <string name="settings_diagnostic_missing_pref_body">The %1$s category requires the %2$s preference to be wired into SettingsAccess. Check logcat tag SettingsAccess.</string>
 
-    <!-- 2.1.E.12 — CalDAV stub category. -->
+    <!-- QA iter-4 C — CalDAV mirror category (wired to the caldav/ engine). -->
     <string name="settings_category_caldav">CalDAV</string>
     <string name="settings_subtitle_caldav">Two-way calendar sync.</string>
-    <string name="settings_caldav_intro">Two-way CalDAV mirror keeps your calendars in sync with Google, Microsoft, Apple, Nextcloud, or your own server. This is coming soon.</string>
-    <string name="settings_caldav_coming">Coming soon</string>
+    <string name="settings_caldav_intro">Mirror a CalDAV calendar into one of your repos. Pull-only keeps a read copy; two-way writes your changes back. Works with Apple iCloud (app password), Nextcloud, and any standard CalDAV server.</string>
+    <string name="settings_caldav_empty">No CalDAV mirrors yet.</string>
+    <string name="settings_caldav_add_to">Add a mirror to %1$s</string>
+    <string name="settings_caldav_need_repo">Add a repo first to mirror into.</string>
+    <string name="settings_caldav_unavailable">CalDAV needs a secure keystore, which isn\'t available here.</string>
+    <string name="settings_caldav_cancel">Cancel</string>
+    <string name="settings_caldav_mode_pull">Pull only</string>
+    <string name="settings_caldav_mode_push">Push only</string>
+    <string name="settings_caldav_mode_bidi">Two-way</string>
 
     <!-- 2.2.D.2 — Repos as in-pane list. -->
     <string name="settings_repos_inline_header">Your accounts</string>

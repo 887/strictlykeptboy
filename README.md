@@ -26,7 +26,7 @@ The name is the brand: a strict, kept schedule, kept boy. Cute bat-in-hoodie mas
 
 - Web app or desktop app. Android only for the GUI in v1. (The `skb` CLI is cross-platform — Linux/macOS/anywhere with Java 17+ — and is the primary surface for AI agents like Claude.)
 - End-to-end encrypted repo contents (Git repo can be private at the provider level; that's the encryption story for now).
-- Self-served CalDAV / webcal endpoints (server territory, not client). Bidirectional CalDAV *client* sync IS in v1 — point the app at any CalDAV server (Google, Microsoft, Apple, Nextcloud, DAVx⁵, your own).
+- Self-served CalDAV / webcal endpoints (server territory, not client). CalDAV *client* mirroring is in the app under **Settings → CalDAV**: the sync engine (PROPFIND discovery, ETag-journaled pull, `If-Match` push with conflict surfacing) is implemented and unit-tested, and mirror setup is live for password / app-password servers (Apple iCloud, Nextcloud, any standard CalDAV server). OAuth device-flow providers (Google, Microsoft 365) and background scheduling are being wired (`docs/plans/caldav-wiring.md`). DAVx⁵ remains the zero-config path — it adds CalDAV accounts to Android's system calendar, which the app already bridges (Round 2.18).
 
 ## Stack (locked)
 

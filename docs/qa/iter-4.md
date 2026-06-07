@@ -61,11 +61,35 @@ overrides, no edits to the component for new groups); ISP/DIP pass (pure
 presentation, no state coupling); no god-modules — this *removed* ~60 LOC of
 duplication. English-only identifiers.
 
-## Phase C — CalDAV decision + action (handoff §2a.1)
+## Phase C — CalDAV decision + action (handoff §2a.1) — shipped in commit (pending)
 
-- [ ] **C.1** Audit the current CalDAV surface + the README claim; decide build
-  vs soften (default: build, staged as its own plan).
-- [ ] **C.2** Execute the decision.
+- [x] **C.1** Audited. Finding: the CalDAV mirror engine is **already built** —
+  ~1665 LOC (`caldav/`: PROPFIND discovery, OkHttp client, iCal codec, ETag-
+  journaled pull/push sync worker, scheduler, encrypted stores, Add-Mirror
+  wizard) + ~510 LOC tests (incl. a MockWebServer worker test). It was
+  **orphaned**: never reached from the shell ("coming soon" disabled stub), and
+  the README overclaimed all 5 providers as v1. So this is not build-vs-soften —
+  it's *wire the existing tested code + make the README honest*.
+- [x] **C.2** Executed:
+  - `CalDavCategory` rewritten to host the real `AddMirrorScreen` wizard + list
+    configured mirrors; `reposFlow` wired at the SettingsPane call site. Stores
+    opened defensively (`runCatching`) so Robolectric / keystore-less devices
+    degrade gracefully instead of crashing (fixed the `KeyStoreException`
+    regression that surfaced 2 nav tests — re-verified green).
+  - Strings de-stubbed (no "coming soon"); honest intro + mode labels added.
+  - README reconciled: sync engine implemented+tested, mirror setup live for
+    password/app-password servers; OAuth (Google/M365) + boot-scheduling in
+    progress (DAVx⁵ = zero-config path, already bridged).
+  - Remaining work staged in `docs/plans/caldav-wiring.md` (Phase B scheduler
+    boot-wire + Sync-now; Phase C OAuth; Phase D i18n/management).
+  - **AVD-verified**: Settings → CalDAV renders the wired surface; "Add a mirror"
+    opens the live provider picker (Google/M365/iCloud/Nextcloud/Custom).
+
+SOLID self-check (C): SRP pass (category presents+creates mirrors, engine
+untouched); LSP pass (defensive store-open honours "renders in any parent" —
+no crash on keystore-less hosts); DIP pass (category → unit-tested
+`AddMirrorViewModel`, not concretes); no god-modules. Hardcoded English wizard
+copy flagged as caldav-wiring D.1.
 
 ## Phase D — Replay the 5 user walks (handoff §2b)
 

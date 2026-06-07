@@ -814,8 +814,9 @@ private fun SettingsCategoryContent(
             SettingsCategory.Mode -> access.modePrefs?.let { p ->
                 ModeCategory(prefs = p)
             } ?: DiagnosticMissingPrefBanner(category, "modePrefs")
-            // 2.1.E.12 — CalDAV stub category.
-            SettingsCategory.CalDav -> CalDavCategory()
+            // QA iter-4 C — CalDAV mirror category, wired to the real
+            // caldav/ flow (was a "coming soon" stub).
+            SettingsCategory.CalDav -> CalDavCategory(reposFlow = access.reposFlow)
             // 2.2.D.6 — Access aggregator (read-only).
             SettingsCategory.Access -> com.eight87.strictlykeptboy.ui.settings.categories.AccessCategory(
                 rows = access.accessAggregator?.aggregate().orEmpty(),
