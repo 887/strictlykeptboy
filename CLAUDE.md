@@ -116,15 +116,17 @@ Canonical loop:
 JAVA_HOME=/usr/lib/jvm/java-26-openjdk ANDROID_HOME=$HOME/Android/Sdk ./gradlew :app:assembleDebug
 ~/Android/Sdk/platform-tools/adb -s emulator-5554 install -r app/build/outputs/apk/debug/app-debug.apk
 ~/Android/Sdk/platform-tools/adb -s emulator-5554 shell am start -n com.eight87.strictlykeptboy/.MainActivity
-~/Android/Sdk/platform-tools/adb -s emulator-5554 exec-out screencap -p | magick - -resize 50% /tmp/skb.png
+~/Android/Sdk/platform-tools/adb -s emulator-5554 exec-out screencap -p | magick - -resize 25% /tmp/skb.png
 # then Read /tmp/skb.png via the Read tool
 ```
 
-The AVD is 1080×2400 native — too big to read comfortably. Pipe screencaps through `magick - -resize 50%` to land at 540×1200; tap coords are still computed against the native 1080×2400 (multiply scaled image coords by 2).
+The AVD is 1080×2400 native — too big to read comfortably. **Resize screenshots before reading — 25% (`magick - -resize 25%`) is the light default** (270×600, plenty to confirm layout, widget presence, overflow, position), and **50% is fine** when you want more detail (540×1200). Tap coords are always computed against the native 1080×2400, so **multiply by 4 for a 25% image, by 2 for a 50% image**.
 
 Clean up `/tmp/*.png` periodically — they accumulate fast across sessions.
 
-Prefer `mobile-mcp` tools when loaded (a11y tree + tap-by-label is more precise than coord input). Fall back to `adb exec-out screencap -p` + visual inspection via Read when mobile-mcp isn't available.
+**Prefer the `mobile` MCP when loaded** (a11y tree + tap-by-label via `mobile_list_elements_on_screen` is far more precise than coordinate math — the Compose UI is testTag-rich for exactly this). `mobile_save_screenshot` writes a PNG you then resize to 25% before Read — note its path allowlist only permits the **cwd** or the host temp dir (`os.tmpdir()`, e.g. `/tmp/laragana`, NOT bare `/tmp`). Fall back to `adb exec-out screencap -p | magick - -resize 25%` + Read when the MCP isn't available.
+
+**Mobile-MCP launch note (node v25 / this box):** `npx`-launching `@mobilenext/mobile-mcp` fails because its `sharp` dep has no node-25 prebuild; the workspace-root `/home/laragana/workspace/.mcp.json` pins `mobile` to a `node`-direct launch of a pre-built copy instead. The screenshot path itself doesn't need sharp (adb emits PNG natively). See the `reference_boy_apps_mobile_mcp_dev` memory.
 
 **Do not report a UI task as done on the strength of unit tests + a successful build alone.**
 
