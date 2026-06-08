@@ -305,21 +305,13 @@ internal fun NowPlayingSheetHost(
                             // when needed.
                             showHeroCard = playbackState.hasMedia,
                             bodyContent = {
+                                // The body fills the real sheet viewport itself
+                                // (fillParentMaxHeight) — no more guessed height.
                                 ExpandedNowPlayingTaskBody(
                                     tasksState = tasksState,
                                     onOpenTask = { task -> openTask = task },
                                     onStartTask = onStartTask,
                                     onLongPressTask = { /* Phase D — TBD */ },
-                                    bodyHeight = if (playbackState.hasMedia) {
-                                        // Hero + transport ~ 480 dp; leave
-                                        // most of the rest of the viewport
-                                        // to the task body.
-                                        (screenHeightDp - 560.dp).coerceAtLeast(240.dp)
-                                    } else {
-                                        // No hero → task body fills the
-                                        // whole viewport minus top app bar.
-                                        (screenHeightDp - 120.dp).coerceAtLeast(360.dp)
-                                    },
                                 )
                             },
                         )

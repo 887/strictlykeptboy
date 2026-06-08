@@ -28,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -48,6 +49,14 @@ const val TestTagExpandedTaskChipPrefix = "ExpandedTaskChip-"
 const val TestTagExpandedTaskBody = "ExpandedTaskBody"
 
 /**
+ * Must match the horizontal `contentPadding` of the host LazyColumn in
+ * `NowPlayingScreen` — the task body bleeds back out by this amount on each
+ * side so the rail + list sit edge-to-edge (the music hero/transport cards
+ * keep the inset; a full-bleed task list does not want it).
+ */
+private val NowPlayingBodyHorizontalBleed = 24.dp
+
+/**
  * Round 2.16.D / Round 2.26.A.6 — the todolist UI inside the expanded
  * NowPlayingScreen. Renders a horizontal chip-strip of [TasksFilter]
  * options on top, and the selected view below. View-mode state is held
@@ -66,7 +75,6 @@ fun LazyItemScope.ExpandedNowPlayingTaskBody(
   onOpenTask: (TaskItem) -> Unit,
   onStartTask: ((String) -> Unit)?,
   onLongPressTask: (TaskItem) -> Unit,
-  bodyHeight: androidx.compose.ui.unit.Dp,
 ) {
   val uiState by tasksState.state.collectAsState()
   val visibleTasks = uiState.visibleTasks()
@@ -76,8 +84,27 @@ fun LazyItemScope.ExpandedNowPlayingTaskBody(
 
   Row(
     modifier = Modifier
-      .fillMaxWidth()
-      .height(bodyHeight)
+      // Fill the actual sheet viewport (like the music QueueSection does
+      // via fillParentMaxHeight) instead of a guessed `screenHeightDp - n`
+      // height — the guess left a dead band at the bottom that the
+      // quick-add FAB floated in, with empty space around it.
+      .fillParentMaxHeight()
+      // Bleed past the host LazyColumn's 24.dp horizontal contentPadding so
+      // the task body (left rail + list) renders edge-to-edge like the
+      // Schedule, not boxed with dead left/right margins. Kept in sync with
+      // NowPlayingScreen's `contentPadding` horizontal value.
+      .layout { measurable, constraints ->
+        val bleed = NowPlayingBodyHorizontalBleed.roundToPx() * 2
+        val placeable = measurable.measure(
+          constraints.copy(
+            minWidth = constraints.maxWidth + bleed,
+            maxWidth = constraints.maxWidth + bleed,
+          ),
+        )
+        layout(placeable.width, placeable.height) {
+          placeable.place(-(bleed / 2), 0)
+        }
+      }
       .testTag(TestTagExpandedTaskBody),
   ) {
     // Vertical left rail matches the Schedule rail style: rotated text
