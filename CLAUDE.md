@@ -116,11 +116,11 @@ Canonical loop:
 JAVA_HOME=/usr/lib/jvm/java-26-openjdk ANDROID_HOME=$HOME/Android/Sdk ./gradlew :app:assembleDebug
 ~/Android/Sdk/platform-tools/adb -s emulator-5554 install -r app/build/outputs/apk/debug/app-debug.apk
 ~/Android/Sdk/platform-tools/adb -s emulator-5554 shell am start -n com.eight87.strictlykeptboy/.MainActivity
-~/Android/Sdk/platform-tools/adb -s emulator-5554 exec-out screencap -p | magick - -resize 25% /tmp/skb.png
+~/Android/Sdk/platform-tools/adb -s emulator-5554 exec-out screencap -p | magick - -resize 50% /tmp/skb.png
 # then Read /tmp/skb.png via the Read tool
 ```
 
-The AVD is 1080×2400 native — too big to read comfortably. **Resize screenshots before reading — 25% (`magick - -resize 25%`) is the light default** (270×600, plenty to confirm layout, widget presence, overflow, position), and **50% is fine** when you want more detail (540×1200). Tap coords are always computed against the native 1080×2400, so **multiply by 4 for a 25% image, by 2 for a 50% image**.
+The AVD is 1080×2400 native — too big to read comfortably. **Resize screenshots before reading — 50% (`magick - -resize 50%`) is the default** (540×1200, matches the sibling apps); drop to **25%** (270×600) when you want lighter/faster captures and don't need fine detail. Tap coords are always computed against the native 1080×2400, so **multiply by 2 for a 50% image, by 4 for a 25% image**.
 
 Clean up `/tmp/*.png` periodically — they accumulate fast across sessions.
 
