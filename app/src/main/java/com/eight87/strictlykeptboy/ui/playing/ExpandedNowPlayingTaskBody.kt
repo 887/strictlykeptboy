@@ -89,20 +89,22 @@ fun LazyItemScope.ExpandedNowPlayingTaskBody(
       // height — the guess left a dead band at the bottom that the
       // quick-add FAB floated in, with empty space around it.
       .fillParentMaxHeight()
-      // Bleed past the host LazyColumn's 24.dp horizontal contentPadding so
-      // the task body (left rail + list) renders edge-to-edge like the
-      // Schedule, not boxed with dead left/right margins. Kept in sync with
+      // Bleed the RIGHT edge past the host LazyColumn's 24.dp horizontal
+      // contentPadding so the task list reaches the screen edge (fixes the
+      // dead right margin). The left edge stays at the content inset so the
+      // rail's rotated labels keep the small margin they need — bleeding the
+      // left clipped them ("Today" → "oday"). Kept in sync with
       // NowPlayingScreen's `contentPadding` horizontal value.
       .layout { measurable, constraints ->
-        val bleed = NowPlayingBodyHorizontalBleed.roundToPx() * 2
+        val extra = NowPlayingBodyHorizontalBleed.roundToPx()
         val placeable = measurable.measure(
           constraints.copy(
-            minWidth = constraints.maxWidth + bleed,
-            maxWidth = constraints.maxWidth + bleed,
+            minWidth = constraints.maxWidth + extra,
+            maxWidth = constraints.maxWidth + extra,
           ),
         )
         layout(placeable.width, placeable.height) {
-          placeable.place(-(bleed / 2), 0)
+          placeable.place(0, 0)
         }
       }
       .testTag(TestTagExpandedTaskBody),
