@@ -32,6 +32,31 @@ Running list of every control that failed the grind-walk. Format + lifecycle in
   height at low zoom — unreadable; fold into the same fix.
 - **Status:** open — fix agent dispatched (background, verifying on emulator-5556)
 
+### D-3 — Tasks (pulled-up sheet) → "Done" filter → completed tasks — major
+- **Expected:** the Done filter lists tasks the user has completed (history).
+- **Actual:** Done is ALWAYS empty. Marked the one-off "buy milk" (Groceries)
+  done via the "Mark done?" confirm dialog → it vanished from the active feed and
+  did NOT appear under Done. Root: `ExpandedNowPlayingTaskBody.kt`
+  `TasksFilter.Done -> TaskStandingView(tasks = visibleTasks.filter { it.done })`
+  — completed one-offs are not in `visibleTasks` (they're dropped from the active
+  feed), so `filter{it.done}` is always empty. The confirm dialog even promises
+  "un-finish it from history" but no history surface exists. Needs a real
+  completed-task source (query the repo / done-state store, not the live feed).
+- **Repro:** open Tasks sheet → check any one-off task → "Yes, mark done" →
+  tap "Done" rail tab → empty. • **Shot:** skb-c0-buymilk.png, skb-c0-done2.png
+- **Status:** open
+- **Note:** checkbox toggle itself WORKS (raises a confirm dialog). Inverted
+  Routines tasks (e.g. "replace water filter") use deviation semantics (D.54) —
+  checking them is NOT "done", which is correct, not a bug.
+
+### D-4 — Tasks → "Done" filter → empty-state copy — minor
+- **Expected:** empty Done reads like "nothing completed yet" (or similar).
+- **Actual:** reads "no standing tasks — good boy ;3" with the bat mascot — that's
+  the *Standing* view's empty-state, reused because Done routes through
+  `TaskStandingView`. Mislabeled. Fix alongside D-3.
+- **Repro:** Tasks sheet → Done tab (with no done tasks). • **Shot:** skb-c0-task-done.png
+- **Status:** open
+
 ### D-2 — Schedule → Week view → day columns — verify
 - **Expected:** Week view shows 7 day columns side-by-side.
 - **Actual:** appears to render a single full-width day column (needs
