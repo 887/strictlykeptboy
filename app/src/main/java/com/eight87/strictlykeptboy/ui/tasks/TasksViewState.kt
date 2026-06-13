@@ -7,6 +7,7 @@ import com.eight87.strictlykeptboy.resolver.TodolistRef
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.time.LocalDate
 import java.time.ZonedDateTime
 
 /**
@@ -71,14 +72,46 @@ class TasksViewState(initial: TasksUiState = TasksUiState()) {
     private val _state = MutableStateFlow(initial)
     val state: StateFlow<TasksUiState> = _state.asStateFlow()
 
+    /**
+     * D-5 fix — optional callback invoked after a task transitions to
+     * `done = true`. The composition root wires this to the file-write
+     * path (read entity from disk → stamp `done`+`doneAt` → write back
+     * via EntityWriter → incremental re-scan). Not called when
+     * un-marking (un-done clears the date and the file write is handled
+     * symmetrically via the same hook if non-null).
+     *
+     * Signature: `(updatedItem: TaskItem) -> Unit`. The callback receives
+     * the **already-updated** in-memory item so the writer doesn't have
+     * to re-derive the new state.
+     */
+    var onTaskMarkedDone: ((TaskItem) -> Unit)? = null
+
     fun set(state: TasksUiState) { _state.value = state }
 
-    fun toggleDone(taskId: String) {
+    /**
+     * D-5 fix — toggle `done` on [taskId], stamping [doneAt] to today
+     * when transitioning to done, and clearing it when un-marking.
+     * Invokes [onTaskMarkedDone] after the state update so the
+     * composition root can persist the change to the task file.
+     */
+    fun toggleDone(taskId: String, today: LocalDate = LocalDate.now()) {
+        var updated: TaskItem? = null
         _state.value = _state.value.copy(
-            tasks = _state.value.tasks.map {
-                if (it.id == taskId) it.copy(done = !it.done) else it
+            tasks = _state.value.tasks.map { task ->
+                if (task.id == taskId) {
+                    val nowDone = !task.done
+                    val item = task.copy(
+                        done = nowDone,
+                        doneAt = if (nowDone) today else null,
+                    )
+                    updated = item
+                    item
+                } else {
+                    task
+                }
             },
         )
+        updated?.let { onTaskMarkedDone?.invoke(it) }
     }
 
     fun pinStanding(taskId: String, pinned: Boolean) {

@@ -73,7 +73,20 @@ Running list of every control that failed the grind-walk. Format + lifecycle in
   interactively-completed tasks sort/display without a date prefix (only tasks
   whose `doneAt` came from the file reader show one). Pre-existing; surfaced by
   the D-3 fix. Low priority.
-- **Status:** open (follow-up)
+- **Status:** fixed-in main — `toggleDone` now stamps `doneAt = today` (clears on
+  un-mark) + an `onTaskMarkedDone` hook wired in MainActivity writes `done`/`doneAt`
+  to the task file and reindexes (mirrors D-8). 4 new tests. AVD-verified: an
+  interactively-completed task shows "done today" in the Done list. Caveats:
+  demo tasks are in-memory only (no disk write), and StandingTask has no `doneAt`
+  file field yet (in-memory date shows but doesn't survive reindex) — logged as
+  D-10 below. Cherry-picked from 49673da.
+
+### D-10 — StandingTask schema lacks a `doneAt` field — minor (follow-up)
+- Surfaced by the D-5 fix: standing (recurring) tasks don't persist a completion
+  date because `StandingTask` has no `doneAt` field; the Done list shows the
+  in-memory date but it doesn't survive a reindex. Add `doneAt` to the
+  `StandingTask` TOML schema + writer to make it durable.
+- **Status:** open (low priority)
 
 ### D-6 — Settings → Repositories → account row tap — major
 - **Expected:** "Tap an account to open its settings" (the screen's own

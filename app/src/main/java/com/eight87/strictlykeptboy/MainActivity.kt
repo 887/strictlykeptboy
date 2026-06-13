@@ -1024,6 +1024,84 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                     }
+                    // D-5 fix — wire onTaskMarkedDone so toggling a task
+                    // done in the UI also stamps done+doneAt in the task
+                    // file and triggers an incremental re-scan. Mirrors the
+                    // D-8 onEventWritten pattern. LaunchedEffect key = Unit
+                    // so the lambda is wired once at composition; it is safe
+                    // to replace on recomposition (same lambda identity).
+                    androidx.compose.runtime.LaunchedEffect(Unit) {
+                        tasksViewState.onTaskMarkedDone = { item ->
+                            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                runCatching {
+                                    val repoId = item.todolist.repoId
+                                    val cfg = graph.repoStore.list()
+                                        .firstOrNull { it.repoId == repoId }
+                                        ?: return@runCatching
+                                    val rootDir = java.io.File(cfg.rootDir)
+                                    // Try dated task first.
+                                    val taskRow = graph.cacheDatabase.tasks()
+                                        .listAll(repoId).firstOrNull { it.id == item.id }
+                                    if (taskRow != null) {
+                                        val absPath = rootDir.toPath().resolve(taskRow.sourcePath)
+                                        val doc = com.eight87.strictlykeptboy.store.FrontmatterReader
+                                            .parse(absPath.toFile().readText(Charsets.UTF_8))
+                                        val entity = com.eight87.strictlykeptboy.store.Task.fromDoc(doc)
+                                        val nowStr = java.time.OffsetDateTime.now().toString()
+                                        val stamped = entity.copy(
+                                            done = item.done,
+                                            doneAt = if (item.done) nowStr else null,
+                                        )
+                                        com.eight87.strictlykeptboy.store.EntityWriter.write(rootDir, stamped)
+                                        val gitRepo = GitRepoRegistry.get(repoId)
+                                            ?: GitRepo.open(
+                                                rootDir = rootDir,
+                                                repoId = repoId,
+                                                remotes = cfg.remotes,
+                                                primaryRemote = cfg.primaryRemote,
+                                                authorIdentity = cfg.authorIdentity,
+                                                defaultBranch = cfg.defaultBranch,
+                                            ).also(GitRepoRegistry::put)
+                                        com.eight87.strictlykeptboy.cache.Indexer(graph.cacheDatabase)
+                                            .incrementalScan(
+                                                repoId = repoId,
+                                                gitRepo = gitRepo,
+                                                adjustToLocalTimezone = cfg.adjustToLocalTimezone,
+                                            )
+                                        return@runCatching
+                                    }
+                                    // Not a dated task — try standing task
+                                    // (StandingTask has no doneAt field on
+                                    // disk; only done=true is written).
+                                    val standingRow = graph.cacheDatabase.standingTasks()
+                                        .listAll(repoId).firstOrNull { it.id == item.id }
+                                    if (standingRow != null) {
+                                        val absPath = rootDir.toPath().resolve(standingRow.sourcePath)
+                                        val doc = com.eight87.strictlykeptboy.store.FrontmatterReader
+                                            .parse(absPath.toFile().readText(Charsets.UTF_8))
+                                        val entity = com.eight87.strictlykeptboy.store.StandingTask.fromDoc(doc)
+                                        val stamped = entity.copy(done = item.done)
+                                        com.eight87.strictlykeptboy.store.EntityWriter.write(rootDir, stamped)
+                                        val gitRepo = GitRepoRegistry.get(repoId)
+                                            ?: GitRepo.open(
+                                                rootDir = rootDir,
+                                                repoId = repoId,
+                                                remotes = cfg.remotes,
+                                                primaryRemote = cfg.primaryRemote,
+                                                authorIdentity = cfg.authorIdentity,
+                                                defaultBranch = cfg.defaultBranch,
+                                            ).also(GitRepoRegistry::put)
+                                        com.eight87.strictlykeptboy.cache.Indexer(graph.cacheDatabase)
+                                            .incrementalScan(
+                                                repoId = repoId,
+                                                gitRepo = gitRepo,
+                                                adjustToLocalTimezone = cfg.adjustToLocalTimezone,
+                                            )
+                                    }
+                                }
+                            }
+                        }
+                    }
                     val togetherVm = remember(scope) {
                         TogetherViewModel(
                             scope = scope,

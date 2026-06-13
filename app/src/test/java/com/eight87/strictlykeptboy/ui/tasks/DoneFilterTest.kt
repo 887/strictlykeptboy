@@ -120,6 +120,62 @@ class DoneFilterTest {
         assertEquals(listOf("t1"), done.map { it.id })
     }
 
+    // D-5 regression guard — toggleDone must stamp doneAt so the Done
+    // view's "done <date>" prefix renders for interactively-completed tasks.
+    @Test fun `toggleDone sets doneAt to today when marking done`() {
+        val fixedToday = today
+        val state = TasksViewState(
+            TasksUiState(
+                tasks = listOf(
+                    TaskItem(id = "t-undone", title = "Undone task", todolist = list, done = false),
+                ),
+            ),
+        )
+        state.toggleDone("t-undone", today = fixedToday)
+        val task = state.state.value.tasks.first { it.id == "t-undone" }
+        assertTrue("done must be true after toggleDone", task.done)
+        assertEquals("doneAt must equal today after marking done", fixedToday, task.doneAt)
+    }
+
+    @Test fun `toggleDone clears doneAt when un-marking done`() {
+        val fixedToday = today
+        val state = TasksViewState(
+            TasksUiState(
+                tasks = listOf(
+                    TaskItem(
+                        id = "t-done",
+                        title = "Already done",
+                        todolist = list,
+                        done = true,
+                        doneAt = fixedToday,
+                    ),
+                ),
+            ),
+        )
+        state.toggleDone("t-done", today = fixedToday)
+        val task = state.state.value.tasks.first { it.id == "t-done" }
+        assertFalse("done must be false after un-marking", task.done)
+        assertEquals("doneAt must be null after un-marking", null, task.doneAt)
+    }
+
+    @Test fun `onTaskMarkedDone callback invoked with updated item`() {
+        val fixedToday = today
+        val state = TasksViewState(
+            TasksUiState(
+                tasks = listOf(
+                    TaskItem(id = "cb-task", title = "Callback task", todolist = list, done = false),
+                ),
+            ),
+        )
+        var callbackItem: TaskItem? = null
+        state.onTaskMarkedDone = { callbackItem = it }
+        state.toggleDone("cb-task", today = fixedToday)
+        val cb = callbackItem
+        assertTrue("callback must be invoked", cb != null)
+        assertTrue("callback item must be done", cb!!.done)
+        assertEquals("callback item doneAt must equal today", fixedToday, cb.doneAt)
+    }
+
     @Test fun `standing false tasks are not excluded by sortedForStanding`() {
         // Guard against regressions where Done routing went through
         // sortedForStanding() and silently dropped all non-standing tasks.
