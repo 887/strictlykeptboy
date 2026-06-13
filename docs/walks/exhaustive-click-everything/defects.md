@@ -98,6 +98,23 @@ Running list of every control that failed the grind-walk. Format + lifecycle in
   (active-only by design?) vs gap. • **Shot:** skb-c0-repos.png
 - **Status:** open (verify)
 
+### D-8 — Event create → created event not visible on schedule — major (investigate)
+- **Expected:** creating an event via "+ New" → fill Title → "Add event" makes it
+  appear on the schedule at its time.
+- **Actual:** created "QA smoke event" (12:00–12:05, calendar = "my calendar",
+  the picker's default/active repo). Sheet dismissed cleanly (no error), but the
+  event does NOT appear on SAT 13 Day view at noon (verified at Detail zoom — only
+  demo events Hydration check / Sunlight / Saturday cardio are there). Create FORM
+  is excellent (Free-form/template tabs, inline title validation, date/time,
+  Repeat chips, calendar picker showing both repos, Notes, Private toggle, Add
+  event). Root cause unknown — either (a) the write didn't persist, or (b) "my
+  calendar" repo's calendar isn't in the schedule's visible/enabled overlay set so
+  its events never render. Needs tracing the create→persist→snapshot→render path
+  + calendar-visibility defaults for a freshly-written event.
+- **Repro:** "+ New" → type title → Add event → check the day at the chosen time.
+  • **Shot:** skb-c0-create.png, skb-c0-created.png, skb-c0-detail-noon.png
+- **Status:** open (investigate + fix)
+
 ### D-2 — Schedule → Week view → day columns — NOT A BUG (resolved)
 - **Resolution:** intended behaviour. `SchedulePane.kt:452-466` — when
   `layoutMode == Stacked`, Week renders the 7 days stacked VERTICALLY (each a
