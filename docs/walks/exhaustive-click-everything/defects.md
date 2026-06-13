@@ -142,3 +142,9 @@ Running list of every control that failed the grind-walk. Format + lifecycle in
   seeded completed tasks. Shot: skb-c0-rewalk-done.png.
 - **D-4** — Done empty-state copy ("no standing tasks"). Fixed on main
   (`c0f9867`): dedicated `tasks_empty_done_*` strings. Closed with D-3.
+- **D-6** — Settings → Repositories account row was a no-op. Fixed on main:
+  wired `SettingsAccess.onOpenRepo` to open the repos overlay pre-selected on the
+  tapped repo. **Re-walk verified** 2026-06-14 — tapping "my calendar" opens its
+  repo settings (Calendars list + Display + Icon). Shot: skb-c0-d6verify.png.
+- **D-7** — Import/export listed only the active repo. **Not a bug** — demo repos
+  (`isDemo = true`) are intentionally excluded from import/export.
