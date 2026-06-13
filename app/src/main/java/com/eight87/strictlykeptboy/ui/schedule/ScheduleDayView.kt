@@ -666,12 +666,30 @@ private fun BandsLayer(
                 isForeignBand(band.instance.repo.id, defaultWriteRepoId)
 
             val isSelected = band.instance.instanceId == selectedBandId
+            // D-1 fix (2026-06-13): non-base bands (lane > 0) need a fully
+            // opaque backing rectangle so the lower-lane band's text cannot
+            // bleed through. We apply a solid surface-color background to the
+            // outer Box; the coloured Surface with its visual alpha sits on
+            // top of that backing. Superseded bands (bandAlpha 0.35f) also
+            // get the opaque backing — their 35% alpha is for their own
+            // visual treatment, not a portal showing lower-lane content.
+            // Base bands (lane 0, the full-width scaffold) stay fully
+            // transparent so the hour grid behind them is visible.
+            val needsOpaqueBacking = !isBase
             Box(
                 modifier = Modifier
                     .offset(x = cascadeX, y = topDp)
                     .width(bandWidth)
                     .height(heightDp)
-                    .padding(2.dp),
+                    .padding(2.dp)
+                    .then(
+                        if (needsOpaqueBacking)
+                            Modifier.background(
+                                color = MaterialTheme.colorScheme.surface,
+                                shape = RoundedCornerShape(12.dp),
+                            )
+                        else Modifier
+                    ),
             ) {
                 // Round 2.23 Phase A — per-calendar colorSeed wins on the
                 // band background (D-2.23.b). Base-layer calendars paint as

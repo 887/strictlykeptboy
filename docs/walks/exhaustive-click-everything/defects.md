@@ -30,7 +30,10 @@ Running list of every control that failed the grind-walk. Format + lifecycle in
   alarm" (w539), "Cage on" — stacked on the same pixel row. Sub-note: 5-minute
   events (e.g. "Morning alarm" 06:30–06:35) get their time text clipped to ~6px
   height at low zoom — unreadable; fold into the same fix.
-- **Status:** open — fix agent dispatched (background, verifying on emulator-5556)
+- **Status:** fixed-in main (ScheduleDayView.kt — opaque surface-color backing
+  on non-base bands so lower-lane glyphs can't bleed through the alpha fill;
+  1017 tests green; AVD-verified clean across Day/3-day/Week at all zooms).
+  Pending final clean re-walk on 5554 to confirm no regression + close.
 
 ### D-3 — Tasks (pulled-up sheet) → "Done" filter → completed tasks — major
 - **Expected:** the Done filter lists tasks the user has completed (history).
