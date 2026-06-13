@@ -75,12 +75,14 @@ Running list of every control that failed the grind-walk. Format + lifecycle in
   the D-3 fix. Low priority.
 - **Status:** open (follow-up)
 
-### D-2 — Schedule → Week view → day columns — verify
-- **Expected:** Week view shows 7 day columns side-by-side.
-- **Actual:** appears to render a single full-width day column (needs
-  confirmation — header was scrolled off). Possibly correct (sliding window) or a
-  layout regression. • **Shot:** skb-c0-week.png
-- **Status:** open (verify in re-walk)
+### D-2 — Schedule → Week view → day columns — NOT A BUG (resolved)
+- **Resolution:** intended behaviour. `SchedulePane.kt:452-466` — when
+  `layoutMode == Stacked`, Week renders the 7 days stacked VERTICALLY (each a
+  full-width day grid). The 7-COLUMN `ScheduleWeekView` (Grid layout) is reached
+  via the "Switch to grid layout" toggle. Verified on-device: toggling grid →
+  proper 7-col MON→SUN week (weekday emoji headers, today highlighted, now-line).
+  • **Shot:** skb-c0-weekgrid.png
+- **Status:** closed (not a defect)
 
 ## Closed
 
