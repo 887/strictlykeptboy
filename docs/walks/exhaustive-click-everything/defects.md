@@ -47,7 +47,11 @@ Running list of every control that failed the grind-walk. Format + lifecycle in
   completed-task source (query the repo / done-state store, not the live feed).
 - **Repro:** open Tasks sheet → check any one-off task → "Yes, mark done" →
   tap "Done" rail tab → empty. • **Shot:** skb-c0-buymilk.png, skb-c0-done2.png
-- **Status:** open
+- **Status:** fixed-in main — new `TaskDoneView` reads `uiState.tasks` (full
+  list, not the active feed) + filters `it.done` directly, bypassing
+  `sortedForStanding()` (which had silently dropped all one-offs). Most-recently-
+  done first; inverted Routines stay out. 7 new `DoneFilterTest` cases green;
+  AVD-verified the marked task lands in Done. Pending final clean re-walk to close.
 - **Note:** checkbox toggle itself WORKS (raises a confirm dialog). Inverted
   Routines tasks (e.g. "replace water filter") use deviation semantics (D.54) —
   checking them is NOT "done", which is correct, not a bug.
@@ -58,7 +62,18 @@ Running list of every control that failed the grind-walk. Format + lifecycle in
   the *Standing* view's empty-state, reused because Done routes through
   `TaskStandingView`. Mislabeled. Fix alongside D-3.
 - **Repro:** Tasks sheet → Done tab (with no done tasks). • **Shot:** skb-c0-task-done.png
-- **Status:** open
+- **Status:** fixed-in main — `TaskDoneView` uses new strings
+  `tasks_empty_done_primary` ("nothing finished yet — keep going ;3") +
+  `tasks_empty_done_neutral`; Standing view keeps its own copy. Pending re-walk.
+
+### D-5 — Tasks → mark-done → no done-date on interactively-completed tasks — minor
+- **Expected:** a task marked done in-app shows a "done" date in the Done list,
+  like file-read done tasks do.
+- **Actual:** `TasksViewState.toggleDone` flips `done` but never sets `doneAt`, so
+  interactively-completed tasks sort/display without a date prefix (only tasks
+  whose `doneAt` came from the file reader show one). Pre-existing; surfaced by
+  the D-3 fix. Low priority.
+- **Status:** open (follow-up)
 
 ### D-2 — Schedule → Week view → day columns — verify
 - **Expected:** Week view shows 7 day columns side-by-side.

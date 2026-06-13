@@ -64,6 +64,8 @@
     <string name="tasks_empty_shopping_neutral">Shopping list empty.</string>
     <string name="tasks_empty_standing_primary">no standing tasks — good boy ;3</string>
     <string name="tasks_empty_standing_neutral">No standing tasks.</string>
+    <string name="tasks_empty_done_primary">nothing finished yet — keep going ;3</string>
+    <string name="tasks_empty_done_neutral">Nothing done yet.</string>
     <string name="tasks_combined_completed_section">Completed</string>
     <string name="tasks_today_section_today">Today</string>
     <string name="tasks_today_section_from_events">From today\'s events</string>

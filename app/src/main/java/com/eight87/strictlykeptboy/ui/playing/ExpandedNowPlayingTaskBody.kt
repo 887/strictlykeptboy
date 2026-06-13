@@ -34,6 +34,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.ui.tasks.TaskCombinedView
+import com.eight87.strictlykeptboy.ui.tasks.TaskDoneView
 import com.eight87.strictlykeptboy.ui.tasks.TaskItem
 import com.eight87.strictlykeptboy.ui.tasks.TaskPerListView
 import com.eight87.strictlykeptboy.ui.tasks.TaskShoppingView
@@ -248,14 +249,15 @@ fun LazyItemScope.ExpandedNowPlayingTaskBody(
             }
           }
         }
-        TasksFilter.Done -> TaskStandingView(
-          // Stub: Subagent 2 / Phase B routes Done through a dedicated
-          // done-only filter. For now reuse Standing-style row layout
-          // over the done subset.
-          tasks = visibleTasks.filter { it.done },
+        TasksFilter.Done -> TaskDoneView(
+          // D-3 fix: use the dedicated done view which shows ALL tasks
+          // with done == true (not filtered by standing == true like
+          // TaskStandingView did). Sources the full state.tasks list so
+          // that tasks toggled done are visible here even if they
+          // dropped off the active feed in other filters.
+          tasks = uiState.tasks,
           onToggleDone = { tasksState.toggleDone(it.id) },
           onOpen = onOpenTask,
-          onPinToday = { task, pin -> tasksState.pinStanding(task.id, pin) },
           onStartTask = onStartTask,
         )
       }
