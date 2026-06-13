@@ -9,6 +9,32 @@ One line per grind-walk pass. Clean round = 0 new defects over the FULL list.
 | 2 | 2026-06-13 | Schedule sweep (Now/Day/3-day/Week/Month/Year + event-detail + Settings top) via mobile-MCP | ~18 | 1 new (D-1) | — | NOT clean — D-1 systemic band overlap |
 | 3 | 2026-06-13 | Tasks sheet grind (filters, checkbox, confirm, Done) | — | 3 new (D-3/D-4/D-5) + 1 verify (D-2) | — | NOT clean |
 | 4 | 2026-06-13 | Re-walk after fix wave 1 (D-1 + D-3/D-4 merged) on read-only 5554 | — | 0 new | 3 (D-1, D-3, D-4) | partial-clean (verified batch 1) |
+| 5 | 2026-06-14 | Grind Reviews / Repos / Event-create / Look&Feel / repo-settings / repos-overlay | ~30 | 3 (D-6/D-7/D-8) | 1 (D-6) | NOT clean — D-8 open |
+
+### Iter-5 notes (cycle 0 — breadth grind + fix wave 2)
+- **Reviews:** clean — feedback cards, rail (All/Unread/Reactions/Threaded),
+  "Mark all read" works (badges clear, list reflows).
+- **Repos pane:** D-6 (account row no-op) → FIXED + merged + re-walked clean
+  (taps now open repo settings pre-selected). D-7 (import/export active-only) →
+  not-a-bug (demo repos excluded by design).
+- **Event-create:** form is excellent (Free-form/template, inline title
+  validation, date/time, Repeat chips, calendar picker, Private toggle, Notes,
+  Add event) BUT D-8: the created event doesn't render on the schedule. Fix agent
+  investigating; strong clue relayed — **Demo mode is ON (read-only demo data)**,
+  likely makes writes non-persistent.
+- **Look & Feel:** clean — Theme picker (Auto/Light/Dark) switches the whole app
+  live (verified Light); Density + Font-scale + tint-by-avatar all present.
+- **Repo settings (per-repo):** rich + clean — Calendars list w/ priority toggles,
+  + Add calendar, Display name, Icon (Auto-initials/Emoji/Photo + mascot + custom),
+  Color seed swatches + HEX, Sync interval chips, Identity (Author name)… write-back
+  persistence is a deeper test (defer to targeted check).
+- **Repos overlay:** clean — Demo-mode banner + toggle, per-repo toggles (Show on
+  schedule/tasks, Auto-sync, Wi-Fi only, Import stickers, Adjust to local tz),
+  add-repo "+" and share/Together icon.
+- **Open:** D-5 (minor doneAt), D-8 (created event invisible — agent on it).
+- **Next:** process D-8 → merge+verify; then Wizard/add-repo, Todolists/Templates/
+  External-calendars settings, overlay/filter pickers, drag-reschedule, Edit-
+  schedule; then the 5 furry claude -p walks.
 
 ### Iter-3/4 notes (cycle 0 — fix wave 1 landed + verified)
 - **Two fix agents** ran in parallel worktrees (skb-d1, skb-d3); both merged to main
