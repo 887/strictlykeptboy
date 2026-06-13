@@ -10,6 +10,35 @@ One line per grind-walk pass. Clean round = 0 new defects over the FULL list.
 | 3 | 2026-06-13 | Tasks sheet grind (filters, checkbox, confirm, Done) | — | 3 new (D-3/D-4/D-5) + 1 verify (D-2) | — | NOT clean |
 | 4 | 2026-06-13 | Re-walk after fix wave 1 (D-1 + D-3/D-4 merged) on read-only 5554 | — | 0 new | 3 (D-1, D-3, D-4) | partial-clean (verified batch 1) |
 | 5 | 2026-06-14 | Grind Reviews / Repos / Event-create / Look&Feel / repo-settings / repos-overlay | ~30 | 3 (D-6/D-7/D-8) | 1 (D-6) | NOT clean — D-8 open |
+| 6 | 2026-06-14 | Wizard + Templates grind; fix wave 2 (D-6/D-8/D-9) | ~10 | 1 (D-9) | — | building combined APK for re-walk |
+| 7 | 2026-06-14 | Combined re-walk of fix wave 2 on merged build (5554) | — | 0 new | 3 (D-6/D-8/D-9) | clean (wave-2 batch verified) |
+
+### Iter-7 notes — fix wave 2 verified on merged build
+- D-8 create→render: created "D8 rewalk event"; bottom bar shows "Next: D8 rewalk
+  event in 10h 22m" → persisted + rendered same session. D-9 wizard mascot renders
+  full-color. D-6 account-row opens repo settings (iter-5 verify).
+- **All majors found so far are fixed + verified.** Only OPEN defect: D-5 (minor —
+  interactive mark-done doesn't set `doneAt`).
+- **Next:** grind remaining surfaces (Todolists/External-cal/Sync settings,
+  overlay/filter pickers, drag-reschedule, Edit-schedule, Together/sharing,
+  Android Auto, tablet), fix D-5; then the 5 furry `claude -p` walks; then the
+  formal 3 clean full-app cycles.
+
+### Iter-6 notes (cycle 0 — fix wave 2: 3 agents in parallel)
+- **3 fix agents ran concurrently** (D-6 repos-row, D-8 created-event, D-9 wizard
+  illustration), each on its OWN read-only emulator (5556/5562/5566) — the
+  all-readonly policy made true parallel AVD verification work. All merged to main.
+- **D-8 root cause** (good catch): create path wrote+committed to git but never
+  ran `Indexer.incrementalScan`, so Room's read-cache never saw the event →
+  schedule never rendered it. Fixed with an `onEventWritten`→reindex hook + test.
+  (My demo-mode hypothesis was wrong; agent verified visibility defaults to on.)
+- **D-9:** wizard welcome used `Icon` (force-tints black) for a raster WebP → black
+  box; switched to `Image`. Verified both themes.
+- **Walked clean:** Wizard flow (10 steps, sticker-pack select), Templates
+  (atomic registry medical/flight/household/leisure + Apply-to-calendar + custom
+  repo URL).
+- **Open:** D-5 (minor doneAt). Combined re-walk pending (verify D-8 create→renders
+  + D-9 wizard on the merged build), then close both.
 
 ### Iter-5 notes (cycle 0 — breadth grind + fix wave 2)
 - **Reviews:** clean — feedback cards, rail (All/Unread/Reactions/Threaded),

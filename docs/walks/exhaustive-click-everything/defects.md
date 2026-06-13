@@ -175,3 +175,11 @@ Running list of every control that failed the grind-walk. Format + lifecycle in
   repo settings (Calendars list + Display + Icon). Shot: skb-c0-d6verify.png.
 - **D-7** — Import/export listed only the active repo. **Not a bug** — demo repos
   (`isDemo = true`) are intentionally excluded from import/export.
+- **D-8** — Created event didn't render on the schedule. Fixed on main: create
+  path now triggers `Indexer.incrementalScan` after write+commit (onEventWritten
+  hook) so Room's cache + schedule update immediately. **Re-walk verified**
+  2026-06-14 — created "D8 rewalk event" → bottom bar shows "Next: D8 rewalk
+  event in 10h 22m". Shot: skb-c0-d8verify.png. +1 regression test.
+- **D-9** — Wizard welcome illustration rendered as a black box. Fixed on main:
+  `Icon`→`Image` (no force-tint) for the raster mascot. Verified full-color both
+  themes (agent shot fix-d9-wizard-light.png + merge confirm). Closed.
