@@ -75,6 +75,29 @@ Running list of every control that failed the grind-walk. Format + lifecycle in
   the D-3 fix. Low priority.
 - **Status:** open (follow-up)
 
+### D-6 — Settings → Repositories → account row tap — major
+- **Expected:** "Tap an account to open its settings" (the screen's own
+  instruction) opens that repo's settings (RepoSettingsScreen exists).
+- **Actual:** tapping the account row OR its chevron ("Open account settings") is
+  a NO-OP — nothing navigates. Root: `ReposCategory.kt:78` calls `onOpenRepo(cfg)`,
+  but `SettingsPane.kt:212` defaults `onOpenRepo = {}` and `ShellContext.kt:35`
+  constructs `SettingsAccess()` with the default — the lambda was never wired to
+  the existing repos overlay / `RepoSettingsScreen`. So per-account settings
+  (identity, remotes, mode) are unreachable from Settings → Repositories.
+- **Fix:** wire `SettingsAccess.onOpenRepo` at the composition root (SkbAppShell)
+  to open the repos overlay (`reposOpen = true`), ideally pre-selecting `cfg` —
+  mirror the existing `onAccountTap = { reposOpen = true }`.
+- **Repro:** Settings → Repositories → tap "my calendar" (row or chevron) →
+  nothing. • **Shot:** skb-c0-account.png, skb-c0-account2.png
+- **Status:** open
+
+### D-7 — Settings → Repositories → Import/export lists only active repo — minor
+- **Expected:** "Pick a repo to import into, or export its calendars" with 2
+  repos should let you pick either. **Actual:** only "my calendar" (active repo)
+  is shown; "demo · kept-life" has no import/export affordance. Verify intent
+  (active-only by design?) vs gap. • **Shot:** skb-c0-repos.png
+- **Status:** open (verify)
+
 ### D-2 — Schedule → Week view → day columns — NOT A BUG (resolved)
 - **Resolution:** intended behaviour. `SchedulePane.kt:452-466` — when
   `layoutMode == Stacked`, Week renders the 7 days stacked VERTICALLY (each a
