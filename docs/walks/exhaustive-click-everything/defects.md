@@ -84,4 +84,13 @@ Running list of every control that failed the grind-walk. Format + lifecycle in
 
 ## Closed
 
-_(none yet)_
+- **D-1** — Schedule band title bleed/collision (Day/3-day/Week). Fixed on main
+  (`cd90f97`): opaque surface backing on non-base bands. **Re-walk verified clean**
+  2026-06-13 on the merged build — Work-day + morning-stack render opaque, no
+  bleed. Shots: skb-c0-rewalk-week.png + fix-d1-week3-small.png.
+- **D-3** — Tasks "Done" filter never listed completed tasks. Fixed on main
+  (`c0f9867`): new `TaskDoneView` over the full task list. **Re-walk verified**
+  2026-06-13 — marked "buy milk" done → it now appears in Done alongside the
+  seeded completed tasks. Shot: skb-c0-rewalk-done.png.
+- **D-4** — Done empty-state copy ("no standing tasks"). Fixed on main
+  (`c0f9867`): dedicated `tasks_empty_done_*` strings. Closed with D-3.
