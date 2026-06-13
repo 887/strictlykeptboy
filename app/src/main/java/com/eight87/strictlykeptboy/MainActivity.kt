@@ -1061,7 +1061,22 @@ class MainActivity : ComponentActivity() {
                                 }
                             },
                             neutralModeProvider = { graph.neutralModePrefs.isEnabled() },
-                        )
+                        ).also { controller ->
+                            // D-8 fix — after each write+commit, run an
+                            // incremental re-scan so the new event row
+                            // lands in Room and propagates through
+                            // SourcesPublisher → the schedule renderer.
+                            controller.onEventWritten = { cfg, repo ->
+                                runCatching {
+                                    com.eight87.strictlykeptboy.cache.Indexer(graph.cacheDatabase)
+                                        .incrementalScan(
+                                            repoId = cfg.repoId,
+                                            gitRepo = repo,
+                                            adjustToLocalTimezone = cfg.adjustToLocalTimezone,
+                                        )
+                                }
+                            }
+                        }
                     }
                     // Phase 2.1.I.4 — share-with-dom CTA needs the active
                     // repo. We resolve at click-time so the latest scaffold

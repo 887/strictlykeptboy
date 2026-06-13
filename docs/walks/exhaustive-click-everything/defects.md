@@ -119,7 +119,15 @@ Running list of every control that failed the grind-walk. Format + lifecycle in
   + calendar-visibility defaults for a freshly-written event.
 - **Repro:** "+ New" → type title → Add event → check the day at the chosen time.
   • **Shot:** skb-c0-create.png, skb-c0-created.png, skb-c0-detail-noon.png
-- **Status:** open (investigate + fix)
+- **Status:** fixed-in main — ROOT CAUSE: `EventCreateController.writeEvent()`
+  wrote+committed to git but never ran `Indexer.incrementalScan`, so Room's
+  cache (which `SourcesPublisher` reads) never saw the new event → schedule never
+  re-rendered it. (Demo-mode hypothesis eliminated; visibility defaults to
+  visible.) Fix: added an `onEventWritten` hook on the controller, wired in
+  `MainActivity` to call `Indexer.incrementalScan` after write+commit → renders
+  immediately, no restart. +1 Robolectric regression test. AVD-verified the
+  created event appears same-session. Cherry-picked from afb3b94. Pending
+  orchestrator re-walk on 5554.
 
 ### D-9 — Wizard → step 1 welcome illustration renders as a black box — minor/major
 - **Expected:** the wizard intro ("let's set up your repo") shows its

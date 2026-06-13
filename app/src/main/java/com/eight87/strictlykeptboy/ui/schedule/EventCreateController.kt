@@ -77,6 +77,20 @@ class EventCreateController(
         { _, _, _ -> }
 
     /**
+     * D-8 fix — called after each successful event write + commit so
+     * the Room cache can be updated. The caller (MainActivity) wires
+     * this to an `Indexer.incrementalScan` call so the new event row
+     * lands in the DB and propagates through SourcesPublisher → the
+     * schedule render pipeline.
+     *
+     * Runs on [Dispatchers.IO] inside the same launch that called
+     * [writeEvent]. No-op by default so tests and previews need no
+     * wiring.
+     */
+    var onEventWritten: suspend (cfg: RepoConfig, repo: GitRepo) -> Unit =
+        { _, _ -> }
+
+    /**
      * Phase 2.1.D.7 — opens the create sheet pre-populated with a
      * task's title + a `relatedTaskId` field. On confirm,
      * [onTaskLinked] fires so callers can mutate the originating
@@ -271,6 +285,10 @@ class EventCreateController(
             runCatching { EntityWriter.delete(rootDir, payload.event) }
             val repo = openRepo(cfg)
             runCatching { repo?.commitAll("undo: remove event '${payload.event.title}'") }
+            // D-8 fix — re-index so the deleted row is removed from Room.
+            if (repo != null) {
+                runCatching { onEventWritten(cfg, repo) }
+            }
         }
         return true
     }
@@ -329,6 +347,11 @@ class EventCreateController(
                 // repo so the next openSheet() preselects it.
                 if (event.calendarId.isNotBlank()) {
                     prefs.setLastUsedCalendar(cfg.repoId, event.calendarId)
+                }
+                // D-8 fix — update the Room cache so the new event row
+                // propagates through SourcesPublisher into the schedule.
+                if (repo != null) {
+                    runCatching { onEventWritten(cfg, repo) }
                 }
             }
         }
