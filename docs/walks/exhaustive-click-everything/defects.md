@@ -161,6 +161,40 @@ Running list of every control that failed the grind-walk. Format + lifecycle in
   in BOTH themes (fix-d9-wizard-light.png). 1017 tests green. Cherry-picked from
   e05a181.
 
+### D-11 — Todolist → Upcoming filter is a stub — major (UX)
+- **Expected:** "Upcoming" lists FUTURE-dated tasks (what's coming, not today).
+- **Actual:** `ExpandedNowPlayingTaskBody.kt` routes Upcoming through
+  `TaskCombinedView` filtered to `done == false` — it shows ALL non-done tasks
+  (today-dated + no-due included), so Upcoming ≈ All. The most conceptually broken
+  filter (code comment even names the missing follow-up). Surfaced by the
+  snow-leopard/cheetah todolist walks.
+- **Status:** open
+
+### D-12 — Todolist → By Repo headers show raw repoId — major (UX)
+- **Expected:** group headers show a friendly repo display name ("marc-kept").
+- **Actual:** `ExpandedNowPlayingTaskBody.kt` ~line 228 renders `Text(text =
+  repoId)` — the raw git slug/path (e.g. "github.com/887/marc-kept"). Use the
+  repo's display name (same source the repo settings + switcher use).
+- **Status:** open
+
+### D-13 — Todolist → Done view omits author chip + repo dot — major (UX)
+- **Expected:** Done rows show "this was Sir's task" (author chip) + repo dot —
+  exactly where a kept user wants to see who assigned the completed item.
+- **Actual:** `TaskDoneView.kt` calls `TaskRow` WITHOUT `multiRepo` /
+  `activeRepoOwner`, so author chips + repo dots are absent in Done (present in
+  Today/All). Thread those params through.
+- **Status:** open
+
+### D-14 — Todolist → Quick Add velocity: no auto-focus + IME Done not wired — major (UX)
+- **Expected:** tapping Quick Add focuses the field + raises the keyboard; the
+  keyboard "Done" key submits. Target: 3 interactions to add.
+- **Actual:** the Quick Add `OutlinedTextField` has no `focusRequester` (keyboard
+  doesn't auto-appear → +1 tap) and `singleLine` IME Done isn't wired to
+  `onSubmit` (Done key is a no-op) → 4–5 interactions. Hurts the cheetah
+  "fast" path most. Add focusRequester + KeyboardActions(onDone=onSubmit) +
+  ImeAction.Done.
+- **Status:** open
+
 ### D-2 — Schedule → Week view → day columns — NOT A BUG (resolved)
 - **Resolution:** intended behaviour. `SchedulePane.kt:452-466` — when
   `layoutMode == Stacked`, Week renders the 7 days stacked VERTICALLY (each a
