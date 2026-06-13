@@ -89,14 +89,20 @@ Running list of every control that failed the grind-walk. Format + lifecycle in
   mirror the existing `onAccountTap = { reposOpen = true }`.
 - **Repro:** Settings → Repositories → tap "my calendar" (row or chevron) →
   nothing. • **Shot:** skb-c0-account.png, skb-c0-account2.png
-- **Status:** open
+- **Status:** fixed-in main — wired `SettingsAccess.onOpenRepo` at the
+  composition root (`SkbAppShell.kt`): tapping an account closes Settings, sets
+  `pendingOpenRepoId = cfg.repoId`, opens the repos overlay PRE-SELECTED on that
+  repo's settings (`ReposOverlayScreen`/`ReposPane` gained `initialRepoId`). 1017
+  tests green; agent AVD-verified. Pending orchestrator re-walk on 5554.
 
 ### D-7 — Settings → Repositories → Import/export lists only active repo — minor
 - **Expected:** "Pick a repo to import into, or export its calendars" with 2
   repos should let you pick either. **Actual:** only "my calendar" (active repo)
   is shown; "demo · kept-life" has no import/export affordance. Verify intent
   (active-only by design?) vs gap. • **Shot:** skb-c0-repos.png
-- **Status:** open (verify)
+- **Status:** NOT A BUG (resolved) — `ImportExportScreen` iterates all repos and
+  filters out `isDemo = true` entries; "demo · kept-life" is an app-internal
+  seeded demo (not a user repo on disk), intentionally excluded from import/export.
 
 ### D-8 — Event create → created event not visible on schedule — major (investigate)
 - **Expected:** creating an event via "+ New" → fill Title → "Add event" makes it

@@ -44,6 +44,12 @@ fun ReposPane(
     state: ReposViewState,
     secretsStore: SecretsStore? = null,
     modifier: Modifier = Modifier,
+    /**
+     * D-6 fix — when set, the pane opens directly to the settings screen
+     * for the given repo ID (pre-selection from Settings → Repositories →
+     * account row tap). Null means start at Mode.List as usual.
+     */
+    initialRepoId: String? = null,
     onOpenTogether: () -> Unit = {},
     onOpenWizard: () -> Unit = {},
     /**
@@ -86,7 +92,11 @@ fun ReposPane(
      */
     safPermissionRevoked: Boolean = false,
 ) {
-    var mode by remember { mutableStateOf<Mode>(Mode.List) }
+    var mode by remember {
+        mutableStateOf<Mode>(
+            if (initialRepoId != null) Mode.Settings(initialRepoId) else Mode.List,
+        )
+    }
     val repos by state.repos.collectAsState()
     val activeRepoId by state.activeRepoId.collectAsState()
     var showShareSheetForRepo by remember { mutableStateOf<String?>(null) }

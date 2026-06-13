@@ -47,6 +47,12 @@ fun ReposOverlayScreen(
     onOpenAppSettings: () -> Unit,
     onPickInternalStorage: () -> Unit,
     settingsAccess: SettingsAccess,
+    /**
+     * D-6 fix — when set, the overlay opens directly to the settings
+     * screen for this repo ID (pre-selection from Settings → Repositories
+     * → account row tap).
+     */
+    initialRepoId: String? = null,
     modifier: Modifier = Modifier,
 ) {
     val safRevoked = settingsAccess.safPermissionRevokedFlow
@@ -74,6 +80,7 @@ fun ReposOverlayScreen(
             ReposPane(
                 state = state,
                 secretsStore = secretsStore,
+                initialRepoId = initialRepoId,
                 onOpenTogether = onOpenTogether,
                 onOpenWizard = onOpenWizard,
                 onOpenAppSettings = onOpenAppSettings,

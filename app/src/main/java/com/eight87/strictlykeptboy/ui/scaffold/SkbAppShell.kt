@@ -221,6 +221,9 @@ private fun SkbAppShellContent(
     // exhaustive `when` arms but is no longer reachable via UI taps;
     // the bat-avatar + top-bar repo-switcher chip both flip this flag.
     var reposOpen by rememberSaveable { mutableStateOf(false) }
+    // D-6 fix — repo ID pre-selected when opening repos overlay from
+    // Settings → Repositories → account row tap. Null = open at list.
+    var pendingOpenRepoId by remember { mutableStateOf<String?>(null) }
 
     // Big top-left title = destination name ("Schedule" / "Tasks" / etc.).
     // The rail already shows the current view-mode (rotated "Day" / "Week"
@@ -480,7 +483,10 @@ private fun SkbAppShellContent(
         // its own Surface fully covers the chrome. Back navigates to
         // the underlying pane without changing `selected`.
         if (reposOpen && context.reposState != null) {
-            BackHandler { reposOpen = false }
+            BackHandler {
+                reposOpen = false
+                pendingOpenRepoId = null
+            }
             Surface(
                 color = MaterialTheme.colorScheme.background,
                 modifier = Modifier.fillMaxSize(),
@@ -488,21 +494,28 @@ private fun SkbAppShellContent(
                 com.eight87.strictlykeptboy.ui.repos.ReposOverlayScreen(
                     state = context.reposState,
                     secretsStore = context.secretsStore,
-                    onBack = { reposOpen = false },
+                    onBack = {
+                        reposOpen = false
+                        pendingOpenRepoId = null
+                    },
                     onOpenTogether = {
                         reposOpen = false
+                        pendingOpenRepoId = null
                         selected = TopDestination.Together
                     },
                     onOpenWizard = {
                         reposOpen = false
+                        pendingOpenRepoId = null
                         selected = TopDestination.Wizard
                     },
                     onOpenAppSettings = {
                         reposOpen = false
+                        pendingOpenRepoId = null
                         settingsOpen = true
                     },
                     onPickInternalStorage = callbacks.onPickInternalStorage,
                     settingsAccess = context.settingsAccess,
+                    initialRepoId = pendingOpenRepoId,
                 )
             }
         }
@@ -518,6 +531,13 @@ private fun SkbAppShellContent(
                     onPickExportFile = callbacks.onPickExportFile,
                     access = context.settingsAccess.copy(
                         onPlanTrip = { tripWizardOpen = true },
+                        // D-6 fix — wire account-row tap in Settings → Repositories
+                        // to open the repos overlay pre-selected on that repo.
+                        onOpenRepo = { cfg ->
+                            settingsOpen = false
+                            pendingOpenRepoId = cfg.repoId
+                            reposOpen = true
+                        },
                     ),
                     onBack = { settingsOpen = false },
                 )
