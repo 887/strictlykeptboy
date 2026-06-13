@@ -134,7 +134,11 @@ Running list of every control that failed the grind-walk. Format + lifecycle in
   pack selectable).
 - **Repro:** Repos overlay → "+" (add repo) → Wizard step 1. • **Shot:**
   skb-c0-wizard1.png (black box), skb-c0-wizard2.png (emoji stickers OK)
-- **Status:** open
+- **Status:** fixed-in main — `BatMascotSticker` in `WizardNavHost.kt` used
+  `Icon` (force-tints to content color = black on light bg) for a raster WebP;
+  switched to `Image` (no tint), matching `AboutCategory.kt`. Verified full-color
+  in BOTH themes (fix-d9-wizard-light.png). 1017 tests green. Cherry-picked from
+  e05a181.
 
 ### D-2 — Schedule → Week view → day columns — NOT A BUG (resolved)
 - **Resolution:** intended behaviour. `SchedulePane.kt:452-466` — when

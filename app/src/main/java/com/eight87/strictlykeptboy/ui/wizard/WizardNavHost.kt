@@ -13,9 +13,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.Image
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -488,7 +488,7 @@ private fun BatMascotSticker(screen: WizardScreen) {
         contentAlignment = ComposeAlign.Center,
     ) {
         Column(horizontalAlignment = ComposeAlign.CenterHorizontally) {
-            Icon(
+            Image(
                 painter = painterResource(R.drawable.about_bat),
                 contentDescription = stringResource(R.string.cd_wizard_mascot, screen.stickerKey),
                 modifier = Modifier.size(96.dp),
