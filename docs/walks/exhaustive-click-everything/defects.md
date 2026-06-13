@@ -196,3 +196,7 @@ Running list of every control that failed the grind-walk. Format + lifecycle in
 - **D-9** — Wizard welcome illustration rendered as a black box. Fixed on main:
   `Icon`→`Image` (no force-tint) for the raster mascot. Verified full-color both
   themes (agent shot fix-d9-wizard-light.png + merge confirm). Closed.
+- **D-5** — Interactive mark-done didn't set `doneAt` (no date in Done list).
+  Fixed on main: `toggleDone` stamps `doneAt` + writes it to the file + reindexes.
+  **Re-walk verified** 2026-06-14 — "buy milk · done today" shows in Done with the
+  date prefix. Shot: skb-c0-d5verify.png. (Spawned D-10 minor follow-up.)

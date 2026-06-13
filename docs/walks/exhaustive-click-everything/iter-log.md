@@ -12,6 +12,20 @@ One line per grind-walk pass. Clean round = 0 new defects over the FULL list.
 | 5 | 2026-06-14 | Grind Reviews / Repos / Event-create / Look&Feel / repo-settings / repos-overlay | ~30 | 3 (D-6/D-7/D-8) | 1 (D-6) | NOT clean — D-8 open |
 | 6 | 2026-06-14 | Wizard + Templates grind; fix wave 2 (D-6/D-8/D-9) | ~10 | 1 (D-9) | — | building combined APK for re-walk |
 | 7 | 2026-06-14 | Combined re-walk of fix wave 2 on merged build (5554) | — | 0 new | 3 (D-6/D-8/D-9) | clean (wave-2 batch verified) |
+| 8 | 2026-06-14 | Edit-schedule + Filter-picker grind; D-5 fix merged+verified | ~6 | 1 (D-10 minor) | 1 (D-5) | clean — all grind defects closed |
+
+### Iter-8 notes — D-5 closed; grind backlog clear
+- **D-5** (interactive mark-done now stamps doneAt) fixed + verified ("buy milk ·
+  done today" in Done). Spawned **D-10** (StandingTask schema lacks doneAt — minor).
+- **Walked clean:** Edit-schedule (weekday template editor + period chips + New),
+  Filter-events picker (Important/Active/Routine toggles work).
+- **Defect ledger:** closed D-1,D-3,D-4,D-5,D-6,D-8,D-9 (+ D-2,D-7 not-bugs).
+  Open: D-10 (minor, standing-task doneAt durability). The app's core is now
+  verified WORKING across all major surfaces.
+- **In flight:** todolist-walk authoring agent (snow leopard + cheetah) — its
+  reported UX gaps seed the next fix wave focused on the todolist.
+- **Next:** run the 2 todolist walks + 5 furry claude -p walks on the AVD; fix
+  todolist UX gaps; then the formal 3 clean full-app cycles.
 
 ### Iter-7 notes — fix wave 2 verified on merged build
 - D-8 create→render: created "D8 rewalk event"; bottom bar shows "Next: D8 rewalk
