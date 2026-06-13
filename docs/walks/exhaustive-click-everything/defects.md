@@ -121,6 +121,21 @@ Running list of every control that failed the grind-walk. Format + lifecycle in
   • **Shot:** skb-c0-create.png, skb-c0-created.png, skb-c0-detail-noon.png
 - **Status:** open (investigate + fix)
 
+### D-9 — Wizard → step 1 welcome illustration renders as a black box — minor/major
+- **Expected:** the wizard intro ("let's set up your repo") shows its
+  "welcome-wave" illustration/sticker.
+- **Actual:** it renders as a solid BLACK rectangle (caption "welcome-wave"
+  below). On the light theme it clearly reads as broken — and it's the very first
+  onboarding screen. Note: the EMOJI species stickers (Bat 🦇 / Bunny 🐰 on the
+  "Pick your sticker pack" step) render fine — so the failure is specific to the
+  named non-emoji wizard illustrations (welcome-wave etc.). Likely a missing/
+  mis-tinted sticker asset or a load failure in the wizard's illustration
+  renderer (vs. the emoji path). Wizard FLOW otherwise works (steps advance,
+  pack selectable).
+- **Repro:** Repos overlay → "+" (add repo) → Wizard step 1. • **Shot:**
+  skb-c0-wizard1.png (black box), skb-c0-wizard2.png (emoji stickers OK)
+- **Status:** open
+
 ### D-2 — Schedule → Week view → day columns — NOT A BUG (resolved)
 - **Resolution:** intended behaviour. `SchedulePane.kt:452-466` — when
   `layoutMode == Stacked`, Week renders the 7 days stacked VERTICALLY (each a
