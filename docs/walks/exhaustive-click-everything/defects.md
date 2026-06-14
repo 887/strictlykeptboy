@@ -246,6 +246,63 @@ Running list of every control that failed the grind-walk. Format + lifecycle in
   on Today rail; U-7 IME Done submits but doesn't dismiss the sheet.
 - **Status:** open (polish — pick the high-value ones)
 
+## Todolist-walk findings (Glaciermark / snow-leopard-thorough QA run, 2026-06-14)
+_Confirmed working by this walk: D-5, D-11, D-12, D-14 (live) + D-13 (code). B-2
+"Today rail dead after Done" and B-4 "first checkbox no-op" are the same dead-zone
+as **D-16** (already in fix). New findings below._
+
+### D-23 — Quick Add adds an EVENT, not a todolist task (no list target) — CRITICAL
+- The Quick Add sheet's Target row offers only "Today as event" / "Tomorrow as
+  event" — there is NO way to add the new item to a TODOLIST. So "Quick add" on the
+  todolist sheet doesn't add a task to any list (it creates a calendar event).
+  This breaks the core "add a task Sir assigned" flow. (Explains why my earlier
+  "cheetah quick task" never showed as a task.) Add a todolist-target chip row
+  (pre-select last-used list); keep event-targets as a secondary option.
+  `ui/tasks/TaskQuickAddFab.kt`. **Status:** open
+### D-24 — All view lost its per-list filter chips — major
+- The All tab is a flat combined list with no chip row to filter by todolist
+  (can't isolate marc-kept vs marc-work). `TaskPerListView` chips used to exist;
+  restore a per-list slicer on All. **Status:** open
+### D-25 — Sheet dismisses on ANY downward swipe in content — CRITICAL (UX)
+- Swiping down to scroll back up a long Done/Today list DISMISSES the whole sheet
+  → user loses place + must re-pull/re-navigate/re-scroll. Restrict dismiss to the
+  drag handle (or only when the list is at top). `ui/scaffold/NowPlayingSheetHost.kt`
+  nested-scroll. **Status:** open
+### D-26 — Today sub-section headers (Overdue/From events/Pinned) not visible — major
+- `TaskTodayView.kt` calls `sectionHeader()` but headers don't render live (likely
+  empty-section suppression) → 15 overdue tasks are a flat wall with no provenance.
+  Show headers (with counts) for non-empty sections. **Status:** open
+### D-27 — Completing a task vanishes it with no feedback — major (UX/feel)
+- On "Yes, mark done" the task instantly disappears from Today — no strikethrough/
+  dim/"moved to Done" beat. The completion moment (esp. Dom-assigned) is the
+  product's emotional core. Add ~600ms strikethrough+dim before it slides out.
+  **Status:** open
+### D-28 — No undo after marking done — major
+- No "Marked done — Undo" snackbar; an accidental confirm is permanent unless you
+  hunt through Done and re-toggle. Add a 5s undo snackbar. **Status:** open
+### D-29 — Upcoming is a flat list, no date grouping — major (UX)
+- After D-11 made Upcoming future-only, it still has no "Tomorrow / This week /
+  Next week" dividers → items feel "missing". Add date-bucket grouping.
+  **Status:** open
+### D-30 — Passive-habit ("From events") tasks visually indistinct — moderate
+- Standing/recurring ritual items look identical to dated tasks (no gutter accent/
+  recurring icon) → blend into the pile. Give them a distinct treatment.
+  **Status:** open
+### D-31 — Task checkbox has empty contentDescription (a11y) — major
+- TalkBack reads the checkbox unlabeled; the title is a sibling, not merged into
+  the checkbox semantics → a blind user can't tell which task they're toggling.
+  Merge title into the row/checkbox semantics. **Status:** open
+### D-32 — AuthorBubble + PriorityDot have no contentDescription (a11y) — minor
+- Decorative-only to TalkBack; add semantic labels (author name / priority).
+  **Status:** open
+### D-33 — Confirm + empty-state copy not identity.toml-driven — enhancement (Phase K)
+- "Mark done?" / empty-states are hardcoded; could honor `praise`/`honorific`
+  ("Done, good boy?" / "Sir would be pleased"). Ties to D-4/D-15 copy work.
+  **Status:** open (enhancement)
+### D-34 — Demo data lacks Boy-Keeper-authored TASKS — demo-data gap
+- Boy Keeper authors only calendar events, so the D-13 author-chip-in-Done fix
+  can't be SEEN in the demo. Seed some Dom-authored todolist tasks. **Status:** open
+
 ### D-15 — Todolist → Upcoming empty-state copy is misleading — minor (UX polish)
 - The Upcoming filter (now future-only) shows the generic "no tasks anywhere —
   good boy ;3" empty-state when there are no FUTURE tasks — but there ARE tasks
