@@ -493,6 +493,14 @@ _15/16 PASS. Dustrun iter-3 was fully CLEAN. Glaciermark's 3 remaining majors:_
 
 ## Closed
 
+- **D-47** — AGENTS.md under-specified the schema keys → AI-Dom `claude -p` authoring
+  drifted to non-parseable names. Fixed on main: both AGENTS.md sources (RepoBootstrap
+  AGENTS_MD_TEMPLATE + bundled rich-demo-repo/AGENTS.md) now pin the canonical schema
+  (event start/end/calendar_id; recurrence dtstart/duration/rrule; task todolist_id;
+  private bool; nonSuperseable as a tag; 2 fences; unquoted datetimes) with field tables
+  + worked examples + a 'what NOT to write' table. Clean-room re-run = zero drift,
+  parser-valid. (82a7e29) — closes the AI-native authoring loop.
+
 - **D-1** — Schedule band title bleed/collision (Day/3-day/Week). Fixed on main
   (`cd90f97`): opaque surface backing on non-base bands. **Re-walk verified clean**
   2026-06-13 on the merged build — Work-day + morning-stack render opaque, no

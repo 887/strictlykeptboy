@@ -256,10 +256,11 @@ and tone register — use these when generating content for this user.
    the v7 flag, or `python -c "import uuid; print(uuid.uuid7())"` on
    3.13+).
 4. **File format = TOML frontmatter + Markdown body, fenced by `+++`.**
-   The frontmatter is structured; the body is yours to write notes,
-   links, and reminders. Pure-TOML metadata files (`calendar.toml`,
-   `todolist.toml`, `.strictlykeptboy/*.toml`, `identity.toml`) have
-   no fences and no body.
+   The frontmatter opens with `+++` on line 1 and closes with `+++` on
+   its own line. Exactly two fences, no trailing third fence. The body
+   (Markdown) follows the closing `+++`. Pure-TOML metadata files
+   (`calendar.toml`, `todolist.toml`, `.strictlykeptboy/*.toml`,
+   `identity.toml`) have no fences and no body.
 5. **Schema version is `{{SCHEMA_VERSION}}`.** Every entity file
    starts with `schema_version = {{SCHEMA_VERSION}}`. Bump only after
    coordinating with the app's migration code.
@@ -301,15 +302,224 @@ and tone register — use these when generating content for this user.
   `identities/{{DEFAULT_IDENTITY_ID}}.md` is the seed author. Exactly
   one identity in `identities/` must carry `default_author = true`.
 
+## Exact field names — canonical schema
+
+The app parser reads these exact TOML keys. Use them verbatim. Drifting
+to synonyms (e.g. `start_at`, `calendar`, `visibility`) causes silent
+parse failures.
+
+### Common header (all entity files)
+
+| Key              | Type                  | Required | Notes                              |
+|------------------|-----------------------|----------|------------------------------------|
+| `schema_version` | int                   | yes      | Always `{{SCHEMA_VERSION}}`        |
+| `id`             | string (UUIDv7)       | yes      | Matches filename stem              |
+| `kind`           | string (enum)         | yes      | See per-entity tables below        |
+| `created_at`     | offset-datetime       | yes      | RFC-3339 with offset, e.g. `2026-06-16T09:00:00+01:00` |
+| `updated_at`     | offset-datetime       | yes      | Same format                        |
+| `author`         | string (identity id)  | yes      | UUIDv7 of the authoring identity   |
+
+Datetimes are bare TOML offset-datetimes — **not quoted strings**.
+`2026-06-16T09:00:00+01:00` is correct; `"2026-06-16T09:00:00+01:00"` is wrong.
+
+### One-off event — `kind = "event"`
+
+Path: `calendars/<cal-id>/events/<yyyy>/<mm>/<id>.md`
+
+| Key              | Type            | Required | Notes                                    |
+|------------------|-----------------|----------|------------------------------------------|
+| `title`          | string          | yes      |                                          |
+| `start`          | offset-datetime | yes      | NOT `start_at`, NOT `dtstart`            |
+| `end`            | offset-datetime | yes      | NOT `end_at`, NOT `duration`             |
+| `calendar_id`    | string          | yes      | NOT `calendar`                           |
+| `all_day`        | bool            | no       | Omit when false                          |
+| `busy`           | bool            | no       | Default true; write only when false      |
+| `private`        | bool            | no       | NOT `visibility`; omit when false        |
+| `tags`           | string array    | no       | `tags = ["tag1", "tag2"]`                |
+| `emoji`          | string          | no       |                                          |
+| `group`          | string          | no       | Grouping label for consecutive events    |
+| `location`       | string          | no       |                                          |
+| `tz_id`          | string          | no       | IANA zone e.g. `"America/New_York"`      |
+
+**Minimal example:**
+```
++++
+schema_version = {{SCHEMA_VERSION}}
+id = "01952f3a-1234-7000-8000-000000000001"
+kind = "event"
+created_at = 2026-06-16T09:00:00+01:00
+updated_at = 2026-06-16T09:00:00+01:00
+author = "{{DEFAULT_IDENTITY_ID}}"
+title = "Morning check-in"
+start = 2026-06-16T09:00:00+01:00
+end = 2026-06-16T09:15:00+01:00
+calendar_id = "<cal-uuid>"
++++
+Notes go here in Markdown.
+```
+
+### Recurrence rule — `kind = "recurrence"`
+
+Path: `calendars/<cal-id>/recurrences/<id>.md`
+
+| Key           | Type             | Required | Notes                                         |
+|---------------|------------------|----------|-----------------------------------------------|
+| `title`       | string           | yes      |                                               |
+| `dtstart`     | local-datetime   | yes      | No offset, no zone — e.g. `2026-06-16T09:00:00` |
+| `duration`    | string (ISO-8601)| yes      | e.g. `"PT45M"`, `"P1DT2H"`, `"PT1H30M"`      |
+| `tz_id`       | string           | yes      | IANA zone name                                |
+| `rrule`       | string           | yes      | RFC-5545 e.g. `"FREQ=DAILY"`, `"FREQ=WEEKLY;BYDAY=MO,WE,FR"` |
+| `calendar_id` | string           | yes      |                                               |
+| `passive`     | bool             | no       | True = done-by-schedule (passive habit)       |
+| `active`      | bool             | no       | Default true; write only when false           |
+| `busy`        | bool             | no       | Default true; write only when false           |
+| `tags`        | string array     | no       |                                               |
+| `emoji`       | string           | no       |                                               |
+| `group`       | string           | no       |                                               |
+
+Note: `passive` supersedes the old `inverted` key — both are accepted
+on read but `passive` is canonical on write.
+
+**Minimal example:**
+```
++++
+schema_version = {{SCHEMA_VERSION}}
+id = "01952f3a-1234-7000-8000-000000000002"
+kind = "recurrence"
+created_at = 2026-06-16T09:00:00+01:00
+updated_at = 2026-06-16T09:00:00+01:00
+author = "{{DEFAULT_IDENTITY_ID}}"
+title = "Morning walk"
+dtstart = 2026-06-16T07:30:00
+duration = "PT30M"
+tz_id = "{{TZ_ID}}"
+rrule = "FREQ=DAILY"
+calendar_id = "<cal-uuid>"
+passive = true
++++
+```
+
+### Task — `kind = "task"`
+
+Path: `todolists/<list-id>/tasks/<yyyy>/<mm>/<id>.md`
+
+| Key           | Type                  | Required | Notes                                |
+|---------------|-----------------------|----------|--------------------------------------|
+| `title`       | string                | yes      |                                      |
+| `todolist_id` | string                | yes      | NOT `list_id`, NOT `todolist`        |
+| `due`         | local-date or offset-datetime | no | e.g. `2026-06-16` or full datetime  |
+| `done`        | bool                  | no       | Omit when false                      |
+| `done_at`     | offset-datetime       | no       | Set when `done = true`               |
+| `priority`    | int                   | no       | Lower = higher priority              |
+| `tags`        | string array          | no       |                                      |
+
+**Minimal example:**
+```
++++
+schema_version = {{SCHEMA_VERSION}}
+id = "01952f3a-1234-7000-8000-000000000003"
+kind = "task"
+created_at = 2026-06-16T09:00:00+01:00
+updated_at = 2026-06-16T09:00:00+01:00
+author = "{{DEFAULT_IDENTITY_ID}}"
+title = "Buy groceries"
+todolist_id = "<list-uuid>"
+due = 2026-06-16
++++
+```
+
+### Standing task — `kind = "standing_task"`
+
+Path: `todolists/<list-id>/standing/<id>.md`
+
+| Key           | Type            | Required | Notes                           |
+|---------------|-----------------|----------|---------------------------------|
+| `title`       | string          | yes      |                                 |
+| `todolist_id` | string          | yes      |                                 |
+| `done`        | bool            | no       | Omit when false                 |
+| `done_at`     | offset-datetime | no       | Set when `done = true`          |
+| `pinned`      | bool            | no       | Omit when false                 |
+| `priority`    | int             | no       |                                 |
+| `tags`        | string array    | no       |                                 |
+
+### Deviation — `kind = "deviation"`
+
+Path: `calendars/<cal-id>/deviations/<target-id>/<yyyy-mm-dd>.md`
+
+| Key              | Type            | Required | Notes                                                              |
+|------------------|-----------------|----------|--------------------------------------------------------------------|
+| `target_id`      | string          | yes      | ID of the recurrence rule or event                                 |
+| `instance_date`  | local-date      | yes      | e.g. `2026-06-16`                                                  |
+| `deviation_kind` | string          | yes      | `"skipped"`, `"partial"`, `"completed-early"`, `"completed-late"` |
+| `at`             | offset-datetime | yes      | When the deviation was recorded                                    |
+| `note`           | string          | no       |                                                                    |
+
+### Override — `kind = "override"`
+
+Path: `overrides/<superseded-cal-id>/<event-id>/<yyyy-mm-dd>.md`
+
+Used to force-show a specific event instance that supersedence would
+otherwise hide.
+
+| Key                     | Type       | Required | Notes                                    |
+|-------------------------|------------|----------|------------------------------------------|
+| `superseded_calendar_id`| string     | yes      | The calendar being paused by supersedence |
+| `event_id`              | string     | yes      | The event/rule to force-show             |
+| `instance_date`         | local-date | yes      |                                          |
+| `override_kind`         | string     | yes      | `"force-show"` or `"force-show-for-range"` |
+| `from`                  | local-date | no       | Only for `force-show-for-range`          |
+| `to`                    | local-date | no       | Only for `force-show-for-range`          |
+
+## Special rules
+
+### nonSuperseable entries
+
+A recurrence entry that must never be paused by a vacation/overlay
+calendar (e.g. medication, pet care) signals this via its tags:
+
+```
+tags = ["meds", "nonSuperseable"]
+```
+
+The literal string `"nonSuperseable"` (camelCase, no space) in the
+`tags` array tells the resolver to skip supersedence for this entry.
+This is a **tag**, not a boolean field. Do NOT write `nonSuperseable = true`.
+
+### Supersedence (trip/vacation pausing a calendar)
+
+Supersedence is configured in `calendar.toml` (pure TOML, no fences):
+
+```toml
+# The vacation calendar pauses these calendars while active:
+supersedes = ["<routine-cal-uuid>", "<work-cal-uuid>"]
+
+# Optional date-range restriction (always-on if omitted):
+[[superseded_during]]
+from = 2026-06-20
+to   = 2026-06-27
+
+# Make THIS calendar immune to all supersedence:
+nonSuperseable = true
+```
+
+Both `nonSuperseable` and `non_superseable` are accepted on read;
+`nonSuperseable` is canonical on write.
+
+### Passive habits
+
+A recurrence with `passive = true` is treated as completed-by-default
+unless a deviation file exists for that day. Use this for hygiene
+routines, medication, pet care — things the user does unless noted
+otherwise.
+
 ## How to add a one-off event
 
 1. Generate a UUIDv7 (the `id`).
 2. Decide on the calendar (its `<calendar-id>` is the folder name
    under `calendars/`).
-3. Compute the bucket path: month-bucket by the event's *start* date
-   in the calendar's timezone — `calendars/<cal-id>/events/<yyyy>/<mm>/<id>.md`.
-4. Write the file with `+++`-fenced TOML frontmatter and a body. See
-   the schema in `docs/plans/data-model.md` DM-B.1 for the field list.
+3. Bucket path: `calendars/<cal-id>/events/<yyyy>/<mm>/<id>.md`
+   (bucket by the event's *start* date in the calendar's timezone).
+4. Write the file with exactly two `+++` fences and a body.
 
 ## How to cancel one instance of a recurring event
 
@@ -318,17 +528,24 @@ Create `calendars/<cal-id>/exceptions/<rule-id>/<yyyy-mm-dd>.md` with
 
 ## How to mark a task done
 
-Set `done = true` and `done_at = <RFC-3339 offset-datetime>` in the
-task's frontmatter. The body checkbox is a visual cue only — the
-frontmatter `done` flag is the truth.
+Set `done = true` and `done_at = <offset-datetime>` in the task's
+frontmatter. The body checkbox is a visual cue only — the frontmatter
+`done` flag is the truth.
 
 ## Things you should NOT do
 
+- Don't use `start_at`/`end_at` for events — use `start`/`end`.
+- Don't use `dtstart`/`duration` for one-off events — that's for recurrences.
+- Don't use `calendar` — use `calendar_id`.
+- Don't use `visibility = "private"` — use `private = true` (boolean).
+- Don't write `nonSuperseable = true` on a recurrence — use the tag `"nonSuperseable"`.
 - Don't bundle entities (one file per entity).
+- Don't create index files.
 - Don't invent IDs by hand.
 - Don't write to `attachments/` (content-addressed; the app manages).
 - Don't put commentary in TOML comments — use the Markdown body.
-- Don't edit `.strictlykeptboy/schema.toml`'s `schema_version` field.
+- Don't add a third `+++` fence at the end — exactly two fences only.
+- Don't quote datetimes — bare TOML datetime literals, not strings.
 
 ## Where to find more
 
