@@ -1,14 +1,29 @@
 package com.eight87.strictlykeptboy.ui.tasks
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.compositionLocalOf
 import com.eight87.strictlykeptboy.resolver.ActiveSetEvaluator
 import com.eight87.strictlykeptboy.resolver.RepoSnapshot
 import com.eight87.strictlykeptboy.resolver.TodolistRef
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZonedDateTime
+
+/**
+ * D-27 — CompositionLocal carrying the set of task IDs currently in the
+ * completion beat window. [NowPlayingSheetHost] provides this from
+ * [TasksUiState.animatingDoneIds] so [TaskTodayView] can apply the
+ * fade-out alpha without needing an explicit parameter threaded through
+ * [ExpandedNowPlayingTaskBody] (which is owned by another agent).
+ */
+val LocalAnimatingDoneIds = compositionLocalOf<Set<String>> { emptySet() }
 
 /**
  * Phase H — five top-level task views per UI-J.
@@ -35,6 +50,19 @@ data class TasksUiState(
      * rail (chip taps). Empty = "all visible" (no chip selected).
      */
     val hiddenTodolistIds: Set<String> = emptySet(),
+    /**
+     * D-27 — set of task IDs currently in the "completion beat" animation
+     * window (~600ms strikethrough+dim before the row leaves Today). While
+     * a task's ID is in this set, Today keeps it visible with done=true
+     * styling even though forToday() would normally exclude it once done.
+     */
+    val animatingDoneIds: Set<String> = emptySet(),
+    /**
+     * D-27 — task IDs that have finished their beat window and should no
+     * longer appear in Today even though they are done-today tasks.
+     * Populated 600ms after mark-done; cleared on un-mark.
+     */
+    val beatCompletedIds: Set<String> = emptySet(),
     /**
      * Phase 2.1.D.1 — when `false` (default), tasks belonging to a
      * todolist outside `ActiveSetEvaluator.activeTodolistsAt(now)` drop
@@ -74,7 +102,16 @@ data class TasksUiState(
  * pane testable without Room. A real ViewModel-backed version lands when
  * the indexer→view glue is built out (deferred — see Phase H notes).
  */
-class TasksViewState(initial: TasksUiState = TasksUiState()) {
+class TasksViewState(
+    initial: TasksUiState = TasksUiState(),
+    /**
+     * D-27 / D-28 — coroutine scope for the completion beat timer (defaults
+     * to a supervisor scope on [Dispatchers.Default]). [MutableStateFlow.value]
+     * is thread-safe so updates from a non-Main dispatcher are fine here.
+     * Tests can pass a controlled scope to advance time manually.
+     */
+    private val beatScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+) {
     private val _state = MutableStateFlow(initial)
     val state: StateFlow<TasksUiState> = _state.asStateFlow()
 
@@ -92,16 +129,38 @@ class TasksViewState(initial: TasksUiState = TasksUiState()) {
      */
     var onTaskMarkedDone: ((TaskItem) -> Unit)? = null
 
+    /**
+     * D-28 — optional callback invoked with the task ID immediately after
+     * the completion beat starts, so the host can show a snackbar with an
+     * Undo action. The host calls [undoDone] if the user taps Undo within
+     * the snackbar timeout.
+     */
+    var onShowUndoSnackbar: ((taskId: String) -> Unit)? = null
+
     fun set(state: TasksUiState) { _state.value = state }
 
     /**
-     * D-5 fix — toggle `done` on [taskId], stamping [doneAt] to today
-     * when transitioning to done, and clearing it when un-marking.
-     * Invokes [onTaskMarkedDone] after the state update so the
-     * composition root can persist the change to the task file.
+     * D-5 fix + D-27 / D-28 extension — toggle `done` on [taskId].
+     *
+     * When marking a task **done**:
+     *  1. Stamps [doneAt] to today and flips `done = true`.
+     *  2. Adds [taskId] to [TasksUiState.animatingDoneIds] so Today keeps
+     *     the row visible with strikethrough+dim for the beat window.
+     *  3. Fires [onShowUndoSnackbar] so the host can show the Undo snackbar.
+     *  4. After [beatMs] ms removes [taskId] from [animatingDoneIds] so the
+     *     row finally slides out of Today.
+     *  5. Fires [onTaskMarkedDone] for the file-write path.
+     *
+     * When **un-marking** (done → not done), clears `done`+`doneAt` and
+     * removes from [animatingDoneIds] immediately — no beat, no snackbar.
      */
-    fun toggleDone(taskId: String, today: LocalDate = LocalDate.now()) {
+    fun toggleDone(
+        taskId: String,
+        today: LocalDate = LocalDate.now(),
+        beatMs: Long = 600L,
+    ) {
         var updated: TaskItem? = null
+        val wasAlreadyDone = _state.value.tasks.firstOrNull { it.id == taskId }?.done ?: false
         _state.value = _state.value.copy(
             tasks = _state.value.tasks.map { task ->
                 if (task.id == taskId) {
@@ -116,8 +175,49 @@ class TasksViewState(initial: TasksUiState = TasksUiState()) {
                     task
                 }
             },
+            // D-27 — when un-marking, clear any in-progress beat immediately.
+            animatingDoneIds = if (wasAlreadyDone) {
+                _state.value.animatingDoneIds - taskId
+            } else {
+                _state.value.animatingDoneIds + taskId
+            },
+            // D-27 — un-marking clears it from the beat-completed (hidden) set too.
+            beatCompletedIds = if (wasAlreadyDone) {
+                _state.value.beatCompletedIds - taskId
+            } else {
+                _state.value.beatCompletedIds
+            },
         )
-        updated?.let { onTaskMarkedDone?.invoke(it) }
+        val item = updated ?: return
+        if (item.done) {
+            // D-28 — notify host to show the Undo snackbar.
+            onShowUndoSnackbar?.invoke(taskId)
+            // D-27 — after beat window, move from animating set to beat-completed
+            // (hidden) set so the row finally disappears from Today.
+            beatScope.launch {
+                delay(beatMs)
+                _state.value = _state.value.copy(
+                    animatingDoneIds = _state.value.animatingDoneIds - taskId,
+                    beatCompletedIds = _state.value.beatCompletedIds + taskId,
+                )
+            }
+            onTaskMarkedDone?.invoke(item)
+        }
+    }
+
+    /**
+     * D-28 — undo a completion: un-marks [taskId] without triggering the
+     * beat or snackbar again. Clears `done`+`doneAt` and removes from
+     * [animatingDoneIds] and [beatCompletedIds] immediately.
+     */
+    fun undoDone(taskId: String) {
+        _state.value = _state.value.copy(
+            tasks = _state.value.tasks.map { task ->
+                if (task.id == taskId) task.copy(done = false, doneAt = null) else task
+            },
+            animatingDoneIds = _state.value.animatingDoneIds - taskId,
+            beatCompletedIds = _state.value.beatCompletedIds - taskId,
+        )
     }
 
     fun pinStanding(taskId: String, pinned: Boolean) {

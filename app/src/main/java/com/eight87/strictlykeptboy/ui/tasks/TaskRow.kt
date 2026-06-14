@@ -26,6 +26,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.store.PromptKind
 import androidx.compose.runtime.Composable
@@ -130,11 +134,15 @@ fun TaskRow(
         java.time.temporal.ChronoUnit.DAYS.between(item.due, today).coerceAtLeast(0)
     } else 0L
 
+    // D-31 fix — mergeDescendants=true causes TalkBack to merge the row's
+    // children (including the title Text) into a single focusable node, so
+    // the checkbox is announced as "<title>, checkbox, checked/unchecked".
     Surface(
         tonalElevation = 0.dp,
         color = MaterialTheme.colorScheme.surface,
         modifier = modifier
             .fillMaxWidth()
+            .semantics(mergeDescendants = true) {}
             .testTag("$TestTagTaskRow-${item.id}")
             .pointerInput(item.id) {
                 detectTapGestures(
@@ -156,6 +164,9 @@ fun TaskRow(
                 // undo from history, so the user explicitly asked for a
                 // yes/no gate. Unchecking is unguarded (cheap to redo).
                 var confirmDone by remember(item.id) { mutableStateOf(false) }
+                // D-31 fix — provide a contentDescription on the Checkbox itself as a
+                // belt-and-suspenders fallback for assistive services that traverse
+                // individual widgets rather than the merged row node.
                 Checkbox(
                     checked = item.done,
                     onCheckedChange = { checked ->
@@ -167,6 +178,10 @@ fun TaskRow(
                     },
                     modifier = Modifier
                         .padding(start = 8.dp)
+                        .semantics {
+                            contentDescription = item.title
+                            role = Role.Checkbox
+                        }
                         .testTag("$TestTagTaskCheckbox-${item.id}"),
                 )
                 if (confirmDone) {

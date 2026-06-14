@@ -274,19 +274,27 @@ as **D-16** (already in fix). New findings below._
 - Swiping down to scroll back up a long Done/Today list DISMISSES the whole sheet
   → user loses place + must re-pull/re-navigate/re-scroll. Restrict dismiss to the
   drag handle (or only when the list is at top). `ui/scaffold/NowPlayingSheetHost.kt`
-  nested-scroll. **Status:** open
+  nested-scroll. **Status:** fixed-in main (d42fa0f) — removed downward-swipe
+  dismiss from the NestedScrollConnection; dismiss now lives on the drag handle's
+  own draggable. AVD-verified: scrolling the list doesn't dismiss. (Caveat: the
+  OS status-bar gesture zone ~0–60px still captures drags — platform-level.)
 ### D-26 — Today sub-section headers (Overdue/From events/Pinned) not visible — major
 - `TaskTodayView.kt` calls `sectionHeader()` but headers don't render live (likely
   empty-section suppression) → 15 overdue tasks are a flat wall with no provenance.
-  Show headers (with counts) for non-empty sections. **Status:** open
+  Show headers (with counts) for non-empty sections. **Status:** fixed-in main
+  (d42fa0f) — TaskTodayView splits Overdue/Today/From-events/Pinned with counted
+  headers (new string resources).
 ### D-27 — Completing a task vanishes it with no feedback — major (UX/feel)
 - On "Yes, mark done" the task instantly disappears from Today — no strikethrough/
   dim/"moved to Done" beat. The completion moment (esp. Dom-assigned) is the
   product's emotional core. Add ~600ms strikethrough+dim before it slides out.
-  **Status:** open
+  **Status:** fixed-in main (d42fa0f) — toggleDone adds a 600ms "beat"
+  (animatingDoneIds + BeatTaskRow fade) before the task leaves Today. 7 tests.
 ### D-28 — No undo after marking done — major
 - No "Marked done — Undo" snackbar; an accidental confirm is permanent unless you
-  hunt through Done and re-toggle. Add a 5s undo snackbar. **Status:** open
+  hunt through Done and re-toggle. Add a 5s undo snackbar. **Status:** fixed-in
+  main (d42fa0f) — "Marked done / Undo" snackbar (Channel→SnackbarHost); Undo
+  calls undoDone(taskId).
 ### D-29 — Upcoming is a flat list, no date grouping — major (UX)
 - After D-11 made Upcoming future-only, it still has no "Tomorrow / This week /
   Next week" dividers → items feel "missing". Add date-bucket grouping.
@@ -299,7 +307,9 @@ as **D-16** (already in fix). New findings below._
 ### D-31 — Task checkbox has empty contentDescription (a11y) — major
 - TalkBack reads the checkbox unlabeled; the title is a sibling, not merged into
   the checkbox semantics → a blind user can't tell which task they're toggling.
-  Merge title into the row/checkbox semantics. **Status:** open
+  Merge title into the row/checkbox semantics. **Status:** fixed-in main (d42fa0f)
+  — Surface `semantics(mergeDescendants=true)`; Checkbox `contentDescription =
+  item.title` + Role.Checkbox. Verified via a11y tree.
 ### D-32 — AuthorBubble + PriorityDot have no contentDescription (a11y) — minor
 - Decorative-only to TalkBack; add semantic labels (author name / priority).
   **Status:** open

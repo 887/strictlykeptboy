@@ -71,9 +71,13 @@
     <string name="tasks_empty_upcoming_primary">nothing coming up — good boy ;3</string>
     <string name="tasks_empty_upcoming_neutral">No upcoming tasks.</string>
     <string name="tasks_combined_completed_section">Completed</string>
+    <string name="tasks_today_section_overdue">Overdue</string>
     <string name="tasks_today_section_today">Today</string>
     <string name="tasks_today_section_from_events">From today\'s events</string>
     <string name="tasks_today_section_pinned">Pinned</string>
+    <!-- D-28 — undo snackbar after marking a task done. -->
+    <string name="task_marked_done_snackbar">Marked done</string>
+    <string name="task_marked_done_undo">Undo</string>
     <string name="tasks_standing_unpin">Unpin from today</string>
     <string name="tasks_standing_pin">Pin to today</string>
     <!-- Round 2.27 / Phase C.4 — keeper-prompt row affordances. -->

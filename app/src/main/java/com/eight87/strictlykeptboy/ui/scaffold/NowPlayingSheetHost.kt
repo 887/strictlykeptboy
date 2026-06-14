@@ -13,7 +13,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,10 +37,10 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.resolver.NowNextResolver
 import com.eight87.strictlykeptboy.resolver.NowNextSnapshot
 import com.eight87.strictlykeptboy.task.StubTaskPlaybackSource
@@ -46,8 +53,11 @@ import kotlinx.coroutines.flow.StateFlow
 import com.eight87.strictlykeptboy.ui.playing.ExpandedNowPlayingTaskBody
 import com.eight87.strictlykeptboy.ui.playing.MiniPlayer
 import com.eight87.strictlykeptboy.ui.playing.NowPlayingScreen
+import com.eight87.strictlykeptboy.ui.tasks.LocalAnimatingDoneIds
 import com.eight87.strictlykeptboy.ui.tasks.TaskQuickAddRequest
 import com.eight87.strictlykeptboy.ui.tasks.TasksViewState
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -121,6 +131,29 @@ internal fun NowPlayingSheetHost(
     var quickAddOpen by remember { mutableStateOf(false) }
     val tasksUi by tasksState.state.collectAsState()
 
+    // D-28 — undo snackbar infrastructure. A channel carries task IDs
+    // from the toggleDone path (via onShowUndoSnackbar) into this
+    // LaunchedEffect which shows the snackbar and handles the result.
+    val snackbarHostState = remember { SnackbarHostState() }
+    val undoChannel = remember { Channel<String>(Channel.CONFLATED) }
+    val markedDoneLabel = stringResource(R.string.task_marked_done_snackbar)
+    val undoLabel = stringResource(R.string.task_marked_done_undo)
+    LaunchedEffect(tasksState) {
+        tasksState.onShowUndoSnackbar = { taskId -> undoChannel.trySend(taskId) }
+    }
+    LaunchedEffect(undoChannel) {
+        for (taskId in undoChannel) {
+            val result = snackbarHostState.showSnackbar(
+                message = markedDoneLabel,
+                actionLabel = undoLabel,
+                duration = SnackbarDuration.Short,
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                tasksState.undoDone(taskId)
+            }
+        }
+    }
+
     val sheetProgress = remember { Animatable(0f) }
     val coroutineScope = rememberCoroutineScope()
     val nowPlayingListState = rememberLazyListState()
@@ -146,6 +179,9 @@ internal fun NowPlayingSheetHost(
     val screenHeightDp = configuration.screenHeightDp.dp
     val density = LocalDensity.current
     val screenHeightPx = with(density) { screenHeightDp.toPx() }.coerceAtLeast(1f)
+    // D-27 — provide animatingDoneIds down the tree so TaskTodayView can apply
+    // the completion beat fade without ExpandedNowPlayingTaskBody needing changes.
+    CompositionLocalProvider(LocalAnimatingDoneIds provides tasksUi.animatingDoneIds) {
     Box(modifier = Modifier.fillMaxSize()) {
         val peekDp = 118.dp
         val peekPx = with(density) { peekDp.toPx() }
@@ -213,18 +249,16 @@ internal fun NowPlayingSheetHost(
                             }
                             return Offset(0f, available.y)
                         }
-                        if (available.y > 0f &&
-                            nowPlayingListState.firstVisibleItemIndex == 0 &&
-                            nowPlayingListState.firstVisibleItemScrollOffset == 0
-                        ) {
-                            val travel = (screenHeightPx - effectivePeekPx).coerceAtLeast(1f)
-                            val delta = available.y / travel
-                            nestedDragDirection.value = 1
-                            coroutineScope.launch {
-                                sheetProgress.snapTo((sheetProgress.value - delta).coerceAtLeast(0f))
-                            }
-                            return Offset(0f, available.y)
-                        }
+                        // D-25 fix — remove the nested-scroll dismiss path for
+                        // downward swipes on the sheet CONTENT. Sheet dismissal
+                        // is now exclusively the drag handle's responsibility
+                        // (the outer `.draggable()` on this Box). Previously this
+                        // block consumed downward-overscroll-at-top and moved
+                        // sheetProgress toward 0; that caused any fast downward
+                        // fling through the list to dismiss the sheet once the
+                        // list bounced back to the top. The handle still dismisses
+                        // (via onSheetDragDelta / onSheetDragSettle), so the user
+                        // can always pull the sheet down from the handle.
                         return Offset.Zero
                     }
 
@@ -235,15 +269,8 @@ internal fun NowPlayingSheetHost(
                     ): Offset {
                         if (source != NestedScrollSource.UserInput)
                             return Offset.Zero
-                        if (available.y > 0f) {
-                            val travel = (screenHeightPx - effectivePeekPx).coerceAtLeast(1f)
-                            val delta = available.y / travel
-                            nestedDragDirection.value = 1
-                            coroutineScope.launch {
-                                sheetProgress.snapTo((sheetProgress.value - delta).coerceAtLeast(0f))
-                            }
-                            return Offset(0f, available.y)
-                        }
+                        // D-25 fix — no longer consume downward overscroll here.
+                        // See onPreScroll comment above.
                         return Offset.Zero
                     }
 
@@ -251,12 +278,16 @@ internal fun NowPlayingSheetHost(
                         available: Velocity,
                     ): Velocity {
                         val dir = nestedDragDirection.value
-                        val target = when {
-                            dir > 0 -> 0f
-                            dir < 0 -> 1f
-                            else -> if (sheetProgress.value >= 0.5f) 1f else 0f
+                        // Only snap if the sheet was actually pulled upward
+                        // (dir < 0 = user was expanding). Never snap to close
+                        // via nested scroll — handle-only dismiss.
+                        if (dir < 0) {
+                            sheetProgress.animateTo(1f)
                         }
-                        sheetProgress.animateTo(target)
+                        // If dir == 0 (no sheet movement): do nothing, let the
+                        // list fling propagate.
+                        // If dir > 0: this case no longer occurs since onPreScroll
+                        // no longer sets dir=1 for downward swipes.
                         nestedDragDirection.value = 0
                         return Velocity.Zero
                     }
@@ -304,6 +335,13 @@ internal fun NowPlayingSheetHost(
                             // scoped slot so it can claim viewport height
                             // when needed.
                             showHeroCard = playbackState.hasMedia,
+                            // D-25 fix — give the drag handle its own
+                            // dedicated gesture surface so downward drags
+                            // from the handle area always reach the sheet
+                            // host rather than being captured by the inner
+                            // LazyColumn.
+                            onSheetDragDelta = onSheetDragDelta,
+                            onSheetDragSettle = onSheetDragSettle,
                             bodyContent = {
                                 // The body fills the real sheet viewport itself
                                 // (fillParentMaxHeight) — no more guessed height.
@@ -401,5 +439,15 @@ internal fun NowPlayingSheetHost(
                 },
             )
         }
+
+        // D-28 — undo snackbar, anchored at the bottom of the sheet host
+        // so it appears above the mini-player peek.
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = if (showMiniPlayer) 118.dp else 16.dp),
+        )
     }
+    } // end CompositionLocalProvider(LocalAnimatingDoneIds)
 }

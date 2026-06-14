@@ -187,11 +187,18 @@ internal fun TaskItem.effectivePriority(now: ZonedDateTime): Int {
  * `effectivePriority` folds in `todolist.priority` (D.5) plus the
  * active-hours bump (D.6).
  */
+/**
+ * D-27 — [beatSortAsActive] is the set of task IDs currently in the completion
+ * beat window. Beat tasks have [TaskItem.done] = true but should sort as if they
+ * were still active (so they stay in their natural position rather than sinking
+ * to the bottom of the done group).
+ */
 fun List<TaskItem>.sortedForCombined(
     today: LocalDate = LocalDate.now(),
     now: ZonedDateTime = ZonedDateTime.now(),
+    beatSortAsActive: Set<String> = emptySet(),
 ): List<TaskItem> {
-    val (active, done) = partition { !it.done }
+    val (active, done) = partition { !it.done || it.id in beatSortAsActive }
     val activeSorted = active.sortedWith(
         compareBy<TaskItem> {
             // overdue first (negative bucket), then upcoming, then no-due

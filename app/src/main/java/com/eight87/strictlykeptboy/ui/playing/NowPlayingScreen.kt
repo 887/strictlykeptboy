@@ -1,7 +1,10 @@
 package com.eight87.strictlykeptboy.ui.playing
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -97,6 +100,15 @@ fun NowPlayingScreen(
    * sheet with no active task.
    */
   showHeroCard: Boolean = true,
+  /**
+   * D-25 fix — drag callbacks threaded from NowPlayingSheetHost so the
+   * drag-handle pill has its own dedicated draggable surface. The handle
+   * sits above the LazyColumn content and never competes with it for
+   * gesture events. When null (tests / verbatim-port callers), the pill
+   * is decorative only (which is fine when no sheet host is present).
+   */
+  onSheetDragDelta: ((Float) -> Unit)? = null,
+  onSheetDragSettle: (() -> Unit)? = null,
 ) {
   val state by nowPlayingState.state.collectAsStateWithLifecycle()
   val queueSnapshot by nowPlayingState.queue.collectAsStateWithLifecycle()
@@ -123,7 +135,12 @@ fun NowPlayingScreen(
       // Scaffold/TopAppBar back arrow. Sheet is dismissed by drag-down
       // or BackHandler (wired in SkbAppShell to `onBack`), so no
       // explicit back-button affordance is rendered.
-      SheetDragHandle()
+      // D-25 fix — drag callbacks wired so the handle has its own
+      // dedicated gesture surface, independent of the inner LazyColumn.
+      SheetDragHandle(
+        onSheetDragDelta = onSheetDragDelta,
+        onSheetDragSettle = onSheetDragSettle,
+      )
       when (subState) {
         NowPlayingSubState.Connecting -> NowPlayingConnecting(
           modifier = Modifier
@@ -168,12 +185,32 @@ fun NowPlayingScreen(
  * Round 2.16 follow-up — Material bottom-sheet drag-handle pill. 4-dp tall,
  * 32-dp wide, outline-colored, centered. Replaces the music-chrome
  * TopAppBar back arrow as the visual "this is a drag-up sheet" affordance.
+ *
+ * D-25 fix — when [onSheetDragDelta] / [onSheetDragSettle] are provided the
+ * entire Row is a draggable surface, giving the handle a gesture zone that
+ * is separate from and higher-priority than the LazyColumn below it. Without
+ * this, downward drags from the handle area were captured by the LazyColumn's
+ * nested-scroll before the outer sheet draggable ever saw them.
  */
 @Composable
-private fun SheetDragHandle() {
+private fun SheetDragHandle(
+  onSheetDragDelta: ((Float) -> Unit)? = null,
+  onSheetDragSettle: (() -> Unit)? = null,
+) {
+  val draggableModifier = if (onSheetDragDelta != null && onSheetDragSettle != null) {
+    val dragState = rememberDraggableState { delta -> onSheetDragDelta(delta) }
+    Modifier.draggable(
+      state = dragState,
+      orientation = Orientation.Vertical,
+      onDragStopped = { onSheetDragSettle() },
+    )
+  } else {
+    Modifier
+  }
   Row(
     modifier = Modifier
       .fillMaxWidth()
+      .then(draggableModifier)
       .padding(top = 8.dp, bottom = 4.dp),
     horizontalArrangement = Arrangement.Center,
   ) {
