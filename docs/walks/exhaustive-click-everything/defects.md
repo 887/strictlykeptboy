@@ -577,3 +577,22 @@ functional). For cycles 2-3: run ≤3 concurrent emulators + verify HIGH taps on
 ### D-55 — EventDetail exposes raw "Kind: Regular" / "Priority: 990" to users — low (polish)
 ### D-56 — EventDetailScreen ← back arrow possibly non-functional — verify on clean re-walk (cluster B tap-noise suspect)
 - **Status:** open (D-53/54/55 confirmed-ish; D-56 verify)
+
+## Phase 3 cycle-1 — cluster D + INFRA VERDICT (orchestrator-verified)
+**The 5-concurrent-emulator QA approach is UNRELIABLE on this box.** Under load the
+agents' MCP taps land ~N rows offset, producing systematic FALSE positives:
+- **D-17..D-21 (settings "routing offset" CalDAV/Access/Auto&Tablet/Storage/Ext-cal
+  → wrong screen): FALSE.** Orchestrator verified on 5554 (single emulator): tapping
+  "External calendars" opens the correct External-calendars screen. The "offset" was
+  the AGENT's tap landing on the wrong row, not the app's routing. Closed.
+- **D-52 (External-cal AllowEdit toggle absent): FALSE** — the "Allow editing system
+  calendars" toggle IS present (verified, d-extcal.png). Closed.
+- D-06/D-08/D-09/D-14/D-23 (Mode radios / Lifestyle CTAs / Todolists-UUIDs / search
+  dead): treat as tap-offset suspects — verify individually before acting.
+- "Setup Wizard unreachable in demo / demo-toggle dead": the onboarding's "Empty
+  calendar" option is the exit-demo path; verify the in-overlay demo toggle separately.
+
+**Method correction for the rest of Phase 3:** trust only (a) code-level findings
+verifiable by grep/reading source, and (b) findings the orchestrator re-confirms on
+the single reliable 5554 emulator. Tap-"not responding"/"wrong screen" findings from
+the concurrent cluster agents are discounted unless reproduced.
