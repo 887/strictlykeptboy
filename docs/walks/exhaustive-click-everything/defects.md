@@ -540,20 +540,20 @@ _15/16 PASS. Dustrun iter-3 was fully CLEAN. Glaciermark's 3 remaining majors:_
 - `IcsImportScreen` exists but the OS file picker's MIME filter prevents selecting
   `.ics` files → ICS import is broken for users. Fix the picker MIME (accept
   text/calendar + */* fallback). **Status:** open
-### D-49 — ForeignEventSourceChip never called → events show no author chip — HIGH
+### D-49 — ForeignEventSourceChip — PARTIALLY wired (1 call-site) — verify on AVD
 - The cross-repo EVENT author chip composable is defined but wired nowhere; only
   TASK rows got author chips (D-39). Cross-repo/shared events should show who
   authored them. Wire `ForeignEventSourceChip` into the event band/detail render
   (mirror the task author-chip predicate: author != active repo owner). **Status:** open
-### D-50 — SyncButton never called → no manual sync trigger — HIGH
+### D-50 — SyncButton 'never called' — FALSE POSITIVE (orchestrator grep: 12 call-sites)
 - `SyncButton`/`SyncSuccessCheck`/`SyncErrorDot` defined but never placed. Repos
-  with a remote have auto-sync but no manual "sync now" affordance. Wire a sync
-  action (repo settings / repos overlay) with success/error state. **Status:** open
+  with a remote have auto-sync but no manual "sync now" affordance. **Status:**
+  NOT A BUG — grep finds 12 SyncButton call-sites; cluster E mis-reported. Closed.
 ### D-51 — PinAction/PinMenu + EventTitleEmojiPreview orphaned — medium
 - `PinAction`/`PinMenu` (pin a standing task to Today) + `EventTitleEmojiPreview`
-  composables defined but never called. Wire pin-to-today into the standing-task
-  row menu; wire the emoji preview where event titles are edited (or remove if
-  truly superseded — triage). **Status:** open
+  composables: EventTitleEmojiPreview HAS 2 call-sites (not orphaned). PinAction/
+  PinMenu live in TaskStandingView, which was dropped from the rail (Done now uses
+  TaskDoneView) → pin-to-today may be unreachable. **Status:** open (verify pin-to-today reachability; emoji-preview = not-a-bug)
 ### D-52 — External Calendars: AllowEdit toggle + defaults row absent — medium
 - `ExternalCalendars-AllowEdit` toggle + `CalendarDefaultsRow`/`Button` missing
   (only Show + Publish present). Add the allow-edit toggle + defaults affordance.
