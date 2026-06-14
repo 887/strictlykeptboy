@@ -16,7 +16,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -53,6 +52,7 @@ import com.eight87.strictlykeptboy.ui.playing.ExpandedNowPlayingTaskBody
 import com.eight87.strictlykeptboy.ui.playing.MiniPlayer
 import com.eight87.strictlykeptboy.ui.playing.NowPlayingScreen
 import com.eight87.strictlykeptboy.ui.tasks.LocalAnimatingDoneIds
+import com.eight87.strictlykeptboy.ui.tasks.LocalAuthorDisplayNames
 import com.eight87.strictlykeptboy.ui.tasks.TaskQuickAddRequest
 import com.eight87.strictlykeptboy.ui.tasks.TasksViewState
 import kotlinx.coroutines.channels.Channel
@@ -192,7 +192,13 @@ internal fun NowPlayingSheetHost(
     val screenHeightPx = with(density) { screenHeightDp.toPx() }.coerceAtLeast(1f)
     // D-27 — provide animatingDoneIds down the tree so TaskTodayView can apply
     // the completion beat fade without ExpandedNowPlayingTaskBody needing changes.
-    CompositionLocalProvider(LocalAnimatingDoneIds provides tasksUi.animatingDoneIds) {
+    // D-43 fix — provide authorDisplayNames so TaskRow's AuthorBubble resolves
+    // author UUIDs to display names ("BK" for "Boy Keeper") without needing an
+    // explicit parameter threaded through ExpandedNowPlayingTaskBody.
+    CompositionLocalProvider(
+        LocalAnimatingDoneIds provides tasksUi.animatingDoneIds,
+        LocalAuthorDisplayNames provides tasksUi.authorDisplayNames,
+    ) {
     Box(modifier = Modifier.fillMaxSize()) {
         val peekDp = 118.dp
         val peekPx = with(density) { peekDp.toPx() }

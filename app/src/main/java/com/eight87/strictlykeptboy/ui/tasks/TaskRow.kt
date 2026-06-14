@@ -113,7 +113,25 @@ fun TaskRow(
      * the host to open the response sheet for this prompt.
      */
     onRespond: ((TaskItem) -> Unit)? = null,
+    /**
+     * D-43 fix — map from author identity UUID → display name. When the
+     * row's [TaskItem.author] is a UUID present in this map, the
+     * [AuthorBubble] shows initials derived from the resolved name (e.g.
+     * "BK" for "Boy Keeper") rather than the first char of the UUID
+     * ("0"). Falls back gracefully when the author string isn't a key in
+     * this map (e.g. inline demo-seed names like "Keeper" → "K").
+     */
+    authorDisplayNames: Map<String, String> = emptyMap(),
 ) {
+    // D-43 fix — merge explicit param with CompositionLocal so call sites that
+    // don't pass the map explicitly (e.g. TaskTodayView's BeatTaskRow, owned by
+    // another agent) still pick up the resolved names when the local is provided
+    // by an ancestor (NowPlayingSheetHost or a task-list wrapper).
+    val effectiveAuthorNames = if (authorDisplayNames.isEmpty()) {
+        LocalAuthorDisplayNames.current
+    } else {
+        authorDisplayNames + LocalAuthorDisplayNames.current
+    }
     val isPrompt = item.source == TaskSource.KeeperPrompt
     // D-36 fix — block the row's onTap for a short window after the confirm
     // dialog is dismissed (confirm OR cancel). The Compose dialog scrim does
@@ -287,6 +305,32 @@ fun TaskRow(
                             .weight(1f, fill = false)
                             .testTag("$TestTagTaskTitle-${item.id}"),
                     )
+                    // D-30 fix — passive-habit (standing/recurring) tasks get a
+                    // small loop glyph next to the title so they are visually
+                    // distinct from one-off dated tasks. The glyph is a compact
+                    // "↻" (↻ U+21BB) in a labelSmall container; same color as
+                    // the accent strip so it echoes the row's identity without
+                    // adding noise. Only shown for standing rows (item.standing).
+                    if (item.standing && !isPrompt) {
+                        Spacer(Modifier.width(4.dp))
+                        Box(
+                            modifier = Modifier
+                                .background(
+                                    color = accent.copy(alpha = 0.15f),
+                                    shape = RoundedCornerShape(4.dp),
+                                )
+                                .padding(horizontal = 3.dp, vertical = 1.dp)
+                                .semantics {
+                                    contentDescription = "recurring"
+                                },
+                        ) {
+                            Text(
+                                text = "↻",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = accent,
+                            )
+                        }
+                    }
                     if (isPrompt) {
                         Spacer(Modifier.width(6.dp))
                         SuggestionChip(
@@ -350,8 +394,12 @@ fun TaskRow(
                     )
                     if (item.author.isNotEmpty() && item.author != activeRepoOwner) {
                         Spacer(Modifier.width(6.dp))
+                        // D-43 fix — resolve author UUID → display name so the
+                        // bubble shows real initials (e.g. "BK") not a UUID char.
+                        val resolvedAuthorName = effectiveAuthorNames[item.author] ?: item.author
                         AuthorBubble(
                             author = item.author,
+                            displayName = resolvedAuthorName,
                             modifier = Modifier.testTag("$TestTagTaskAuthor-${item.id}"),
                         )
                     }
@@ -427,10 +475,32 @@ private fun RepoDot(seed: String, modifier: Modifier = Modifier) {
     )
 }
 
+/**
+ * D-43 fix — [displayName] is the resolved author display name (e.g. "Boy
+ * Keeper") used for both initials derivation and the a11y label.
+ * [author] is the raw identity field (UUID or fallback name string) used
+ * only for the deterministic color seed. When [displayName] falls back to
+ * the raw [author] string the initials logic still does its best (e.g.
+ * "Keeper" → "K", "01900000-…" → "?" → shown as "?" which is correct
+ * without the map, and now "BK" with the map).
+ *
+ * D-32 fix — `contentDescription` set to "by <displayName>" so TalkBack
+ * announces author attribution instead of skipping the bubble silently.
+ */
 @Composable
-private fun AuthorBubble(author: String, modifier: Modifier = Modifier) {
-    val initials = author.trim().split(Regex("\\s+")).take(2)
-        .mapNotNull { it.firstOrNull()?.uppercaseChar()?.toString() }
+private fun AuthorBubble(
+    author: String,
+    displayName: String = author,
+    modifier: Modifier = Modifier,
+) {
+    // Derive initials from the resolved display name, not the raw author field.
+    val initials = displayName.trim().split(Regex("\\s+")).take(2)
+        .mapNotNull { w ->
+            // Skip UUID-segment-looking tokens (all hex digits + dashes) so
+            // that an unresolved UUID falls through to "?".
+            if (w.all { c -> c.isDigit() || c in 'a'..'f' || c in 'A'..'F' || c == '-' }) null
+            else w.firstOrNull()?.uppercaseChar()?.toString()
+        }
         .joinToString("")
         .ifEmpty { "?" }
     Box(
@@ -439,7 +509,9 @@ private fun AuthorBubble(author: String, modifier: Modifier = Modifier) {
             .background(
                 colorFromSeed(author),
                 shape = androidx.compose.foundation.shape.CircleShape,
-            ),
+            )
+            // D-32 fix — a11y label so TalkBack announces attribution.
+            .semantics { contentDescription = "by $displayName" },
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -471,6 +543,12 @@ private fun LinkedTimeboxChip(
     )
 }
 
+/**
+ * D-32 fix — `contentDescription` added so TalkBack announces the priority
+ * level instead of silently skipping the dot. The label uses a human-readable
+ * tier ("high priority" / "medium priority" / "low priority") rather than the
+ * raw numeric level, which is an implementation detail.
+ */
 @Composable
 private fun PriorityDot(level: Int) {
     val color = when (level) {
@@ -478,10 +556,17 @@ private fun PriorityDot(level: Int) {
         in 4..7 -> MaterialTheme.colorScheme.tertiary
         else -> MaterialTheme.colorScheme.secondary
     }
+    val tier = when (level) {
+        in 8..Int.MAX_VALUE -> "high priority"
+        in 4..7 -> "medium priority"
+        else -> "low priority"
+    }
     Box(
         modifier = Modifier
             .size(12.dp)
-            .background(color, shape = androidx.compose.foundation.shape.CircleShape),
+            .background(color, shape = androidx.compose.foundation.shape.CircleShape)
+            // D-32 fix — a11y label so TalkBack announces priority.
+            .semantics { contentDescription = tier },
     )
 }
 

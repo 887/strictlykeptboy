@@ -123,7 +123,11 @@ fun LazyItemScope.ExpandedNowPlayingTaskBody(
         .testTag(TestTagExpandedTaskChipStrip),
       horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-      TasksFilter.entries.forEach { f ->
+      // D-20 — Rail is reversed so Today sits at the thumb-native bottom of
+      // the pulled-up sheet; less-frequent filters (Done, ByRepo) are at the
+      // top where they don't need to be in every session. Visual order becomes
+      // Done → ByRepo → All → Upcoming → Today (top → bottom).
+      TasksFilter.entries.reversed().forEach { f ->
         val labelRes = when (f) {
           TasksFilter.Today -> R.string.task_filter_today
           TasksFilter.Upcoming -> R.string.task_filter_upcoming

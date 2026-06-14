@@ -27,6 +27,21 @@ import java.util.concurrent.ConcurrentHashMap
 val LocalAnimatingDoneIds = compositionLocalOf<Set<String>> { emptySet() }
 
 /**
+ * D-43 fix — CompositionLocal carrying the author UUID → display name map.
+ * [NowPlayingSheetHost] provides this from [TasksUiState.authorDisplayNames]
+ * so [TaskRow]'s [AuthorBubble] can resolve "Boy Keeper" from a UUID without
+ * needing an explicit parameter threaded through every intermediate composable.
+ *
+ * Default is an empty map — [AuthorBubble] falls back to initials derived
+ * from the raw author string (which produces "K" for "Keeper" / "?" for
+ * unresolved UUIDs). The CompositionLocal is ALSO provided by each task-list
+ * composable ([TaskCombinedView], [TaskDoneView], etc.) that receives
+ * [TasksUiState], so coverage is complete even if a view doesn't explicitly
+ * wrap in [NowPlayingSheetHost]'s provider.
+ */
+val LocalAuthorDisplayNames = compositionLocalOf<Map<String, String>> { emptyMap() }
+
+/**
  * Phase H — five top-level task views per UI-J.
  *
  * Phase U.4 / F11 note: [label] is **wire-format** / stable toString fallback.
@@ -95,6 +110,16 @@ data class TasksUiState(
      * is absent from this map.
      */
     val repoDisplayNames: Map<String, String> = emptyMap(),
+    /**
+     * D-43 fix — map from author identity UUID → display name, used by
+     * [TaskRow]'s [AuthorBubble] to show meaningful initials (e.g. "BK"
+     * for "Boy Keeper") instead of the first char of the raw UUID ("0").
+     * Populated from [CacheDatabase.identities()] for every drawn repo.
+     * Falls back gracefully to initials derived from the raw author string
+     * when the UUID isn't in this map (e.g. a manually-set name like
+     * "Keeper" in the in-memory demo prompts still produces "K").
+     */
+    val authorDisplayNames: Map<String, String> = emptyMap(),
 )
 
 /**

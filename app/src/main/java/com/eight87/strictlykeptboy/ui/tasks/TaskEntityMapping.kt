@@ -73,12 +73,17 @@ fun TaskRow.toTaskItem(
     source = TaskSource.Other,
 )
 
-fun StandingTaskRow.toTaskItem(todolistInfo: TodolistInfo): TaskItem = TaskItem(
+fun StandingTaskRow.toTaskItem(
+    todolistInfo: TodolistInfo,
+    zone: ZoneId = ZoneId.systemDefault(),
+): TaskItem = TaskItem(
     id = id,
     title = title,
     todolist = todolistInfo,
     due = null,
     done = done,
+    // D-10 — propagate completion date from the row so Done list shows the date.
+    doneAt = doneAtEpochMs?.let { epochMsToLocalDate(it, zone) },
     priority = priority ?: 0,
     tags = decodeTags(tagsJson),
     standing = true,

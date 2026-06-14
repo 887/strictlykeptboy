@@ -75,6 +75,8 @@ data class StandingTaskRow(
     val title: String,
     val body: String,
     val done: Boolean,
+    /** D-10 — completion epoch-ms, mirroring TaskRow.doneAtEpochMs. Null when not yet completed. */
+    val doneAtEpochMs: Long? = null,
     val pinned: Boolean,
     val priority: Int?,
     val tagsJson: String,

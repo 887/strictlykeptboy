@@ -63,7 +63,7 @@ import com.eight87.strictlykeptboy.cache.entities.TaskRow
         EventFtsRow::class,
         TaskFtsRow::class,
     ],
-    version = 6,
+    version = 7, // D-10: added doneAtEpochMs to StandingTaskRow
     exportSchema = false,
 )
 abstract class CacheDatabase : RoomDatabase() {

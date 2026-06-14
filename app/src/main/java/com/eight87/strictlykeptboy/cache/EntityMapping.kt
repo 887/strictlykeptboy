@@ -100,6 +100,8 @@ internal object EntityMapping {
             title = t.title,
             body = t.body,
             done = t.done,
+            // D-10 — persist completion date so it survives reindex.
+            doneAtEpochMs = t.doneAt?.let { parseEpochMs(it) },
             pinned = t.pinned,
             priority = t.priority,
             tagsJson = encodeTags(t.tags),

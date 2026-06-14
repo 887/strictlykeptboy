@@ -1055,6 +1055,26 @@ class MainActivity : ComponentActivity() {
                             // D-12 fix — build the repoId→displayName map so
                             // By Repo section headers show friendly names.
                             val repoDisplayNames = repos.associate { it.repoId to it.displayName }
+                            // D-43 fix — build author UUID → display name map from
+                            // the identity DAO so TaskRow's AuthorBubble can show
+                            // real initials ("BK" for "Boy Keeper") instead of the
+                            // first char of the raw UUID ("0").
+                            val authorDisplayNames: Map<String, String> =
+                                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                    val out = mutableMapOf<String, String>()
+                                    for (cfg in drawingRepos) {
+                                        runCatching {
+                                            graph.cacheDatabase.identities()
+                                                .listAll(cfg.repoId)
+                                                .forEach { row ->
+                                                    if (row.displayName.isNotBlank()) {
+                                                        out[row.id] = row.displayName
+                                                    }
+                                                }
+                                        }
+                                    }
+                                    out
+                                }
                             // D-23 fix — populate TasksUiState.todolists from the
                             // todolistByUuid cache (populated by scanRepoTomls above) so
                             // the Quick Add sheet has list chips to show. Previously this
@@ -1078,6 +1098,8 @@ class MainActivity : ComponentActivity() {
                                     multiRepo = repos.size > 1,
                                     activeRepoOwner = owner,
                                     repoDisplayNames = repoDisplayNames,
+                                    // D-43 fix — wire author UUID → display name map.
+                                    authorDisplayNames = authorDisplayNames,
                                     // Use freshState for animation sets to pick up
                                     // any undoDone() that happened during collect.
                                     animatingDoneIds = freshState.animatingDoneIds,

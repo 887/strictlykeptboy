@@ -86,7 +86,7 @@ Running list of every control that failed the grind-walk. Format + lifecycle in
   date because `StandingTask` has no `doneAt` field; the Done list shows the
   in-memory date but it doesn't survive a reindex. Add `doneAt` to the
   `StandingTask` TOML schema + writer to make it durable.
-- **Status:** open (low priority)
+- **Status:** fixed-in main — StandingTask gained a `done_at` field (Entities/codec/Rows/EntityMapping; DB v6→7); completion date survives reindex. +2 round-trip tests. (0d82fe1)
 
 ### D-6 — Settings → Repositories → account row tap — major
 - **Expected:** "Tap an account to open its settings" (the screen's own
@@ -236,7 +236,7 @@ Running list of every control that failed the grind-walk. Format + lifecycle in
 - Rail is Today→…→Done top-to-bottom; Today (primary) sits at the hard-to-reach
   top, Done (secondary for the complete flow) lowest. Consider inverting so the
   primary filter is at thumb-native height. `ExpandedNowPlayingTaskBody.kt:125`.
-- **Status:** open (design)
+- **Status:** fixed-in main — rail reversed (Done→…→Today top-to-bottom) so Today sits at thumb-height on the bottom sheet. AVD-verified. (0d82fe1)
 
 ### D-21 — Todolist → By Repo blank header for tasks with empty repoId — minor
 - `groupBy { it.todolist.repoId }` with empty repoId renders a blank section
@@ -370,7 +370,7 @@ _PASS: D-16 top-zone, D-17, D-18, D-19, D-25, D-27, D-28. New below._
   switched to Done tab. Agent flagged all three as needing physical-device
   verification (coordinate-precision / IME artifacts of automated driving, not
   clearly app bugs). Re-verify on the next walk; only escalate if reproducible.
-- **Status:** open (investigate / likely not-a-bug)
+- **Status:** fixed-in main — standing/recurring tasks show a ↻ glyph badge in TaskRow. AVD-verified. (d8d2781)
 
 ## Re-walk iter-2 findings (Glaciermark/thorough, A+B build, 2026-06-14)
 _PASS: D-16, D-17, D-18, D-19, D-23, D-24, D-26, D-27, D-31. Issues below._
@@ -489,7 +489,7 @@ _15/16 PASS. Dustrun iter-3 was fully CLEAN. Glaciermark's 3 remaining majors:_
   initials ("BK"/"K"). Resolve author id → party/identity display name → initials
   (same source the event author chip should use), so a kept user sees who set the
   task. Low priority (chip is present; just mislabeled).
-- **Status:** open (follow-up)
+- **Status:** fixed-in main — author chip resolves UUID→display name (authorDisplayNames map from identities DAO + LocalAuthorDisplayNames) → shows 'BK'. AVD-verified. (d8d2781)
 
 ## Closed
 

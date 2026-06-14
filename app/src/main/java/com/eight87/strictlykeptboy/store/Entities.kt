@@ -459,6 +459,12 @@ data class StandingTask(
     val title: String,
     val todolistId: String,
     val done: Boolean = false,
+    /**
+     * D-10 — completion timestamp, mirroring [Task.doneAt]. Written to disk
+     * so a completed standing task's date survives a reindex. Omitted on
+     * write when null (omit-on-default, same policy as Task).
+     */
+    val doneAt: String? = null,
     val pinned: Boolean = false,
     val priority: Int? = null,
     val tags: List<String> = emptyList(),
@@ -475,6 +481,8 @@ data class StandingTask(
         t.putString("title", title)
         t.putString("todolist_id", todolistId)
         if (done) t.putBool("done", true)
+        // D-10 — persist completion date so it survives reindex.
+        t.putOffsetDateTime("done_at", doneAt)
         if (pinned) t.putBool("pinned", true)
         t.putInt("priority", priority)
         if (tags.isNotEmpty()) t.putStringArray("tags", tags)
@@ -489,6 +497,7 @@ data class StandingTask(
                 title = t.getString("title") ?: error("missing title"),
                 todolistId = t.getString("todolist_id") ?: error("missing todolist_id"),
                 done = t.getBool("done") ?: false,
+                doneAt = t.getDateLike("done_at"),
                 pinned = t.getBool("pinned") ?: false,
                 priority = t.getInt("priority"),
                 tags = t.getStringArray("tags") ?: emptyList(),

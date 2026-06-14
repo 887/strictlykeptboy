@@ -133,6 +133,45 @@ class EntityRoundTripTest {
         assertEquals(s, back)
     }
 
+    // D-10 — StandingTask completion date must survive a serialize → parse
+    // round-trip so a completed standing task's date is durable across reindex.
+
+    @Test fun standingTaskDoneAtRoundTrip() {
+        val s = StandingTask(
+            header = header,
+            title = "Replace water filter",
+            todolistId = "0190a0aa-2222-7000-8a0a-000000000022",
+            done = true,
+            doneAt = "2026-06-14T09:15:00+02:00",
+        )
+        val text = FrontmatterWriter.serialize(s.toDoc())
+        // Verify the field is actually written to the wire format.
+        assert(text.contains("done_at")) {
+            "done_at absent from serialized standing task: $text"
+        }
+        val back = StandingTask.fromDoc(FrontmatterReader.parse(text))
+        assertEquals(s.done, back.done)
+        assertEquals(s.doneAt, back.doneAt)
+        assertEquals(s, back)
+    }
+
+    @Test fun standingTaskDoneAtNullByDefault() {
+        // Undone standing tasks must NOT emit a done_at field so existing
+        // hand-authored files stay byte-identical on round-trip.
+        val s = StandingTask(
+            header = header,
+            title = "Sharpen knives",
+            todolistId = "0190a0aa-2222-7000-8a0a-000000000022",
+        )
+        val text = FrontmatterWriter.serialize(s.toDoc())
+        assert(!text.contains("done_at")) {
+            "done_at leaked into undone standing task: $text"
+        }
+        val back = StandingTask.fromDoc(FrontmatterReader.parse(text))
+        assertEquals(null, back.doneAt)
+        assertEquals(s, back)
+    }
+
     @Test fun deviationRoundTrip() {
         val d = Deviation(
             header = header,
