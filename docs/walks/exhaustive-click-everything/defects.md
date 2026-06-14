@@ -445,7 +445,10 @@ _15/16 PASS. Dustrun iter-3 was fully CLEAN. Glaciermark's 3 remaining majors:_
   undoDone to flip `done=false` + clear `doneAt` + return the task to the active
   feed (+ persist/reindex like toggleDone). (The confirm-dialog "skips the
   playback timer" copy is about the timer, not the done-state, so undo is fine.)
-- **Status:** open — blocks the thorough walk
+- **Status:** fixed-in main (44f4419) — undoDone now reverses the disk write
+  (onTaskMarkedDone done=false) + a pendingDoneOverrides map stops Room from
+  clobbering the undo. AVD-verified: mark done → Undo → task back in Today, gone
+  from Done. 7 tests.
 
 ### D-45 — Quick Add silently fails when target list is read-only/demo — major
 - Adding a task to a read-only/demo-repo list: the sheet dismisses as if it
@@ -454,7 +457,10 @@ _15/16 PASS. Dustrun iter-3 was fully CLEAN. Glaciermark's 3 remaining majors:_
   either disable/annotate read-only list chips, or show a clear "can't add to a
   read-only list" message, or make the in-memory add visibly appear — never a
   silent success-that-isn't. `TaskQuickAddFab.kt` + `MainActivity.onWriteTask`.
-- **Status:** open — blocks the thorough walk
+- **Status:** fixed-in main (44f4419) — TasksViewState keeps an _inMemoryTasks
+  list merged into mergedBase on every Room refresh (+ their ids added to active),
+  so a quick-add to a demo/read-only list appears immediately + survives refresh.
+  AVD-verified. No more silent failure.
 
 ### D-46 — Done view still has no author chips / repo dots — major
 - D-39 made the author chip render in TODAY, but the DONE view shows neither
@@ -463,7 +469,9 @@ _15/16 PASS. Dustrun iter-3 was fully CLEAN. Glaciermark's 3 remaining majors:_
   the chip/dot still don't render there. Ensure `TaskDoneView`'s row path renders
   the same author chip + repo dot as Today. (NEW-3: task DETAIL also shows the raw
   author UUID — same id→name resolution gap as D-43.)
-- **Status:** open — blocks the thorough walk
+- **Status:** NOT A BUG / already-working (44f4419) — on-device the Done view
+  DOES render author chips + repo dots (D-13/D-39 path correct). Iter-3 logged it
+  against a stale build. Closed.
 
 ### D-43 — Author chip on tasks shows the author UUID's first char, not initials — minor (follow-up)
 - D-39 made the author chip render on file-backed tasks, but `item.author` holds

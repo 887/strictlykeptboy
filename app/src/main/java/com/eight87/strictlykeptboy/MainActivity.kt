@@ -1007,13 +1007,51 @@ class MainActivity : ComponentActivity() {
                             // De-dupe: real-disk wins over demo/FromEvents
                             // collisions by id.
                             val realIds = realTasks.mapTo(mutableSetOf()) { it.id }
-                            val mergedBase = realTasks + withPrompts.filter { it.id !in realIds } +
+                            val baseWithPrompts = realTasks + withPrompts.filter { it.id !in realIds } +
                                 fromEvents.filter { it.id !in realIds }
+                            // D-45 fix — re-merge in-memory quick-adds (demo/read-only
+                            // targets that never get a disk write). Without this, every
+                            // reactive set() call would overwrite the addTask() result,
+                            // making quick-adds to demo lists silently disappear. Tasks
+                            // whose id already appears in realIds are dropped (the real
+                            // entity has landed on disk and the Room scan now owns it).
+                            val inMemoryIds = baseWithPrompts.mapTo(mutableSetOf()) { it.id }
+                            val baseWithInMemory = baseWithPrompts +
+                                tasksViewState.inMemoryTasksSnapshot()
+                                    .filter { it.id !in inMemoryIds }
+                            // D-44 fix — re-apply pending done-state overrides so an
+                            // undo that fires before the async disk write + re-scan
+                            // doesn't get reverted by the Room snapshot. Once Room
+                            // delivers the expected state, the override is no longer
+                            // needed and we clear it so it doesn't ghost.
+                            val pendingOverrides = tasksViewState.pendingDoneOverridesSnapshot()
+                            val mergedBase = if (pendingOverrides.isEmpty()) {
+                                baseWithInMemory
+                            } else {
+                                baseWithInMemory.map { t ->
+                                    val forced = pendingOverrides[t.id]
+                                    when {
+                                        forced == null -> t
+                                        // Override matches disk — clear the pending entry.
+                                        forced == t.done -> {
+                                            tasksViewState.clearDoneOverride(t.id)
+                                            t
+                                        }
+                                        // Override differs from disk — apply it.
+                                        else -> t.copy(done = forced, doneAt = if (forced) t.doneAt else null)
+                                    }
+                                }
+                            }
                             // Round 2.27 / Phase C — ensure the demo
                             // KeeperPrompt todolist id is considered
                             // active so the rows are visible under
                             // `visibleTasks()`.
-                            val idsWithDemo = ids + "demo-keeper"
+                            // D-45 fix — also include todolist IDs from any
+                            // in-memory quick-adds (demo/read-only targets)
+                            // so their tasks pass the visibleTasks() filter.
+                            val inMemoryTodolistIds = tasksViewState.inMemoryTasksSnapshot()
+                                .mapTo(mutableSetOf()) { it.todolist.id }
+                            val idsWithDemo = ids + "demo-keeper" + inMemoryTodolistIds
                             // D-12 fix — build the repoId→displayName map so
                             // By Repo section headers show friendly names.
                             val repoDisplayNames = repos.associate { it.repoId to it.displayName }
@@ -1026,6 +1064,12 @@ class MainActivity : ComponentActivity() {
                                     .filter { it.repoId in (drawRepoIds.ifEmpty { repos.map { r -> r.repoId }.toSet() }) }
                                     .distinctBy { it.id }
                                     .sortedByDescending { it.priority }
+                            // D-44 fix — use a fresh snapshot of state for
+                            // animatingDoneIds + beatCompletedIds so that an
+                            // undo that fires between `cur` capture and this
+                            // set() call doesn't re-add the task to the beat
+                            // window (cur.animatingDoneIds may be stale).
+                            val freshState = tasksViewState.state.value
                             tasksViewState.set(
                                 cur.copy(
                                     tasks = mergedBase,
@@ -1034,6 +1078,10 @@ class MainActivity : ComponentActivity() {
                                     multiRepo = repos.size > 1,
                                     activeRepoOwner = owner,
                                     repoDisplayNames = repoDisplayNames,
+                                    // Use freshState for animation sets to pick up
+                                    // any undoDone() that happened during collect.
+                                    animatingDoneIds = freshState.animatingDoneIds,
+                                    beatCompletedIds = freshState.beatCompletedIds,
                                 ),
                             )
                         }

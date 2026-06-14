@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZonedDateTime
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * D-27 — CompositionLocal carrying the set of task IDs currently in the
@@ -117,15 +118,16 @@ class TasksViewState(
 
     /**
      * D-5 fix — optional callback invoked after a task transitions to
-     * `done = true`. The composition root wires this to the file-write
-     * path (read entity from disk → stamp `done`+`doneAt` → write back
-     * via EntityWriter → incremental re-scan). Not called when
-     * un-marking (un-done clears the date and the file write is handled
-     * symmetrically via the same hook if non-null).
+     * `done = true` or back to `done = false` (via [undoDone]). The
+     * composition root wires this to the file-write path (read entity
+     * from disk → stamp `done`+`doneAt` → write back via EntityWriter →
+     * incremental re-scan).
      *
      * Signature: `(updatedItem: TaskItem) -> Unit`. The callback receives
      * the **already-updated** in-memory item so the writer doesn't have
-     * to re-derive the new state.
+     * to re-derive the new state. When `item.done == false` the writer
+     * clears `doneAt` (its own `if (item.done)` guard handles both
+     * directions correctly).
      */
     var onTaskMarkedDone: ((TaskItem) -> Unit)? = null
 
@@ -209,15 +211,38 @@ class TasksViewState(
      * D-28 — undo a completion: un-marks [taskId] without triggering the
      * beat or snackbar again. Clears `done`+`doneAt` and removes from
      * [animatingDoneIds] and [beatCompletedIds] immediately.
+     *
+     * D-44 fix — also calls [onTaskMarkedDone] with the un-done item so
+     * the disk write is reversed (the same callback handles `done=false`
+     * by clearing `doneAt` and reindexing). Without this the reactive
+     * Room snapshot would overwrite the in-memory undo on the next update,
+     * silently keeping the task in Done.
      */
     fun undoDone(taskId: String) {
+        var undoneItem: TaskItem? = null
         _state.value = _state.value.copy(
             tasks = _state.value.tasks.map { task ->
-                if (task.id == taskId) task.copy(done = false, doneAt = null) else task
+                if (task.id == taskId) {
+                    val item = task.copy(done = false, doneAt = null)
+                    undoneItem = item
+                    item
+                } else task
             },
             animatingDoneIds = _state.value.animatingDoneIds - taskId,
             beatCompletedIds = _state.value.beatCompletedIds - taskId,
         )
+        // D-44 fix — record a pending override so the reactive collector
+        // re-applies done=false even when the Room snapshot fires before
+        // the async disk write + re-scan complete (which would otherwise
+        // overwrite the in-memory undo with done=true from the old cache).
+        _pendingDoneOverrides[taskId] = false
+        // D-44 — reverse the disk write so the Room snapshot also reflects
+        // done=false on the next re-scan. The onTaskMarkedDone callback
+        // handles both directions: when item.done==false it writes
+        // done=false + clears doneAt to disk and triggers incrementalScan.
+        // After incrementalScan the Room snapshot delivers done=false and
+        // the collector calls clearDoneOverride(taskId) to clean up.
+        undoneItem?.let { onTaskMarkedDone?.invoke(it) }
     }
 
     fun pinStanding(taskId: String, pinned: Boolean) {
@@ -228,9 +253,55 @@ class TasksViewState(
         )
     }
 
+    /**
+     * D-44 fix — pending done-state overrides. When [undoDone] is called
+     * the in-memory flip happens immediately, but the Room snapshot may
+     * overwrite it before the async disk write + re-scan complete. Storing
+     * the pending override here lets [set] re-apply it when merging from
+     * disk on the next collect cycle. The key is taskId; value is the
+     * forced done state. Cleared by [clearDoneOverride] once the Room
+     * snapshot delivers the on-disk value (called from the collector after
+     * the disk write + incrementalScan confirm the new state).
+     */
+    private val _pendingDoneOverrides = ConcurrentHashMap<String, Boolean>()
+
+    /** D-44 — record a pending done override that survives the next set(). */
+    fun setPendingDoneOverride(taskId: String, done: Boolean) {
+        _pendingDoneOverrides[taskId] = done
+    }
+
+    /** D-44 — remove an override once the Room snapshot has caught up. */
+    fun clearDoneOverride(taskId: String) {
+        _pendingDoneOverrides.remove(taskId)
+    }
+
+    /** D-44 — snapshot the pending overrides for the reactive collector. */
+    fun pendingDoneOverridesSnapshot(): Map<String, Boolean> = _pendingDoneOverrides.toMap()
+
+    /**
+     * D-45 fix — in-memory tasks added via [addTask] that are NOT backed
+     * by a real disk entity (demo-list / read-only targets). The reactive
+     * Room snapshot collector calls [set] and replaces `tasks` from disk,
+     * which would overwrite purely in-memory additions. Storing them here
+     * separately lets the collector merge them back in on every refresh so
+     * they stay visible. Items are removed when [set] is called with a
+     * `tasks` list that already contains an entity with the same id (i.e.
+     * the disk write eventually lands and the Room scan picks it up).
+     */
+    private val _inMemoryTasks = mutableListOf<TaskItem>()
+
     fun addTask(item: TaskItem) {
+        // D-45 fix — record the item in the in-memory list so it
+        // survives the next reactive set() call that rebuilds from disk.
+        _inMemoryTasks.add(item)
         _state.value = _state.value.copy(tasks = _state.value.tasks + item)
     }
+
+    /**
+     * D-45 — expose the in-memory task set for the reactive collector so
+     * it can merge them into mergedBase on every snapshot refresh.
+     */
+    fun inMemoryTasksSnapshot(): List<TaskItem> = _inMemoryTasks.toList()
 
     /** Phase 2.1.D.2 — flip a todolist's chip-filter on/off. */
     fun toggleListVisibility(todolistId: String) {
