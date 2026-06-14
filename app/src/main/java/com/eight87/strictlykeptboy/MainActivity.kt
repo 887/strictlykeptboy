@@ -1108,6 +1108,23 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                     }
+                    // D-33 — wire identityPrefs + neutralModePrefs into
+                    // TasksViewState so the task UI copy (confirm dialog, snackbar,
+                    // empty states) uses the active repo's praise term / honorific.
+                    // Collects the identity state reactively so settings-screen
+                    // edits are reflected in the task UI without a restart.
+                    androidx.compose.runtime.LaunchedEffect(Unit) {
+                        graph.identityPrefs.state.collect { identity ->
+                            val cur = tasksViewState.state.value
+                            tasksViewState.set(
+                                cur.copy(
+                                    praiseTerm = identity.praise.ifBlank { "good boy" },
+                                    honorific = identity.honorific,
+                                    neutralMode = graph.neutralModePrefs.isEnabled(),
+                                ),
+                            )
+                        }
+                    }
                     // D-5 fix — wire onTaskMarkedDone so toggling a task
                     // done in the UI also stamps done+doneAt in the task
                     // file and triggers an incremental re-scan. Mirrors the

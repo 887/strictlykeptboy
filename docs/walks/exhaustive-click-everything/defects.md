@@ -248,7 +248,7 @@ Running list of every control that failed the grind-walk. Format + lifecycle in
   UN-mark (un-doing should be instant); U-3 Quick Add default target chip isn't
   "Today"; U-4 no haptic on completion; U-5 drag handle small; U-6 no count badge
   on Today rail; U-7 IME Done submits but doesn't dismiss the sheet.
-- **Status:** open (polish — pick the high-value ones)
+- **Status:** fixed-in main (328079e) — U-1 all-done delight, U-2 instant un-mark (no confirm), U-3 Quick Add default Today, U-4 haptic on done, U-5 bigger drag-handle target, U-6 Today rail count badge, U-7 IME-Done submits+dismisses. 13 tests, AVD-verified.
 
 ## Todolist-walk findings (Glaciermark / snow-leopard-thorough QA run, 2026-06-14)
 _Confirmed working by this walk: D-5, D-11, D-12, D-14 (live) + D-13 (code). B-2

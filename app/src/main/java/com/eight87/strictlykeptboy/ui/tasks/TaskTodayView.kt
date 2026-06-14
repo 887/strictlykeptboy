@@ -18,6 +18,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
+import com.eight87.strictlykeptboy.ui.tasks.LocalNeutralMode
+import com.eight87.strictlykeptboy.ui.tasks.LocalPraiseTerm
 import java.time.LocalDate
 
 const val TestTagTodayView = "TodayView"
@@ -55,17 +57,43 @@ fun TaskTodayView(
 ) {
     // D-27 — fall back to the CompositionLocal if the caller doesn't pass explicitly.
     val effectiveAnimatingIds = animatingDoneIds ?: LocalAnimatingDoneIds.current
+    // D-33 — read identity copy from CompositionLocals.
+    val praiseTerm = LocalPraiseTerm.current
+    val neutralMode = LocalNeutralMode.current
     val forToday = tasks.forToday(today)
     // D-27 — tasks mid-beat are visually "done" but still present in Today.
     val beatTasks = tasks.filter { it.id in effectiveAnimatingIds && it.done }
     val visibleForToday = (forToday + beatTasks).distinctBy { it.id }
 
     if (visibleForToday.isEmpty()) {
-        EmptyTasksState(
-            primaryMessage = stringResource(R.string.tasks_empty_today_primary),
-            neutralMessage = stringResource(R.string.tasks_empty_today_neutral),
-            modifier = modifier.testTag(TestTagTodayView),
-        )
+        // U-1 — distinguish between "no Today tasks at all" vs "all Today tasks done".
+        // If forToday has tasks (some are done, some beat-animated) but they're ALL done
+        // (and no more beat tasks), show the "all done" delight state.
+        // More precisely: if the full task list has any today-eligible tasks that are done,
+        // it's the all-done case; otherwise it's the truly-empty case.
+        val todayEligible = tasks.forToday(today) // unfiltered — includes done
+        val hasDoneTodayTasks = todayEligible.any { it.done }
+        if (hasDoneTodayTasks) {
+            // All-done delight state: kink-positive, on-brand.
+            val allDonePrimary = if (!neutralMode && praiseTerm.isNotEmpty()) {
+                stringResource(R.string.tasks_today_all_done_primary, praiseTerm)
+            } else {
+                stringResource(R.string.tasks_today_all_done_primary, "good boy")
+            }
+            EmptyTasksState(
+                primaryMessage = allDonePrimary,
+                neutralMessage = stringResource(R.string.tasks_today_all_done_neutral),
+                neutralOnly = neutralMode,
+                modifier = modifier.testTag(TestTagTodayView),
+            )
+        } else {
+            EmptyTasksState(
+                primaryMessage = stringResource(R.string.tasks_empty_today_primary),
+                neutralMessage = stringResource(R.string.tasks_empty_today_neutral),
+                neutralOnly = neutralMode,
+                modifier = modifier.testTag(TestTagTodayView),
+            )
+        }
         return
     }
 

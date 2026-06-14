@@ -53,6 +53,9 @@ import com.eight87.strictlykeptboy.ui.playing.MiniPlayer
 import com.eight87.strictlykeptboy.ui.playing.NowPlayingScreen
 import com.eight87.strictlykeptboy.ui.tasks.LocalAnimatingDoneIds
 import com.eight87.strictlykeptboy.ui.tasks.LocalAuthorDisplayNames
+import com.eight87.strictlykeptboy.ui.tasks.LocalPraiseTerm
+import com.eight87.strictlykeptboy.ui.tasks.LocalHonorific
+import com.eight87.strictlykeptboy.ui.tasks.LocalNeutralMode
 import com.eight87.strictlykeptboy.ui.tasks.TaskQuickAddRequest
 import com.eight87.strictlykeptboy.ui.tasks.TasksViewState
 import kotlinx.coroutines.channels.Channel
@@ -142,6 +145,7 @@ internal fun NowPlayingSheetHost(
     val snackbarHostState = remember { SnackbarHostState() }
     val undoChannel = remember { Channel<String>(Channel.CONFLATED) }
     val markedDoneLabel = stringResource(R.string.task_marked_done_snackbar)
+    val markedDoneIdentityLabel = stringResource(R.string.task_marked_done_snackbar_identity, tasksUi.praiseTerm.ifEmpty { "good boy" })
     LaunchedEffect(tasksState) {
         tasksState.onShowUndoSnackbar = { taskId -> undoChannel.trySend(taskId) }
     }
@@ -155,8 +159,14 @@ internal fun NowPlayingSheetHost(
             // (and its copy already says completion can't be un-finished from
             // history); to reverse a completion the user un-checks it in the Done
             // view. Short duration is fine for a passive confirmation.
+            // D-33 — use identity-driven copy when praiseTerm is set and neutral off.
+            val label = if (!tasksUi.neutralMode && tasksUi.praiseTerm.isNotEmpty()) {
+                markedDoneIdentityLabel
+            } else {
+                markedDoneLabel
+            }
             snackbarHostState.showSnackbar(
-                message = markedDoneLabel,
+                message = label,
                 duration = SnackbarDuration.Short,
             )
         }
@@ -198,6 +208,12 @@ internal fun NowPlayingSheetHost(
     CompositionLocalProvider(
         LocalAnimatingDoneIds provides tasksUi.animatingDoneIds,
         LocalAuthorDisplayNames provides tasksUi.authorDisplayNames,
+        // D-33 — surface identity.toml praise term + honorific + neutral mode
+        // into the task UI copy without threading through every intermediate
+        // composable. Empty string = fall back to hardcoded defaults in leaves.
+        LocalPraiseTerm provides tasksUi.praiseTerm,
+        LocalHonorific provides tasksUi.honorific,
+        LocalNeutralMode provides tasksUi.neutralMode,
     ) {
     Box(modifier = Modifier.fillMaxSize()) {
         val peekDp = 118.dp

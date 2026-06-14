@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -23,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -31,8 +33,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.eight87.strictlykeptboy.R
+import java.time.LocalDate
 import com.eight87.strictlykeptboy.ui.tasks.TaskCombinedView
 import com.eight87.strictlykeptboy.ui.tasks.TaskDoneView
 import com.eight87.strictlykeptboy.ui.tasks.TaskItem
@@ -44,6 +49,7 @@ import com.eight87.strictlykeptboy.ui.tasks.TaskUpcomingView
 import com.eight87.strictlykeptboy.ui.tasks.TasksFilter
 import com.eight87.strictlykeptboy.ui.tasks.TasksViewState
 import com.eight87.strictlykeptboy.ui.tasks.TodolistMode
+import com.eight87.strictlykeptboy.ui.tasks.forToday
 import com.eight87.strictlykeptboy.ui.tasks.forUpcoming
 import com.eight87.strictlykeptboy.ui.tasks.visibleTasks
 
@@ -84,6 +90,13 @@ fun LazyItemScope.ExpandedNowPlayingTaskBody(
 
   var selectedFilter by rememberSaveable { mutableStateOf(TasksFilter.Today) }
   var selectedListId by rememberSaveable { mutableStateOf<String?>(null) }
+
+  // U-6 — count of ACTIVE (not-done) tasks in the Today view for the badge.
+  // Includes overdue + today-dated + from-events + pinned standing (same as
+  // TaskTodayView.forToday), but excludes done tasks and beat-window tasks.
+  val todayActiveCount = remember(visibleTasks) {
+    visibleTasks.forToday(LocalDate.now()).count { !it.done }
+  }
 
   Row(
     modifier = Modifier
@@ -138,6 +151,8 @@ fun LazyItemScope.ExpandedNowPlayingTaskBody(
         val selected = f == selectedFilter
         val labelColor = if (selected) MaterialTheme.colorScheme.onSurface
           else MaterialTheme.colorScheme.onSurfaceVariant
+        // U-6 — show active count badge on the Today rail item only.
+        val showBadge = f == TasksFilter.Today && todayActiveCount > 0
         Box(
           modifier = Modifier
             .size(width = 52.dp, height = 108.dp)
@@ -165,6 +180,29 @@ fun LazyItemScope.ExpandedNowPlayingTaskBody(
                 .background(MaterialTheme.colorScheme.primary)
                 .clip(RoundedCornerShape(1.dp)),
             )
+          }
+          // U-6 — count badge: small pill at top-center of the Today rail item.
+          if (showBadge) {
+            Box(
+              modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 8.dp)
+                .size(18.dp)
+                .background(
+                  color = MaterialTheme.colorScheme.primary,
+                  shape = CircleShape,
+                )
+                .testTag("TodayCountBadge"),
+              contentAlignment = Alignment.Center,
+            ) {
+              Text(
+                text = todayActiveCount.coerceAtMost(99).toString(),
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                color = MaterialTheme.colorScheme.onPrimary,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+              )
+            }
           }
         }
       }

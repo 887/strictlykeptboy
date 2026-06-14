@@ -112,8 +112,11 @@ fun TaskQuickAddSheet(
     // D-19 fix — track whether the user tried to submit an empty title
     // so we can show an error message on the field.
     var showEmptyError by remember { mutableStateOf(false) }
+    // U-3 fix — default due date is Today (not No-date) so quick-added tasks
+    // land in the Today view right away. The user can change to No-date or
+    // Tomorrow explicitly if needed.
     // D-40 — due-date selection, only relevant for Todolist targets.
-    var selectedDue by remember { mutableStateOf(QuickAddDue.None) }
+    var selectedDue by remember { mutableStateOf(QuickAddDue.Today) }
 
     // D-18 fix — gate focus on the sheet being fully expanded so the
     // focus request doesn't race the ModalBottomSheet settle animation
@@ -127,6 +130,9 @@ fun TaskQuickAddSheet(
 
     // Helper to submit the current input — shared by the Button and the
     // keyboard IME Done action so both paths are identical.
+    // U-7 fix — after successful submit, also invoke onDismiss so the sheet
+    // closes (previously only the Button path dismissed; IME Done submitted
+    // but left the sheet open requiring a separate swipe-down dismiss).
     val submitAction: () -> Unit = submit@{
         val t = target ?: return@submit
         val cleaned = title.trim()
@@ -147,6 +153,9 @@ fun TaskQuickAddSheet(
             else -> null // event targets handle due themselves via materialize()
         }
         onSubmit(cleaned, t, due)
+        // U-7 fix — dismiss the sheet after submit so the user doesn't need to
+        // manually swipe it away after the keyboard "Done" key submits a task.
+        onDismiss()
     }
 
     ModalBottomSheet(

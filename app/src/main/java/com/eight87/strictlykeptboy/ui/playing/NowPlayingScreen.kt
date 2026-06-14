@@ -207,11 +207,17 @@ private fun SheetDragHandle(
   } else {
     Modifier
   }
+  // U-5 fix — the entire Row is the draggable surface (already the case via
+  // draggableModifier), but we also increase the vertical padding so the
+  // touch target is at least 48dp tall while keeping the visual pill subtle
+  // (32×4dp). This gives a larger grab area for fast swipes without changing
+  // the visual appearance.
   Row(
     modifier = Modifier
       .fillMaxWidth()
       .then(draggableModifier)
-      .padding(top = 8.dp, bottom = 4.dp),
+      // U-5 — 20dp top + 20dp bottom = 44dp + 4dp pill = 48dp touch target.
+      .padding(top = 20.dp, bottom = 20.dp),
     horizontalArrangement = Arrangement.Center,
   ) {
     androidx.compose.foundation.layout.Box(

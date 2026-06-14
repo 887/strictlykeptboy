@@ -27,6 +27,26 @@ import java.util.concurrent.ConcurrentHashMap
 val LocalAnimatingDoneIds = compositionLocalOf<Set<String>> { emptySet() }
 
 /**
+ * D-33 — CompositionLocal carrying the active repo's praise term from
+ * identity.toml (e.g. "good boy"). Provided by [NowPlayingSheetHost]
+ * from [TasksUiState.praiseTerm]. Empty string = use hardcoded default.
+ */
+val LocalPraiseTerm = compositionLocalOf<String> { "" }
+
+/**
+ * D-33 — CompositionLocal carrying the active repo's honorific from
+ * identity.toml (e.g. "Sir"). Provided by [NowPlayingSheetHost].
+ * Empty string = omit from copy.
+ */
+val LocalHonorific = compositionLocalOf<String> { "" }
+
+/**
+ * D-33 — CompositionLocal for neutral-mode flag. When true, identity-
+ * driven copy falls back to plain English (no kink terms).
+ */
+val LocalNeutralMode = compositionLocalOf<Boolean> { false }
+
+/**
  * D-43 fix — CompositionLocal carrying the author UUID → display name map.
  * [NowPlayingSheetHost] provides this from [TasksUiState.authorDisplayNames]
  * so [TaskRow]'s [AuthorBubble] can resolve "Boy Keeper" from a UUID without
@@ -120,6 +140,30 @@ data class TasksUiState(
      * "Keeper" in the in-memory demo prompts still produces "K").
      */
     val authorDisplayNames: Map<String, String> = emptyMap(),
+    /**
+     * D-33 — active repo's praise term from identity.toml (e.g. "good boy").
+     * Empty = use the hardcoded default. Populated by the reactive identity
+     * collector in MainActivity from [IdentityPrefs.state].
+     */
+    val praiseTerm: String = "",
+    /**
+     * D-33 — active repo's honorific from identity.toml (e.g. "Sir").
+     * Empty = omit from copy. Populated alongside [praiseTerm].
+     */
+    val honorific: String = "",
+    /**
+     * D-33 — when true, all identity-driven copy falls back to its neutral
+     * variant (plain English, no kink terms). Driven by [NeutralModePrefs].
+     */
+    val neutralMode: Boolean = false,
+    /**
+     * D-22 / U-1 — the Today view shows a "all done" delight state distinct
+     * from the no-tasks-at-all state. This flag is derived in the view from
+     * the total forToday() count vs the visible active count, but we track it
+     * here so the count badge (U-6) can be derived from the same source.
+     * The count of ACTIVE (not-done, not-beat-window) Today tasks.
+     */
+    val todayActiveCount: Int = 0,
 )
 
 /**

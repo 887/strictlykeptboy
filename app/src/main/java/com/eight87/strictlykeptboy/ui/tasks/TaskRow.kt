@@ -24,6 +24,8 @@ import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -32,6 +34,8 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.store.PromptKind
+import com.eight87.strictlykeptboy.ui.tasks.LocalPraiseTerm
+import com.eight87.strictlykeptboy.ui.tasks.LocalNeutralMode
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -132,6 +136,11 @@ fun TaskRow(
     } else {
         authorDisplayNames + LocalAuthorDisplayNames.current
     }
+    // U-4 — haptic feedback on task completion (light click sensation)
+    val haptic = LocalHapticFeedback.current
+    // D-33 — read praise term from identity CompositionLocal for confirm dialog copy.
+    val praiseTerm = LocalPraiseTerm.current
+    val neutralMode = LocalNeutralMode.current
     val isPrompt = item.source == TaskSource.KeeperPrompt
     // D-36 fix — block the row's onTap for a short window after the confirm
     // dialog is dismissed (confirm OR cancel). The Compose dialog scrim does
@@ -195,7 +204,11 @@ fun TaskRow(
                 // Manual check-off confirmation — tapping the box to mark
                 // a task done bypasses the playback timer, and there's no
                 // undo from history, so the user explicitly asked for a
-                // yes/no gate. Unchecking is unguarded (cheap to redo).
+                // yes/no gate.
+                // U-2 fix — UN-marking a done task is immediate (no confirm).
+                // Only tapping an UNCHECKED checkbox (marking done) shows the
+                // confirm dialog. Un-checking is cheap to redo and should be
+                // instant.
                 var confirmDone by remember(item.id) { mutableStateOf(false) }
                 // D-31 fix — provide a contentDescription on the Checkbox itself as a
                 // belt-and-suspenders fallback for assistive services that traverse
@@ -204,8 +217,10 @@ fun TaskRow(
                     checked = item.done,
                     onCheckedChange = { checked ->
                         if (checked && !item.done) {
+                            // Marking done — show confirm dialog.
                             confirmDone = true
-                        } else {
+                        } else if (!checked && item.done) {
+                            // U-2 fix — un-marking is immediate, no confirm.
                             onToggleDone()
                         }
                     },
@@ -227,14 +242,22 @@ fun TaskRow(
                     }
                 }
                 if (confirmDone) {
+                    // D-33 — use identity-driven title when praiseTerm is set and
+                    // neutral mode is off; fall back to plain "Mark done?" otherwise.
+                    val confirmTitle = if (!neutralMode && praiseTerm.isNotEmpty()) {
+                        androidx.compose.ui.res.stringResource(
+                            com.eight87.strictlykeptboy.R.string.task_confirm_done_title_identity,
+                            praiseTerm,
+                        )
+                    } else {
+                        androidx.compose.ui.res.stringResource(
+                            com.eight87.strictlykeptboy.R.string.task_confirm_done_title,
+                        )
+                    }
                     androidx.compose.material3.AlertDialog(
                         onDismissRequest = { dismissConfirm() },
                         title = {
-                            androidx.compose.material3.Text(
-                                androidx.compose.ui.res.stringResource(
-                                    com.eight87.strictlykeptboy.R.string.task_confirm_done_title,
-                                ),
-                            )
+                            androidx.compose.material3.Text(confirmTitle)
                         },
                         text = {
                             androidx.compose.material3.Text(
@@ -248,6 +271,8 @@ fun TaskRow(
                                 onClick = {
                                     // D-36 fix — arm the guard before dismissing so
                                     // the leaked up-event is suppressed.
+                                    // U-4 fix — haptic click for satisfying completion cue.
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                     dismissConfirm()
                                     onToggleDone()
                                 },

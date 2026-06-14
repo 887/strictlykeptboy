@@ -62,6 +62,14 @@
     <string name="tasks_empty_combined_neutral">No tasks.</string>
     <string name="tasks_empty_today_primary">nothing on your plate today — good boy ;3</string>
     <string name="tasks_empty_today_neutral">No tasks for today.</string>
+    <!-- D-22 U-1 — "all done" delight state: all Today tasks completed, distinct from no-tasks -->
+    <!-- %1$s = praise term (e.g. "good boy") -->
+    <string name="tasks_today_all_done_primary">all done — %1$s ;3</string>
+    <string name="tasks_today_all_done_neutral">All done for today!</string>
+    <!-- D-33 — identity-driven confirm dialog copy (%1$s = praise term) -->
+    <string name="task_confirm_done_title_identity">Done, %1$s?</string>
+    <!-- D-33 — identity-driven snackbar copy (%1$s = praise term) -->
+    <string name="task_marked_done_snackbar_identity">Marked done, %1$s</string>
     <string name="tasks_empty_shopping_primary">shopping list empty — good boy ;3</string>
     <string name="tasks_empty_shopping_neutral">Shopping list empty.</string>
     <string name="tasks_empty_standing_primary">no standing tasks — good boy ;3</string>
