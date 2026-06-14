@@ -228,8 +228,10 @@ fun LazyItemScope.ExpandedNowPlayingTaskBody(
                 // from "github.com/887/marc-kept") when no display name
                 // is in the map, which is still far more readable than
                 // the full raw slug.
+                // D-21 fix — repoId can be empty for demo/local tasks;
+                // fall back to "Local" instead of rendering a blank header.
                 val displayName = uiState.repoDisplayNames[repoId]
-                    ?: repoId.substringAfterLast('/')
+                    ?: repoId.substringAfterLast('/').ifEmpty { "Local" }
                 Text(
                   text = displayName,
                   style = MaterialTheme.typography.titleSmall,

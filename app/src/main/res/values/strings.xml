@@ -54,6 +54,8 @@
     <string name="tasks_quick_add_today_event">Today as event</string>
     <string name="tasks_quick_add_tomorrow_event">Tomorrow as event</string>
     <string name="cd_tasks_quick_add">Quick add</string>
+    <!-- D-19 fix — inline error when user tries to submit an empty quick-add title -->
+    <string name="tasks_quick_add_empty_error">Title can\'t be empty</string>
     <string name="tasks_empty_list_primary">nothing in this list — good boy ;3</string>
     <string name="tasks_empty_list_neutral">No tasks in this list.</string>
     <string name="tasks_empty_combined_primary">no tasks anywhere — good boy ;3</string>

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -191,7 +192,10 @@ fun TaskRow(
                                     confirmDone = false
                                     onToggleDone()
                                 },
-                                modifier = Modifier.testTag("$TestTagTaskCheckbox-confirm-${item.id}"),
+                                // D-17 fix — M3 48dp minimum tap target.
+                                modifier = Modifier
+                                    .defaultMinSize(minHeight = 48.dp)
+                                    .testTag("$TestTagTaskCheckbox-confirm-${item.id}"),
                             ) {
                                 androidx.compose.material3.Text(
                                     androidx.compose.ui.res.stringResource(
@@ -203,7 +207,10 @@ fun TaskRow(
                         dismissButton = {
                             androidx.compose.material3.TextButton(
                                 onClick = { confirmDone = false },
-                                modifier = Modifier.testTag("$TestTagTaskCheckbox-cancel-${item.id}"),
+                                // D-17 fix — M3 48dp minimum tap target.
+                                modifier = Modifier
+                                    .defaultMinSize(minHeight = 48.dp)
+                                    .testTag("$TestTagTaskCheckbox-cancel-${item.id}"),
                             ) {
                                 androidx.compose.material3.Text(
                                     androidx.compose.ui.res.stringResource(

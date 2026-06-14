@@ -333,7 +333,11 @@ internal fun NowPlayingSheetHost(
                         )
                     }
 
-                    if (showMiniPlayer) Box(
+                    // D-16 fix — only compose the MiniPlayer when miniAlpha > 0f.
+                    // At alpha=0 (sheet fully expanded) the Box still consumed
+                    // pointer events in the top ~309px, making the first task-row
+                    // checkbox and the Today rail center unreachable.
+                    if (showMiniPlayer && miniAlpha > 0f) Box(
                         modifier = Modifier
                             .align(Alignment.TopCenter)
                             .fillMaxWidth()

@@ -209,24 +209,28 @@ Running list of every control that failed the grind-walk. Format + lifecycle in
   register. `ui/scaffold/NowPlayingSheetHost.kt` ~lines 336–362. (This explains an
   earlier grind anomaly where a top-row checkbox seemed a no-op.) Fix: only
   compose/hit-test the MiniPlayer when `miniAlpha > 0f`.
-- **Status:** open — URGENT (fix dispatched)
+- **Status:** fixed-in main (9efc027) — `if (showMiniPlayer && miniAlpha > 0f)`;
+  Box not composed when expanded → no phantom interception. AVD-verified (first
+  checkbox y208 raises dialog). Closes B-2 + B-4.
 
 ### D-17 — Todolist → "Mark done?" dialog buttons below 48dp tap target — major
 - `TaskRow.kt` AlertDialog TextButtons (~20dp tall) are under the M3 48dp minimum
   → mis-taps at speed. Add `Modifier.defaultMinSize(minHeight = 48.dp)`.
-- **Status:** open
+- **Status:** fixed-in main (9efc027) — 48dp minHeight on both buttons.
 
 ### D-18 — Todolist → Quick Add auto-focus races the sheet animation — major
 - `TaskQuickAddFab.kt` `LaunchedEffect(Unit){focusRequester.requestFocus()}` runs
   before the ModalBottomSheet settles on FIRST open → keyboard doesn't raise (first
   add = 4 interactions, not 3). Subsequent opens work. Fix: gate focus on
   `sheetState` visibility/settle (or small delay). (Refines D-14.)
-- **Status:** open
+- **Status:** fixed-in main (9efc027) — focus gated on SheetValue.Expanded;
+  AVD-verified keyboard raises on first open.
 
 ### D-19 — Todolist → empty Quick Add submit is a silent no-op — minor
 - `TaskQuickAddFab.kt` `if (cleaned.isEmpty()) return@submit` — no feedback →
   double-tap confusion. Add a shake/snackbar "Title can't be empty".
-- **Status:** open
+- **Status:** fixed-in main (9efc027) — isError + "Title can't be empty"
+  supporting text; no phantom task. AVD-verified.
 
 ### D-20 — Todolist → rail order top-heavy for one-handed reach — minor (UX)
 - Rail is Today→…→Done top-to-bottom; Today (primary) sits at the hard-to-reach
@@ -237,7 +241,7 @@ Running list of every control that failed the grind-walk. Format + lifecycle in
 ### D-21 — Todolist → By Repo blank header for tasks with empty repoId — minor
 - `groupBy { it.todolist.repoId }` with empty repoId renders a blank section
   header (seen for demo-mode tasks). Add a fallback label. `ExpandedNowPlayingTaskBody.kt:219`.
-- **Status:** open
+- **Status:** fixed-in main (9efc027) — empty repoId falls back to "Local".
 
 ### D-22 — Todolist UX gaps (cheetah) — polish batch
 - U-1 no "all done" delight state on Today; U-2 confirm dialog also fires on

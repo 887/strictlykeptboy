@@ -14,6 +14,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.foundation.text.KeyboardActions
@@ -89,12 +90,18 @@ fun TaskQuickAddSheet(
     var target by remember(initialTarget) {
         mutableStateOf(initialTarget ?: targets.firstOrNull())
     }
+    // D-19 fix — track whether the user tried to submit an empty title
+    // so we can show an error message on the field.
+    var showEmptyError by remember { mutableStateOf(false) }
 
-    // D-14 fix — auto-focus the input field so the keyboard raises
-    // immediately when Quick Add opens, removing the extra tap.
+    // D-18 fix — gate focus on the sheet being fully expanded so the
+    // focus request doesn't race the ModalBottomSheet settle animation
+    // on first open (which caused the keyboard to not raise first time).
     val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
+    LaunchedEffect(sheetState.currentValue) {
+        if (sheetState.currentValue == SheetValue.Expanded) {
+            focusRequester.requestFocus()
+        }
     }
 
     // Helper to submit the current input — shared by the Button and the
@@ -102,7 +109,12 @@ fun TaskQuickAddSheet(
     val submitAction: () -> Unit = submit@{
         val t = target ?: return@submit
         val cleaned = title.trim()
-        if (cleaned.isEmpty()) return@submit
+        if (cleaned.isEmpty()) {
+            // D-19 fix — surface a visible error instead of silent no-op.
+            showEmptyError = true
+            return@submit
+        }
+        showEmptyError = false
         onSubmit(cleaned, t)
     }
 
@@ -115,7 +127,11 @@ fun TaskQuickAddSheet(
             Text(stringResource(R.string.tasks_quick_add_title), style = MaterialTheme.typography.titleMedium)
             OutlinedTextField(
                 value = title,
-                onValueChange = { title = it },
+                onValueChange = {
+                    title = it
+                    // D-19 fix — clear the error as soon as the user types.
+                    if (showEmptyError && it.isNotBlank()) showEmptyError = false
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 8.dp)
@@ -127,6 +143,11 @@ fun TaskQuickAddSheet(
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { submitAction() }),
+                // D-19 fix — show inline error when empty submit attempted.
+                isError = showEmptyError,
+                supportingText = if (showEmptyError) {
+                    { Text(stringResource(R.string.tasks_quick_add_empty_error)) }
+                } else null,
             )
             Text(
                 stringResource(R.string.tasks_quick_add_target_label),
