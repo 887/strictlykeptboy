@@ -252,3 +252,53 @@ fun List<TaskItem>.forUpcoming(today: LocalDate = LocalDate.now()): List<TaskIte
             item.due != null &&
             item.due.isAfter(today)
     }.sortedBy { it.due }
+
+/**
+ * D-29 — Date bucket labels for the Upcoming grouped view.
+ *
+ * Maps to string resources:
+ *  [UpcomingBucket.Tomorrow] → `upcoming_bucket_tomorrow`
+ *  [UpcomingBucket.ThisWeek] → `upcoming_bucket_this_week`
+ *  [UpcomingBucket.NextWeek] → `upcoming_bucket_next_week`
+ *  [UpcomingBucket.Later]    → `upcoming_bucket_later`
+ */
+enum class UpcomingBucket { Tomorrow, ThisWeek, NextWeek, Later }
+
+/**
+ * D-29 — Groups [forUpcoming] results into ordered date buckets.
+ *
+ * Bucket rules (exclusive; first match wins):
+ *  - **Tomorrow**: due == today + 1
+ *  - **This week**: due within the current ISO week (Mon–Sun that contains today)
+ *  - **Next week**: due within the following ISO week
+ *  - **Later**: everything else
+ *
+ * Returns an ordered list of (bucket, tasks) pairs — only non-empty buckets
+ * are included and the ordering is chronological (Tomorrow first).
+ */
+fun List<TaskItem>.forUpcomingBucketed(
+    today: LocalDate = LocalDate.now(),
+): List<Pair<UpcomingBucket, List<TaskItem>>> {
+    val upcoming = forUpcoming(today)
+    if (upcoming.isEmpty()) return emptyList()
+
+    val tomorrow = today.plusDays(1)
+    // ISO week: Monday = first day. Current week spans [thisMonday, nextMonday).
+    val thisMonday = today.with(java.time.DayOfWeek.MONDAY)
+    val nextMonday = thisMonday.plusWeeks(1)
+    val afterNextWeek = nextMonday.plusWeeks(1)
+
+    fun bucket(item: TaskItem): UpcomingBucket {
+        val due = item.due!! // forUpcoming guarantees non-null due
+        return when {
+            due == tomorrow -> UpcomingBucket.Tomorrow
+            due >= thisMonday && due < nextMonday -> UpcomingBucket.ThisWeek
+            due >= nextMonday && due < afterNextWeek -> UpcomingBucket.NextWeek
+            else -> UpcomingBucket.Later
+        }
+    }
+
+    val grouped: Map<UpcomingBucket, List<TaskItem>> = upcoming.groupBy { bucket(it) }
+    return UpcomingBucket.entries
+        .mapNotNull { b -> grouped[b]?.let { b to it } }
+}

@@ -1017,9 +1017,19 @@ class MainActivity : ComponentActivity() {
                             // D-12 fix — build the repoId→displayName map so
                             // By Repo section headers show friendly names.
                             val repoDisplayNames = repos.associate { it.repoId to it.displayName }
+                            // D-23 fix — populate TasksUiState.todolists from the
+                            // todolistByUuid cache (populated by scanRepoTomls above) so
+                            // the Quick Add sheet has list chips to show. Previously this
+                            // field was never set here, leaving the chip row empty.
+                            val todolistsForState: List<com.eight87.strictlykeptboy.ui.tasks.TodolistInfo> =
+                                todolistByUuid.values
+                                    .filter { it.repoId in (drawRepoIds.ifEmpty { repos.map { r -> r.repoId }.toSet() }) }
+                                    .distinctBy { it.id }
+                                    .sortedByDescending { it.priority }
                             tasksViewState.set(
                                 cur.copy(
                                     tasks = mergedBase,
+                                    todolists = todolistsForState.ifEmpty { cur.todolists },
                                     activeTodolistIds = idsWithDemo,
                                     multiRepo = repos.size > 1,
                                     activeRepoOwner = owner,
@@ -1551,6 +1561,15 @@ class MainActivity : ComponentActivity() {
                         ),
                         callbacks = ShellCallbacks(
                             onPersistTab = graph.viewModePrefs::set,
+                            // D-23 fix — wire Quick Add → task list. Materializes the
+                            // TaskQuickAddRequest into a TaskItem (using the demo seed's
+                            // materializer which honours the Todolist target) and pushes
+                            // it into the live tasksViewState so it appears immediately
+                            // in Today/All without a restart.
+                            onWriteTask = { req ->
+                                val newTask = com.eight87.strictlykeptboy.ui.tasks.TasksDemoSeed.materialize(req)
+                                tasksViewState.addTask(newTask)
+                            },
                             onSyncClick = {
                                 if (graph.repoStore.list().any { it.remotes.isNotEmpty() }) {
                                     SyncService.startSyncAll(this@MainActivity)

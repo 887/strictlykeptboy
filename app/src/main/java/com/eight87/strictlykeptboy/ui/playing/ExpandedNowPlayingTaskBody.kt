@@ -40,6 +40,7 @@ import com.eight87.strictlykeptboy.ui.tasks.TaskPerListView
 import com.eight87.strictlykeptboy.ui.tasks.TaskShoppingView
 import com.eight87.strictlykeptboy.ui.tasks.TaskStandingView
 import com.eight87.strictlykeptboy.ui.tasks.TaskTodayView
+import com.eight87.strictlykeptboy.ui.tasks.TaskUpcomingView
 import com.eight87.strictlykeptboy.ui.tasks.TasksFilter
 import com.eight87.strictlykeptboy.ui.tasks.TasksViewState
 import com.eight87.strictlykeptboy.ui.tasks.TodolistMode
@@ -182,11 +183,13 @@ fun LazyItemScope.ExpandedNowPlayingTaskBody(
           activeRepoOwner = uiState.activeRepoOwner,
           onStartTask = onStartTask,
         )
-        TasksFilter.Upcoming -> TaskCombinedView(
+        TasksFilter.Upcoming -> TaskUpcomingView(
           // D-11 fix — Upcoming shows only tasks with a due date STRICTLY
           // after today (no-due and today-due tasks excluded; those belong
-          // to Today). Sorted chronologically by due date via forUpcoming().
-          tasks = visibleTasks.forUpcoming(),
+          // to Today). Sorted chronologically by due date.
+          // D-29 fix — grouped into Tomorrow / This week / Next week / Later
+          // buckets with section headers for clear chronological structure.
+          tasks = visibleTasks,
           onToggleDone = { tasksState.toggleDone(it.id) },
           onOpen = onOpenTask,
           onLongPress = onLongPressTask,

@@ -68,6 +68,8 @@
     <string name="tasks_empty_standing_neutral">No standing tasks.</string>
     <string name="tasks_empty_done_primary">nothing finished yet — keep going ;3</string>
     <string name="tasks_empty_done_neutral">Nothing done yet.</string>
+    <string name="tasks_empty_upcoming_primary">nothing coming up — good boy ;3</string>
+    <string name="tasks_empty_upcoming_neutral">No upcoming tasks.</string>
     <string name="tasks_combined_completed_section">Completed</string>
     <string name="tasks_today_section_today">Today</string>
     <string name="tasks_today_section_from_events">From today\'s events</string>
@@ -856,6 +858,19 @@
     <string name="task_confirm_done_yes">Yes, mark done</string>
     <string name="task_confirm_done_no">No, keep open</string>
     <string name="task_filter_done">Done</string>
+
+    <!-- D-29 — Upcoming date-bucket headers. -->
+    <string name="upcoming_bucket_tomorrow">Tomorrow</string>
+    <string name="upcoming_bucket_this_week">This week</string>
+    <string name="upcoming_bucket_next_week">Next week</string>
+    <string name="upcoming_bucket_later">Later</string>
+
+    <!-- D-23 — Quick Add section labels separating list targets from event targets. -->
+    <string name="quick_add_section_lists">Add to list</string>
+    <string name="quick_add_section_events">Or add as event</string>
+
+    <!-- D-24 — Per-list All-lists chip label. -->
+    <string name="per_list_chip_all">All lists</string>
 
     <!-- Unified-today section headers + Now/Next hint (Round 2.26.B/C.4). -->
     <!-- Fix-batch W3.2 / R-7 (2026-05-24) — bucket label now spells

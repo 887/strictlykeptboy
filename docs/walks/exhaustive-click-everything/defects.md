@@ -262,11 +262,14 @@ as **D-16** (already in fix). New findings below._
   This breaks the core "add a task Sir assigned" flow. (Explains why my earlier
   "cheetah quick task" never showed as a task.) Add a todolist-target chip row
   (pre-select last-used list); keep event-targets as a secondary option.
-  `ui/tasks/TaskQuickAddFab.kt`. **Status:** open
+  `ui/tasks/TaskQuickAddFab.kt`. **Status:** fixed-in main (3a9e64b) — Quick Add
+  now has an "Add to list" chip row (all todolists) + "Or add as event"; quick-add
+  writes a real TASK to the chosen list (onWriteTask wired). 4 tests. AVD-verified.
 ### D-24 — All view lost its per-list filter chips — major
 - The All tab is a flat combined list with no chip row to filter by todolist
   (can't isolate marc-kept vs marc-work). `TaskPerListView` chips used to exist;
-  restore a per-list slicer on All. **Status:** open
+  restore a per-list slicer on All. **Status:** fixed-in main (3a9e64b) — All has
+  per-list chips + an "All lists" reset chip. 3 tests. AVD-verified.
 ### D-25 — Sheet dismisses on ANY downward swipe in content — CRITICAL (UX)
 - Swiping down to scroll back up a long Done/Today list DISMISSES the whole sheet
   → user loses place + must re-pull/re-navigate/re-scroll. Restrict dismiss to the
@@ -287,7 +290,8 @@ as **D-16** (already in fix). New findings below._
 ### D-29 — Upcoming is a flat list, no date grouping — major (UX)
 - After D-11 made Upcoming future-only, it still has no "Tomorrow / This week /
   Next week" dividers → items feel "missing". Add date-bucket grouping.
-  **Status:** open
+  **Status:** fixed-in main (3a9e64b) — `TaskUpcomingView` + `forUpcomingBucketed()`
+  groups into Tomorrow/This week/Next week/Later with headers. 12 tests.
 ### D-30 — Passive-habit ("From events") tasks visually indistinct — moderate
 - Standing/recurring ritual items look identical to dated tasks (no gutter accent/
   recurring icon) → blend into the pile. Give them a distinct treatment.
@@ -317,7 +321,8 @@ as **D-16** (already in fix). New findings below._
   (today/past), so "anywhere" is wrong. Should be Upcoming-specific, e.g.
   "nothing coming up — good boy ;3" (mirror the D-4 per-filter copy approach).
 - Surfaced verifying D-11. • **Shot:** skb-c0-upcoming.png
-- **Status:** open (minor)
+- **Status:** fixed-in main (3a9e64b) — `TaskUpcomingView` empty-state now reads
+  "nothing coming up — good boy ;3" (Upcoming-specific).
 
 ### D-2 — Schedule → Week view → day columns — NOT A BUG (resolved)
 - **Resolution:** intended behaviour. `SchedulePane.kt:452-466` — when

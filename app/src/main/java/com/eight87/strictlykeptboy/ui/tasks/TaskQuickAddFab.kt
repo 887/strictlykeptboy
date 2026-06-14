@@ -10,6 +10,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -83,8 +84,11 @@ fun TaskQuickAddSheet(
     modifier: Modifier = Modifier,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val targets: List<QuickAddTarget> = todolists.map { QuickAddTarget.Todolist(it) } +
-        QuickAddTarget.TodayEvent + QuickAddTarget.TomorrowEvent
+    // D-23 fix — split targets into primary (todolist) and secondary (event) groups
+    // so the user can clearly see adding to a list vs creating an event.
+    val listTargets: List<QuickAddTarget> = todolists.map { QuickAddTarget.Todolist(it) }
+    val eventTargets: List<QuickAddTarget> = listOf(QuickAddTarget.TodayEvent, QuickAddTarget.TomorrowEvent)
+    val targets: List<QuickAddTarget> = listTargets + eventTargets
 
     var title by remember { mutableStateOf("") }
     var target by remember(initialTarget) {
@@ -149,13 +153,36 @@ fun TaskQuickAddSheet(
                     { Text(stringResource(R.string.tasks_quick_add_empty_error)) }
                 } else null,
             )
+            // D-23 fix — two labelled sections: list targets (primary) + event
+            // targets (secondary). This makes it obvious you can add to a todolist
+            // and the event options are just an alternative.
+            if (listTargets.isNotEmpty()) {
+                Text(
+                    stringResource(R.string.quick_add_section_lists),
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.padding(top = 12.dp),
+                )
+                WrappingChipRow(modifier = Modifier.padding(top = 4.dp)) {
+                    listTargets.forEach { t ->
+                        val key = targetKey(t)
+                        FilterChip(
+                            selected = target == t,
+                            onClick = { target = t },
+                            label = { Text(t.labelString()) },
+                            modifier = Modifier.testTag("$TestTagQuickAddTarget-$key"),
+                        )
+                    }
+                }
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            }
             Text(
-                stringResource(R.string.tasks_quick_add_target_label),
+                stringResource(R.string.quick_add_section_events),
                 style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.padding(top = 12.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = if (listTargets.isEmpty()) 12.dp else 0.dp),
             )
             WrappingChipRow(modifier = Modifier.padding(top = 4.dp)) {
-                targets.forEach { t ->
+                eventTargets.forEach { t ->
                     val key = targetKey(t)
                     FilterChip(
                         selected = target == t,

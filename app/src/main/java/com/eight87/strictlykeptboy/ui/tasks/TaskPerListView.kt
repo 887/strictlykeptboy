@@ -31,7 +31,7 @@ fun TaskPerListView(
     tasks: List<TaskItem>,
     todolists: List<TodolistInfo>,
     selectedListId: String?,
-    onSelectList: (String) -> Unit,
+    onSelectList: (String?) -> Unit,
     onToggleDone: (TaskItem) -> Unit,
     onOpen: (TaskItem) -> Unit,
     modifier: Modifier = Modifier,
@@ -49,6 +49,14 @@ fun TaskPerListView(
                 .horizontalScroll(scroll)
                 .padding(horizontal = 12.dp, vertical = 8.dp),
         ) {
+            // D-24 fix — "All lists" chip lets the user reset the filter after
+            // selecting a specific list. Selected when no list is filtered.
+            FilterChip(
+                selected = selectedListId == null,
+                onClick = { onSelectList(null) },
+                label = { Text(stringResource(R.string.per_list_chip_all)) },
+                modifier = Modifier.testTag("$TestTagListFilterChip-all"),
+            )
             todolists.forEach { tl ->
                 val count = tasks.count { it.todolist.id == tl.id && !it.done }
                 FilterChip(
