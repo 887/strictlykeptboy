@@ -340,6 +340,33 @@ as **D-16** (already in fix). New findings below._
   resolver gap but does NOT block the walk; fix in a later pass (scan all drawn
   repos / resolve from snapshot meta in MainActivity readTomlInfo).
 
+## Re-walk iter-2 findings (Dustrun/cheetah, A+B build, 2026-06-14)
+_PASS: D-16 top-zone, D-17, D-18, D-19, D-25, D-27, D-28. New below._
+
+### D-36 — Post-confirm touch-through: dialog dismiss opens a task detail — BLOCKER (UX)
+- After tapping "Yes, mark done", the dialog's dismiss touch-up passes through to
+  the list underneath, auto-opening whatever task sits at that y → forces a BACK
+  tap per completion, breaking burst-complete (4-task burst blows the 10s target).
+  Classic Compose dialog up-event-through-scrim. Fix: consume the dismiss gesture
+  (modal scrim eats the up event) or briefly block list input after the dialog
+  closes. `TaskRow.kt` confirm dialog. • **Shot:** rewalk-cheetah (N-1)
+- **Status:** open — must fix before the fast walk is clean
+
+### D-37 — D-23 quick-add-to-list persistence unconfirmed — investigate
+- The Add-to-list chip UI works + sheet dismisses, but the re-walk couldn't find
+  the new task on disk. May be in-memory-only (TasksDemoSeed.materialize→addTask)
+  or demo-mode non-persisting. Confirm whether a quick-added task survives a
+  reindex / shows in Today reliably; if in-memory-only, wire it through the real
+  task-write path like D-8/D-5. • **Status:** open (investigate)
+
+### D-38 — Re-walk N-2/N-3/N-4: likely emulator/MCP tap-coordinate artifacts — investigate
+- N-2 Row-1 checkbox intermittent; N-3 a11y-reported Row 2+ coords vs actual
+  hit-test offset under keyboard-adjusted layout; N-4 typing in Quick Add once
+  switched to Done tab. Agent flagged all three as needing physical-device
+  verification (coordinate-precision / IME artifacts of automated driving, not
+  clearly app bugs). Re-verify on the next walk; only escalate if reproducible.
+- **Status:** open (investigate / likely not-a-bug)
+
 ### D-15 — Todolist → Upcoming empty-state copy is misleading — minor (UX polish)
 - The Upcoming filter (now future-only) shows the generic "no tasks anywhere —
   good boy ;3" empty-state when there are no FUTURE tasks — but there ARE tasks
