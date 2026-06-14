@@ -199,6 +199,53 @@ Running list of every control that failed the grind-walk. Format + lifecycle in
 - **Status:** fixed-in main (b32fc32) — Quick Add auto-focuses (keyboard raises)
   + IME Done submits (shared submitAction). Pending re-walk.
 
+## Todolist-walk findings (Dustrun / cheetah-fast QA run, 2026-06-14)
+
+### D-16 — Todolist sheet → invisible MiniPlayer overlay eats top ~309px — BLOCKER
+- When the sheet is fully expanded (`progress=1f`), `miniAlpha=0f` but the
+  MiniPlayer `Box` (height 118dp ≈ 309px) stays in the composition at alpha 0 and
+  KEEPS intercepting pointer events in y:0–309. Result: the FIRST task row's
+  checkbox (y≈271) and the Today rail center (y≈228) are unreachable — taps don't
+  register. `ui/scaffold/NowPlayingSheetHost.kt` ~lines 336–362. (This explains an
+  earlier grind anomaly where a top-row checkbox seemed a no-op.) Fix: only
+  compose/hit-test the MiniPlayer when `miniAlpha > 0f`.
+- **Status:** open — URGENT (fix dispatched)
+
+### D-17 — Todolist → "Mark done?" dialog buttons below 48dp tap target — major
+- `TaskRow.kt` AlertDialog TextButtons (~20dp tall) are under the M3 48dp minimum
+  → mis-taps at speed. Add `Modifier.defaultMinSize(minHeight = 48.dp)`.
+- **Status:** open
+
+### D-18 — Todolist → Quick Add auto-focus races the sheet animation — major
+- `TaskQuickAddFab.kt` `LaunchedEffect(Unit){focusRequester.requestFocus()}` runs
+  before the ModalBottomSheet settles on FIRST open → keyboard doesn't raise (first
+  add = 4 interactions, not 3). Subsequent opens work. Fix: gate focus on
+  `sheetState` visibility/settle (or small delay). (Refines D-14.)
+- **Status:** open
+
+### D-19 — Todolist → empty Quick Add submit is a silent no-op — minor
+- `TaskQuickAddFab.kt` `if (cleaned.isEmpty()) return@submit` — no feedback →
+  double-tap confusion. Add a shake/snackbar "Title can't be empty".
+- **Status:** open
+
+### D-20 — Todolist → rail order top-heavy for one-handed reach — minor (UX)
+- Rail is Today→…→Done top-to-bottom; Today (primary) sits at the hard-to-reach
+  top, Done (secondary for the complete flow) lowest. Consider inverting so the
+  primary filter is at thumb-native height. `ExpandedNowPlayingTaskBody.kt:125`.
+- **Status:** open (design)
+
+### D-21 — Todolist → By Repo blank header for tasks with empty repoId — minor
+- `groupBy { it.todolist.repoId }` with empty repoId renders a blank section
+  header (seen for demo-mode tasks). Add a fallback label. `ExpandedNowPlayingTaskBody.kt:219`.
+- **Status:** open
+
+### D-22 — Todolist UX gaps (cheetah) — polish batch
+- U-1 no "all done" delight state on Today; U-2 confirm dialog also fires on
+  UN-mark (un-doing should be instant); U-3 Quick Add default target chip isn't
+  "Today"; U-4 no haptic on completion; U-5 drag handle small; U-6 no count badge
+  on Today rail; U-7 IME Done submits but doesn't dismiss the sheet.
+- **Status:** open (polish — pick the high-value ones)
+
 ### D-15 — Todolist → Upcoming empty-state copy is misleading — minor (UX polish)
 - The Upcoming filter (now future-only) shows the generic "no tasks anywhere —
   good boy ;3" empty-state when there are no FUTURE tasks — but there ARE tasks
