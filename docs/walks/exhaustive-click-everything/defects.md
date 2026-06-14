@@ -315,6 +315,16 @@ as **D-16** (already in fix). New findings below._
   for Sir" (play); manifest regenerated. Now the D-13 author chip is exercisable
   on the re-walk.
 
+### D-35 — REGRESSION: task-row subtitle shows raw todolist UUID, not list name — major
+- Introduced by the D-23/D-24 work (3a9e64b): task rows in Today/All now show the
+  raw `todolist_id` ("0190a0aa-2222-70…") instead of the friendly list name
+  ("Routines"/"Groceries"). Likely `TasksUiState.todolists` is now populated only
+  from the ACTIVE repo's `todolistByUuid`, so cross-repo (rich-demo) tasks can't
+  resolve their list name → fall back to the raw id. Fix: resolve the row's list
+  name from a COMPLETE todolist map (union across repos), or restore the prior
+  name source. Caught on the post-A re-walk. • **Shot:** skb-c0-d23b.png
+- **Status:** open — REGRESSION (fix with the B reconcile)
+
 ### D-15 — Todolist → Upcoming empty-state copy is misleading — minor (UX polish)
 - The Upcoming filter (now future-only) shows the generic "no tasks anywhere —
   good boy ;3" empty-state when there are no FUTURE tasks — but there ARE tasks
