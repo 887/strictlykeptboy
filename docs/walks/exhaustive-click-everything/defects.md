@@ -534,3 +534,32 @@ _15/16 PASS. Dustrun iter-3 was fully CLEAN. Glaciermark's 3 remaining majors:_
   D-12 By-Repo headers show "my calendar"/"demo · kept-life" not slugs (skb-c0-byrepo.png);
   D-13 Done shows repo dots + author accent (skb-c0-donechips.png); D-14 Quick Add
   auto-focuses + IME Done submits (skb-c0-quickadd.png/quickadd2.png). +12 tests.
+
+## Phase 3 cycle-1 findings — cluster E (Settings-screens/Calendars/IO/Sharing)
+### D-48 — ICS import unreachable (file-picker MIME blocks .ics) — HIGH
+- `IcsImportScreen` exists but the OS file picker's MIME filter prevents selecting
+  `.ics` files → ICS import is broken for users. Fix the picker MIME (accept
+  text/calendar + */* fallback). **Status:** open
+### D-49 — ForeignEventSourceChip never called → events show no author chip — HIGH
+- The cross-repo EVENT author chip composable is defined but wired nowhere; only
+  TASK rows got author chips (D-39). Cross-repo/shared events should show who
+  authored them. Wire `ForeignEventSourceChip` into the event band/detail render
+  (mirror the task author-chip predicate: author != active repo owner). **Status:** open
+### D-50 — SyncButton never called → no manual sync trigger — HIGH
+- `SyncButton`/`SyncSuccessCheck`/`SyncErrorDot` defined but never placed. Repos
+  with a remote have auto-sync but no manual "sync now" affordance. Wire a sync
+  action (repo settings / repos overlay) with success/error state. **Status:** open
+### D-51 — PinAction/PinMenu + EventTitleEmojiPreview orphaned — medium
+- `PinAction`/`PinMenu` (pin a standing task to Today) + `EventTitleEmojiPreview`
+  composables defined but never called. Wire pin-to-today into the standing-task
+  row menu; wire the emoji preview where event titles are edited (or remove if
+  truly superseded — triage). **Status:** open
+### D-52 — External Calendars: AllowEdit toggle + defaults row absent — medium
+- `ExternalCalendars-AllowEdit` toggle + `CalendarDefaultsRow`/`Button` missing
+  (only Show + Publish present). Add the allow-edit toggle + defaults affordance.
+  **Status:** open
+### Checklist staleness (NOT app defects) — update feature-checklist.md
+- `CalendarFilterChipStrip` was DELETED in Round 2.21 C.3 → remove its rows + dead
+  testTag constants from the checklist (D-E-03).
+- `ImportExportScreen` is INLINE on the Repositories page by design (no standalone
+  container) → re-word the checklist rows (D-E-05).
