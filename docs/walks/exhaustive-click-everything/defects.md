@@ -598,3 +598,15 @@ agents' MCP taps land ~N rows offset, producing systematic FALSE positives:
 verifiable by grep/reading source, and (b) findings the orchestrator re-confirms on
 the single reliable 5554 emulator. Tap-"not responding"/"wrong screen" findings from
 the concurrent cluster agents are discounted unless reproduced.
+
+## Phase 3 cycle-1 — cluster A (Schedule) — TRIAGE (verify before fixing)
+**Likely intentional (demo is read-only):** A-D2 Edit no-op, A-D5 drag-reschedule no
+affordance, A-D7 mode-pill hidden — all demo-mode-gated; verify by exiting demo,
+expect they work on a writable repo. Not bugs if so.
+**Credible real candidates (schedule-nav completeness — verify on 5554 + fix if real):**
+- D-57 (A-D3) — Week 7-column GRID event bars not tappable (work in stacked view, not grid). Wire grid-band tap → EventDetail.
+- D-58 (A-D4/A-D9) — Week/3-day GRID column-header tap doesn't open that day's Day view. Wire header → setDate+Day.
+- D-59 (A-D6) — Timebox view has no rail entry / no navigation path. Either add an entry or confirm intentionally removed.
+- D-60 (A-D8) — Year view month-label / dot-cell tap doesn't navigate to that month/day. Wire cell → setDate+Month/Day.
+- D-61 (A-D1) — "+ New" FAB opens free-form directly instead of an expandable menu (New Event/Routine/Plan Trip/ICS). Design: confirm intended vs add the menu.
+- **Status:** open (verify each on 5554, fix the real ones)
