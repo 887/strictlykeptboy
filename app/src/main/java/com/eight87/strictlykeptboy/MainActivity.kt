@@ -1566,9 +1566,70 @@ class MainActivity : ComponentActivity() {
                             // materializer which honours the Todolist target) and pushes
                             // it into the live tasksViewState so it appears immediately
                             // in Today/All without a restart.
+                            //
+                            // D-37 fix — also persist to disk when the target is a real
+                            // (non-demo) Todolist-backed repo, mirroring the D-8/D-5
+                            // onEventWritten / onTaskMarkedDone pattern. For demo repos
+                            // (isDemo=true) the in-memory path is still the only path
+                            // (the demo tree is read-only in production).
                             onWriteTask = { req ->
                                 val newTask = com.eight87.strictlykeptboy.ui.tasks.TasksDemoSeed.materialize(req)
                                 tasksViewState.addTask(newTask)
+                                // D-37 — attempt real disk write for Todolist targets.
+                                val listTarget = req.target as?
+                                    com.eight87.strictlykeptboy.ui.tasks.QuickAddTarget.Todolist
+                                if (listTarget != null) {
+                                    kotlinx.coroutines.GlobalScope.launch(
+                                        kotlinx.coroutines.Dispatchers.IO
+                                    ) {
+                                        runCatching {
+                                            val repoId = listTarget.info.repoId
+                                            val cfg = graph.repoStore.list()
+                                                .firstOrNull { it.repoId == repoId && !it.isDemo }
+                                                ?: return@runCatching // demo or unknown → in-memory only
+                                            val rootDir = java.io.File(cfg.rootDir)
+                                            val now = java.time.OffsetDateTime.now()
+                                            val iso = java.time.format.DateTimeFormatter
+                                                .ISO_OFFSET_DATE_TIME.format(now)
+                                            val entityId =
+                                                com.eight87.strictlykeptboy.git.Uuid7
+                                                    .generate().toString()
+                                            val entity =
+                                                com.eight87.strictlykeptboy.store.StandingTask(
+                                                    header =
+                                                        com.eight87.strictlykeptboy.store.EntityHeader(
+                                                            schemaVersion = 1,
+                                                            id = entityId,
+                                                            createdAt = iso,
+                                                            updatedAt = iso,
+                                                            author = cfg.authorIdentity.name
+                                                                .ifBlank { "me" },
+                                                        ),
+                                                    title = req.title,
+                                                    todolistId = listTarget.info.id,
+                                                )
+                                            com.eight87.strictlykeptboy.store.EntityWriter
+                                                .write(rootDir, entity)
+                                            val gitRepo =
+                                                GitRepoRegistry.get(repoId) ?: GitRepo.open(
+                                                    rootDir = rootDir,
+                                                    repoId = repoId,
+                                                    remotes = cfg.remotes,
+                                                    primaryRemote = cfg.primaryRemote,
+                                                    authorIdentity = cfg.authorIdentity,
+                                                    defaultBranch = cfg.defaultBranch,
+                                                ).also(GitRepoRegistry::put)
+                                            com.eight87.strictlykeptboy.cache.Indexer(
+                                                graph.cacheDatabase
+                                            ).incrementalScan(
+                                                repoId = repoId,
+                                                gitRepo = gitRepo,
+                                                adjustToLocalTimezone =
+                                                    cfg.adjustToLocalTimezone,
+                                            )
+                                        }
+                                    }
+                                }
                             },
                             onSyncClick = {
                                 if (graph.repoStore.list().any { it.remotes.isNotEmpty() }) {

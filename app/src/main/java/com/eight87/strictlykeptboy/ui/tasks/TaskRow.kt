@@ -36,6 +36,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,6 +49,8 @@ import androidx.compose.ui.unit.dp
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import kotlin.math.abs
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 const val TestTagTaskRow = "TaskRow"
 const val TestTagTaskCheckbox = "TaskCheckbox"
@@ -112,6 +115,16 @@ fun TaskRow(
     onRespond: ((TaskItem) -> Unit)? = null,
 ) {
     val isPrompt = item.source == TaskSource.KeeperPrompt
+    // D-36 fix — block the row's onTap for a short window after the confirm
+    // dialog is dismissed (confirm OR cancel). The Compose dialog scrim does
+    // not consume the pointer-up event that sits above it when the scrim is
+    // removed, so the leaked up-event fires detectTapGestures.onTap on the
+    // row underneath, opening the detail screen unwantedly. Guarding with a
+    // 350ms window (longer than the dialog exit animation, shorter than any
+    // deliberate second tap) is the minimal-invasive fix that keeps D-27
+    // (beat) and D-28 (undo) intact.
+    var confirmJustDismissed by remember(item.id) { mutableStateOf(false) }
+    val tapGuardScope = rememberCoroutineScope()
     val accent = if (isPrompt) {
         // Round 2.27.C.1 — KeeperPrompt rows paint the accent strip with
         // colorScheme.tertiary so they stand out from regular
@@ -144,9 +157,11 @@ fun TaskRow(
             .fillMaxWidth()
             .semantics(mergeDescendants = true) {}
             .testTag("$TestTagTaskRow-${item.id}")
-            .pointerInput(item.id) {
+            .pointerInput(item.id, confirmJustDismissed) {
                 detectTapGestures(
-                    onTap = { onClick() },
+                    // D-36 fix — suppress the tap that leaks through from the
+                    // dialog dismiss gesture for the guard window.
+                    onTap = { if (!confirmJustDismissed) onClick() },
                     onLongPress = { onLongClick() },
                 )
             },
@@ -184,9 +199,18 @@ fun TaskRow(
                         }
                         .testTag("$TestTagTaskCheckbox-${item.id}"),
                 )
+                // Helper to arm the tap guard + dismiss the dialog.
+                val dismissConfirm: () -> Unit = {
+                    confirmDone = false
+                    confirmJustDismissed = true
+                    tapGuardScope.launch {
+                        delay(350L)
+                        confirmJustDismissed = false
+                    }
+                }
                 if (confirmDone) {
                     androidx.compose.material3.AlertDialog(
-                        onDismissRequest = { confirmDone = false },
+                        onDismissRequest = { dismissConfirm() },
                         title = {
                             androidx.compose.material3.Text(
                                 androidx.compose.ui.res.stringResource(
@@ -204,7 +228,9 @@ fun TaskRow(
                         confirmButton = {
                             androidx.compose.material3.TextButton(
                                 onClick = {
-                                    confirmDone = false
+                                    // D-36 fix — arm the guard before dismissing so
+                                    // the leaked up-event is suppressed.
+                                    dismissConfirm()
                                     onToggleDone()
                                 },
                                 // D-17 fix — M3 48dp minimum tap target.
@@ -221,7 +247,7 @@ fun TaskRow(
                         },
                         dismissButton = {
                             androidx.compose.material3.TextButton(
-                                onClick = { confirmDone = false },
+                                onClick = { dismissConfirm() },
                                 // D-17 fix — M3 48dp minimum tap target.
                                 modifier = Modifier
                                     .defaultMinSize(minHeight = 48.dp)

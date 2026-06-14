@@ -350,14 +350,19 @@ _PASS: D-16 top-zone, D-17, D-18, D-19, D-25, D-27, D-28. New below._
   Classic Compose dialog up-event-through-scrim. Fix: consume the dismiss gesture
   (modal scrim eats the up event) or briefly block list input after the dialog
   closes. `TaskRow.kt` confirm dialog. • **Shot:** rewalk-cheetah (N-1)
-- **Status:** open — must fix before the fast walk is clean
+- **Status:** fixed-in main (07cb5f1) — CONFIRMED REAL (scrim doesn't consume the
+  pointer-up). `confirmJustDismissed` 350ms guard makes the row's onTap a no-op
+  after any dialog dismiss. AVD-verified burst 24→21, no stray detail. Pending re-walk.
 
 ### D-37 — D-23 quick-add-to-list persistence unconfirmed — investigate
 - The Add-to-list chip UI works + sheet dismisses, but the re-walk couldn't find
   the new task on disk. May be in-memory-only (TasksDemoSeed.materialize→addTask)
   or demo-mode non-persisting. Confirm whether a quick-added task survives a
   reindex / shows in Today reliably; if in-memory-only, wire it through the real
-  task-write path like D-8/D-5. • **Status:** open (investigate)
+  task-write path like D-8/D-5. • **Status:** fixed-in main (07cb5f1) — confirmed
+  in-memory-only; non-demo Todolist quick-adds now write a StandingTask via
+  EntityWriter + GitRepo + Indexer.incrementalScan (D-8 pattern). Demo repos stay
+  in-memory (read-only tree). AVD-verified the task appears in All. Pending re-walk.
 
 ### D-38 — Re-walk N-2/N-3/N-4: likely emulator/MCP tap-coordinate artifacts — investigate
 - N-2 Row-1 checkbox intermittent; N-3 a11y-reported Row 2+ coords vs actual
