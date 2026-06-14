@@ -199,6 +199,14 @@ Running list of every control that failed the grind-walk. Format + lifecycle in
 - **Status:** fixed-in main (b32fc32) — Quick Add auto-focuses (keyboard raises)
   + IME Done submits (shared submitAction). Pending re-walk.
 
+### D-15 — Todolist → Upcoming empty-state copy is misleading — minor (UX polish)
+- The Upcoming filter (now future-only) shows the generic "no tasks anywhere —
+  good boy ;3" empty-state when there are no FUTURE tasks — but there ARE tasks
+  (today/past), so "anywhere" is wrong. Should be Upcoming-specific, e.g.
+  "nothing coming up — good boy ;3" (mirror the D-4 per-filter copy approach).
+- Surfaced verifying D-11. • **Shot:** skb-c0-upcoming.png
+- **Status:** open (minor)
+
 ### D-2 — Schedule → Week view → day columns — NOT A BUG (resolved)
 - **Resolution:** intended behaviour. `SchedulePane.kt:452-466` — when
   `layoutMode == Stacked`, Week renders the 7 days stacked VERTICALLY (each a
@@ -238,3 +246,8 @@ Running list of every control that failed the grind-walk. Format + lifecycle in
   Fixed on main: `toggleDone` stamps `doneAt` + writes it to the file + reindexes.
   **Re-walk verified** 2026-06-14 — "buy milk · done today" shows in Done with the
   date prefix. Shot: skb-c0-d5verify.png. (Spawned D-10 minor follow-up.)
+- **D-11..D-14** — Todolist UX wave (b32fc32). **All re-walk-verified** 2026-06-14:
+  D-11 Upcoming future-only (empty on past-dated demo vs All ~20; skb-c0-upcoming.png);
+  D-12 By-Repo headers show "my calendar"/"demo · kept-life" not slugs (skb-c0-byrepo.png);
+  D-13 Done shows repo dots + author accent (skb-c0-donechips.png); D-14 Quick Add
+  auto-focuses + IME Done submits (skb-c0-quickadd.png/quickadd2.png). +12 tests.
