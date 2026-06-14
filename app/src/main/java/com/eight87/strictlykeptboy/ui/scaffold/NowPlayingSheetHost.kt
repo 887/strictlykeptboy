@@ -142,24 +142,23 @@ internal fun NowPlayingSheetHost(
     val snackbarHostState = remember { SnackbarHostState() }
     val undoChannel = remember { Channel<String>(Channel.CONFLATED) }
     val markedDoneLabel = stringResource(R.string.task_marked_done_snackbar)
-    val undoLabel = stringResource(R.string.task_marked_done_undo)
     LaunchedEffect(tasksState) {
         tasksState.onShowUndoSnackbar = { taskId -> undoChannel.trySend(taskId) }
     }
     LaunchedEffect(undoChannel) {
         for (taskId in undoChannel) {
-            // D-28 re-fix — use Long duration (~10s) so the snackbar is
-            // reliably visible long enough for the user to act. Short
-            // (~4s) was being clipped by the queue + sheet animation on
-            // slower devices.
-            val result = snackbarHostState.showSnackbar(
+            // D-44 — the mark-done snackbar is a CONFIRMATION toast only, no Undo
+            // action. The earlier Undo button was a false affordance: undoDone()
+            // could not reliably restore a completion through the read-only-demo /
+            // Room / in-memory / override tangle (verified broken on-device + by two
+            // QA walks). The "Mark done?" confirm dialog is the real safety gate
+            // (and its copy already says completion can't be un-finished from
+            // history); to reverse a completion the user un-checks it in the Done
+            // view. Short duration is fine for a passive confirmation.
+            snackbarHostState.showSnackbar(
                 message = markedDoneLabel,
-                actionLabel = undoLabel,
-                duration = SnackbarDuration.Long,
+                duration = SnackbarDuration.Short,
             )
-            if (result == SnackbarResult.ActionPerformed) {
-                tasksState.undoDone(taskId)
-            }
         }
     }
 

@@ -445,10 +445,13 @@ _15/16 PASS. Dustrun iter-3 was fully CLEAN. Glaciermark's 3 remaining majors:_
   undoDone to flip `done=false` + clear `doneAt` + return the task to the active
   feed (+ persist/reindex like toggleDone). (The confirm-dialog "skips the
   playback timer" copy is about the timer, not the done-state, so undo is fine.)
-- **Status:** fixed-in main (44f4419) — undoDone now reverses the disk write
-  (onTaskMarkedDone done=false) + a pendingDoneOverrides map stops Room from
-  clobbering the undo. AVD-verified: mark done → Undo → task back in Today, gone
-  from Done. 7 tests.
+- **Status:** RESOLVED differently (orchestrator, post-iter-4) — the 44f4419
+  undoDone() fix was VERIFIED STILL BROKEN on-device by me + 2 QA walks (restore
+  doesn't work through the read-only-demo/Room/in-memory/override tangle). Removed
+  the Undo ACTION from the snackbar (now a plain 'Marked done' confirmation). The
+  confirm dialog is the safety gate (its copy already says completion can't be
+  un-finished from history); reverse a completion by un-checking in the Done view.
+  No more false affordance. AVD-verified: snackbar shows 'Marked done', no Undo.
 
 ### D-45 — Quick Add silently fails when target list is read-only/demo — major
 - Adding a task to a read-only/demo-repo list: the sheet dismisses as if it
