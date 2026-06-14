@@ -610,3 +610,11 @@ expect they work on a writable repo. Not bugs if so.
 - D-60 (A-D8) — Year view month-label / dot-cell tap doesn't navigate to that month/day. Wire cell → setDate+Month/Day.
 - D-61 (A-D1) — "+ New" FAB opens free-form directly instead of an expandable menu (New Event/Routine/Plan Trip/ICS). Design: confirm intended vs add the menu.
 - **Status:** open (verify each on 5554, fix the real ones)
+
+## Phase 3 cycle-1 — cluster C (Reviews/Together/Repos) — CREDIBLE (low noise, 82/87 PASS)
+- D-62 (C-4) — **Trip Wizard date fields self-clear** (controlled Compose state) → canAdvance stays false → whole wizard blocked. HIGH. `ui/trip/TripWizardNavHost.kt`.
+- D-63 (C-5) — TripBatMascot renders grey rectangle (about_bat via Icon/tint, like D-9). `TripWizardNavHost.kt:222`.
+- D-64 (C-3) — StickerPackSelector entry point: screen exists + ReposPane has a path comment; verify onOpenStickerPack is actually wired (reachable) — wire if dead.
+- D-65 (C-1) — RepoCard footer content clipped when two cards expanded simultaneously. medium.
+- D-66 (C-2) — Reviews empty-state shows literal "(none)" from identity.toml honorific. low (copy).
+- **Status:** open (verify+fix via reliable single-emulator agents)
