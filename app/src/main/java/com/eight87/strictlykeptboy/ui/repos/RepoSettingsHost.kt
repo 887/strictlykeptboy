@@ -55,6 +55,8 @@ internal fun RepoSettingsHost(
     onOpenIdentities: () -> Unit,
     onShare: () -> Unit,
     onRemoved: () -> Unit,
+    /** D-64 fix — opens the StickerPackSelectorScreen for this repo. */
+    onOpenStickerPack: () -> Unit = {},
 ) {
     val repoRoot: Path = remember(repo.repoId, repo.rootDir) { Path.of(repo.rootDir) }
     var refreshTick by remember { mutableStateOf(0) }
@@ -107,6 +109,7 @@ internal fun RepoSettingsHost(
             }
         },
         onOpenIdentities = onOpenIdentities,
+        onOpenStickerPack = onOpenStickerPack,
         onShareRepo = onShare,
         onToggleRemoteReadOnly = { name, value ->
             scope.launch {

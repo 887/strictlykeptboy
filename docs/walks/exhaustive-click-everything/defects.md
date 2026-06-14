@@ -578,7 +578,7 @@ functional). For cycles 2-3: run ≤3 concurrent emulators + verify HIGH taps on
 ### D-54 — TemplateConfirmSheet shows raw ISO-8601 datetime, not locale-formatted — medium
 ### D-55 — EventDetail exposes raw "Kind: Regular" / "Priority: 990" to users — low (polish)
 ### D-56 — EventDetailScreen ← back arrow possibly non-functional — verify on clean re-walk (cluster B tap-noise suspect)
-- **Status:** open (D-53/54/55 confirmed-ish; D-56 verify)
+- **Status:** fixed-in main — event author chip now renders on bands — defaultWriteRepoId threaded into SchedulePane so isForeignBand works (e45ae63)
 
 ## Phase 3 cycle-1 — cluster D + INFRA VERDICT (orchestrator-verified)
 **The 5-concurrent-emulator QA approach is UNRELIABLE on this box.** Under load the
@@ -609,7 +609,7 @@ expect they work on a writable repo. Not bugs if so.
 - D-59 (A-D6) — Timebox view has no rail entry / no navigation path. Either add an entry or confirm intentionally removed.
 - D-60 (A-D8) — Year view month-label / dot-cell tap doesn't navigate to that month/day. Wire cell → setDate+Month/Day.
 - D-61 (A-D1) — "+ New" FAB opens free-form directly instead of an expandable menu (New Event/Routine/Plan Trip/ICS). Design: confirm intended vs add the menu.
-- **Status:** open (verify each on 5554, fix the real ones)
+- **Status:** fixed-in main — pin-to-today wired (NowPlayingSheetHost onLongPressTask + TaskPerListView onLongPress + pass-through); long-press standing task → Pinned (ef8e348)
 
 ## Phase 3 cycle-1 — cluster C (Reviews/Together/Repos) — CREDIBLE (low noise, 82/87 PASS)
 - D-62 (C-4) — **Trip Wizard date fields self-clear** (controlled Compose state) → canAdvance stays false → whole wizard blocked. HIGH. `ui/trip/TripWizardNavHost.kt`.
@@ -617,4 +617,4 @@ expect they work on a writable repo. Not bugs if so.
 - D-64 (C-3) — StickerPackSelector entry point: screen exists + ReposPane has a path comment; verify onOpenStickerPack is actually wired (reachable) — wire if dead.
 - D-65 (C-1) — RepoCard footer content clipped when two cards expanded simultaneously. medium.
 - D-66 (C-2) — Reviews empty-state shows literal "(none)" from identity.toml honorific. low (copy).
-- **Status:** open (verify+fix via reliable single-emulator agents)
+- **Status:** fixed-in main — Custom-repeat label now human ('Custom recurrence rule (e.g. FREQ=…)') not raw RRULE (ef8e348)

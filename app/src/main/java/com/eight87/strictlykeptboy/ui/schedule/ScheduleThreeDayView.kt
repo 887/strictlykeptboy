@@ -1,5 +1,6 @@
 package com.eight87.strictlykeptboy.ui.schedule
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -46,6 +47,8 @@ fun ScheduleThreeDayView(
     effectiveZoom: Int = 2,
     /** Round 2.22 / Phase B UI follow-up — long-press-and-drag drop callback. */
     onDragReschedule: ((DayBand, java.time.OffsetDateTime) -> Unit)? = null,
+    /** D-58 — tapping a column header navigates to that day's Day view. */
+    onColumnHeaderTap: (LocalDate) -> Unit = {},
 ) {
     val dates = (0..2).map { anchor.plusDays(it.toLong()) }
     val sharedScroll = rememberScrollState()
@@ -76,7 +79,8 @@ fun ScheduleThreeDayView(
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .padding(4.dp),
+                        .padding(4.dp)
+                        .clickable { onColumnHeaderTap(d) },
                     contentAlignment = Alignment.Center,
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {

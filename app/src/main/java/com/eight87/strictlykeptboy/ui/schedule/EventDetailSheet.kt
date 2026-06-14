@@ -234,18 +234,34 @@ fun EventDetailContent(
                         modifier = Modifier.testTag(TestTagEventDetailSourceRepo),
                     )
                 }
-                Text(
-                    text = "Kind: " + when (band.kind) {
-                        com.eight87.strictlykeptboy.resolver.CalendarKind.Timebox -> "Timebox"
-                        com.eight87.strictlykeptboy.resolver.CalendarKind.Regular -> "Regular"
-                        // Round 2.18.A.3 — external (CalendarContract) calendars.
-                        com.eight87.strictlykeptboy.resolver.CalendarKind.External -> "External"
-                        com.eight87.strictlykeptboy.resolver.CalendarKind.Base -> "Base layer"
-                    },
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.testTag(TestTagEventDetailSourceKind),
-                )
+                // D-55 fix — suppress "Kind: Regular" for ordinary events
+                // (users don't need to see the internal CalendarKind name for
+                // the default case). Non-regular kinds get a friendly label so
+                // the user knows what type of event they're looking at.
+                when (band.kind) {
+                    com.eight87.strictlykeptboy.resolver.CalendarKind.Regular -> { /* suppress — normal event, no label needed */ }
+                    com.eight87.strictlykeptboy.resolver.CalendarKind.Timebox ->
+                        Text(
+                            text = "⏱ Timebox",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.testTag(TestTagEventDetailSourceKind),
+                        )
+                    com.eight87.strictlykeptboy.resolver.CalendarKind.External ->
+                        Text(
+                            text = "External calendar",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.testTag(TestTagEventDetailSourceKind),
+                        )
+                    com.eight87.strictlykeptboy.resolver.CalendarKind.Base ->
+                        Text(
+                            text = "Base layer",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.testTag(TestTagEventDetailSourceKind),
+                        )
+                }
                 band.instance.author?.let { author ->
                     Text(
                         text = "Author: ${author.id}",
@@ -254,13 +270,25 @@ fun EventDetailContent(
                         modifier = Modifier.testTag(TestTagEventDetailSourceAuthor),
                     )
                 }
+                // D-55 fix — don't expose raw priority numbers to users.
+                // Priority is a scheduling-layer concern; high-priority calendars
+                // get a subtle "★ High priority calendar" note, low numbers
+                // (default ≤ 10) are suppressed entirely as noise.
                 calendarPriority?.let { p ->
-                    Text(
-                        text = "Priority: $p",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.testTag(TestTagEventDetailSourcePriority),
-                    )
+                    val label = when {
+                        p >= 900 -> "★ High priority calendar"
+                        p >= 500 -> "↑ Elevated priority calendar"
+                        p > 10 -> null // mid-range: suppress
+                        else -> null   // default: suppress
+                    }
+                    if (label != null) {
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.testTag(TestTagEventDetailSourcePriority),
+                        )
+                    }
                 }
                 if (linkedTaskTitles.isNotEmpty()) {
                     Text(

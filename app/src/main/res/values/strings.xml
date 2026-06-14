@@ -1043,7 +1043,7 @@
     <string name="event_create_repeat_weekly">Weekly</string>
     <string name="event_create_repeat_monthly">Monthly</string>
     <string name="event_create_repeat_custom">Custom</string>
-    <string name="event_create_custom_rrule">RRULE</string>
+    <string name="event_create_custom_rrule">Custom recurrence rule (e.g. FREQ=WEEKLY;BYDAY=MO,WE)</string>
     <string name="event_create_private_label">Private</string>
     <string name="event_create_private_tooltip">Body visible only to you; title still surfaces in the schedule.</string>
     <string name="event_create_confirm">Add event</string>

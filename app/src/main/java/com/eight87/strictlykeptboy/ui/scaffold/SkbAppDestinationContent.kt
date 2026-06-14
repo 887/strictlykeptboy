@@ -3,6 +3,7 @@ package com.eight87.strictlykeptboy.ui.scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import kotlinx.coroutines.flow.MutableStateFlow
 import androidx.compose.ui.res.stringResource
 import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.git.auth.SecretsStore
@@ -102,6 +103,14 @@ internal fun SkbAppDestinationContent(
     /** Round 2.27 / Phase C.3 — keeper-prompt long-press → offline marker. */
     onPromptMarkAnsweredOffline: ((TaskItem) -> Unit)? = null,
 ) {
+    // D-49 — resolve the active write-target repo id so SchedulePane
+    // can pass it down to the band-renderers' isForeignBand predicate.
+    // ReposViewState.activeRepoId is a StateFlow<String?> collected here
+    // (nullable → empty string when no active repo, which matches the
+    // existing "chip suppressed" contract in isForeignBand).
+    val activeRepoIdState by (reposState?.activeRepoId
+        ?: MutableStateFlow(null)).collectAsState()
+    val defaultWriteRepoId: String = activeRepoIdState ?: ""
     when (selected) {
         TopDestination.Schedule -> SchedulePane(
             activeRepoName = activeRepoName,
@@ -117,6 +126,7 @@ internal fun SkbAppDestinationContent(
             onRecurringDrop = onRecurringDrop,
             onOpenEventDetailFullScreen = onOpenEventDetailFullScreen,
             viewModePrefs = scheduleViewModePrefs,
+            defaultWriteRepoId = defaultWriteRepoId,
         )
         TopDestination.Tasks -> TasksPane(
             filter = tasksFilter,
@@ -187,7 +197,12 @@ internal fun SkbAppDestinationContent(
             com.eight87.strictlykeptboy.ui.reviews.ReviewsPane(
                 side = com.eight87.strictlykeptboy.ui.reviews.ReviewsSide.Boy,
                 items = items,
-                boyHonorific = identityState?.honorific?.ifBlank { "Sir" } ?: "Sir",
+                // D-66 fix: "(none)" is the wire-format for Honorific.None from the
+                // wizard; treat it the same as blank to avoid showing "(none)" in
+                // the Reviews empty-state copy.
+                boyHonorific = identityState?.honorific?.let { h ->
+                    if (h.isBlank() || h == "(none)") "Sir" else h
+                } ?: "Sir",
                 boyPraiseTerm = identityState?.praise?.ifBlank { "good boy" } ?: "good boy",
                 filter = reviewsFilter,
             )

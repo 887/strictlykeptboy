@@ -401,7 +401,15 @@ internal fun NowPlayingSheetHost(
                                     tasksState = tasksState,
                                     onOpenTask = { task -> openTask = task },
                                     onStartTask = onStartTask,
-                                    onLongPressTask = { /* Phase D — TBD */ },
+                                    onLongPressTask = { task ->
+                                        // D-51 fix — pin-to-today for standing (no-deadline)
+                                        // tasks. Long-pressing a standing task toggles its
+                                        // pinned state; pinned tasks surface in Today's
+                                        // "Pinned" section. Non-standing tasks: no-op for now.
+                                        if (task.standing) {
+                                            tasksState.pinStanding(task.id, !task.pinnedForToday)
+                                        }
+                                    },
                                 )
                             },
                         )

@@ -127,6 +127,7 @@ internal fun ReposDetailPane(
                     onBack = { onModeChange(Mode.List) },
                     onAddRemote = { onModeChange(Mode.Add) },
                     onOpenIdentities = { onModeChange(Mode.Identities(repo.repoId)) },
+                    onOpenStickerPack = { onModeChange(Mode.StickerPacks(repo.repoId)) },
                     onShare = { onShowShare(repo.repoId) },
                     onRemoved = { onModeChange(Mode.List) },
                 )

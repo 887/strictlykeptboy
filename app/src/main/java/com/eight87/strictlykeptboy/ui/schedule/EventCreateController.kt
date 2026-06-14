@@ -22,6 +22,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 /**
  * Phase FFF / EC-A — orchestrator for the event-create flow.
@@ -249,7 +251,9 @@ class EventCreateController(
         _state.value = _state.value.copy(
             confirmingTemplate = entry,
             confirmingTemplateSubbeats = firstEntry.subbeats,
-            confirmingTemplateStart = start.toString(),
+            confirmingTemplateStart = start.format(
+                DateTimeFormatter.ofPattern("EEE, d MMM yyyy  HH:mm", Locale.getDefault()),
+            ),
         )
     }
 

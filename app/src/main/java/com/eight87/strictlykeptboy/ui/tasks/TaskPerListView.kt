@@ -39,6 +39,7 @@ fun TaskPerListView(
     multiRepo: Boolean = false,
     activeRepoOwner: String = "",
     onStartTask: ((String) -> Unit)? = null,
+    onLongPress: (TaskItem) -> Unit = {},
 ) {
     Column(modifier = modifier.fillMaxSize().testTag(TestTagPerListView)) {
         val scroll = rememberScrollState()
@@ -119,6 +120,7 @@ fun TaskPerListView(
                     item = task,
                     onToggleDone = { onToggleDone(task) },
                     onClick = { onOpen(task) },
+                    onLongClick = { onLongPress(task) },
                     multiRepo = multiRepo,
                     activeRepoOwner = activeRepoOwner,
                     onStartTask = onStartTask,

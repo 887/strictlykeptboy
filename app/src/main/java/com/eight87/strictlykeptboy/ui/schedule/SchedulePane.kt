@@ -127,6 +127,13 @@ fun SchedulePane(
      * renders + the toggle is omitted (test / preview entry-points).
      */
     viewModePrefs: ScheduleViewModePrefs? = null,
+    /**
+     * D-49 / D-58 — the active write-target repo id. Used to decide
+     * whether to show the author chip on foreign-repo bands (isForeignBand
+     * predicate) and to colour column-header navigation in Week/3-day.
+     * Empty string ⇒ chip suppressed (back-compat).
+     */
+    defaultWriteRepoId: String = "",
 ) {
     androidx.compose.runtime.LaunchedEffect(state) {
         com.eight87.strictlykeptboy.perf.PerfTraceRecorder.begin(
@@ -207,6 +214,7 @@ fun SchedulePane(
                             onDragReschedule = onDragReschedule,
                             repoDefaultTzId = repoDefaultTzId,
                             viewModePrefs = viewModePrefs,
+                            defaultWriteRepoId = defaultWriteRepoId,
                         )
                     }
                 },
@@ -247,6 +255,7 @@ fun SchedulePane(
                     onDragReschedule = onDragReschedule,
                     repoDefaultTzId = repoDefaultTzId,
                     viewModePrefs = viewModePrefs,
+                    defaultWriteRepoId = defaultWriteRepoId,
                 )
             }
             // Round 2.23 Phase D (D-2.23.d) — full-screen event detail
@@ -348,6 +357,8 @@ private fun ScheduleMasterContent(
     onDragReschedule: ((DayBand, java.time.OffsetDateTime) -> Unit)? = null,
     repoDefaultTzId: String? = null,
     viewModePrefs: ScheduleViewModePrefs? = null,
+    /** D-49 / D-58 — active write-target repo id; empty = chip suppressed. */
+    defaultWriteRepoId: String = "",
 ) {
     val selectedTab by state.selectedTab.collectAsState()
     val date by state.date.collectAsState()
@@ -571,6 +582,12 @@ private fun ScheduleMasterContent(
                     onBandTap = onBandTap,
                     effectiveZoom = effectiveZoom,
                     onDragReschedule = onDragReschedule,
+                    defaultWriteRepoId = defaultWriteRepoId,
+                    onColumnHeaderTap = { d ->
+                        state.setDate(d)
+                        state.setSelectedTab(ScheduleViewTab.Day)
+                        onPersistTab(ScheduleViewTab.Day)
+                    },
                 )
             }
             ScheduleViewTab.Day -> Column(modifier = Modifier.fillMaxSize()) {
@@ -589,6 +606,7 @@ private fun ScheduleMasterContent(
                 onSetupWizard = onSetupWizard,
                 effectiveZoom = effectiveZoom,
                 metaGroupByCalendar = metaGroupByCalendar,
+                defaultWriteRepoId = defaultWriteRepoId,
                 // Round 2.21 Phase D.5 — pinch-to-zoom on the day grid.
                 // The picker's per-row segmented control covers the
                 // deliberate path; pinch is the gesture-convenience layer
@@ -621,6 +639,12 @@ private fun ScheduleMasterContent(
                     onSwipeWeek = { delta -> state.setDate(date.plusWeeks(delta.toLong())) },
                     effectiveZoom = effectiveZoom,
                     onDragReschedule = onDragReschedule,
+                    defaultWriteRepoId = defaultWriteRepoId,
+                    onColumnHeaderTap = { d ->
+                        state.setDate(d)
+                        state.setSelectedTab(ScheduleViewTab.Day)
+                        onPersistTab(ScheduleViewTab.Day)
+                    },
                 )
             }
             ScheduleViewTab.Month -> ScheduleMonthView(

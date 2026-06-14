@@ -300,6 +300,7 @@ fun ReposPane(
                         onBack = { mode = Mode.List },
                         onAddRemote = { mode = Mode.Add },
                         onOpenIdentities = { mode = Mode.Identities(repo.repoId) },
+                        onOpenStickerPack = { mode = Mode.StickerPacks(repo.repoId) },
                         onShare = { showShareSheetForRepo = repo.repoId },
                         onRemoved = { mode = Mode.List },
                     )

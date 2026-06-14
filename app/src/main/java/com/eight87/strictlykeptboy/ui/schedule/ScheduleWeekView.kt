@@ -1,6 +1,7 @@
 package com.eight87.strictlykeptboy.ui.schedule
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -77,6 +78,8 @@ fun ScheduleWeekView(
     effectiveZoom: Int = 2,
     /** Round 2.22 / Phase B UI follow-up — long-press-and-drag drop callback. */
     onDragReschedule: ((DayBand, java.time.OffsetDateTime) -> Unit)? = null,
+    /** D-58 — tapping a column header navigates to that day's Day view. */
+    onColumnHeaderTap: (LocalDate) -> Unit = {},
 ) {
     val HourHeight = hourHeightForZoom(effectiveZoom)
     val dragState = rememberDragRescheduleUiState()
@@ -130,6 +133,7 @@ fun ScheduleWeekView(
                     modifier = Modifier
                         .weight(1f)
                         .padding(2.dp)
+                        .clickable { onColumnHeaderTap(d) }
                         .then(
                             if (isToday) Modifier.testTag(TestTagWeekTodayColumn)
                             else Modifier,

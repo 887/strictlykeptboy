@@ -252,6 +252,7 @@ fun LazyItemScope.ExpandedNowPlayingTaskBody(
               onSelectList = { selectedListId = it },
               onToggleDone = { tasksState.toggleDone(it.id) },
               onOpen = onOpenTask,
+              onLongPress = onLongPressTask,
               multiRepo = uiState.multiRepo,
               activeRepoOwner = uiState.activeRepoOwner,
               onStartTask = onStartTask,

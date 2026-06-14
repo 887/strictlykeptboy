@@ -357,9 +357,21 @@ fun RepoSettingsScreen(
             }
         }
 
-        // Round 2.19 — Sticker pack import toggle moved to the per-repo
-        // card. The side-effect that copies the active pack into the repo
-        // now lives in `RepoCard` next to the switch the user flips.
+        // D-64 fix — add an explicit "Sticker pack…" entry-point so the
+        // StickerPackSelectorScreen is reachable. The per-repo *import* toggle
+        // lives in RepoCard; this button navigates to the selector where the
+        // user chooses *which* pack to use.
+        SectionCard(
+            title = "Sticker pack",
+            modifier = Modifier.testTag(TestTagRepoSettingsStickerPack),
+        ) {
+            TextButton(
+                onClick = onOpenStickerPack,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Choose sticker pack…")
+            }
+        }
 
         // ---- Defaults --------------------------------------------------------
         SectionCard(title = stringResource(R.string.repo_settings_section_defaults)) {

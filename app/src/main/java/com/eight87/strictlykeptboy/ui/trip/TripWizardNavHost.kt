@@ -1,6 +1,7 @@
 package com.eight87.strictlykeptboy.ui.trip
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -218,7 +219,7 @@ private fun TripBatMascot(screen: TripScreen) {
         contentAlignment = ComposeAlign.Center,
     ) {
         Column(horizontalAlignment = ComposeAlign.CenterHorizontally) {
-            Icon(
+            Image(
                 painter = painterResource(R.drawable.about_bat),
                 contentDescription = stringResource(R.string.cd_trip_wizard_mascot, screen.stickerKey),
                 modifier = Modifier.size(80.dp),
@@ -256,16 +257,36 @@ private fun BasicsScreen(draft: TripDraft, onUpdate: (TripDraft) -> Unit) {
         )
         // Date pickers — compact: use a simple text-entry "yyyy-mm-dd" for v1.
         // M3 DatePicker is heavyweight; the FAB path uses native DatePicker too.
+        // D-62 fix: decouple the display text from the parsed date so that
+        // intermediate typing ("2025-1") is not lost when parseDate returns null.
+        var startDateText by remember(draft.startDate) {
+            mutableStateOf(draft.startDate?.toString() ?: "")
+        }
+        var endDateText by remember(draft.endDate) {
+            mutableStateOf(draft.endDate?.toString() ?: "")
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
-                value = draft.startDate?.toString() ?: "",
-                onValueChange = { onUpdate(draft.copy(startDate = parseDate(it))) },
+                value = startDateText,
+                onValueChange = { txt ->
+                    startDateText = txt
+                    val parsed = parseDate(txt)
+                    if (parsed != null || txt.isEmpty()) {
+                        onUpdate(draft.copy(startDate = parsed))
+                    }
+                },
                 label = { Text(stringResource(R.string.trip_wizard_start_date_label)) },
                 modifier = Modifier.weight(1f).testTag("TripWizard-StartDate"),
             )
             OutlinedTextField(
-                value = draft.endDate?.toString() ?: "",
-                onValueChange = { onUpdate(draft.copy(endDate = parseDate(it))) },
+                value = endDateText,
+                onValueChange = { txt ->
+                    endDateText = txt
+                    val parsed = parseDate(txt)
+                    if (parsed != null || txt.isEmpty()) {
+                        onUpdate(draft.copy(endDate = parsed))
+                    }
+                },
                 label = { Text(stringResource(R.string.trip_wizard_end_date_label)) },
                 modifier = Modifier.weight(1f).testTag("TripWizard-EndDate"),
             )
