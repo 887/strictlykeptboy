@@ -178,10 +178,13 @@ object TasksDemoSeed {
             is QuickAddTarget.Todolist -> target.info
             else -> errands
         }
+        // D-40 — for event targets the due date comes from the target type;
+        // for Todolist targets the optional req.due takes precedence (None,
+        // Today or Tomorrow chosen in the Quick Add sheet).
         val due = when (target) {
             QuickAddTarget.TodayEvent -> today
             QuickAddTarget.TomorrowEvent -> today.plusDays(1)
-            else -> null
+            else -> req.due // null = standing (no due date), or a user-picked date
         }
         return TaskItem(
             id = "user-" + System.currentTimeMillis(),

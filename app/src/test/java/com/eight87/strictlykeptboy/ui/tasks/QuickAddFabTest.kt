@@ -45,8 +45,9 @@ class QuickAddFabTest {
                         todolists = listOf(a, b),
                         initialTarget = QuickAddTarget.Todolist(a),
                         onDismiss = {},
-                        onSubmit = { title, target ->
-                            submitted = TaskQuickAddRequest(title, target)
+                        // D-40 — signature now includes optional due date.
+                        onSubmit = { title, target, due ->
+                            submitted = TaskQuickAddRequest(title, target, due)
                         },
                     )
                 }

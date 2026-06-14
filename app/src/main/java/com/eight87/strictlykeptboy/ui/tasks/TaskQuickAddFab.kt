@@ -36,12 +36,17 @@ import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.ui.components.WrappingChipRow
 import com.eight87.strictlykeptboy.ui.a11y.labelString
+import java.time.LocalDate
 
 const val TestTagQuickAddFab = "QuickAddFab"
 const val TestTagQuickAddSheet = "QuickAddSheet"
 const val TestTagQuickAddInput = "QuickAddInput"
 const val TestTagQuickAddSubmit = "QuickAddSubmit"
 const val TestTagQuickAddTarget = "QuickAddTarget"
+// D-40 — due-date chip row (only visible when a Todolist target is selected)
+const val TestTagQuickAddDueNone = "QuickAddDueNone"
+const val TestTagQuickAddDueToday = "QuickAddDueToday"
+const val TestTagQuickAddDueTomorrow = "QuickAddDueTomorrow"
 
 /**
  * UI-J.7 — quick-add target.
@@ -74,13 +79,23 @@ fun TaskQuickAddFab(
     }
 }
 
+/** D-40 — due-date selection for the task path in Quick Add. */
+enum class QuickAddDue { None, Today, Tomorrow }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskQuickAddSheet(
     todolists: List<TodolistInfo>,
     initialTarget: QuickAddTarget?,
     onDismiss: () -> Unit,
-    onSubmit: (title: String, target: QuickAddTarget) -> Unit,
+    /**
+     * D-40 — extended signature: caller receives the picked [due] date
+     * alongside the [title] and [target]. `null` due means no due date
+     * (standing task). Event targets always carry today/tomorrow
+     * implicitly via the target type, so [due] is only meaningful for
+     * [QuickAddTarget.Todolist] targets.
+     */
+    onSubmit: (title: String, target: QuickAddTarget, due: LocalDate?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -97,6 +112,8 @@ fun TaskQuickAddSheet(
     // D-19 fix — track whether the user tried to submit an empty title
     // so we can show an error message on the field.
     var showEmptyError by remember { mutableStateOf(false) }
+    // D-40 — due-date selection, only relevant for Todolist targets.
+    var selectedDue by remember { mutableStateOf(QuickAddDue.None) }
 
     // D-18 fix — gate focus on the sheet being fully expanded so the
     // focus request doesn't race the ModalBottomSheet settle animation
@@ -119,7 +136,17 @@ fun TaskQuickAddSheet(
             return@submit
         }
         showEmptyError = false
-        onSubmit(cleaned, t)
+        // D-40 — resolve the due date for Todolist targets from selectedDue;
+        // event targets carry their due date implicitly in the target type.
+        val due: LocalDate? = when {
+            t is QuickAddTarget.Todolist -> when (selectedDue) {
+                QuickAddDue.Today -> LocalDate.now()
+                QuickAddDue.Tomorrow -> LocalDate.now().plusDays(1)
+                QuickAddDue.None -> null
+            }
+            else -> null // event targets handle due themselves via materialize()
+        }
+        onSubmit(cleaned, t, due)
     }
 
     ModalBottomSheet(
@@ -170,6 +197,35 @@ fun TaskQuickAddSheet(
                             onClick = { target = t },
                             label = { Text(t.labelString()) },
                             modifier = Modifier.testTag("$TestTagQuickAddTarget-$key"),
+                        )
+                    }
+                }
+                // D-40 — due-date chips: only shown when a Todolist target is
+                // selected (event targets imply today/tomorrow from the target type).
+                if (target is QuickAddTarget.Todolist) {
+                    Text(
+                        stringResource(R.string.quick_add_due_label),
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                    WrappingChipRow(modifier = Modifier.padding(top = 4.dp)) {
+                        FilterChip(
+                            selected = selectedDue == QuickAddDue.None,
+                            onClick = { selectedDue = QuickAddDue.None },
+                            label = { Text(stringResource(R.string.quick_add_due_none)) },
+                            modifier = Modifier.testTag(TestTagQuickAddDueNone),
+                        )
+                        FilterChip(
+                            selected = selectedDue == QuickAddDue.Today,
+                            onClick = { selectedDue = QuickAddDue.Today },
+                            label = { Text(stringResource(R.string.quick_add_due_today)) },
+                            modifier = Modifier.testTag(TestTagQuickAddDueToday),
+                        )
+                        FilterChip(
+                            selected = selectedDue == QuickAddDue.Tomorrow,
+                            onClick = { selectedDue = QuickAddDue.Tomorrow },
+                            label = { Text(stringResource(R.string.quick_add_due_tomorrow)) },
+                            modifier = Modifier.testTag(TestTagQuickAddDueTomorrow),
                         )
                     }
                 }

@@ -476,11 +476,15 @@ internal fun NowPlayingSheetHost(
                 todolists = tasksUi.todolists,
                 initialTarget = initialTarget,
                 onDismiss = { quickAddOpen = false },
-                onSubmit = { title, target ->
+                // D-40 — receive the optional due date from the sheet and
+                // forward it in the request so the disk-write path can choose
+                // between StandingTask (null) and dated Task (non-null).
+                onSubmit = { title, target, due ->
                     onWriteTask(
                         com.eight87.strictlykeptboy.ui.tasks.TaskQuickAddRequest(
                             title = title,
                             target = target,
+                            due = due,
                         ),
                     )
                     quickAddOpen = false

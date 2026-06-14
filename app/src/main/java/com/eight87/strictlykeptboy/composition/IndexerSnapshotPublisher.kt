@@ -9,6 +9,8 @@ import com.eight87.strictlykeptboy.resolver.RepoRef
 import com.eight87.strictlykeptboy.resolver.RepoSnapshot
 import com.eight87.strictlykeptboy.resolver.TodolistMeta
 import com.eight87.strictlykeptboy.resolver.TodolistRef
+import com.eight87.strictlykeptboy.store.TomlReader
+import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -140,15 +142,45 @@ class IndexerSnapshotPublisher(
                 tasks.forEach { add(it.todolistId) }
                 standing.forEach { add(it.todolistId) }
             }
+            // D-35 fix — read todolist.toml files for this repo eagerly so
+            // the snapshot carries real display names instead of raw UUIDs.
+            // The todolist dir name is a slug; the TOML's `id` field is the
+            // UUID referenced by task frontmatter. We build a uuid→name map
+            // and fall back to the uuid itself only when the TOML is absent.
+            val todolistNameByUuid: Map<String, String> =
+                readTodolistNamesFromDisk(cfg.rootDir)
             todolistIds.mapTo(todolists) { id ->
                 TodolistMeta(
                     ref = TodolistRef(id),
                     repo = repoRef,
-                    displayName = id,
+                    displayName = todolistNameByUuid[id] ?: id,
                 )
             }
         }
         return RepoSnapshot(repos = repos, calendars = calendars, todolists = todolists)
+    }
+
+    /**
+     * D-35 fix — scan `<repoRoot>/todolists/<slug>/todolist.toml` files and
+     * return a map of `todolistUuid → displayName`. Cheap: each TOML is tiny;
+     * called once per repo per snapshot tick (IO dispatcher). Returns an empty
+     * map on any IO failure so the caller can fall back to the raw UUID.
+     */
+    private fun readTodolistNamesFromDisk(repoRoot: String): Map<String, String> {
+        val dir = File(repoRoot, "todolists")
+        if (!dir.isDirectory) return emptyMap()
+        val result = mutableMapOf<String, String>()
+        dir.listFiles()?.forEach { slugDir ->
+            val toml = File(slugDir, "todolist.toml")
+            if (!toml.isFile) return@forEach
+            runCatching {
+                val tbl = TomlReader.parse(toml.readText(Charsets.UTF_8))
+                val uuid = tbl.getString("id") ?: return@runCatching
+                val name = tbl.getString("name")?.takeIf { it.isNotBlank() } ?: return@runCatching
+                result[uuid] = name
+            }
+        }
+        return result
     }
 
     companion object {

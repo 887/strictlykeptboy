@@ -873,6 +873,12 @@
     <string name="quick_add_section_lists">Add to list</string>
     <string name="quick_add_section_events">Or add as event</string>
 
+    <!-- D-40 — Quick Add due-date picker chips (Todolist target only). -->
+    <string name="quick_add_due_label">Due</string>
+    <string name="quick_add_due_none">No date</string>
+    <string name="quick_add_due_today">Today</string>
+    <string name="quick_add_due_tomorrow">Tomorrow</string>
+
     <!-- D-24 — Per-list All-lists chip label. -->
     <string name="per_list_chip_all">All lists</string>
 

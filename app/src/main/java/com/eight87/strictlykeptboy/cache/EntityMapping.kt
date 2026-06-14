@@ -87,6 +87,9 @@ internal object EntityMapping {
         priority = t.priority,
         tagsJson = encodeTags(t.tags),
         sourcePath = sourcePath,
+        // D-39 — carry the author id from EntityHeader so TaskRow → TaskItem
+        // can surface the author chip for foreign-authored tasks.
+        author = t.header.author,
     )
 
     fun standingTask(repoId: String, t: StandingTask, sourcePath: String): StandingTaskRow =
@@ -101,6 +104,8 @@ internal object EntityMapping {
             priority = t.priority,
             tagsJson = encodeTags(t.tags),
             sourcePath = sourcePath,
+            // D-39 — carry the author id from EntityHeader.
+            author = t.header.author,
         )
 
     fun recurrenceRule(

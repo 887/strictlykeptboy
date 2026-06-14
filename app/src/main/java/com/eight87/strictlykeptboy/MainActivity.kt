@@ -1576,6 +1576,8 @@ class MainActivity : ComponentActivity() {
                                 val newTask = com.eight87.strictlykeptboy.ui.tasks.TasksDemoSeed.materialize(req)
                                 tasksViewState.addTask(newTask)
                                 // D-37 — attempt real disk write for Todolist targets.
+                                // D-40 — when req.due is set write a dated Task instead of
+                                // a StandingTask so it appears in Upcoming.
                                 val listTarget = req.target as?
                                     com.eight87.strictlykeptboy.ui.tasks.QuickAddTarget.Todolist
                                 if (listTarget != null) {
@@ -1594,20 +1596,32 @@ class MainActivity : ComponentActivity() {
                                             val entityId =
                                                 com.eight87.strictlykeptboy.git.Uuid7
                                                     .generate().toString()
-                                            val entity =
-                                                com.eight87.strictlykeptboy.store.StandingTask(
-                                                    header =
-                                                        com.eight87.strictlykeptboy.store.EntityHeader(
-                                                            schemaVersion = 1,
-                                                            id = entityId,
-                                                            createdAt = iso,
-                                                            updatedAt = iso,
-                                                            author = cfg.authorIdentity.name
-                                                                .ifBlank { "me" },
-                                                        ),
-                                                    title = req.title,
-                                                    todolistId = listTarget.info.id,
+                                            val header =
+                                                com.eight87.strictlykeptboy.store.EntityHeader(
+                                                    schemaVersion = 1,
+                                                    id = entityId,
+                                                    createdAt = iso,
+                                                    updatedAt = iso,
+                                                    author = cfg.authorIdentity.name
+                                                        .ifBlank { "me" },
                                                 )
+                                            // D-40 — write a dated Task when due is set;
+                                            // fall back to StandingTask when due is null.
+                                            val entity: com.eight87.strictlykeptboy.store.TypedEntity =
+                                                if (req.due != null) {
+                                                    com.eight87.strictlykeptboy.store.Task(
+                                                        header = header,
+                                                        title = req.title,
+                                                        todolistId = listTarget.info.id,
+                                                        due = req.due.toString(),
+                                                    )
+                                                } else {
+                                                    com.eight87.strictlykeptboy.store.StandingTask(
+                                                        header = header,
+                                                        title = req.title,
+                                                        todolistId = listTarget.info.id,
+                                                    )
+                                                }
                                             com.eight87.strictlykeptboy.store.EntityWriter
                                                 .write(rootDir, entity)
                                             val gitRepo =

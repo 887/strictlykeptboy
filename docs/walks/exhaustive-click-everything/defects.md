@@ -383,7 +383,10 @@ _PASS: D-16, D-17, D-18, D-19, D-23, D-24, D-26, D-27, D-31. Issues below._
   the TaskItem isn't carrying `author`, or `TaskRow`'s chip predicate doesn't fire
   for tasks the way it does for event-derived rows. Read author onto the TaskItem
   (snapshot/indexer) + render the chip in `TaskRow` for foreign-authored tasks.
-- **Status:** open (supersedes the "D-13 verified-by-code" optimism)
+- **Status:** fixed-in main (d06109b) — added `author` column to task/standing
+  Room entities (DB v5→6), propagated via EntityMapping → TaskItem.author; chip now
+  renders + fires the author!=owner predicate on file-backed tasks. 7 tests.
+  FOLLOW-UP D-43: chip shows the author UUID's first char ('0'), not real initials.
 
 ### D-41 — Swiping a task DETAIL closed also dismisses the whole sheet — major (NEW-2)
 - Tap a task → detail opens → swipe down to close the detail → BOTH the detail
@@ -397,7 +400,8 @@ _PASS: D-16, D-17, D-18, D-19, D-23, D-24, D-26, D-27, D-31. Issues below._
 - A quick-added TASK can't be given a due date, so it never lands in Upcoming
   (D-29 grouping is unexercisable) and users can't schedule a task from Quick Add.
   Add a due-date affordance (Today/Tomorrow/pick) to the task path.
-- **Status:** open
+- **Status:** fixed-in main (d06109b) — No-date/Today/Tomorrow chips on the task
+  quick-add; Tomorrow-dated quick-add lands in Upcoming's Tomorrow bucket. 6 tests.
 
 ### D-42 — Quick Add opens from near-FAB scroll gestures — minor (NEW-6)
 - A swipe ending near the FAB (~912,2232) accidentally triggers Quick Add.
@@ -409,10 +413,9 @@ _PASS: D-16, D-17, D-18, D-19, D-23, D-24, D-26, D-27, D-31. Issues below._
   the list is at its very top; near-bottom swipe now scrolls, doesn't dismiss. AVD-verified.
 - **D-28:** FIXED-in main (8c8bca5) — SnackbarDuration.Short→Long (~10s); reliably
   visible every mark-done; Undo restores. AVD-verified.
-- **D-35 (UPGRADED back to major):** NEW-1 shows raw UUID list names on a FRESH
-  session (warm cache shows names) — a data-resolution TIMING RACE, not just the
-  non-owning-repo edge case. Resolve names from the snapshot (which has them
-  immediately) so first render is correct. **Status:** re-opened (major).
+- **D-35:** FIXED-in main (d06109b) — IndexerSnapshotPublisher now eagerly scans
+  todolists/*/todolist.toml so displayName is the real name on first render. AVD-
+  verified on cold uninstall+reinstall (names show immediately). 6 tests.
 
 ### D-15 — Todolist → Upcoming empty-state copy is misleading — minor (UX polish)
 - The Upcoming filter (now future-only) shows the generic "no tasks anywhere —
@@ -431,6 +434,14 @@ _PASS: D-16, D-17, D-18, D-19, D-23, D-24, D-26, D-27, D-31. Issues below._
   proper 7-col MON→SUN week (weekday emoji headers, today highlighted, now-line).
   • **Shot:** skb-c0-weekgrid.png
 - **Status:** closed (not a defect)
+
+### D-43 — Author chip on tasks shows the author UUID's first char, not initials — minor (follow-up)
+- D-39 made the author chip render on file-backed tasks, but `item.author` holds
+  the author UUID (`01900000-…bb`), so the chip shows "0" instead of the Dom's
+  initials ("BK"/"K"). Resolve author id → party/identity display name → initials
+  (same source the event author chip should use), so a kept user sees who set the
+  task. Low priority (chip is present; just mislabeled).
+- **Status:** open (follow-up)
 
 ## Closed
 

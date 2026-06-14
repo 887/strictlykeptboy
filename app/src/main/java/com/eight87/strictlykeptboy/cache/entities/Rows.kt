@@ -63,6 +63,8 @@ data class TaskRow(
     val priority: Int?,
     val tagsJson: String,
     val sourcePath: String,
+    /** D-39 — task author id from EntityHeader, empty string when not set. */
+    val author: String = "",
 )
 
 @Entity(tableName = "standing_tasks", primaryKeys = ["repoId", "id"])
@@ -77,6 +79,8 @@ data class StandingTaskRow(
     val priority: Int?,
     val tagsJson: String,
     val sourcePath: String,
+    /** D-39 — task author id from EntityHeader, empty string when not set. */
+    val author: String = "",
 )
 
 @Entity(tableName = "recurrence_rules", primaryKeys = ["repoId", "id"])

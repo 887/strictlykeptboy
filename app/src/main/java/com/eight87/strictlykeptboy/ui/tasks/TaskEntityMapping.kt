@@ -67,6 +67,9 @@ fun TaskRow.toTaskItem(
     standing = false,
     pinnedForToday = false,
     body = body,
+    // D-39 — propagate the stored author id so TaskRow shows the author chip
+    // when the task was written by a foreign identity (e.g. a Dom-authored task).
+    author = author,
     source = TaskSource.Other,
 )
 
@@ -81,6 +84,8 @@ fun StandingTaskRow.toTaskItem(todolistInfo: TodolistInfo): TaskItem = TaskItem(
     standing = true,
     pinnedForToday = pinned,
     body = body,
+    // D-39 — propagate the stored author id for standing tasks too.
+    author = author,
     source = if (pinned) TaskSource.Pinned else TaskSource.Other,
 )
 
