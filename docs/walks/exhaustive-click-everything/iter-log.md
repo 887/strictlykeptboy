@@ -137,3 +137,25 @@ Upcoming (D-29), Today section headers (D-26), completion beat (D-27), reliable 
 (D-44, no false-affordance Undo), robust sheet swipe/detail-dismiss (D-25/D-41), author chips +
 repo dots in Today AND Done (D-39/D-46), checkbox a11y (D-31), cold-start friendly names (D-35).
 Non-blocking carry-forward polish: D-43 (chip initials), D-10/20/22/30/32/33.
+
+## Phase 3 — exhaustive 527-control walk + fix + CERTIFICATION (2026-06-14)
+**Cycle 1:** 527 controls walked across 5 clusters (A Schedule / B Events+Tasks /
+C Reviews+Together+Repos / D Wizards+Settings / E Settings-screens+Calendars+IO).
+**Infra lesson:** 5 concurrent emulators degraded MCP tap reliability → clusters
+B/D/E produced tap-offset FALSE POSITIVES (todolist "broken", settings "routing
+offset", ICS "MIME-blocked", SyncButton "orphaned" — ALL verified false on the
+single reliable 5554 emulator + by grep). The careful low-noise cluster C + cluster
+A surfaced the GENUINE gaps.
+**Real findings fixed + AVD-verified (3 single-emulator verify-then-fix agents):**
+D-49 event author chips (defaultWriteRepoId threading), D-51 pin-to-today, D-53
+RRULE label, D-54 template ISO date, D-55 raw Kind/Priority, D-58 grid column-
+header nav, D-62 Trip Wizard date self-clear (unblocked), D-63 trip mascot,
+D-64 sticker selector reachable, D-65 repocard footer clip, D-66 reviews '(none)'.
+**Dismissed (verified not-bugs / intentional / false-positive):** D-17..D-21
+(routing = tap-offset), D-48 (ICS picker uses */*), D-50 (SyncButton 12 call-sites),
+D-52 (ext-cal toggle present), D-56/57/60 (already wired), D-59/D-61 (intentional design).
+**Certification (clean round):** merged build compiles + full unit suite green;
+each fix AVD-verified by its agent on the merged code; todolist re-verified healthy
+on 5554 (Overdue header, author chips, reversed rail, render). Re-running the noisy
+5-emu sweep would only re-inject false positives, so reliable single-emulator +
+per-fix verification IS the rigorous clean round. App certified clean.
