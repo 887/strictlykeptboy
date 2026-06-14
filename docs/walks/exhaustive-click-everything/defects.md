@@ -303,7 +303,7 @@ as **D-16** (already in fix). New findings below._
 ### D-30 — Passive-habit ("From events") tasks visually indistinct — moderate
 - Standing/recurring ritual items look identical to dated tasks (no gutter accent/
   recurring icon) → blend into the pile. Give them a distinct treatment.
-  **Status:** open
+  **Status:** fixed-in main (PA 656e6f0) — standing tasks show a ↻ glyph badge.
 ### D-31 — Task checkbox has empty contentDescription (a11y) — major
 - TalkBack reads the checkbox unlabeled; the title is a sibling, not merged into
   the checkbox semantics → a blind user can't tell which task they're toggling.
@@ -312,11 +312,11 @@ as **D-16** (already in fix). New findings below._
   item.title` + Role.Checkbox. Verified via a11y tree.
 ### D-32 — AuthorBubble + PriorityDot have no contentDescription (a11y) — minor
 - Decorative-only to TalkBack; add semantic labels (author name / priority).
-  **Status:** open
+  **Status:** fixed-in main (PA 656e6f0) — AuthorBubble 'by <name>' + PriorityDot tier a11y labels.
 ### D-33 — Confirm + empty-state copy not identity.toml-driven — enhancement (Phase K)
 - "Mark done?" / empty-states are hardcoded; could honor `praise`/`honorific`
   ("Done, good boy?" / "Sir would be pleased"). Ties to D-4/D-15 copy work.
-  **Status:** open (enhancement)
+  **Status:** fixed-in main (PC 6cb7bdd) — identity praiseTerm/honorific in confirm/snackbar/empty copy, neutral fallback.
 ### D-34 — Demo data lacks Boy-Keeper-authored TASKS — demo-data gap
 - Boy Keeper authors only calendar events, so the D-13 author-chip-in-Done fix
   can't be SEEN in the demo. Seed some Dom-authored todolist tasks. **Status:**
@@ -546,7 +546,7 @@ _15/16 PASS. Dustrun iter-3 was fully CLEAN. Glaciermark's 3 remaining majors:_
 - The cross-repo EVENT author chip composable is defined but wired nowhere; only
   TASK rows got author chips (D-39). Cross-repo/shared events should show who
   authored them. Wire `ForeignEventSourceChip` into the event band/detail render
-  (mirror the task author-chip predicate: author != active repo owner). **Status:** open
+  (mirror the task author-chip predicate: author != active repo owner). **Status:** fixed-in main (e45ae63) — defaultWriteRepoId threaded; event author chips render. (dup of canonical D-49)
 ### D-50 — SyncButton 'never called' — FALSE POSITIVE (orchestrator grep: 12 call-sites)
 - `SyncButton`/`SyncSuccessCheck`/`SyncErrorDot` defined but never placed. Repos
   with a remote have auto-sync but no manual "sync now" affordance. **Status:**
@@ -555,11 +555,11 @@ _15/16 PASS. Dustrun iter-3 was fully CLEAN. Glaciermark's 3 remaining majors:_
 - `PinAction`/`PinMenu` (pin a standing task to Today) + `EventTitleEmojiPreview`
   composables: EventTitleEmojiPreview HAS 2 call-sites (not orphaned). PinAction/
   PinMenu live in TaskStandingView, which was dropped from the rail (Done now uses
-  TaskDoneView) → pin-to-today may be unreachable. **Status:** open (verify pin-to-today reachability; emoji-preview = not-a-bug)
+  TaskDoneView) → pin-to-today wired. **Status:** fixed-in main (ef8e348) — long-press standing task → Pinned. (dup of canonical D-51)
 ### D-52 — External Calendars: AllowEdit toggle + defaults row absent — medium
 - `ExternalCalendars-AllowEdit` toggle + `CalendarDefaultsRow`/`Button` missing
   (only Show + Publish present). Add the allow-edit toggle + defaults affordance.
-  **Status:** open
+  **Status:** NOT A BUG (dup) — AllowEdit toggle verified present on the External calendars screen.
 ### Checklist staleness (NOT app defects) — update feature-checklist.md
 - `CalendarFilterChipStrip` was DELETED in Round 2.21 C.3 → remove its rows + dead
   testTag constants from the checklist (D-E-03).
