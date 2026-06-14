@@ -305,7 +305,11 @@ as **D-16** (already in fix). New findings below._
   **Status:** open (enhancement)
 ### D-34 — Demo data lacks Boy-Keeper-authored TASKS — demo-data gap
 - Boy Keeper authors only calendar events, so the D-13 author-chip-in-Done fix
-  can't be SEEN in the demo. Seed some Dom-authored todolist tasks. **Status:** open
+  can't be SEEN in the demo. Seed some Dom-authored todolist tasks. **Status:**
+  fixed-in main — added 2 Boy-Keeper-authored (author=…bb) tasks due today:
+  "Kneel and check in with Sir" (daily-rituals) + "Edge once — no release, log it
+  for Sir" (play); manifest regenerated. Now the D-13 author chip is exercisable
+  on the re-walk.
 
 ### D-15 — Todolist → Upcoming empty-state copy is misleading — minor (UX polish)
 - The Upcoming filter (now future-only) shows the generic "no tasks anywhere —
