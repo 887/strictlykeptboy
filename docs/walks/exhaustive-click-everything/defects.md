@@ -452,6 +452,13 @@ _15/16 PASS. Dustrun iter-3 was fully CLEAN. Glaciermark's 3 remaining majors:_
   confirm dialog is the safety gate (its copy already says completion can't be
   un-finished from history); reverse a completion by un-checking in the Done view.
   No more false affordance. AVD-verified: snackbar shows 'Marked done', no Undo.
+- **REAL ROOT CAUSE (Glaciermark iter-4 insight):** the Undo button was never
+  actually invokable — the `SnackbarHost` does not CONSUME pointer events, so a
+  tap on 'Undo' (and my own test tap) FELL THROUGH to the task row behind the
+  snackbar (opening a detail). undoDone() may have been fine all along. So the
+  removal is doubly safe. If Undo is ever re-added as an enhancement, the fix is
+  to make the SnackbarHost/overlay consume touches (pointerInput) + elevate its
+  z-order above the LazyColumn — then verify undoDone() actually restores.
 
 ### D-45 — Quick Add silently fails when target list is read-only/demo — major
 - Adding a task to a read-only/demo-repo list: the sheet dismisses as if it
