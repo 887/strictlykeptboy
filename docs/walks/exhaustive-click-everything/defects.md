@@ -333,7 +333,12 @@ as **D-16** (already in fix). New findings below._
   resolve their list name → fall back to the raw id. Fix: resolve the row's list
   name from a COMPLETE todolist map (union across repos), or restore the prior
   name source. Caught on the post-A re-walk. • **Shot:** skb-c0-d23b.png
-- **Status:** open — REGRESSION (fix with the B reconcile)
+- **Status:** DOWNGRADED to backlog (minor, edge-case) — on a FRESH install (the
+  default + walk state, rich-demo active) rows show friendly names correctly
+  (skb-c0-d35check.png). The raw-UUID only appears when a NON-owning repo is the
+  active write target (I'd switched to the onboarding demo). Real cross-repo
+  resolver gap but does NOT block the walk; fix in a later pass (scan all drawn
+  repos / resolve from snapshot meta in MainActivity readTomlInfo).
 
 ### D-15 — Todolist → Upcoming empty-state copy is misleading — minor (UX polish)
 - The Upcoming filter (now future-only) shows the generic "no tasks anywhere —
