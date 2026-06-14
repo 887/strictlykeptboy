@@ -124,3 +124,16 @@ First grind pass over the core navigation + schedule surface, on `emulator-5554`
   Wizard/Settings-internals/Event-Create/CalDAV-wizard — pending iter-2+ (this is
   the multi-iteration grind the walk is designed for; AVD coord-tapping is the
   bottleneck — a `mobile` MCP tap-by-testTag session will accelerate it).
+
+### Todolist walks — CLEAN (iter-5, 2026-06-14)
+Both new todolist walks reached a CLEAN round on the final build:
+- **Dustrun (cheetah / fast):** CLEAN — all 11 items PASS, tap-counts on target, 0 new findings.
+- **Glaciermark (snow leopard / thorough):** CLEAN — no blocker/major open; all 3 iter-3 blockers
+  (D-44/45/46) resolved + full regression PASS; escape-hatch (uncheck-in-Done) verified.
+Convergence took 5 walk iterations across ~10 fix waves (D-11→D-46). The todolist — the app's
+weakest feature — is now solid: blocker dead-zone gone (D-16), real quick-add-to-list (D-23) with
+due-date (D-40) + visible demo-list adds (D-45), per-list All chips (D-24), future-only bucketed
+Upcoming (D-29), Today section headers (D-26), completion beat (D-27), reliable confirmation toast
+(D-44, no false-affordance Undo), robust sheet swipe/detail-dismiss (D-25/D-41), author chips +
+repo dots in Today AND Done (D-39/D-46), checkbox a11y (D-31), cold-start friendly names (D-35).
+Non-blocking carry-forward polish: D-43 (chip initials), D-10/20/22/30/32/33.
