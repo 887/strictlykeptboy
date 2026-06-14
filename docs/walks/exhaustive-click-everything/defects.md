@@ -536,10 +536,12 @@ _15/16 PASS. Dustrun iter-3 was fully CLEAN. Glaciermark's 3 remaining majors:_
   auto-focuses + IME Done submits (skb-c0-quickadd.png/quickadd2.png). +12 tests.
 
 ## Phase 3 cycle-1 findings — cluster E (Settings-screens/Calendars/IO/Sharing)
-### D-48 — ICS import unreachable (file-picker MIME blocks .ics) — HIGH
+### D-48 — ICS import 'MIME blocks .ics' — FALSE POSITIVE
 - `IcsImportScreen` exists but the OS file picker's MIME filter prevents selecting
   `.ics` files → ICS import is broken for users. Fix the picker MIME (accept
-  text/calendar + */* fallback). **Status:** open
+  text/calendar + */* fallback). **Status:** NOT A BUG — openIcs.launch already
+  passes arrayOf("text/calendar","text/*","*/*"); */* makes any .ics selectable.
+  Cluster E mis-reported (no .ics on the test device). Closed.
 ### D-49 — ForeignEventSourceChip — PARTIALLY wired (1 call-site) — verify on AVD
 - The cross-repo EVENT author chip composable is defined but wired nowhere; only
   TASK rows got author chips (D-39). Cross-repo/shared events should show who
