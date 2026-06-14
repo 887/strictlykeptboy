@@ -168,14 +168,16 @@ Running list of every control that failed the grind-walk. Format + lifecycle in
   (today-dated + no-due included), so Upcoming ≈ All. The most conceptually broken
   filter (code comment even names the missing follow-up). Surfaced by the
   snow-leopard/cheetah todolist walks.
-- **Status:** open
+- **Status:** fixed-in main (b32fc32) — new `forUpcoming()` predicate (future-dated,
+  not-done, chronological); 7 tests. Pending re-walk.
 
 ### D-12 — Todolist → By Repo headers show raw repoId — major (UX)
 - **Expected:** group headers show a friendly repo display name ("marc-kept").
 - **Actual:** `ExpandedNowPlayingTaskBody.kt` ~line 228 renders `Text(text =
   repoId)` — the raw git slug/path (e.g. "github.com/887/marc-kept"). Use the
   repo's display name (same source the repo settings + switcher use).
-- **Status:** open
+- **Status:** fixed-in main (b32fc32) — `repoDisplayNames` map in TasksUiState;
+  header resolves displayName with last-segment fallback; 5 tests. Pending re-walk.
 
 ### D-13 — Todolist → Done view omits author chip + repo dot — major (UX)
 - **Expected:** Done rows show "this was Sir's task" (author chip) + repo dot —
@@ -183,7 +185,8 @@ Running list of every control that failed the grind-walk. Format + lifecycle in
 - **Actual:** `TaskDoneView.kt` calls `TaskRow` WITHOUT `multiRepo` /
   `activeRepoOwner`, so author chips + repo dots are absent in Done (present in
   Today/All). Thread those params through.
-- **Status:** open
+- **Status:** fixed-in main (b32fc32) — threaded `multiRepo`/`activeRepoOwner`
+  into `TaskDoneView`→`TaskRow`; chips + dots now show in Done. Pending re-walk.
 
 ### D-14 — Todolist → Quick Add velocity: no auto-focus + IME Done not wired — major (UX)
 - **Expected:** tapping Quick Add focuses the field + raises the keyboard; the
@@ -193,7 +196,8 @@ Running list of every control that failed the grind-walk. Format + lifecycle in
   `onSubmit` (Done key is a no-op) → 4–5 interactions. Hurts the cheetah
   "fast" path most. Add focusRequester + KeyboardActions(onDone=onSubmit) +
   ImeAction.Done.
-- **Status:** open
+- **Status:** fixed-in main (b32fc32) — Quick Add auto-focuses (keyboard raises)
+  + IME Done submits (shared submitAction). Pending re-walk.
 
 ### D-2 — Schedule → Week view → day columns — NOT A BUG (resolved)
 - **Resolution:** intended behaviour. `SchedulePane.kt:452-466` — when

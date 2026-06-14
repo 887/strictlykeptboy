@@ -236,3 +236,19 @@ fun List<TaskItem>.forToday(today: LocalDate = LocalDate.now()): List<TaskItem> 
             else -> false
         }
     }
+
+/**
+ * D-11 fix — Upcoming filter: tasks with a due date STRICTLY after today.
+ *
+ * Excludes:
+ *  - tasks due today (those belong to Today)
+ *  - overdue tasks (already surfaced in Today)
+ *  - no-due tasks (no meaningful upcoming date)
+ *  - done tasks (history belongs to Done)
+ */
+fun List<TaskItem>.forUpcoming(today: LocalDate = LocalDate.now()): List<TaskItem> =
+    filter { item ->
+        !item.done &&
+            item.due != null &&
+            item.due.isAfter(today)
+    }.sortedBy { it.due }

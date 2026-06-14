@@ -1014,12 +1014,16 @@ class MainActivity : ComponentActivity() {
                             // active so the rows are visible under
                             // `visibleTasks()`.
                             val idsWithDemo = ids + "demo-keeper"
+                            // D-12 fix — build the repoId→displayName map so
+                            // By Repo section headers show friendly names.
+                            val repoDisplayNames = repos.associate { it.repoId to it.displayName }
                             tasksViewState.set(
                                 cur.copy(
                                     tasks = mergedBase,
                                     activeTodolistIds = idsWithDemo,
                                     multiRepo = repos.size > 1,
                                     activeRepoOwner = owner,
+                                    repoDisplayNames = repoDisplayNames,
                                 ),
                             )
                         }

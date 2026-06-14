@@ -60,6 +60,12 @@ data class TasksUiState(
      * authors show).
      */
     val activeRepoOwner: String = "",
+    /**
+     * D-12 fix — map from repoId → repo display name for the By Repo
+     * section headers. Falls back to the raw repoId when the display name
+     * is absent from this map.
+     */
+    val repoDisplayNames: Map<String, String> = emptyMap(),
 )
 
 /**

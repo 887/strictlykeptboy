@@ -43,6 +43,7 @@ import com.eight87.strictlykeptboy.ui.tasks.TaskTodayView
 import com.eight87.strictlykeptboy.ui.tasks.TasksFilter
 import com.eight87.strictlykeptboy.ui.tasks.TasksViewState
 import com.eight87.strictlykeptboy.ui.tasks.TodolistMode
+import com.eight87.strictlykeptboy.ui.tasks.forUpcoming
 import com.eight87.strictlykeptboy.ui.tasks.visibleTasks
 
 const val TestTagExpandedTaskChipStrip = "ExpandedTaskChipStrip"
@@ -182,10 +183,10 @@ fun LazyItemScope.ExpandedNowPlayingTaskBody(
           onStartTask = onStartTask,
         )
         TasksFilter.Upcoming -> TaskCombinedView(
-          // Stub: Subagent 2 / Phase B routes Upcoming through a
-          // dedicated upcoming-only filter. For now reuse Combined so
-          // the chip is functional.
-          tasks = visibleTasks.filter { !it.done },
+          // D-11 fix — Upcoming shows only tasks with a due date STRICTLY
+          // after today (no-due and today-due tasks excluded; those belong
+          // to Today). Sorted chronologically by due date via forUpcoming().
+          tasks = visibleTasks.forUpcoming(),
           onToggleDone = { tasksState.toggleDone(it.id) },
           onOpen = onOpenTask,
           onLongPress = onLongPressTask,
@@ -222,8 +223,15 @@ fun LazyItemScope.ExpandedNowPlayingTaskBody(
           ) {
             byRepo.forEach { (repoId, tasks) ->
               item(key = "by-repo-header-$repoId") {
+                // D-12 fix — resolve repoId → friendly display name.
+                // Falls back to the last path segment (e.g. "marc-kept"
+                // from "github.com/887/marc-kept") when no display name
+                // is in the map, which is still far more readable than
+                // the full raw slug.
+                val displayName = uiState.repoDisplayNames[repoId]
+                    ?: repoId.substringAfterLast('/')
                 Text(
-                  text = repoId,
+                  text = displayName,
                   style = MaterialTheme.typography.titleSmall,
                   color = MaterialTheme.colorScheme.primary,
                   modifier = Modifier
@@ -255,10 +263,14 @@ fun LazyItemScope.ExpandedNowPlayingTaskBody(
           // TaskStandingView did). Sources the full state.tasks list so
           // that tasks toggled done are visible here even if they
           // dropped off the active feed in other filters.
+          // D-13 fix: pass multiRepo + activeRepoOwner so author chips
+          // and repo dots render in Done exactly like Today/All.
           tasks = uiState.tasks,
           onToggleDone = { tasksState.toggleDone(it.id) },
           onOpen = onOpenTask,
           onStartTask = onStartTask,
+          multiRepo = uiState.multiRepo,
+          activeRepoOwner = uiState.activeRepoOwner,
         )
       }
     }

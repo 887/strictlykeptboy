@@ -16,14 +16,20 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.eight87.strictlykeptboy.R
 import com.eight87.strictlykeptboy.ui.components.WrappingChipRow
@@ -84,6 +90,22 @@ fun TaskQuickAddSheet(
         mutableStateOf(initialTarget ?: targets.firstOrNull())
     }
 
+    // D-14 fix — auto-focus the input field so the keyboard raises
+    // immediately when Quick Add opens, removing the extra tap.
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+
+    // Helper to submit the current input — shared by the Button and the
+    // keyboard IME Done action so both paths are identical.
+    val submitAction: () -> Unit = submit@{
+        val t = target ?: return@submit
+        val cleaned = title.trim()
+        if (cleaned.isEmpty()) return@submit
+        onSubmit(cleaned, t)
+    }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -97,8 +119,14 @@ fun TaskQuickAddSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 8.dp)
+                    .focusRequester(focusRequester)
                     .testTag(TestTagQuickAddInput),
+                // D-14 fix — singleLine + ImeAction.Done + KeyboardActions
+                // wired to submit so the keyboard Done key adds the task
+                // (3 interactions: open → type → Done, not 4–5).
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { submitAction() }),
             )
             Text(
                 stringResource(R.string.tasks_quick_add_target_label),
@@ -117,12 +145,7 @@ fun TaskQuickAddSheet(
                 }
             }
             Button(
-                onClick = {
-                    val t = target ?: return@Button
-                    val cleaned = title.trim()
-                    if (cleaned.isEmpty()) return@Button
-                    onSubmit(cleaned, t)
-                },
+                onClick = submitAction,
                 modifier = Modifier
                     .padding(top = 16.dp)
                     .testTag(TestTagQuickAddSubmit),

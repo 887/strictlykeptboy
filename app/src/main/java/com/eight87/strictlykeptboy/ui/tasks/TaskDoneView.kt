@@ -39,6 +39,16 @@ fun TaskDoneView(
     onOpen: (TaskItem) -> Unit,
     modifier: Modifier = Modifier,
     onStartTask: ((String) -> Unit)? = null,
+    /**
+     * D-13 fix — when true, rows paint a repo dot. Mirrors [TaskRow.multiRepo].
+     * Defaults to false for callers that don't thread multi-repo state.
+     */
+    multiRepo: Boolean = false,
+    /**
+     * D-13 fix — active repo owner for author-chip suppression. Mirrors
+     * [TaskRow.activeRepoOwner].
+     */
+    activeRepoOwner: String = "",
 ) {
     // Only show tasks that are explicitly marked done. Inverted-routine
     // tasks (standing = true, done = false) stay out of this list.
@@ -66,6 +76,11 @@ fun TaskDoneView(
                 onClick = { onOpen(task) },
                 onLongClick = { onOpen(task) },
                 onStartTask = onStartTask,
+                // D-13 fix — thread multiRepo + activeRepoOwner through
+                // so author chips and repo dots render in the Done list
+                // exactly as they do in Today/All.
+                multiRepo = multiRepo,
+                activeRepoOwner = activeRepoOwner,
             )
         }
     }
