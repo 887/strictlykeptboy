@@ -389,7 +389,9 @@ _PASS: D-16, D-17, D-18, D-19, D-23, D-24, D-26, D-27, D-31. Issues below._
 - Tap a task → detail opens → swipe down to close the detail → BOTH the detail
   AND the main todolist sheet close, landing on Schedule. Sheet-stacking dismiss
   chain (likely interacts with the D-25 nested-scroll change). • repro repeatable.
-- **Status:** open
+- **Status:** fixed-in main (8c8bca5) — detailJustDismissed 350ms guard blocks the
+  detail-close swipe from chaining to the parent sheet. AVD-verified: closing
+  detail lands back on the todolist.
 
 ### D-40 — Quick Add has no due-date picker for tasks — medium
 - A quick-added TASK can't be given a due date, so it never lands in Upcoming
@@ -399,16 +401,14 @@ _PASS: D-16, D-17, D-18, D-19, D-23, D-24, D-26, D-27, D-31. Issues below._
 
 ### D-42 — Quick Add opens from near-FAB scroll gestures — minor (NEW-6)
 - A swipe ending near the FAB (~912,2232) accidentally triggers Quick Add.
-- **Status:** open (minor)
+- **Status:** fixed-in main (8c8bca5) — swipeInProgress flag guards the FAB onClick;
+  taps still open Quick Add, swipe-releases don't.
 
 ### RE-OPENED by iter-2:
-- **D-25 (now PARTIAL):** mid-list down-swipe no longer dismisses, but NEAR-BOTTOM
-  swipes (y~1800→2100) STILL dismiss the sheet. Nested-scroll guard must cover the
-  whole content height, not just mid-list. **Status:** re-opened.
-- **D-28 (now FLAKY):** Dustrun saw the "Marked done / Undo" snackbar; Glaciermark
-  saw NONE at 200/700/1700ms. Snackbar is unreliable (Short duration + maybe
-  anchored where it's clipped). Make it reliably visible (and tappable) long
-  enough to Undo. **Status:** re-opened.
+- **D-25:** FIXED-in main (8c8bca5) — onSheetDragDelta drops downward delta unless
+  the list is at its very top; near-bottom swipe now scrolls, doesn't dismiss. AVD-verified.
+- **D-28:** FIXED-in main (8c8bca5) — SnackbarDuration.Short→Long (~10s); reliably
+  visible every mark-done; Undo restores. AVD-verified.
 - **D-35 (UPGRADED back to major):** NEW-1 shows raw UUID list names on a FRESH
   session (warm cache shows names) — a data-resolution TIMING RACE, not just the
   non-owning-repo edge case. Resolve names from the snapshot (which has them

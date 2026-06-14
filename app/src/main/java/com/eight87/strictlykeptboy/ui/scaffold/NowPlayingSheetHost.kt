@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -57,7 +56,6 @@ import com.eight87.strictlykeptboy.ui.tasks.LocalAnimatingDoneIds
 import com.eight87.strictlykeptboy.ui.tasks.TaskQuickAddRequest
 import com.eight87.strictlykeptboy.ui.tasks.TasksViewState
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -128,6 +126,13 @@ internal fun NowPlayingSheetHost(
     var openTask by remember {
         mutableStateOf<com.eight87.strictlykeptboy.ui.tasks.TaskItem?>(null)
     }
+    // D-41 fix — track a short cooldown after the detail sheet is dismissed
+    // so that the touch-up event from the dismiss swipe gesture does NOT
+    // propagate to the parent sheet's draggable and dismiss it too.
+    // The cooldown matches the typical ModalBottomSheet settle animation
+    // duration (~300ms). During this window, downward drag on the parent
+    // sheet is suppressed.
+    var detailJustDismissed by remember { mutableStateOf(false) }
     var quickAddOpen by remember { mutableStateOf(false) }
     val tasksUi by tasksState.state.collectAsState()
 
@@ -143,10 +148,14 @@ internal fun NowPlayingSheetHost(
     }
     LaunchedEffect(undoChannel) {
         for (taskId in undoChannel) {
+            // D-28 re-fix — use Long duration (~10s) so the snackbar is
+            // reliably visible long enough for the user to act. Short
+            // (~4s) was being clipped by the queue + sheet animation on
+            // slower devices.
             val result = snackbarHostState.showSnackbar(
                 message = markedDoneLabel,
                 actionLabel = undoLabel,
-                duration = SnackbarDuration.Short,
+                duration = SnackbarDuration.Long,
             )
             if (result == SnackbarResult.ActionPerformed) {
                 tasksState.undoDone(taskId)
@@ -157,6 +166,9 @@ internal fun NowPlayingSheetHost(
     val sheetProgress = remember { Animatable(0f) }
     val coroutineScope = rememberCoroutineScope()
     val nowPlayingListState = rememberLazyListState()
+    // D-42 — track whether a swipe gesture is currently in progress so
+    // the FAB onClick is ignored during swipe-release events.
+    var swipeInProgress by remember { mutableStateOf(false) }
 
     val openNowPlayingSheet: () -> Unit = remember {
         { coroutineScope.launch { sheetProgress.animateTo(1f) }; Unit }
@@ -194,6 +206,24 @@ internal fun NowPlayingSheetHost(
         val dragStartProgress = remember { mutableStateOf<Float?>(null) }
         val onSheetDragDelta: (Float) -> Unit = { delta ->
             coroutineScope.launch {
+                // D-41 re-fix — when a task detail sheet is open OR was just
+                // dismissed, block downward drag on the parent sheet. The
+                // `detailJustDismissed` cooldown covers the case where the
+                // modal sheet dismiss gesture fires a touch-up that reaches
+                // the parent's draggable after `openTask` is already null.
+                if ((openTask != null || detailJustDismissed) && delta > 0f) return@launch
+                // D-25 re-fix — only allow downward drag (delta > 0 = user
+                // dragging down = progress decreases) when the list IS at the
+                // very top. If the list has scrolled even one pixel, a downward
+                // drag is a list-scroll gesture, not a sheet-dismiss intent.
+                // The drag-handle component passes its own drags through this
+                // same callback and the handle is NOT within the LazyColumn, so
+                // handle drags are unaffected (the handle Row sits above the
+                // LazyColumn in the Column layout).
+                val listAtTop = nowPlayingListState.firstVisibleItemIndex == 0 &&
+                    nowPlayingListState.firstVisibleItemScrollOffset == 0
+                if (delta > 0f && !listAtTop) return@launch
+                swipeInProgress = true
                 if (dragStartProgress.value == null) {
                     dragStartProgress.value = sheetProgress.value
                 }
@@ -204,6 +234,7 @@ internal fun NowPlayingSheetHost(
         }
         val onSheetDragSettle: () -> Unit = {
             coroutineScope.launch {
+                swipeInProgress = false
                 val start = dragStartProgress.value ?: 0f
                 val end = sheetProgress.value
                 // Round 2.16.G — flick-commit math factored to
@@ -360,6 +391,12 @@ internal fun NowPlayingSheetHost(
                     // sheet (we drive only the quick-add overlay flag).
                     // Visible alpha follows the expanded-sheet crossfade so
                     // it fades in with NowPlayingScreen.
+                    // D-42 fix — guard onClick against swipe-release events.
+                    // `swipeInProgress` is true during any active drag and is
+                    // cleared in onSheetDragSettle. A swipe ending near the
+                    // FAB fires a touch-up that Compose routes to the FAB's
+                    // onClick; the guard makes the callback a no-op while any
+                    // drag is in flight, so only deliberate taps open Quick Add.
                     if (progress > 0.45f) Box(
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
@@ -367,7 +404,7 @@ internal fun NowPlayingSheetHost(
                             .alpha(nowPlayingAlpha),
                     ) {
                         com.eight87.strictlykeptboy.ui.tasks.TaskQuickAddFab(
-                            onClick = { quickAddOpen = true },
+                            onClick = { if (!swipeInProgress) quickAddOpen = true },
                         )
                     }
 
@@ -410,10 +447,21 @@ internal fun NowPlayingSheetHost(
         // ModalBottomSheet renders above all sibling Box content per the
         // Compose dialog/sheet z-order convention, so no extra z-index
         // wrangling is needed.
+        // D-41 fix — onDismiss starts a 350ms cooldown (`detailJustDismissed`)
+        // that blocks the parent sheet's downward drag in `onSheetDragDelta`.
+        // This prevents the detail's swipe-down dismiss gesture from
+        // propagating to the parent sheet and collapsing it too.
         openTask?.let { t ->
             com.eight87.strictlykeptboy.ui.tasks.TaskDetailSheet(
                 task = t,
-                onDismiss = { openTask = null },
+                onDismiss = {
+                    openTask = null
+                    detailJustDismissed = true
+                    coroutineScope.launch {
+                        kotlinx.coroutines.delay(350L)
+                        detailJustDismissed = false
+                    }
+                },
                 onEdit = { /* Phase EE — editor stub */ },
                 onToggleDone = { tasksState.toggleDone(t.id) },
             )
