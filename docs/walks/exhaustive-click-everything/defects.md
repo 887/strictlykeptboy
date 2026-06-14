@@ -435,6 +435,36 @@ _PASS: D-16, D-17, D-18, D-19, D-23, D-24, D-26, D-27, D-31. Issues below._
   • **Shot:** skb-c0-weekgrid.png
 - **Status:** closed (not a defect)
 
+## Re-walk iter-3 findings (Glaciermark, full-stack build, 2026-06-14)
+_15/16 PASS. Dustrun iter-3 was fully CLEAN. Glaciermark's 3 remaining majors:_
+
+### D-44 — Undo button in the mark-done snackbar doesn't restore the task — major
+- The "Marked done / Undo" snackbar now appears reliably (D-28), but tapping Undo
+  does NOT restore the task — it stays in Done. `TasksViewState.undoDone(taskId)`
+  is wired to the snackbar action but doesn't actually un-mark/restore. Fix
+  undoDone to flip `done=false` + clear `doneAt` + return the task to the active
+  feed (+ persist/reindex like toggleDone). (The confirm-dialog "skips the
+  playback timer" copy is about the timer, not the done-state, so undo is fine.)
+- **Status:** open — blocks the thorough walk
+
+### D-45 — Quick Add silently fails when target list is read-only/demo — major
+- Adding a task to a read-only/demo-repo list: the sheet dismisses as if it
+  succeeded, but no task is created and NO error is shown (silent data loss).
+  D-37 made non-demo writes persist; demo/read-only targets silently no-op. Fix:
+  either disable/annotate read-only list chips, or show a clear "can't add to a
+  read-only list" message, or make the in-memory add visibly appear — never a
+  silent success-that-isn't. `TaskQuickAddFab.kt` + `MainActivity.onWriteTask`.
+- **Status:** open — blocks the thorough walk
+
+### D-46 — Done view still has no author chips / repo dots — major
+- D-39 made the author chip render in TODAY, but the DONE view shows neither
+  author chips nor repo dots — exactly where a kept user reviews who assigned each
+  completed task. D-13 passed `multiRepo`/`activeRepoOwner` to `TaskDoneView` but
+  the chip/dot still don't render there. Ensure `TaskDoneView`'s row path renders
+  the same author chip + repo dot as Today. (NEW-3: task DETAIL also shows the raw
+  author UUID — same id→name resolution gap as D-43.)
+- **Status:** open — blocks the thorough walk
+
 ### D-43 — Author chip on tasks shows the author UUID's first char, not initials — minor (follow-up)
 - D-39 made the author chip render on file-backed tasks, but `item.author` holds
   the author UUID (`01900000-…bb`), so the chip shows "0" instead of the Dom's
