@@ -563,3 +563,17 @@ _15/16 PASS. Dustrun iter-3 was fully CLEAN. Glaciermark's 3 remaining majors:_
   testTag constants from the checklist (D-E-03).
 - `ImportExportScreen` is INLINE on the Repositories page by design (no standalone
   container) → re-word the checklist rows (D-E-05).
+
+## Phase 3 cycle-1 findings — cluster B (Events+Tasks) — HEAVILY FILTERED
+**Infra lesson:** running 5 QA emulators concurrently degraded tap reliability →
+cluster B reported FALSE "not responding" defects. Orchestrator verified on 5554
+(latest build, clean install): checkbox → "Done, good boy?" dialog WORKS; by-repo
+shows NAMES (not UUIDs); author chips "DB"/"by Demo Boy"; per-list chips present;
+rail reversed w/ count. So D-TASKS-1/2/3/4/7 = FALSE POSITIVES (todolist verified
+functional). For cycles 2-3: run ≤3 concurrent emulators + verify HIGH taps on 5554.
+### Real carry-forward from cluster B (polish/observational, to fix):
+### D-53 — Event Create "Custom" repeat chip shows raw "RRULE" jargon — low
+### D-54 — TemplateConfirmSheet shows raw ISO-8601 datetime, not locale-formatted — medium
+### D-55 — EventDetail exposes raw "Kind: Regular" / "Priority: 990" to users — low (polish)
+### D-56 — EventDetailScreen ← back arrow possibly non-functional — verify on clean re-walk (cluster B tap-noise suspect)
+- **Status:** open (D-53/54/55 confirmed-ish; D-56 verify)
