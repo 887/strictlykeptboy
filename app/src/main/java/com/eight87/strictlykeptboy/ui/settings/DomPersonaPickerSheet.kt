@@ -18,7 +18,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
+import com.eight87.strictlykeptboy.ui.components.rememberFullHeightSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -54,7 +54,7 @@ fun DomPersonaPickerSheet(
     onSelectCadence: (DomCadence) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberFullHeightSheetState()
     var personas by remember {
         mutableStateOf(runCatching { DomPersonaStore.list(home) }.getOrDefault(DomPersonaStore.BUILTINS))
     }

@@ -59,7 +59,7 @@ fun TemplatesCategory(
         } else {
             templateIds.forEach { id ->
                 ListItem(
-                    headlineContent = { Text(id) },
+                    content = { Text(id) },
                     trailingContent = {
                         TextButton(
                             onClick = { onApply(id) },

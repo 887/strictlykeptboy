@@ -38,7 +38,6 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -74,6 +73,7 @@ import com.eight87.strictlykeptboy.ui.wizard.NeutralModePrefs
 import com.eight87.strictlykeptboy.avatar.AvatarPackPrefs
 import com.eight87.strictlykeptboy.avatar.CompositePackStore
 import com.eight87.strictlykeptboy.avatar.StickerPack
+import com.eight87.strictlykeptboy.ui.components.ValueSlider
 
 const val TestTagCatAppearance = "Cat-Appearance"
 const val TestTagCatAppearanceStickerSection = "Cat-Appearance-StickerSection"
@@ -286,7 +286,7 @@ fun AppearanceCategory(
                         ),
                         subtitle = stringResource(R.string.settings_appearance_font_scale_subtitle),
                     ) {
-                        Slider(
+                        ValueSlider(
                             value = fontScale,
                             onValueChange = { fontScale = it },
                             valueRange = 0.75f..1.5f,
@@ -314,7 +314,7 @@ fun AppearanceCategory(
                     modifier = Modifier
                         .clickable(onClick = onJumpToLifestyleNeutral)
                         .testTag("$TestTagCatAppearance-NeutralDeeplink"),
-                    headlineContent = {
+                    content = {
                         Text(stringResource(R.string.settings_appearance_neutral_mode))
                     },
                     supportingContent = {
@@ -504,7 +504,7 @@ private fun ToggleRowM3(
     testTag: String,
 ) {
     ListItem(
-        headlineContent = { Text(label) },
+        content = { Text(label) },
         supportingContent = {
             Text(
                 subtitle,
@@ -543,7 +543,7 @@ private fun ThemeListItem(
     trailing: (@Composable () -> Unit)? = null,
 ) {
     ListItem(
-        headlineContent = { Text(label) },
+        content = { Text(label) },
         supportingContent = {
             Text(
                 supporting,

@@ -302,7 +302,7 @@ private fun AboutRow(
     val rowMod = (if (testTag != null) Modifier.testTag(testTag) else Modifier)
         .let { if (onClick != null) it.clickable(onClick = onClick) else it }
     ListItem(
-        headlineContent = { Text(label) },
+        content = { Text(label) },
         supportingContent = {
             Text(
                 subtitle,

@@ -40,6 +40,16 @@
 -keep class org.eclipse.jgit.storage.** { *; }
 -keepclassmembers class org.eclipse.jgit.storage.** { *; }
 
+# org.eclipse.jgit.nls.* — JGit's NLS layer instantiates every
+# TranslationBundle subclass (JGitText, SshdText, …) reflectively via its
+# no-arg constructor, fills its public String fields by name from the
+# matching `<ClassName>.properties` ResourceBundle, and looks that bundle up
+# by the class's binary name. Without this, JGit 7's FileSnapshot ->
+# FileStoreAttributes -> ShutdownHook init path hits
+# `NoSuchMethodException: JGitText.<init>` on the first Git.open().
+-keep class org.eclipse.jgit.nls.** { *; }
+-keep class * extends org.eclipse.jgit.nls.TranslationBundle { *; }
+
 # --- SSH transport ----------------------------------------------------------
 # apache-sshd-osgi: reflective service discovery for ciphers, KEX,
 # signature factories. Keep the public API + impl packages.

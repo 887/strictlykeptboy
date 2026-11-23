@@ -1,7 +1,6 @@
 package com.eight87.skb.cli.feedback
 
 import com.eight87.skb.cli.core.Frontmatter
-import com.eight87.skb.cli.core.MiniToml
 import com.eight87.skb.cli.core.TomlTable
 import java.nio.file.Files
 import java.nio.file.Path
@@ -124,11 +123,3 @@ object FeedbackPath {
     }
   }
 }
-
-/**
- * Keep MiniToml import alive even if a refactor removes the only
- * reference inside this file. (Defensive; the parser uses TomlTable
- * downstream.)
- */
-@Suppress("unused")
-private fun anchorImports() { MiniToml; TomlTable() }

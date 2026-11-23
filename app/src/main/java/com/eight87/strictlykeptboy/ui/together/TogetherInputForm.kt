@@ -8,12 +8,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenu
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -32,6 +33,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import com.eight87.strictlykeptboy.ui.components.ValueSlider
 
 const val TestTagTogetherForm = "TogetherForm"
 const val TestTagTogetherRepoChipPrefix = "TogetherRepoChip-"
@@ -146,7 +148,7 @@ fun TogetherInputForm(
                 pluralStringResource(R.plurals.together_field_duration_minutes, state.durationMinutes, state.durationMinutes),
             style = MaterialTheme.typography.titleSmall,
         )
-        Slider(
+        ValueSlider(
             value = state.durationMinutes.toFloat(),
             onValueChange = { v -> onUpdate { it.copy(durationMinutes = v.toInt().coerceIn(TogetherInputState.DURATION_MIN_RANGE)) } },
             valueRange = TogetherInputState.DURATION_MIN_RANGE.first.toFloat()..TogetherInputState.DURATION_MIN_RANGE.last.toFloat(),
@@ -234,7 +236,7 @@ private fun ParticipantTzDropdown(
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier
                 .fillMaxWidth()
-                .menuAnchor()
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                 .testTag("$TestTagTogetherParticipantTzPrefix$repoId"),
         )
         ExposedDropdownMenu(

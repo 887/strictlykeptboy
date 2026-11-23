@@ -1,3 +1,4 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -12,9 +13,12 @@ plugins {
 // matches the APK's About screen line-for-line.
 val gitShortSha: String =
   runCatching {
-      val proc = ProcessBuilder("git", "rev-parse", "--short", "HEAD").redirectErrorStream(true).start()
-      proc.waitFor()
-      proc.inputStream.bufferedReader().readText().trim().ifEmpty { "unknown" }
+      providers
+        .exec {
+          commandLine("git", "rev-parse", "--short", "HEAD")
+          isIgnoreExitValue = true
+        }
+        .standardOutput.asText.get().trim().ifEmpty { "unknown" }
     }
     .getOrDefault("unknown")
 val buildDateUtc: String = DateTimeFormatter.ISO_LOCAL_DATE.format(LocalDate.now(ZoneOffset.UTC))
@@ -25,8 +29,15 @@ application {
   applicationName = "skb"
 }
 
+java {
+  sourceCompatibility = JavaVersion.VERSION_21
+  targetCompatibility = JavaVersion.VERSION_21
+}
+
 kotlin {
-  jvmToolchain(17)
+  compilerOptions {
+    jvmTarget.set(JvmTarget.JVM_21)
+  }
 }
 
 dependencies {
@@ -37,7 +48,7 @@ dependencies {
 
 // Generate BuildInfo.kt under build/generated/ so the CLI has the same
 // version stamp pattern as the Android BuildConfig.
-val generateBuildInfo by tasks.registering {
+val generateBuildInfo = tasks.register("generateBuildInfo") {
   val outDir = layout.buildDirectory.dir("generated/source/buildinfo/kotlin")
   outputs.dir(outDir)
   doLast {

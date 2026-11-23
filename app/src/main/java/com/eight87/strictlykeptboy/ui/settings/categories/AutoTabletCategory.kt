@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -28,6 +27,7 @@ import com.eight87.strictlykeptboy.git.RepoConfig
 import com.eight87.strictlykeptboy.ui.settings.AutoTabletPrefs
 import com.eight87.strictlykeptboy.ui.settings.TabletMasterDetailMode
 import kotlinx.coroutines.flow.StateFlow
+import com.eight87.strictlykeptboy.ui.components.ValueSlider
 
 const val TestTagCatAutoTablet = "Cat-AutoTablet"
 const val TestTagAutoTabletMaxSlider = "Cat-AutoTablet-MaxSlider"
@@ -86,7 +86,7 @@ fun AutoTabletCategory(
         var maxFloat by remember(state.maxAutoEventsToday) {
             mutableFloatStateOf(state.maxAutoEventsToday.toFloat())
         }
-        Slider(
+        ValueSlider(
             value = maxFloat,
             onValueChange = { maxFloat = it },
             onValueChangeFinished = { prefs.setMaxAutoEventsToday(maxFloat.toInt()) },

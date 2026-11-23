@@ -323,8 +323,7 @@ class MainActivity : ComponentActivity() {
                 kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                     runCatching {
                         val rootDir = File(repo.rootDir)
-                        val all = (report.events + report.rules + report.exceptions)
-                            .map { it as com.eight87.strictlykeptboy.store.TypedEntity }
+                        val all = report.events + report.rules + report.exceptions
                         com.eight87.strictlykeptboy.store.EntityWriter.writeBatch(rootDir, all)
                         val gitRepo = GitRepoRegistry.get(repo.repoId)
                             ?: GitRepo.open(
@@ -767,7 +766,7 @@ class MainActivity : ComponentActivity() {
                                                     .url(src.uri.toString())
                                                     .build()
                                                 client.newCall(req).execute().use { resp ->
-                                                    resp.body?.string()
+                                                    resp.body.string()
                                                 }
                                             }
                                         }
@@ -1834,7 +1833,6 @@ class MainActivity : ComponentActivity() {
                                             )
                                         }
                                     }
-                                    Unit
                                 }
                             },
                             // Phase CCC.8 — trip-overlay materializer. Writes a
@@ -1866,7 +1864,6 @@ class MainActivity : ComponentActivity() {
                                         author = cfg.authorIdentity,
                                         repoId = cfg.repoId,
                                     )
-                                    Unit
                                 }
                             },
                             onPickImportFile = { repo ->

@@ -65,7 +65,7 @@ fun BackupRestoreScreen(
             style = MaterialTheme.typography.headlineSmall,
         )
         ListItem(
-            headlineContent = { Text(stringResource(R.string.backuprestore_export_title)) },
+            content = { Text(stringResource(R.string.backuprestore_export_title)) },
             supportingContent = {
                 Text(stringResource(R.string.backuprestore_export_subtitle))
             },
@@ -76,7 +76,7 @@ fun BackupRestoreScreen(
         )
         HorizontalDivider()
         ListItem(
-            headlineContent = {
+            content = {
                 Text(stringResource(R.string.backuprestore_restore_folder_title))
             },
             supportingContent = {
@@ -88,7 +88,7 @@ fun BackupRestoreScreen(
                 .clickable { pending = RestorePending.FromFolder },
         )
         ListItem(
-            headlineContent = {
+            content = {
                 Text(stringResource(R.string.backuprestore_restore_archive_title))
             },
             supportingContent = {

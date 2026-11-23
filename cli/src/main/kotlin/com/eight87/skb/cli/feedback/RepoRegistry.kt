@@ -1,8 +1,6 @@
 package com.eight87.skb.cli.feedback
 
 import com.eight87.skb.cli.core.AtomicWriter
-import com.eight87.skb.cli.core.MiniToml
-import com.eight87.skb.cli.core.TomlTable
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.OffsetDateTime
@@ -231,8 +229,5 @@ class RepoRegistry private constructor(val storePath: Path) {
       }
       return out
     }
-
-    @Suppress("unused")
-    private fun unused() { MiniToml; TomlTable() } // keep import use stable across refactors
   }
 }

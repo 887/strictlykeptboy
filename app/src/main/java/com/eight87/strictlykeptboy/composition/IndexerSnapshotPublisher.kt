@@ -93,7 +93,7 @@ class IndexerSnapshotPublisher(
         } else {
             db.events()
                 .multiRepoByDateRange(FAR_PAST_MS, FAR_FUTURE_MS)
-                .map { Unit }
+                .map { }
         }
         // Combine the (per-config) tick with the external calendar
         // metas flow so any change on either side re-emits.

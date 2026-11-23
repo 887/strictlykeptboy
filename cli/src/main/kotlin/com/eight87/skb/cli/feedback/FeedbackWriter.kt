@@ -3,7 +3,6 @@ package com.eight87.skb.cli.feedback
 import com.eight87.skb.cli.core.AtomicWriter
 import com.eight87.skb.cli.core.CliError
 import com.eight87.skb.cli.core.ExitCode
-import com.eight87.skb.cli.core.Frontmatter
 import com.eight87.skb.cli.core.GitOps
 import com.eight87.skb.cli.core.Uuid7
 import java.nio.file.Files
@@ -156,5 +155,3 @@ class FeedbackWriter(
       .firstOrNull { it.id == feedbackId }
   }
 }
-
-@Suppress("unused") private fun anchorImports() { Frontmatter }

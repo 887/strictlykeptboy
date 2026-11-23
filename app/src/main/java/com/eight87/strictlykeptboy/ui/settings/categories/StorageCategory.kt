@@ -63,7 +63,7 @@ fun StorageCategory(
         )
         Spacer(Modifier.height(8.dp))
         ListItem(
-            headlineContent = { Text(stringResource(R.string.settings_storage_folder_title)) },
+            content = { Text(stringResource(R.string.settings_storage_folder_title)) },
             supportingContent = { Text(currentLabel) },
             modifier = Modifier
                 .fillMaxWidth()
@@ -72,7 +72,7 @@ fun StorageCategory(
         )
         HorizontalDivider()
         ListItem(
-            headlineContent = { Text(stringResource(R.string.settings_storage_adopt_title)) },
+            content = { Text(stringResource(R.string.settings_storage_adopt_title)) },
             supportingContent = { Text(stringResource(R.string.settings_storage_adopt_subtitle)) },
             modifier = Modifier
                 .fillMaxWidth()
@@ -81,7 +81,7 @@ fun StorageCategory(
         )
         HorizontalDivider()
         ListItem(
-            headlineContent = { Text(stringResource(R.string.settings_storage_backuprestore_title)) },
+            content = { Text(stringResource(R.string.settings_storage_backuprestore_title)) },
             supportingContent = { Text(stringResource(R.string.settings_storage_backuprestore_subtitle)) },
             modifier = Modifier
                 .fillMaxWidth()

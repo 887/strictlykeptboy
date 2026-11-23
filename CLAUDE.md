@@ -11,7 +11,7 @@ See `docs/plans/decisions.md` for the full locked-decisions doc (D.1..D.87 + K-1
 - **Language:** Kotlin only. No Java.
 - **UI:** Jetpack Compose + Material3 Expressive. No Android Views.
 - **Cache DB:** Room read-through cache only; **Git files are source of truth**, Room is rebuildable from disk.
-- **Git:** JGit 6.x + apache-sshd-osgi (SSH) + OkHttp (HTTPS+OAuth).
+- **Git:** JGit 7.x + apache-sshd-osgi (SSH) + OkHttp (HTTPS+OAuth).
 - **Auth:** GitHub OAuth Device Flow + Forgejo OAuth Device Flow + manual PAT; per-`(repoId, remoteName)` keying via EncryptedSharedPreferences.
 - **Serialization:** ktoml available, hand-rolled TOML codec for v1 (full round-trip control); kotlinx.serialization for JSON-backed prefs.
 - **Recurrence:** dmfs lib-recur (RFC5545 RRULE).
@@ -53,7 +53,7 @@ chmod +x ~/.local/bin/android
 **JDK quirk (load-bearing):** The CLI's bundled JRE is minimized — missing `java.rmi`, which Gradle 9.1's Kotlin DSL classpath fingerprinter loads. **Direct `./gradlew` calls fail at configuration time with `java.lang.NoClassDefFoundError: java/rmi/Remote`.** Fix:
 
 ```bash
-JAVA_HOME=/usr/lib/jvm/java-26-openjdk ANDROID_HOME=$HOME/Android/Sdk ./gradlew assembleDebug
+JAVA_HOME=/usr/lib/jvm/java-27-openjdk ANDROID_HOME=$HOME/Android/Sdk ./gradlew assembleDebug
 ```
 
 This is the canonical incantation for direct Gradle calls in this repo. `android run --apks=…` works without it (uses the bundled toolchain).
@@ -101,8 +101,8 @@ claude mcp add android-skills --scope project -- npx -y android-skills-mcp
 ## Test loop
 
 ```bash
-JAVA_HOME=/usr/lib/jvm/java-26-openjdk ANDROID_HOME=$HOME/Android/Sdk ./gradlew :app:testDebugUnitTest
-JAVA_HOME=/usr/lib/jvm/java-26-openjdk ANDROID_HOME=$HOME/Android/Sdk ./gradlew :app:installDebug
+JAVA_HOME=/usr/lib/jvm/java-27-openjdk ANDROID_HOME=$HOME/Android/Sdk ./gradlew :app:testDebugUnitTest
+JAVA_HOME=/usr/lib/jvm/java-27-openjdk ANDROID_HOME=$HOME/Android/Sdk ./gradlew :app:installDebug
 ~/Android/Sdk/platform-tools/adb shell am start -n com.eight87.strictlykeptboy/.MainActivity
 ```
 
@@ -113,7 +113,7 @@ Any change that touches Compose UI (layout, composable structure, navigation, th
 Canonical loop:
 
 ```bash
-JAVA_HOME=/usr/lib/jvm/java-26-openjdk ANDROID_HOME=$HOME/Android/Sdk ./gradlew :app:assembleDebug
+JAVA_HOME=/usr/lib/jvm/java-27-openjdk ANDROID_HOME=$HOME/Android/Sdk ./gradlew :app:assembleDebug
 ~/Android/Sdk/platform-tools/adb -s emulator-5554 install -r app/build/outputs/apk/debug/app-debug.apk
 ~/Android/Sdk/platform-tools/adb -s emulator-5554 shell am start -n com.eight87.strictlykeptboy/.MainActivity
 ~/Android/Sdk/platform-tools/adb -s emulator-5554 exec-out screencap -p | magick - -resize 50% /tmp/skb.png

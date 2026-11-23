@@ -19,7 +19,7 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
+import com.eight87.strictlykeptboy.ui.components.rememberFullHeightSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -66,7 +66,7 @@ fun ShareSheet(
     onSend: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberFullHeightSheetState()
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,

@@ -102,7 +102,7 @@ class DeviceFlowClient(
             .post(body)
             .build()
         return http.newCall(req).execute().use { resp ->
-            val text = resp.body?.string().orEmpty()
+            val text = resp.body.string()
             require(resp.isSuccessful) { "device-code request failed: ${resp.code} $text" }
             json.decodeFromString(DeviceCodeResponseAdapter, text).toPayload()
         }
@@ -120,7 +120,7 @@ class DeviceFlowClient(
             .post(body)
             .build()
         return http.newCall(req).execute().use { resp ->
-            val text = resp.body?.string().orEmpty()
+            val text = resp.body.string()
             val payload = json.decodeFromString(TokenResponseAdapter, text)
             when {
                 payload.accessToken != null -> PollOutcome.Granted(

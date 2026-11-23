@@ -16,7 +16,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
+import com.eight87.strictlykeptboy.ui.components.rememberFullHeightSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -149,7 +149,7 @@ fun TaskListSettingsSheet(
     list: TodolistInfo,
     onDismiss: () -> Unit,
 ) {
-    val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheet = rememberFullHeightSheetState()
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheet,

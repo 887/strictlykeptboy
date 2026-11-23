@@ -61,7 +61,7 @@ class CalDavHttp(
         return client.newCall(req).execute().use { resp ->
             CalDavResource(
                 code = resp.code,
-                body = resp.body?.string().orEmpty(),
+                body = resp.body.string(),
                 etag = resp.header("ETag"),
             )
         }
@@ -81,7 +81,7 @@ class CalDavHttp(
             else -> builder.header("If-Match", etag)
         }
         return client.newCall(builder.build()).execute().use { resp ->
-            CalDavResource(code = resp.code, body = resp.body?.string().orEmpty(), etag = resp.header("ETag"))
+            CalDavResource(code = resp.code, body = resp.body.string(), etag = resp.header("ETag"))
         }
     }
 
@@ -101,7 +101,7 @@ class CalDavHttp(
 
     private fun Response.toXml() = CalDavXmlResponse(
         code = code,
-        xml = body?.string().orEmpty(),
+        xml = body.string(),
         location = header("Location"),
     )
 

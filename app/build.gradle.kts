@@ -1,3 +1,4 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.security.MessageDigest
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -5,7 +6,6 @@ import java.time.format.DateTimeFormatter
 
 plugins {
   alias(libs.plugins.android.application)
-  alias(libs.plugins.kotlin.android)
   alias(libs.plugins.compose.compiler)
   alias(libs.plugins.kotlin.serialization)
   alias(libs.plugins.ksp)
@@ -17,9 +17,12 @@ plugins {
 // tarball build).
 val gitShortSha: String =
   runCatching {
-      val proc = ProcessBuilder("git", "rev-parse", "--short", "HEAD").redirectErrorStream(true).start()
-      proc.waitFor()
-      proc.inputStream.bufferedReader().readText().trim().ifEmpty { "unknown" }
+      providers
+        .exec {
+          commandLine("git", "rev-parse", "--short", "HEAD")
+          isIgnoreExitValue = true
+        }
+        .standardOutput.asText.get().trim().ifEmpty { "unknown" }
     }
     .getOrDefault("unknown")
 
@@ -27,7 +30,8 @@ val buildDateUtc: String = DateTimeFormatter.ISO_LOCAL_DATE.format(LocalDate.now
 
 android {
     namespace = "com.eight87.strictlykeptboy"
-    compileSdk = 36
+    compileSdk = 37
+    compileSdkMinor = 2
     defaultConfig {
         applicationId = "com.eight87.strictlykeptboy"
         minSdk = 26
@@ -125,8 +129,8 @@ android {
         disable += "Instantiatable"
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
     buildFeatures {
       compose = true
@@ -156,7 +160,9 @@ android {
 }
 
 kotlin {
-    jvmToolchain(17)
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_21)
+    }
 }
 
 dependencies {
@@ -233,7 +239,7 @@ dependencies {
   // androidx.sqlite:sqlite-bundled ships only the Android NDK .so; the
   // -jvm variant ships host-OS shared libs (linux-x64, macos-arm64, …).
   testImplementation(libs.androidx.sqlite.bundled)
-  testRuntimeOnly("androidx.sqlite:sqlite-bundled-jvm:2.5.0")
+  testRuntimeOnly(libs.androidx.sqlite.bundled.jvm)
 
   // Phase E — resolver (RRULE expansion per D.5)
   implementation(libs.lib.recur)

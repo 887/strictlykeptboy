@@ -17,7 +17,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
+import com.eight87.strictlykeptboy.ui.components.rememberFullHeightSheetState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
@@ -98,7 +98,7 @@ fun TaskQuickAddSheet(
     onSubmit: (title: String, target: QuickAddTarget, due: LocalDate?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberFullHeightSheetState()
     // D-23 fix — split targets into primary (todolist) and secondary (event) groups
     // so the user can clearly see adding to a list vs creating an event.
     val listTargets: List<QuickAddTarget> = todolists.map { QuickAddTarget.Todolist(it) }

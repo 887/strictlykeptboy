@@ -172,7 +172,7 @@ private fun TemplateRow(entry: TemplateEntry, onClick: () -> Unit, onInfo: () ->
                         .background(tint),
                 )
             },
-            headlineContent = { Text(entry.displayName) },
+            content = { Text(entry.displayName) },
             supportingContent = {
                 Text(
                     text = entry.tags.joinToString(" · "),

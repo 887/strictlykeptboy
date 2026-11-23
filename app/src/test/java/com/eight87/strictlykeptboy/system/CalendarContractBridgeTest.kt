@@ -43,15 +43,13 @@ class CalendarContractBridgeTest {
     @Before fun setUp() {
         ctx = ApplicationProvider.getApplicationContext()
         val info = ProviderInfo().apply { authority = CalendarContract.AUTHORITY }
-        val provider = Robolectric.buildContentProvider(FakeCalendarProvider::class.java)
+        Robolectric.buildContentProvider(FakeCalendarProvider::class.java)
             .create(info).get()
         FakeCalendarProvider.rows.clear()
         bridge = CalendarContractBridge(ctx)
         // Ensure permission is granted by default; individual tests can revoke.
         Shadows.shadowOf(ctx as Application)
             .grantPermissions(android.Manifest.permission.READ_CALENDAR)
-        // Provider is created above; reference to keep var alive.
-        provider
     }
 
     @Test fun deniedPermissionEmitsEmpty() {

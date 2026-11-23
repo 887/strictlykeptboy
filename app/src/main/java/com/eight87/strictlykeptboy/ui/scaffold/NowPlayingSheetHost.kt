@@ -180,10 +180,10 @@ internal fun NowPlayingSheetHost(
     var swipeInProgress by remember { mutableStateOf(false) }
 
     val openNowPlayingSheet: () -> Unit = remember {
-        { coroutineScope.launch { sheetProgress.animateTo(1f) }; Unit }
+        { coroutineScope.launch { sheetProgress.animateTo(1f) } }
     }
     val closeSheet: () -> Unit = remember {
-        { coroutineScope.launch { sheetProgress.animateTo(0f) }; Unit }
+        { coroutineScope.launch { sheetProgress.animateTo(0f) } }
     }
 
     // Round 2.16 post-DONE — peek is always visible on Schedule. When no

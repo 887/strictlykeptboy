@@ -618,7 +618,7 @@ private fun SettingsCategoryList(
                 crossHits.forEachIndexed { idx, hit ->
                     val accent = hit.accent ?: subpageAccent(hit.category)
                     ListItem(
-                        headlineContent = { Text(hit.title) },
+                        content = { Text(hit.title) },
                         supportingContent = {
                             Text(
                                 "${ctx.getString(hit.category.labelRes)} • ${hit.subtitle}",
@@ -672,7 +672,7 @@ private fun SettingsCategoryList(
                     val meta = metaFor(cat)
                     val selectedNow = cat::class == selected::class
                     ListItem(
-                        headlineContent = { Text(stringResource(cat.labelRes)) },
+                        content = { Text(stringResource(cat.labelRes)) },
                         supportingContent = {
                             Text(
                                 stringResource(meta.subtitleRes),
