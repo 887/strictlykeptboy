@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Android 12+ (API 31+) SplashScreen API attrs. The system draws
+         these for the cold-start splash; without them it falls back to
+         white. -->
+    <style name="Theme.MyApplication" parent="Base.Theme.MyApplication">
+        <item name="android:windowSplashScreenBackground">@color/splash_background</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@color/splash_background</item>
+    </style>
+
+</resources>

@@ -362,9 +362,14 @@ fun WizardNavHost(
                 )
                 WizardScreen.Scaffold -> {
                     ScaffoldScreen(progress = scaffoldProgress, error = scaffoldError)
-                    if (scaffoldProgress == ScaffoldProgress.Idle) {
+                    // Kick off (or, after "Try again" resets to Idle, re-run) the
+                    // scaffold from an effect rather than from composition. The
+                    // work runs on the screen-scoped [scope] so the Idle→Running
+                    // re-key below does not cancel it mid-commit.
+                    LaunchedEffect(scaffoldProgress) {
+                        if (scaffoldProgress != ScaffoldProgress.Idle) return@LaunchedEffect
+                        scaffoldProgress = ScaffoldProgress.Running
                         scope.launch {
-                            scaffoldProgress = ScaffoldProgress.Running
                             val result = onScaffold(draft)
                             if (result.isSuccess) {
                                 scaffoldProgress = ScaffoldProgress.Done

@@ -12,7 +12,7 @@ See `docs/plans/decisions.md` for the full locked-decisions doc (D.1..D.87 + K-1
 - **UI:** Jetpack Compose + Material3 Expressive. No Android Views.
 - **Cache DB:** Room read-through cache only; **Git files are source of truth**, Room is rebuildable from disk.
 - **Git:** JGit 7.x + apache-sshd-osgi (SSH) + OkHttp (HTTPS+OAuth).
-- **Auth:** GitHub OAuth Device Flow + Forgejo OAuth Device Flow + manual PAT; per-`(repoId, remoteName)` keying via EncryptedSharedPreferences.
+- **Auth:** GitHub OAuth Device Flow + Forgejo OAuth Device Flow + manual PAT; per-`(repoId, remoteName)` keying via Tink-encrypted SharedPreferences (`prefs/secure/SecurePrefs`, wire-compatible with the legacy androidx EncryptedSharedPreferences files).
 - **Serialization:** ktoml available, hand-rolled TOML codec for v1 (full round-trip control); kotlinx.serialization for JSON-backed prefs.
 - **Recurrence:** dmfs lib-recur (RFC5545 RRULE).
 - **Build front-end:** Google's Android CLI (same as tonearmboy).
@@ -263,7 +263,7 @@ What `--gh-release` does:
 3. Creates the GitHub Release `v<version>-<sha7>` with the APK attached.
 4. Pushes the local annotated tag to `origin`.
 
-The `.github/workflows/release.yml` fallback is **tag-only and self-disabling**: it triggers when a `v*` tag is pushed, then queries the matching release; if an APK is already attached (which is true after the local script ran), it exits 0 without rebuilding. Saves CI minutes by default; only runs when a tag shows up without a matching APK (e.g. tag pushed from the GitHub web UI). For a CI-signed release, set the repo secrets `RELEASE_KEYSTORE_BASE64`, `RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD`.
+There is no CI release workflow: releases are only ever built and published locally by `scripts/build-release-apk.sh`. Do not add GitHub Actions.
 
 When a phase asks for a release, the happy path is `--gh-release --install` against the connected AVD / wifi-adb phone.
 

@@ -226,7 +226,7 @@ class SourcesPublisher(
 
     private fun toExceptionInput(row: ExceptionRow): ExceptionInput {
         val date = runCatching { LocalDate.parse(row.instanceDate) }
-            .getOrDefault(LocalDate.EPOCH)
+            .getOrDefault(LocalDate.ofEpochDay(0))
         return ExceptionInput(
             ruleId = RuleRef(row.ruleId),
             instanceDate = date,
@@ -241,7 +241,7 @@ class SourcesPublisher(
 
     private fun toDeviationInput(row: DeviationRow, zone: ZoneId): DeviationInput? {
         val date = runCatching { LocalDate.parse(row.instanceDate) }
-            .getOrDefault(LocalDate.EPOCH)
+            .getOrDefault(LocalDate.ofEpochDay(0))
         val kind = com.eight87.strictlykeptboy.resolver.DeviationKind.fromWire(row.devKind)
             ?: return null
         return DeviationInput(
@@ -255,7 +255,7 @@ class SourcesPublisher(
 
     private fun toOverrideInput(row: OverrideRow): OverrideInput? {
         val date = runCatching { LocalDate.parse(row.instanceDate) }
-            .getOrDefault(LocalDate.EPOCH)
+            .getOrDefault(LocalDate.ofEpochDay(0))
         val rangeFrom = row.rangeFrom?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
         val rangeTo = row.rangeTo?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
         val kind = when (row.overrideKind) {

@@ -2,7 +2,7 @@ package com.eight87.strictlykeptboy.caldav.auth
 
 /**
  * Phase Y.3 — CalDAV credential kinds. Persisted in
- * `EncryptedSharedPreferences` (the same store as git credentials, with
+ * the encrypted `SecurePrefs` file (the same store as git credentials, with
  * a distinct `caldav.*` key prefix per `CalDavSecretsStore`).
  *
  * - [BasicAuth] — Nextcloud / Radicale / custom self-hosts.

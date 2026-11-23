@@ -1,15 +1,14 @@
 package com.eight87.strictlykeptboy.git.auth
 
+import com.eight87.strictlykeptboy.prefs.secure.SecurePrefs
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import com.eight87.strictlykeptboy.git.RemoteName
 
 /**
  * Per-`(repoId, remoteName)` credential storage. Backed by
- * `EncryptedSharedPreferences` (`secrets_v1.xml`) with AES256_GCM via a
- * Keystore-anchored MasterKey.
+ * [com.eight87.strictlykeptboy.prefs.secure.SecurePrefs] (`secrets_v1.xml`),
+ * Tink AES256_GCM under a Keystore-anchored master key.
  *
  * Key naming per Phase B.4 / SE-C "Storage" / Phase ZZ.C:
  *
@@ -127,16 +126,7 @@ class SecretsStore internal constructor(private val prefs: SharedPreferences) {
         private const val PREFS_FILE = "secrets_v1"
 
         fun open(context: Context): SecretsStore {
-            val masterKey = MasterKey.Builder(context)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
-            val prefs = EncryptedSharedPreferences.create(
-                context,
-                PREFS_FILE,
-                masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-            )
+            val prefs = SecurePrefs.open(context, PREFS_FILE)
             return SecretsStore(prefs)
         }
 

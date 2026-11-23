@@ -532,21 +532,22 @@ private fun SettingsCategoryList(
     // (mirrors AppearanceCategory's pattern). Drops the testTag-substring
     // fallback so the user typing "neutral" or "tablet" gets sensible hits.
     val ctx = androidx.compose.ui.platform.LocalContext.current
+    val res = androidx.compose.ui.platform.LocalResources.current
     // Cross-subpage search index — flat list of every searchable row
     // declared by each subpage. The top-level search filters this
     // index too, so typing "density" surfaces "Look and Feel → Density"
     // even though the row lives inside Appearance, not in the category
     // list itself.
     val searchEntries = remember { SettingsSearchRegistry.allEntries(ctx) }
-    val visibleSections = remember(query) {
+    val visibleSections = remember(query, res) {
         val q = query.trim().lowercase()
         if (q.isEmpty()) sections
         else sections.mapNotNull { sec ->
             val kept = sec.items.filter { cat ->
-                val label = ctx.getString(cat.labelRes).lowercase()
-                val subtitle = ctx.getString(subtitleResFor(cat)).lowercase()
+                val label = res.getString(cat.labelRes).lowercase()
+                val subtitle = res.getString(subtitleResFor(cat)).lowercase()
                 val keywords = cat.searchKeywordRes
-                    .joinToString(" ") { ctx.getString(it) }
+                    .joinToString(" ") { res.getString(it) }
                     .lowercase()
                 label.contains(q) || subtitle.contains(q) || keywords.contains(q)
             }
@@ -621,7 +622,7 @@ private fun SettingsCategoryList(
                         content = { Text(hit.title) },
                         supportingContent = {
                             Text(
-                                "${ctx.getString(hit.category.labelRes)} • ${hit.subtitle}",
+                                "${res.getString(hit.category.labelRes)} • ${hit.subtitle}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )

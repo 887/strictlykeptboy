@@ -43,6 +43,7 @@ import com.eight87.strictlykeptboy.ui.components.WrappingChipRow
 import com.eight87.strictlykeptboy.resolver.InstanceSource
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -150,13 +151,14 @@ fun EventDetailContent(
     // knows their own timezone), and the label never repeats the raw IANA
     // id next to its own city ("Arctic/Longyearbyen · Longyearbyen"). See
     // [friendlyZoneSuffix] + EventDetailZoneLabelTest.
-    val tzSuffix = remember(tz) {
-        friendlyZoneSuffix(tz, java.time.ZoneId.systemDefault(), Locale.getDefault())
+    val locale = LocalConfiguration.current.locales[0]
+    val tzSuffix = remember(tz, locale) {
+        friendlyZoneSuffix(tz, java.time.ZoneId.systemDefault(), locale)
     }
     // Kept for the (tz)-bearing time string below; null ⇒ no suffix rendered.
     val tzParen = tzSuffix?.let { "  ($it)" } ?: ""
-    val fmt = DateTimeFormatter.ofPattern("EEE MMM d  HH:mm", Locale.getDefault())
-    val endFmt = DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
+    val fmt = DateTimeFormatter.ofPattern("EEE MMM d  HH:mm", locale)
+    val endFmt = DateTimeFormatter.ofPattern("HH:mm", locale)
     // Round 2026-05-24 R-2 — multi-day events show the END DATE too,
     // not just the end time on the start date. `Brighton weekend Sat
     // 10:00 – 20:00` is wrong when end is Sun 20:00; show

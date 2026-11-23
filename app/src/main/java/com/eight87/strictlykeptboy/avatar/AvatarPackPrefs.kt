@@ -1,9 +1,8 @@
 package com.eight87.strictlykeptboy.avatar
 
+import com.eight87.strictlykeptboy.prefs.secure.SecurePrefs
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -116,16 +115,7 @@ class AvatarPackPrefs internal constructor(
 
         fun open(context: Context): AvatarPackPrefs {
             val plain = context.getSharedPreferences(PLAIN_FILE, Context.MODE_PRIVATE)
-            val masterKey = MasterKey.Builder(context)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
-            val enc = EncryptedSharedPreferences.create(
-                context,
-                ENC_FILE,
-                masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-            )
+            val enc = SecurePrefs.open(context, ENC_FILE)
             return AvatarPackPrefs(plain, enc)
         }
 

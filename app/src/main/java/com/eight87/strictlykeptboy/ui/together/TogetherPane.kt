@@ -19,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -46,6 +47,7 @@ fun TogetherPane(
     onSlotTap: (TimeSlot) -> Unit = defaultSlotTapHandler(),
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val options by vm.repoOptions.collectAsState()
     val input by vm.input.collectAsState()
     val result by vm.result.collectAsState()
@@ -105,7 +107,7 @@ fun TogetherPane(
                         onSlotTap(slot)
                         Toast.makeText(
                             context,
-                            context.getString(R.string.together_result_create_event_toast),
+                            resources.getString(R.string.together_result_create_event_toast),
                             Toast.LENGTH_SHORT,
                         ).show()
                     },
@@ -168,7 +170,7 @@ fun TogetherPane(
                             onSlotTap(slot)
                             Toast.makeText(
                                 context,
-                                context.getString(R.string.together_result_create_event_toast),
+                                resources.getString(R.string.together_result_create_event_toast),
                                 Toast.LENGTH_SHORT,
                             ).show()
                         },

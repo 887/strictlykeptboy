@@ -1,9 +1,8 @@
 package com.eight87.strictlykeptboy.ui.wizard
 
+import com.eight87.strictlykeptboy.prefs.secure.SecurePrefs
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 
 /**
  * Phase K.14 — one-time first-launch age gate persistence.
@@ -33,16 +32,7 @@ class AgeGatePrefs internal constructor(private val prefs: SharedPreferences) {
         private const val PREFS_FILE = "age_gate_v1"
 
         fun open(context: Context): AgeGatePrefs {
-            val masterKey = MasterKey.Builder(context)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
-            val prefs = EncryptedSharedPreferences.create(
-                context,
-                PREFS_FILE,
-                masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-            )
+            val prefs = SecurePrefs.open(context, PREFS_FILE)
             return AgeGatePrefs(prefs)
         }
 

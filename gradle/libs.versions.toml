@@ -25,7 +25,12 @@ jgit = "7.8.1.202611041320-r"
 sshd = "2.20.1"
 bouncycastle = "1.87"
 okhttp = "5.5.1"
-securityCrypto = "1.1.0-alpha06"
+# Encrypted prefs: Tink directly (prefs/secure/), wire-compatible with the
+# deprecated androidx.security EncryptedSharedPreferences files earlier builds
+# wrote. security-crypto 1.1.0-alpha06 (the last pre-deprecation build, the one
+# that wrote existing users' files) stays test-only as the compatibility oracle.
+tink = "1.24.0"
+securityCryptoLegacy = "1.1.0-alpha06"
 work = "2.12.0"
 slf4jAndroid = "1.7.36"
 robolectric = "4.18.1"
@@ -94,7 +99,8 @@ bouncycastle-prov = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = 
 bouncycastle-pkix = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "bouncycastle" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 okhttp-mockwebserver = { module = "com.squareup.okhttp3:mockwebserver", version.ref = "okhttp" }
-androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }
+tink-android = { module = "com.google.crypto.tink:tink-android", version.ref = "tink" }
+androidx-security-crypto-legacy = { module = "androidx.security:security-crypto", version.ref = "securityCryptoLegacy" }
 androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
 androidx-work-testing = { module = "androidx.work:work-testing", version.ref = "work" }
 slf4j-android = { module = "org.slf4j:slf4j-android", version.ref = "slf4jAndroid" }

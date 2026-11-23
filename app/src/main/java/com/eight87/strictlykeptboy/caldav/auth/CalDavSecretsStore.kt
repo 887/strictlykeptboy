@@ -1,9 +1,8 @@
 package com.eight87.strictlykeptboy.caldav.auth
 
+import com.eight87.strictlykeptboy.prefs.secure.SecurePrefs
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 
 /**
  * Phase Y.3 — encrypted storage for CalDAV credentials. Lives in the
@@ -96,16 +95,7 @@ class CalDavSecretsStore internal constructor(private val prefs: SharedPreferenc
         private const val KIND_BEARER = "bearer"
 
         fun open(context: Context): CalDavSecretsStore {
-            val masterKey = MasterKey.Builder(context)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
-            val prefs = EncryptedSharedPreferences.create(
-                context,
-                PREFS_FILE,
-                masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-            )
+            val prefs = SecurePrefs.open(context, PREFS_FILE)
             return CalDavSecretsStore(prefs)
         }
 

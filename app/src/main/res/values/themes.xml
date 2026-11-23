@@ -6,13 +6,11 @@
          status-bar handling). The Light parent is incidental — windowBackground
          is overridden to the bat-charcoal so the system splash + cold-start
          frame don't flashbang against the dark Compose surface. -->
-    <style name="Theme.MyApplication" parent="android:Theme.Material.Light.NoActionBar">
+    <style name="Base.Theme.MyApplication" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@color/splash_background</item>
-        <!-- Android 12+ (API 31+) SplashScreen API attrs. The system draws
-             these for the cold-start splash; without them it falls back to
-             white. -->
-        <item name="android:windowSplashScreenBackground">@color/splash_background</item>
-        <item name="android:windowSplashScreenIconBackgroundColor">@color/splash_background</item>
     </style>
+
+    <!-- API 26-30. values-v31/themes.xml adds the SplashScreen API attrs. -->
+    <style name="Theme.MyApplication" parent="Base.Theme.MyApplication" />
 
 </resources>

@@ -81,7 +81,7 @@ object BackupRestorer {
         while (entry != null) {
             val rel = entry.name
             if (rel == "manifest.toml") {
-                val bytes = tar.readAllBytes()
+                val bytes = tar.readBytes()
                 manifest = decodeManifest(bytes.toString(Charsets.UTF_8))
             } else {
                 writeEntry(parent.toPath(), entry, tar)

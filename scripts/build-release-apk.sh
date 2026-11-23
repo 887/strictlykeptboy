@@ -19,9 +19,7 @@
 #   - Creates the GitHub Release `v<version>-<sha7>` with the APK attached.
 #   - Generates release notes from `git log <prev-tag>..HEAD`.
 #   - Includes a "Verify build" section with the commit SHA + APK SHA-256.
-#   - Pushes the local annotated tag to `origin` (informational; the GH Action
-#     fallback in `.github/workflows/release.yml` is self-disabling and will
-#     exit 0 when an APK is already attached, so no CI minutes burned).
+#   - Pushes the local annotated tag to `origin`.
 
 set -euo pipefail
 
@@ -92,6 +90,22 @@ if [ ! -f "${BUILD_APK}" ]; then
 fi
 
 cp "${BUILD_APK}" "${OUT_APK}"
+
+# Signing-key pin: debug-signed builds use the machine's ~/.android/debug.keystore,
+# which differs per machine. Publishing an APK signed with a different key breaks
+# in-place updates (Obtainium) for every installed copy, so refuse to publish one.
+# Override with EXPECTED_SIGNING_CERT_SHA256 only when rotating keys on purpose.
+EXPECTED_SIGNING_CERT_SHA256="${EXPECTED_SIGNING_CERT_SHA256:-e79055dd0abdc0efa710597c0c9d4b7f11fc14b325efede54e214f48a7ac7762}"
+if [ "${PUSH_TO_GH}" = true ] && [ "${GRADLE_TASK}" = "assembleDebug" ]; then
+    APKSIGNER="$(ls -d "${ANDROID_HOME}"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -n1)"
+    ACTUAL_CERT="$("${APKSIGNER}" verify --print-certs "${OUT_APK}" | awk '/certificate SHA-256 digest/ {print $NF; exit}')"
+    if [ "${ACTUAL_CERT}" != "${EXPECTED_SIGNING_CERT_SHA256}" ]; then
+        echo "[build-release-apk] ABORT: APK signed with ${ACTUAL_CERT:-<unknown>}," >&2
+        echo "  expected ${EXPECTED_SIGNING_CERT_SHA256}. Publishing it would break updates" >&2
+        echo "  for installed copies. Build on the machine holding the expected debug key." >&2
+        exit 1
+    fi
+fi
 ln -sf "$(basename "${OUT_APK}")" "${OUT_DIR}/latest.apk"
 APK_SIZE="$(du -h "${OUT_APK}" | cut -f1)"
 APK_SHA256="$(sha256sum "${OUT_APK}" | awk '{print $1}')"
@@ -159,7 +173,13 @@ EOF
         gh release edit "${REL_TAG}" --notes-file "${NOTES_FILE}" >/dev/null
     else
         echo "[build-release-apk] creating release ${REL_TAG} on GitHub..."
-        gh release create "${REL_TAG}" "${OUT_APK}" \
+        # Tag HEAD locally and push the tag BEFORE creating the release: if the
+        # tag is missing on origin, gh silently creates it on the remote default
+        # branch (the wrong commit). --verify-tag makes that a hard error.
+        git rev-parse -q --verify "refs/tags/${REL_TAG}" >/dev/null \
+            || git tag -a "${REL_TAG}" -m "strictlykeptboy ${TAG}" "${SHA_FULL}"
+        git push origin "refs/tags/${REL_TAG}"
+        gh release create "${REL_TAG}" "${OUT_APK}" --verify-tag \
             --title "strictlykeptboy ${VERSION} (${SHA7})" \
             --notes-file "${NOTES_FILE}"
     fi
@@ -168,9 +188,7 @@ EOF
     REL_URL="$(gh release view "${REL_TAG}" --json url -q .url)"
     echo "[build-release-apk] ${REL_URL}"
 
-    # D.14.1.1: push the annotated tag to origin (informational — the
-    # GH Action workflow is tag-only AND self-disabling, so this won't
-    # burn CI minutes when the release already has the APK attached).
+    # D.14.1.1: push the annotated tag to origin.
     if git rev-parse -q --verify "refs/tags/${REL_TAG}" >/dev/null; then
         echo "[build-release-apk] pushing tag ${REL_TAG} to origin..."
         git push origin "refs/tags/${REL_TAG}" || \

@@ -6,7 +6,7 @@ import java.io.File
 import kotlinx.serialization.Serializable
 
 /**
- * Persistent per-repo configuration. Lives in EncryptedSharedPreferences,
+ * Persistent per-repo configuration. Lives in the encrypted SecurePrefs file,
  * keyed by [repoId]. Per Phase B.3 / SE-F.1 / ZZ.A.1.
  *
  * - `remotes` may be empty (no-origin repo).

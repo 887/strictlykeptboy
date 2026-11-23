@@ -29,7 +29,6 @@ import java.time.LocalDate
 import java.time.Month
 import java.time.YearMonth
 import java.time.temporal.WeekFields
-import java.util.Locale
 
 const val TestTagYearView = "ScheduleYearView"
 const val TestTagYearMonth = "YearMonth"
@@ -92,7 +91,7 @@ private fun MiniMonth(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = month.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault()),
+            text = month.getDisplayName(java.time.format.TextStyle.SHORT, LocalConfiguration.current.locales[0]),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.padding(bottom = 4.dp),

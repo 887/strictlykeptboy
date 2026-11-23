@@ -15,6 +15,7 @@ import com.eight87.strictlykeptboy.store.TomlReader
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -91,7 +92,7 @@ class CalendarRegistry(
         val diskKeys = mutableSetOf<Pair<String, String>>()
         val merged = mutableListOf<CalendarMeta>()
         for (cfg in configs) {
-            val repoRoot = runCatching { Path.of(cfg.rootDir) }.getOrNull() ?: continue
+            val repoRoot = runCatching { Paths.get(cfg.rootDir) }.getOrNull() ?: continue
             val calendarsDir = repoRoot.resolve("calendars")
             if (!Files.isDirectory(calendarsDir)) continue
             Files.list(calendarsDir).use { listing ->

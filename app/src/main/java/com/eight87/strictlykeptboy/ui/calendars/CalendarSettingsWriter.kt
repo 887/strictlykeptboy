@@ -11,7 +11,7 @@ import com.eight87.strictlykeptboy.store.TomlValue
 import com.eight87.strictlykeptboy.store.TomlWriter
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
-import java.nio.file.Path
+import java.nio.file.Paths
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -31,7 +31,7 @@ object CalendarSettingsWriter {
         withContext(Dispatchers.IO) {
             val meta = draft.calendar
             val cfg = repoStore.list().firstOrNull { it.repoId == meta.repo.id } ?: return@withContext
-            val root = Path.of(cfg.rootDir)
+            val root = Paths.get(cfg.rootDir)
             val tomlPath = root.resolve("calendars/${meta.ref.id}/calendar.toml")
             Files.createDirectories(tomlPath.parent)
             // Read existing table (so unrelated keys round-trip), else
@@ -101,7 +101,7 @@ object CalendarSettingsWriter {
     ) {
         withContext(Dispatchers.IO) {
             val cfg = repoStore.list().firstOrNull { it.repoId == repoId } ?: return@withContext
-            val root = Path.of(cfg.rootDir)
+            val root = Paths.get(cfg.rootDir)
             val tomlPath = root.resolve("calendars/$calendarId/calendar.toml")
             Files.createDirectories(tomlPath.parent)
             val table: TomlTable = if (Files.isRegularFile(tomlPath)) {
@@ -138,7 +138,7 @@ object CalendarSettingsWriter {
     ) {
         withContext(Dispatchers.IO) {
             val cfg = repoStore.list().firstOrNull { it.repoId == repoId } ?: return@withContext
-            val root = Path.of(cfg.rootDir)
+            val root = Paths.get(cfg.rootDir)
             val tomlPath = root.resolve("calendars/$calendarId/calendar.toml")
             Files.createDirectories(tomlPath.parent)
             val table: TomlTable = if (Files.isRegularFile(tomlPath)) {

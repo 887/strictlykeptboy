@@ -398,7 +398,7 @@ class AppGraph(private val appContext: Context) {
      * after scaffolding completes (D-2.1.g).
      */
     private val _defaultWriteRepoName: MutableStateFlow<String> by lazy {
-        // Lazy so AppGraph construction doesn't touch EncryptedSharedPreferences
+        // Lazy so AppGraph construction doesn't touch the Keystore-backed SecurePrefs
         // (Robolectric can't init those — see `ColdStartBudgetTest`).
         MutableStateFlow(
             runCatching { repoStore.list().firstOrNull()?.displayName }.getOrNull().orEmpty(),

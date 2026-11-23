@@ -30,6 +30,7 @@ import kotlinx.coroutines.withContext
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 
 /**
  * Round 2.5.B — single Composable wrapping `RepoSettingsScreen` with the
@@ -58,7 +59,7 @@ internal fun RepoSettingsHost(
     /** D-64 fix — opens the StickerPackSelectorScreen for this repo. */
     onOpenStickerPack: () -> Unit = {},
 ) {
-    val repoRoot: Path = remember(repo.repoId, repo.rootDir) { Path.of(repo.rootDir) }
+    val repoRoot: Path = remember(repo.repoId, repo.rootDir) { Paths.get(repo.rootDir) }
     var refreshTick by remember { mutableStateOf(0) }
     var calendars by remember(repo.repoId) { mutableStateOf<List<CalendarMeta>>(emptyList()) }
     var identity by remember(repo.repoId) {

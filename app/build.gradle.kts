@@ -38,6 +38,7 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "GIT_SHA", "\"$gitShortSha\"")
         buildConfigField("String", "BUILD_DATE", "\"$buildDateUtc\"")
@@ -127,6 +128,13 @@ android {
     // rules in proguard-rules.pro ensure both survive minification.
     lint {
         disable += "Instantiatable"
+        // Locale dirs (`values-<bcp47>/`) are deliberately PARTIAL overrides:
+        // Android falls back to canonical English for un-overridden keys,
+        // which CLAUDE.md "Translations" (and docs/plans/translations.md)
+        // documents as the correct outcome. MissingTranslation would demand
+        // mirroring every key into every locale (machine translation), so it
+        // is off; `:app:translationsAudit` reports per-locale coverage instead.
+        disable += "MissingTranslation"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
@@ -219,7 +227,11 @@ dependencies {
   implementation(libs.bouncycastle.prov)
   implementation(libs.bouncycastle.pkix)
   implementation(libs.okhttp)
-  implementation(libs.androidx.security.crypto)
+  implementation(libs.tink.android)
+  // Compatibility oracle only: the legacy EncryptedSharedPreferences that wrote
+  // existing users' files, exercised against prefs/secure/ in JVM + device tests.
+  testImplementation(libs.androidx.security.crypto.legacy)
+  androidTestImplementation(libs.androidx.security.crypto.legacy)
   implementation(libs.androidx.work.runtime.ktx)
   implementation(libs.slf4j.android)
   implementation(libs.kotlinx.serialization.json)

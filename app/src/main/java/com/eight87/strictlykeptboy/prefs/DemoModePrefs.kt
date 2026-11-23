@@ -1,9 +1,8 @@
 package com.eight87.strictlykeptboy.prefs
 
+import com.eight87.strictlykeptboy.prefs.secure.SecurePrefs
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import com.eight87.strictlykeptboy.ui.wizard.LifestyleCard
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -62,16 +61,7 @@ class DemoModePrefs internal constructor(private val prefs: SharedPreferences) {
         private const val KEY_PERSPECTIVE = "demo.perspective"
 
         fun open(context: Context): DemoModePrefs {
-            val masterKey = MasterKey.Builder(context)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
-            val prefs = EncryptedSharedPreferences.create(
-                context,
-                PREFS_FILE,
-                masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-            )
+            val prefs = SecurePrefs.open(context, PREFS_FILE)
             return DemoModePrefs(prefs)
         }
 

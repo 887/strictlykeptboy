@@ -21,8 +21,6 @@ import com.eight87.strictlykeptboy.resolver.DayBand
 import com.eight87.strictlykeptboy.resolver.RenderedSchedule
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
 import java.time.ZonedDateTime
 
 const val TestTagTasksPane = "TasksPane"
@@ -87,7 +85,7 @@ fun TasksPane(
  *
  * Wires the per-filter content:
  *  - [TasksFilter.Today] → [TaskUnifiedTodayView] driven by
- *    [buildUnifiedToday] over `combine(tasksState.state, scheduleFlow)`.
+ *    [buildUnifiedToday] over the collected `tasksState.state` + `scheduleFlow`.
  *  - [TasksFilter.PerList] → existing [TaskSourceRail] chips inline
  *    (A.5) over a filter-name placeholder.
  *  - everything else → filter-name placeholder (to be filled in later
@@ -110,12 +108,10 @@ fun TasksDestinationBody(
     // Round 2.27 / Phase D.3 — hoisted sheet target. When non-null, the
     // PromptResponseSheet is rendered for this task; submit clears it.
     var responseSheetTarget by remember { mutableStateOf<TaskItem?>(null) }
-    // Round 2.26.B.3 — reactive merge of tasks + rendered schedule.
-    val merged by remember(tasksState, scheduleFlow) {
-        combine(tasksState.state, scheduleFlow) { tasksUi, sched ->
-            tasksUi to sched
-        }.distinctUntilChanged()
-    }.collectAsState(initial = ui to scheduleFlow.value)
+    // Round 2.26.B.3 — reactive merge of tasks + rendered schedule: both
+    // StateFlows are collected, so a change on either side recomposes.
+    val renderedSchedule by scheduleFlow.collectAsState()
+    val merged = ui to renderedSchedule
 
     Column(
         modifier = modifier
